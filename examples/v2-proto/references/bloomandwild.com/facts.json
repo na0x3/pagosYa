@@ -1,0 +1,177 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.bloomandwild.com/",
+    "title": "Flower Delivery | Send Flowers & Gifts UK | Bloom & Wild",
+    "width": 1440,
+    "pageHeight": 6449,
+    "fonts": {
+      "h1": {
+        "family": "Tiempos Headline",
+        "size": "52px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Bloom & Wild Flower Delivery & Gifts"
+      },
+      "h2": {
+        "family": "Tiempos Headline",
+        "size": "44px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Counting down the days"
+      },
+      "body": {
+        "family": "Unica 77 LL TT",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Seen our TV advert?"
+      },
+      "button": {
+        "family": "Unica 77 LL TT",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Claim offer"
+      },
+      "nav": {
+        "family": "Unica 77 LL TT",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "available soonest"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 143,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "available soonest",
+        "Help",
+        "Corporate Gifting",
+        "UK (£)",
+        "Search for productsI'm l",
+        "Log in",
+        "Favourites",
+        "Basket",
+        "Flowers",
+        "Toggle submenu for Flowe",
+        "Plants",
+        "Toggle submenu for Plant",
+        "Food & drink",
+        "Toggle submenu for Food ",
+        "Home & pamper",
+        "Toggle submenu for Home "
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 143,
+        "h": 6303,
+        "bg": "rgb(255, 255, 255)",
+        "images": 85,
+        "video": false,
+        "heading": {
+          "family": "Tiempos Headline",
+          "size": "44px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Counting down the days"
+        },
+        "words": 1088,
+        "perRow": 10,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 6,
+      "columns": 6,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.bloomandwild.com/",
+    "title": "Flower Delivery | Send Flowers & Gifts UK | Bloom & Wild",
+    "width": 390,
+    "pageHeight": 7964,
+    "fonts": {
+      "h1": {
+        "family": "Tiempos Headline",
+        "size": "36px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Bloom & Wild Flower Delivery & Gifts"
+      },
+      "h2": {
+        "family": "Tiempos Headline",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Counting down the days"
+      },
+      "body": {
+        "family": "Unica 77 LL TT",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Seen our TV advert?"
+      },
+      "button": {
+        "family": "Unica 77 LL TT",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 403,
+        "h": 7558,
+        "bg": "rgb(255, 255, 255)",
+        "images": 78,
+        "video": false,
+        "heading": {
+          "family": "Tiempos Headline",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Counting down the days"
+        },
+        "words": 938,
+        "perRow": 10,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  }
+}

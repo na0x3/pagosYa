@@ -87,6 +87,22 @@ const BRANDS: Record<string, Brand> = {
       colours: [{ value: 'Original', photos: [] }, { value: 'Ajo', photos: [] }, { value: 'Ahumada', photos: [] }] }],
     articles: [],
   },
+  // Owner 2026-11-16 («create one for the bake lab but with the full pictures»): the bakery catalogue plus 18 CC0 bakery and café
+  // photos from rawpixel via Openverse (examples/full-stores-2026-11-02/bakelab/fuentes-cc0.tsv), so the design has more than product shots.
+  bakelab: {
+    name: 'The Bake Lab', tagline: 'Cookies, rolls y café recién hechos en Sopocachi.', folder: 'catalogo_bakery_pagosya', csv: 'productos_bakery.csv', city: 'La Paz',
+    brandPhotos: resolve(__dirname, '../../../examples/full-stores-2026-11-02/bakelab/marca'),
+    what: 'Laboratorio de horno: cookies rellenas, rolls, cajas surtidas para regalar y desayunos con café, para llevar o recibir en casa.',
+    story: 'The Bake Lab empezó como un horno chico en Sopocachi donde probábamos una receta nueva cada semana. Hoy horneamos cada mañana en tandas pequeñas, con mantequilla de verdad y chocolate belga, y servimos café en el mostrador.',
+    about: 'Horneamos cada mañana en Sopocachi: cookies, rolls, cajas surtidas y desayunos con café.',
+    badges: { 'Torre de cookies rellenas gourmet': 'Más pedido', 'Colección cookies Pantone': 'Edición limitada' },
+    location: { name: 'The Bake Lab Sopocachi', address: 'Calle Belisario Salinas 410, Sopocachi, La Paz', description: 'Horno, mostrador y mesas: recoge tu pedido o quédate a tomar un café.', hours: WEEK('07:30', '20:00', ['08:00', '14:00']) },
+    zone: { name: 'La Paz ciudad', fee: 1200, freeAbove: 15000, minutes: 90, departments: ['LA_PAZ'] },
+    code: { code: 'LAB10', percent: 10 }, instagram: 'https://www.instagram.com/thebakelab.lpz',
+    assistant: { name: 'Lab', greeting: 'Hola, soy Lab. ¿Te ayudo a elegir cookies, una caja para regalar o un desayuno?', notes: 'The Bake Lab es un horno con café en Sopocachi, La Paz. Horneamos cada mañana. Entregas en La Paz ciudad en unos 90 minutos (Bs 12, gratis desde Bs 150) o recojo en Calle Belisario Salinas 410. Cajas surtidas para regalar con tarjeta escrita a mano.' },
+    policies: { returns: 'Si tu pedido llega dañado, escríbenos el mismo día con una foto y lo reponemos.', delivery: 'Entregamos en La Paz ciudad en unos 90 minutos, de lunes a sábado. Recojo gratis en nuestro horno de Sopocachi.', privacy: 'Usamos tus datos solo para tu pedido y, si te suscribes, para contarte la receta de la semana.', terms: TERMS },
+    articles: [{ slug: 'receta-de-la-semana', title: 'Así nace la receta de la semana', excerpt: 'Probamos, horneamos y la pones a prueba tú.', body: 'Cada lunes probamos una cookie nueva en el horno.\n\nLa servimos en el mostrador toda la semana.\n\nSi gusta, entra al menú del mes siguiente.' }],
+  },
   miga: {
     name: 'Miga Dorada', tagline: 'Panadería y cookies de autor en Sopocachi.', folder: 'catalogo_bakery_pagosya', csv: 'productos_bakery.csv', city: 'La Paz',
     what: 'Panadería de autor: rolls rellenos, cookies gourmet, cajas para regalar y desayunos con café para llevar o recibir en casa.',
@@ -433,6 +449,40 @@ const BRANDS: Record<string, Brand> = {
     articles: [{ slug: 'batido-verde', title: 'Batido verde de 3 ingredientes', excerpt: 'Espinaca, plátano y leche.', body: 'Pon un puñado de espinaca, un plátano congelado y un vaso de leche.\n\nLicúa 30 segundos.\n\nListo: verde, frío y sin grumos.' }],
   },
 };
+// Owner 2026-11-16 («a ver haz un noa vargas ahora», after The Bake Lab): NOA's catalogue plus 16 CC0 atelier, bridal and calla photos
+// from rawpixel via Openverse (examples/full-stores-2026-11-02/noaphotos/fuentes-cc0.tsv), so the design has more than product shots.
+BRANDS.noaphotos = { ...BRANDS.noa, brandPhotos: resolve(__dirname, '../../../examples/full-stores-2026-11-02/noaphotos/marca') };
+// Owner 2026-11-16 («create another one but only use the pictures from the rg folder»): NOA's catalogue with every photo taken from
+// ~/Downloads/rg — the product photos matched to it pixel for pixel, plus its RG monogram photo — and no stock photos (12 photos keep
+// the V2 photo-library top-up at zero).
+BRANDS.rg = { ...BRANDS.noa, photoFolder: resolve(homedir(), 'Downloads', 'rg'), brandPhotos: 'rg',
+  photosFor: { 'Corsé Anturio': ['6a1e5d7151ec44578f9a767e28d7a255.jpg'], 'Set de Seda para Dormir': ['e1e625c4f245c1e81d5f766539f49ece.jpg'], 'Vestido Ciudad': ['bb53f2a8df7dfae5fe6b3e1c89e80ce6.jpg'],
+    'Vestido Cala': ['63dc59958a4ac9dbe52ee38bf7eeae6e.jpg'], 'Vestido Escultura': ['c2ff1e41a06ff7f9c866c75066dc9d5e.jpg'], 'Collar de Calas': ['2a9244d7f5f3d660836a2f73496cc5c1.jpg'],
+    'Antifaz de Encaje': ['cae6ff44702a1ddd403cb59d053a5c4e.jpg'], 'Falda Globo de Seda': ['baf887a976adb82d1f55709a999a12e2.jpg'], 'Vestido Espalda Luna': ['b80d47a871d453389f8cd806479b02e5.jpg'],
+    'Vestido Halter Civil': ['73aeac8d55ea9e7f0a0284b68406d109.jpg', 'e749ce6ad0b1dbc77cad2b7e14dd321b.jpg'] } };
+// Owner 2026-11-16 («build a one product store… just use the pictures we have»): Luna Lima alone — the can photo plus the three
+// outdoor photos of ~/luna (examples/full-stores-2026-11-02/lunalima/marca); no generated or stock photos.
+const LUNA_LIMA_PHOTO = '8b63665395c3b17de6d25cfbd25605fa.jpg';
+// Owner 2026-11-16 («create a new store for the luna folder»): ~/luna — low-sugar sparkling cans (lima, toronja, packs) and three
+// outdoor photos (mountains, an alpine cow, a lemon coast) as brand photos. The catalogue is examples/full-stores-2026-11-02/luna/catalogo.csv.
+BRANDS.luna = {
+  name: 'Luna', tagline: 'Burbujas bajas en azúcar para salir afuera.', city: 'La Paz', folder: '../luna', flatImages: true, csv: resolve(__dirname, '../../../examples/full-stores-2026-11-02/luna/catalogo.csv'), brandPhotos: '../luna',
+  what: 'Bebidas con gas bajas en azúcar y 4,5 % de alcohol en latas de 330 ml: lima, toronja rosada, durazno y frutos rojos, en latas sueltas, packs y cajas.',
+  story: 'Luna nació en un viaje al lago: queríamos algo frío, liviano y con fruta de verdad para llevar en la mochila. Hoy la preparamos en La Paz, en tandas chicas, para paseos, fiestas y fines de semana largos.',
+  about: 'Bebidas con gas bajas en azúcar, 4,5 % de alcohol, hechas en La Paz para tomar bien frías al aire libre.',
+  badges: { 'Luna Lima 330 ml': 'La original', 'Caja surtida 12 latas': 'Para compartir' },
+  location: { name: 'Luna Calacoto', address: 'Calle 21 de Calacoto 8150, La Paz', description: 'Retira tus latas y cajas frías.', hours: WEEK('11:00', '20:00', ['10:00', '16:00']) },
+  zone: { name: 'La Paz', fee: 1500, freeAbove: 15000, minutes: 180, departments: ['LA_PAZ'] },
+  code: { code: 'LUNA10', percent: 10 }, instagram: 'https://instagram.com/luna.burbujas.test',
+  assistant: { name: 'Luna', greeting: '¡Hola! ¿Buscas una lata suelta o una caja para compartir?', notes: 'Luna: bebidas con gas bajas en azúcar, 4,5 % de alcohol, latas de 330 ml. Sabores: lima, toronja rosada, durazno, frutos rojos. Packs: dúo, trío, caja de 6 y caja surtida de 12. Se toman bien frías. Solo para mayores de 18 años. Envíos en La Paz en 3 horas.' },
+  policies: { returns: 'Si una lata llega abollada o abierta, te la cambiamos.', delivery: 'Entregamos en La Paz en 3 horas, en frío. Solo a mayores de 18 años.', privacy: 'Usamos tus datos solo para tu pedido.', terms: TERMS },
+  articles: [{ slug: 'bien-fria', title: 'Cómo tomar Luna', excerpt: 'Bien fría, con hielo y un gajo de fruta.', body: 'Enfría la lata al menos dos horas.\n\nSírvela en un vaso con hielo y un gajo de lima o toronja.\n\nPara un paseo, llévala en una conservadora: a la sombra se mantiene fría hasta tres horas.' }],
+};
+BRANDS.lunalima = { ...BRANDS.luna, name: 'Luna Lima', tagline: 'Una lata. Lima, burbujas y aire de montaña.', folder: undefined, csv: undefined, flatImages: undefined,
+  brandPhotos: resolve(__dirname, '../../../examples/full-stores-2026-11-02/lunalima/marca'), photoFolder: resolve(homedir(), 'luna'), badges: {},
+  what: 'Un solo producto: Luna Lima, agua con gas de lima en lata de 330 ml, baja en azúcar y con 4,5 % de alcohol.',
+  items: [{ name: 'Luna Lima 330 ml', amount: 1500, stock: 240, photos: [LUNA_LIMA_PHOTO], colours: [],
+    description: 'Agua con gas de lima, baja en azúcar y 4,5 % de alcohol, en lata de 330 ml. Ácida, fresca y para tomar bien fría, con hielo y un gajo de lima.' }] };
 
 const parse = (csv: string): Row[] => {
   const [head, ...lines] = csv.replace(/^﻿/, '').trim().split(/\r?\n/);

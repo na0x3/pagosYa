@@ -1,7 +1,8 @@
 import { SourceCheckResultDto } from './source-check-results';
 import { Body, Controller, Get, Header, Param, Post, Query, UseGuards, Headers, Res, StreamableFile } from '@nestjs/common';
 import type { Response } from 'express';
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Min, MaxLength, Max, Matches } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Min, MaxLength, Max, Matches } from 'class-validator';
+import { POPUP_LOOK_IDS, type PopupLookId } from '../store-popups/popup-looks';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
@@ -35,6 +36,20 @@ class FinishDto {
   @IsBoolean() apply!: boolean;
 }
 class VisitDto { @IsOptional() @IsUUID('4') visitorId?: string; }
+/** Spec 2026-11-09 A/B tests: the merchant's words travel with the test; a popup test names B's percent and/or look. */
+class StartTestDto extends PublishDto { @IsOptional() @IsString() @MaxLength(200) request?: string; }
+class PopupTestDto {
+  @IsInt() @Min(0) publicationVersion!: number;
+  @IsOptional() @IsInt() @Min(5) @Max(50) discount?: number;
+  @IsOptional() @IsIn(POPUP_LOOK_IDS as unknown as string[]) look?: PopupLookId;
+  @IsString() @MaxLength(200) request!: string;
+}
+class KeepDto {
+  @IsInt() @Min(0) publicationVersion!: number;
+  @IsString() @MaxLength(100) experimentId!: string;
+  @IsIn(['A', 'B']) keep!: 'A' | 'B';
+}
+class ExtendDto { @IsString() @MaxLength(100) experimentId!: string; }
 
 @Controller('v1/stores/:storeId/source-project')
 @UseGuards(MerchantAuthGuard)
@@ -57,8 +72,20 @@ export class SourcePublishingController {
     return this.publishing.visibility(m.id, id, body.published, body.publicationVersion);
   }
   @Post('experiments')
-  start(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: PublishDto) {
-    return this.publishing.start(m.id, id, body.revision, body.publicationVersion);
+  start(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: StartTestDto) {
+    return this.publishing.start(m.id, id, body.revision, body.publicationVersion, body.request);
+  }
+  @Post('experiments/popup')
+  startPopup(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: PopupTestDto) {
+    return this.publishing.startPopupTest(m.id, id, { discount: body.discount, look: body.look }, body.request, body.publicationVersion);
+  }
+  @Post('experiments/keep')
+  keep(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: KeepDto) {
+    return this.publishing.finishWith(m.id, id, body.publicationVersion, body.experimentId, body.keep);
+  }
+  @Post('experiments/extend')
+  extend(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: ExtendDto) {
+    return this.publishing.extend(m.id, id, body.experimentId);
   }
   @Post('experiments/finish')
   finish(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: FinishDto) {
@@ -88,29 +115,45 @@ export class SourceSiteController {
   @Throttle({ default: { limit: 600, ttl: 60000 } })
   async asset(@Param('slug') slug: string, @Param('version') version: string, @Param('path') path: string[] | string, @Res({ passthrough: true }) res: Response, @Headers('if-none-match') ifNoneMatch?: string, @Headers('range') range?: string) {
     const file = await this.publishing.publicAsset(slug, version, Array.isArray(path) ? path.join('/') : path);
-    res.set({
-      'Content-Type': file.contentType,
-      'X-Content-Type-Options': 'nosniff',
-      'Cross-Origin-Resource-Policy': 'cross-origin',
-      // The storefront sandbox has an opaque origin; fonts are fetched in CORS mode and need this.
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      // Safari will not play <video> from a server that cannot answer byte ranges.
-      'Accept-Ranges': 'bytes',
-      ETag: file.etag,
-    });
-    if (ifNoneMatch?.split(',').some(value => value.trim().replace(/^W\//, '') === file.etag)) { res.status(304); return undefined; }
-    const size = file.bytes.length;
-    const requested = range ? /^bytes=(\d*)-(\d*)$/.exec(range.trim()) : null;
-    if (range && requested && (requested[1] || requested[2])) {
-      const start = requested[1] ? Number(requested[1]) : Math.max(0, size - Number(requested[2]));
-      const end = requested[1] && requested[2] ? Math.min(Number(requested[2]), size - 1) : size - 1;
-      if (start >= size || start > end) { res.set({ 'Content-Range': `bytes */${size}` }); res.status(416); return undefined; }
-      res.set({ 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) });
-      res.status(206);
-      return new StreamableFile(file.bytes.subarray(start, end + 1));
-    }
-    res.set({ 'Content-Length': String(size) });
-    return new StreamableFile(file.bytes);
+    return sendSourceAsset(file, res, ifNoneMatch, range);
+  }
+}
+
+/** A revision's media file with long caching, CORS for fonts and byte ranges for Safari's video (published and draft alike). */
+function sendSourceAsset(file: { bytes: Buffer; contentType: string; etag: string }, res: Response, ifNoneMatch?: string, range?: string): StreamableFile | undefined {
+  res.set({
+    'Content-Type': file.contentType,
+    'X-Content-Type-Options': 'nosniff',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    // The storefront sandbox has an opaque origin; fonts are fetched in CORS mode and need this.
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    // Safari will not play <video> from a server that cannot answer byte ranges.
+    'Accept-Ranges': 'bytes',
+    ETag: file.etag,
+  });
+  if (ifNoneMatch?.split(',').some(value => value.trim().replace(/^W\//, '') === file.etag)) { res.status(304); return undefined; }
+  const size = file.bytes.length;
+  const requested = range ? /^bytes=(\d*)-(\d*)$/.exec(range.trim()) : null;
+  if (range && requested && (requested[1] || requested[2])) {
+    const start = requested[1] ? Number(requested[1]) : Math.max(0, size - Number(requested[2]));
+    const end = requested[1] && requested[2] ? Math.min(Number(requested[2]), size - 1) : size - 1;
+    if (start >= size || start > end) { res.set({ 'Content-Range': `bytes */${size}` }); res.status(416); return undefined; }
+    res.set({ 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) });
+    res.status(206);
+    return new StreamableFile(file.bytes.subarray(start, end + 1));
+  }
+  res.set({ 'Content-Length': String(size) });
+  return new StreamableFile(file.bytes);
+}
+
+/** Speed (owner 2026-11-18): the Studio's preview loads a saved draft's media by address, keyed by the revision's digest. */
+@Controller('v1/stores/draft/:storeId/source-site')
+export class SourceDraftAssetsController {
+  constructor(private readonly publishing: SourcePublishingService) {}
+  @Get('assets/:version/*path')
+  @Throttle({ default: { limit: 600, ttl: 60000 } })
+  async asset(@Param('storeId') storeId: string, @Param('version') version: string, @Param('path') path: string[] | string, @Res({ passthrough: true }) res: Response, @Headers('if-none-match') ifNoneMatch?: string, @Headers('range') range?: string) {
+    return sendSourceAsset(await this.publishing.draftAsset(storeId, version, Array.isArray(path) ? path.join('/') : path), res, ifNoneMatch, range);
   }
 }

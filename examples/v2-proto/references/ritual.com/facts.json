@@ -1,0 +1,579 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://ritual.com/",
+    "title": "Ritual",
+    "width": 1440,
+    "pageHeight": 7382,
+    "fonts": {
+      "h1": {
+        "family": "CircularXX",
+        "size": "66px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-1.32px",
+        "text": ""
+      },
+      "h2": {
+        "family": "CircularXX",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Creatine Greens"
+      },
+      "body": {
+        "family": "CircularXX",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale—Get 40% Off Sitewide."
+      },
+      "button": {
+        "family": "CircularXX",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 20,
+    "sections": [
+      {
+        "y": 90,
+        "h": 6138,
+        "bg": "rgb(255, 255, 255)",
+        "images": 69,
+        "video": true,
+        "heading": {
+          "family": "CircularXX",
+          "size": "48px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.48px",
+          "text": "Black Friday Sale Starts Now"
+        },
+        "words": 522,
+        "perRow": 7,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 7,
+      "columns": 7,
+      "photoRatio": 0.83,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://ritual.com/",
+    "title": "Ritual",
+    "width": 390,
+    "pageHeight": 6642,
+    "fonts": {
+      "h1": {
+        "family": "CircularXX",
+        "size": "40px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.8px",
+        "text": ""
+      },
+      "h2": {
+        "family": "CircularXX",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Creatine Greens"
+      },
+      "body": {
+        "family": "CircularXX",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale—Get 40% Off Sitewide."
+      },
+      "button": {
+        "family": "CircularXX",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 20,
+    "sections": [
+      {
+        "y": 114,
+        "h": 5411,
+        "bg": "rgb(255, 255, 255)",
+        "images": 69,
+        "video": true,
+        "heading": {
+          "family": "CircularXX",
+          "size": "40px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Black Friday Sale Starts Now"
+        },
+        "words": 522,
+        "perRow": 7,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 7,
+      "columns": 7,
+      "photoRatio": 0.83,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://ritual.com/collections/all",
+    "title": "Shop All | Ritual",
+    "width": 1440,
+    "pageHeight": 6706,
+    "fonts": {
+      "h1": {
+        "family": "CircularXX",
+        "size": "66px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-1.32px",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "CircularXX",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Creatine Greens"
+      },
+      "body": {
+        "family": "CircularXX",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale—Get 40% Off Sitewide."
+      },
+      "button": {
+        "family": "CircularXX",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 90,
+        "h": 5259,
+        "bg": "rgb(255, 255, 255)",
+        "images": 40,
+        "video": false,
+        "heading": {
+          "family": "CircularXX",
+          "size": "66px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-1.32px",
+          "text": "Shop All"
+        },
+        "words": 593,
+        "perRow": 5,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 28,
+      "columns": 4,
+      "photoRatio": 0.83,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://ritual.com/collections/all?_su_rec=SrDVC-uTHc-z8-sccyu3zWrCbHNee9w03d-y5h8s99mpIQm-S5jbyiGO_-ow4H2jbxcUcLh62HKkC27Ji1tCpOu9vMzibmwpfDOyDx7LeowGUXYZFPurXTOAF4W7j-qHkNUFjacsLJg-spU0TNkYcSLEQhBqIz7JAxX2FiQifENY1c14F0mi8abpZvTqrOIaCvQmM1XKHDDXIut3t2bFyYZmrRQKSKVZuLs4gsgKQl2K_g1iDGr7NBX6U2v2OKWi3DPS_XdhFYzTdmInzDhybd3-sO6wpc97XAPiKm3Y8fG1dpdjYoZUIS9rqoDpL9vZAhLqsqtOvL4rZ27mPQDRNatuayyM97_MyfA&_su_rec_id=fa0ed16b-0f1a-41ad-8a80-b374bb24a7df-1794667229",
+    "title": "Shop All | Ritual",
+    "width": 390,
+    "pageHeight": 7052,
+    "fonts": {
+      "h1": {
+        "family": "CircularXX",
+        "size": "40px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.8px",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "CircularXX",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Creatine Greens"
+      },
+      "body": {
+        "family": "CircularXX",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale—Get 40% Off Sitewide."
+      },
+      "button": {
+        "family": "CircularXX",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 74,
+        "h": 5491,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "CircularXX",
+          "size": "40px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.8px",
+          "text": "Shop All"
+        },
+        "words": 523,
+        "perRow": 5,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 2,
+      "photoRatio": 0.83,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://ritual.com/products/hers-his-daily-health-support-ritual",
+    "title": "Essential Multivitamins for Her & Him*",
+    "width": 1440,
+    "pageHeight": 3432,
+    "fonts": {
+      "h1": {
+        "family": "CircularXX",
+        "size": "40px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.4px",
+        "text": "Essential Multivitamins for Her & Him*"
+      },
+      "h2": {
+        "family": "CircularXX",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Creatine Greens"
+      },
+      "body": {
+        "family": "CircularXX",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale—Get 40% Off Sitewide."
+      },
+      "button": {
+        "family": "CircularXX",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 90,
+        "h": 2188,
+        "bg": "rgb(255, 255, 255)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "CircularXX",
+          "size": "40px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Essential Multivitamins for Her & Him*"
+        },
+        "words": 361,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 492,
+      "x": 40,
+      "width": 644,
+      "bg": "rgb(20, 43, 111)"
+    },
+    "price": {
+      "family": "CircularXX",
+      "size": "32px",
+      "weight": "450",
+      "case": "none",
+      "tracking": "-0.32px",
+      "text": "Sale price $39.60 Regular price $66.00 Unit price / per"
+    },
+    "galleryImages": 2,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 14
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://ritual.com/products/hers-his-daily-health-support-ritual",
+    "title": "Essential Multivitamins for Her & Him*",
+    "width": 390,
+    "pageHeight": 3604,
+    "fonts": {
+      "h1": {
+        "family": "CircularXX",
+        "size": "32px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.32px",
+        "text": "Essential Multivitamins for Her & Him*"
+      },
+      "h2": {
+        "family": "CircularXX",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Creatine Greens"
+      },
+      "body": {
+        "family": "CircularXX",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale—Get 40% Off Sitewide."
+      },
+      "button": {
+        "family": "CircularXX",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 74,
+        "h": 2413,
+        "bg": "rgb(255, 255, 255)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "CircularXX",
+          "size": "32px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.32px",
+          "text": "Essential Multivitamins for Her & Him*"
+        },
+        "words": 361,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 812,
+      "x": 24,
+      "width": 342,
+      "bg": "rgb(20, 43, 111)"
+    },
+    "price": {
+      "family": "CircularXX",
+      "size": "24px",
+      "weight": "450",
+      "case": "none",
+      "tracking": "-0.24px",
+      "text": "Sale price $39.60 Regular price $66.00 Unit price / per"
+    },
+    "galleryImages": 2,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 14
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://ritual.com/?",
+    "title": "Ritual",
+    "width": 1440,
+    "pageHeight": 7382,
+    "fonts": {
+      "h1": {
+        "family": "CircularXX",
+        "size": "66px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-1.32px",
+        "text": ""
+      },
+      "h2": {
+        "family": "CircularXX",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Creatine Greens"
+      },
+      "body": {
+        "family": "CircularXX",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale—Get 40% Off Sitewide."
+      },
+      "button": {
+        "family": "CircularXX",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 20,
+    "sections": [
+      {
+        "y": 90,
+        "h": 6138,
+        "bg": "rgb(255, 255, 255)",
+        "images": 69,
+        "video": true,
+        "heading": {
+          "family": "CircularXX",
+          "size": "48px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.48px",
+          "text": "Black Friday Sale Starts Now"
+        },
+        "words": 522,
+        "perRow": 7,
+        "fullBleed": true
+      }
+    ]
+  }
+}

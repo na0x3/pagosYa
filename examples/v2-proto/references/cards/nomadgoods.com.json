@@ -1,0 +1,85 @@
+{
+  "host": "nomadgoods.com",
+  "name": "Nomad",
+  "at": "2026-11-14T15:46:30.397Z",
+  "mood": "Técnico, robusto y táctil: electrónica de precisión presentada con cuero envejecido, superficies de taller y fotografía de uso real.",
+  "idea": "Combina una interfaz de cápsulas blancas y tipografía geométrica muy pesada con grandes escenas editoriales que demuestran cómo el accesorio acompaña y envejece con el dispositivo.",
+  "header": "En escritorio ocupa 125–135 px y permanece fijo en portada y sticky en catálogo/producto. Arriba lleva una barra de anuncio centrada de unos 40 px de alto; debajo, una cápsula blanca de aproximadamente 70 px de alto, situada a 20 px de los laterales y con esquinas de unos 26–30 px. El logotipo NOMAD se alinea a la izquierda; en el centro aparecen siete enlaces: Best Sellers, Cases, Watch, Charging, Tracking & Wallets, More Gear y Sale. A la derecha se agrupan selector de país/moneda, notificaciones, cuenta, búsqueda y carrito. En teléfono el conjunto mide 92–102 px: barra de anuncio estrecha arriba y cápsula blanca de unos 64 px debajo, con logo a la izquierda y tres acciones —búsqueda, carrito y menú— a la derecha; desaparecen todos los enlaces y la cuenta. El encabezado flota sobre la fotografía del hero. El modal promocional de regalo que aparece en una captura de portada se ignora para estudiar la composición base.",
+  "hero": "En escritorio es una escena fotográfica full bleed de 1440 × 814 px, con fondo oscuro de taller y tres productos de cuero vistos desde arriba. Los objetos ocupan aproximadamente los dos tercios derechos; el bloque verbal queda en el tercio izquierdo, hacia el 42–68 % de la altura. Lleva una entradilla de unos 30 px, titular blanco Gotham Bold de 66.24 px con tracking de −2.65 px, centrado en dos líneas, y botón blanco en cápsula de unos 186 × 49 px. En teléfono se convierte en una pieza vertical de 390 × 700 px: los tres objetos se recomponen en la mitad superior, el titular baja al último tercio, centrado y a 40.95 px, y el botón crece hasta unos 186 × 58 px. Se elimina la entradilla para no competir con la foto. La imagen sigue llegando a los bordes y el header se superpone a ella.",
+  "catalog": "La cabecera del catálogo es primero una pancarta fotográfica de 366 px de alto en escritorio, con esquinas de unos 22 px y margen lateral de 20 px. Divide la fotografía en dos escenas de deporte y superpone en el centro un H1 blanco de 77 px, tracking −3.08 px, en dos líneas. Debajo hay una fila de controles en cápsulas: Filters y Device, cada una de unos 230 × 65 px; no se aprecia un selector de orden separado. La retícula visible usa cuatro columnas en 1440 px, con calles de unos 18–20 px. En teléfono la pancarta mide aproximadamente 378 × 216 px, conserva las dos imágenes y reduce el H1 a 47 px; después aparece un único control de filtros a ancho casi completo. La retícula pasa a dos columnas con unos 6–8 px de calle. No hay barra lateral permanente: los filtros se abren desde el botón.",
+  "card": "Tarjeta blanca con borde o sombra gris muy suave y radio de aproximadamente 14–18 px. La foto ocupa la parte superior en un marco gris muy claro casi cuadrado; el producto aparece aislado, centrado y a gran escala. Debajo se muestran nombre en Gotham Bold, compatibilidad o subtítulo en un cuerpo pequeño, material, precio y una fila de puntos de color. Una insignia azul NEW se fija en la esquina superior derecha de la imagen. En teléfono cada tarjeta ocupa cerca de 184 px de ancho: la imagen tiene unos 170 × 145 px y el texto se comprime debajo, sin perder las muestras. No se ve botón de compra rápida en las capturas ni puede confirmarse una segunda foto al pasar el cursor; no conviene inventar esos comportamientos al reproducirla.",
+  "product": "Sobre el pliegue de escritorio se construye una composición de dos zonas: galería en aproximadamente el 57 % izquierdo y caja de compra de unos 590 px en el 41 % derecho. La galería muestra una imagen principal enorme sobre gris muy claro y una columna vertical de miniaturas a la izquierda. La caja blanca tiene radio cercano a 24 px, valoración arriba, insignia NEW, título de 36 px, precio de 32 px alineado a la derecha, descripción breve, selector de material en dos tarjetas, color mediante muestras circulares y CTA negro a todo el ancho. El producto capturado está agotado, por eso el CTA dice “Sold Out | Join the Waitlist”. Bajo la caja aparece un acordeón Overview y una venta cruzada “Others Like You Also Bought”. En teléfono todo se apila: enlace Back, imagen principal, miniaturas horizontales, ficha de compra blanca, variantes, CTA, acordeón y una tarjeta horizontal de venta adicional. Después aparece una navegación segmentada Overview / More Info / FAQ. El resto de la página alterna módulos editoriales de unos 716 px en escritorio: “Tracking Made Easy”, imagen de uso, “Snap On. Snap Off.”, “Rugged Patina” y “Simplify Your Everyday”, seguidos por especificaciones, reseñas y una retícula Keep Exploring de tres productos. Los titulares editoriales llegan a 77 px en escritorio y aproximadamente 47 px en teléfono.",
+  "cart": "No hay captura del carrito. El header identifica la acción como “Cart drawer”, por lo que probablemente se abre como cajón lateral, pero no pueden documentarse con fiabilidad sus filas, totales, CTA ni ventas adicionales.",
+  "type": "La voz principal es Gotham-Bold: geométrica, ancha y de peso 700. Los grandes titulares usan tracking negativo constante, aproximadamente −4 % del tamaño: 66.24 px/−2.65 px en el hero, 77 px/−3.08 px en catálogo y módulos de producto, 55–56 px/−2.2 px en secciones de portada y 36 px/−1.44 px en el título de producto. En teléfono bajan principalmente a 47 px/−1.88 px, 44 px/−1.76 px o 28 px/−1.12 px. Navegación, anuncio y etiquetas usan Gotham Bold de 14 px con tracking −0.56 px. Los textos secundarios y algunos controles incorporan Gotham Book. Aleo aporta contraste editorial en botones o textos descriptivos, a menudo a 16 px y sin tracking; también explica el aspecto serif visible en varios párrafos. No se recurre a mayúsculas sistemáticas: la jerarquía nace del peso, la escala y el interlineado compacto.",
+  "colour": "El fondo general es gris muy claro rgb(243,243,243). Las superficies funcionales —header, tarjetas, filtros y caja de compra— son blancas, separadas con sombra gris y no con líneas duras. La tinta principal es negra o casi negra; los CTA alternan cápsula blanca sobre fotografía y cápsula negra sobre tarjeta blanca. El azul saturado queda reservado para estados comerciales como Sale y NEW. Los marrones cuero, negro carbón y gris metal proceden casi siempre de las fotografías y actúan como paleta emocional, mientras las bandas promocionales usan imágenes oscuras para sostener texto blanco.",
+  "photos": "Se alternan tres tratamientos. Primero, producto aislado sobre gris casi blanco, fotografiado frontalmente y ocupando entre 70 y 90 % del marco en catálogo y galería. Segundo, bodegones cenitales sobre mesas oscuras, cuero o superficies rayadas, con varios accesorios ordenados como herramientas. Tercero, escenas de uso con recortes cerrados de manos, muñecas, teléfonos y rostros; muestran escala y contexto sin convertir la imagen en retrato genérico. Los módulos editoriales usan radios de 16–22 px y recortes panorámicos en escritorio; en teléfono cambian a formatos verticales o apilan foto y texto. El cuero se ilumina de lado para hacer visibles grano, costura y pátina.",
+  "motion": "Las capturas no muestran una marquesina en movimiento. Los datos detectan dos vídeos en la portada de escritorio, asociados a módulos editoriales/comunidad; en teléfono se sustituyen por imágenes estáticas. También son probables carruseles horizontales en novedades, comunidad y miniaturas, porque se ven tarjetas cortadas y flechas de avance. No puede confirmarse desde imágenes fijas el cambio a segunda foto al pasar ni una animación específica de los botones.",
+  "phone": "La adaptación no consiste solo en reducir: elimina navegación, entradillas y controles secundarios; convierte el header en una cápsula de tres acciones; cambia panorámicas por recortes verticales; y apila las composiciones de texto e imagen. El hero baja de 66.24 a 40.95 px y la mayoría de titulares de sección pasan de 55–77 px a 44–47 px. Los listados mantienen densidad con dos columnas, mientras novedades y comunidad pueden desplazarse horizontalmente. Los filtros pasan a una sola barra a ancho completo. En producto, la galería precede a la compra, las miniaturas pasan de columna a fila y la venta cruzada se reduce a una tarjeta horizontal. Los módulos de campaña conservan radios grandes y márgenes laterales de unos 6–10 px, evitando que toda la página se vuelva una sucesión de bloques sin contención.",
+  "signature": "El gesto propio es presentar el header como una gran cápsula blanca flotante encima de fotografías rugosas de cuero y taller: una pieza de interfaz precisa posada sobre una superficie deliberadamente marcada por el uso.",
+  "home": [
+    {
+      "role": "Abrir con procedencia material y agrupar las familias principales bajo una sola historia.",
+      "composition": "Hero full bleed de 814 px en escritorio y 700 px en teléfono, con bodegón cenital oscuro, productos en el lado derecho o mitad superior, titular blanco centrado en dos líneas y CTA en cápsula blanca."
+    },
+    {
+      "role": "Introducir la novedad principal de temporada.",
+      "composition": "Franja tipográfica de 151–157 px sobre gris #F3F3F3, con “New for iPhone 18” centrado a 56 px en escritorio y 47 px en teléfono."
+    },
+    {
+      "role": "Permitir explorar productos nuevos sin abandonar la portada.",
+      "composition": "Carrusel de 14 imágenes/tarjetas: aproximadamente siete visibles en escritorio; en teléfono se muestran dos tarjetas y parte de la siguiente, indicando desplazamiento horizontal."
+    },
+    {
+      "role": "Ofrecer accesos rápidos por necesidad, no por producto concreto.",
+      "composition": "Título “Shop by Category” centrado en una franja de 160 px; debajo, cuatro cápsulas fotográficas horizontales con texto blanco. En teléfono se disponen como retícula 2 × 2."
+    },
+    {
+      "role": "Llevar a la campaña de fundas iPhone 18.",
+      "composition": "Tarjeta editorial de 566 px en escritorio con foto en la mitad izquierda y gran bloque blanco a la derecha; titular de 56 px y CTA negro. En teléfono el módulo mide unos 491 px y apila fotografía arriba y texto abajo."
+    },
+    {
+      "role": "Presentar un lanzamiento mediante material y color.",
+      "composition": "Módulo “Introducing Saddle” de 566 px: fondo cuero naranja, producto en primer plano y texto de 56 px. En teléfono, fotografía superior y bloque blanco inferior con distintivo NEW, titular de 47 px y botón negro."
+    },
+    {
+      "role": "Cruzar la categoría de carteras con la función Find My.",
+      "composition": "Tarjeta de 566 px con texto en la mitad izquierda y una mano sosteniendo la cartera en la derecha, sobre fondo gris verdoso. En teléfono se apila en unos 491 px."
+    },
+    {
+      "role": "Construir confianza mediante una declaración de marca.",
+      "composition": "Bloque de cita de 316 px, centrado y con ancho de lectura limitado; incluye firma de Noah Dentzel. En teléfono mantiene 280 px y más saltos de línea."
+    },
+    {
+      "role": "Aportar prueba social visual y variedad de usos.",
+      "composition": "Sección “From the Nomad Community” de 582 px con título centrado y carrusel de imágenes casi cuadradas; unas cuatro grandes son visibles en la captura aunque la sección contiene 16 recursos. En teléfono se convierte en carrusel horizontal de unos 410 px."
+    },
+    {
+      "role": "Introducir el origen del cuero como capítulo editorial.",
+      "composition": "Banner de 466 px en escritorio con vídeo o imagen oscura, titular blanco “Horween® Leather” y pequeño CTA superpuesto. En teléfono se reduce a una pieza estática de unos 256 px."
+    },
+    {
+      "role": "Explicar el beneficio de la pátina.",
+      "composition": "Módulo de 716 px con retrato de uso ocupando aproximadamente el 60 % y texto negro sobre área clara en el 40 % restante. Titular de 55 px, párrafo serif y CTA; en teléfono se apila y crece a 744 px."
+    },
+    {
+      "role": "Reforzar el capítulo Horween antes de mostrar más producto.",
+      "composition": "Separador tipográfico sobre gris claro de 207 px en escritorio y 186 px en teléfono, con el nombre del material centrado."
+    },
+    {
+      "role": "Demostrar visualmente cómo cambia el material con el tiempo.",
+      "composition": "Comparación editorial de 670 px con dos imágenes o estados del cuero y titular de 56 px; en teléfono se simplifica a una pieza de 390 px con recorte más cerrado."
+    },
+    {
+      "role": "Convertir el relato del material en navegación comercial.",
+      "composition": "Bloque “Shop Horween®” con cuatro accesos visuales. En escritorio es una fila baja de 180 px; en teléfono se reorganiza en una sección de 470 px."
+    }
+  ],
+  "lessons": [
+    "Usa una única geometría de interfaz —la cápsula redondeada— en header, filtros y CTA para que páginas con fotografías muy distintas sigan perteneciendo al mismo sistema.",
+    "Reserva la tipografía más grande para ideas de una o dos líneas y aplica tracking negativo proporcional; no intentes conseguir impacto añadiendo más peso, colores o mayúsculas.",
+    "En móvil vuelve a dirigir las fotografías: coloca primero el producto y después el mensaje, en vez de limitarte a recortar el lienzo horizontal de escritorio.",
+    "Alterna producto aislado, bodegón y uso real para responder en secuencia qué es, de qué está hecho y cómo vive con la persona.",
+    "Haz que las campañas terminen en accesos comerciales: después de explicar el cuero aparecen categorías o productos Horween, y después de la ficha aparece venta cruzada.",
+    "Mantén fondos y componentes neutrales para que el color de temporada proceda de los propios materiales y pueda cambiar sin rediseñar toda la tienda."
+  ]
+}

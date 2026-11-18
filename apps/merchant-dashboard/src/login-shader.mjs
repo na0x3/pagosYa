@@ -1,12 +1,12 @@
 /** The login page's animated mesh gradient (@paper-design/shaders' MeshGradient, framework-free since this dashboard
- * has no React). The owner found the component's four mid-blues streaky, so it is tuned toward a deep navy field with
- * one light-blue glow and film grain. */
+ * has no React). The owner found the component's four mid-blues streaky, so it runs from a deep blue corner to one
+ * sky-blue glow, with light film grain. */
 
 export const LOGIN_GRADIENT = {
-  // Owner 2026-10-29: a dark grey field with the blue glow (was deep navy).
-  colors: ["hsl(240, 4%, 7%)", "hsl(240, 4%, 10%)", "hsl(232, 8%, 15%)", "hsl(216, 72%, 42%)"],
+  // Owner 2026-11-08: clearer and brighter — a luminous blue panel beside a white sign-in side (was dark grey, 10-29).
+  colors: ["hsl(224, 78%, 30%)", "hsl(220, 86%, 46%)", "hsl(210, 96%, 60%)", "hsl(198, 100%, 80%)"],
   distortion: 0.55, swirl: 0.06, offsetX: 0.35, offsetY: 0.3, scale: 1.25, rotation: 0,
-  grainOverlay: 0.28,
+  grainOverlay: 0.12,
   // A slow drift: it sits behind a form.
   speed: 0.18,
 };

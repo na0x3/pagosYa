@@ -1,0 +1,316 @@
+{
+  "round": "clean1",
+  "at": "2026-11-14T03:32:24.232Z",
+  "summary": {
+    "built": 0,
+    "of": 4,
+    "failed": [
+      "noa: not driven",
+      "ohbelly: not driven",
+      "boxy: not driven",
+      "pawby: not driven"
+    ],
+    "medianMinutes": null,
+    "review": null,
+    "variety": {
+      "pairs": 6,
+      "meanShared": 0.29,
+      "mostAlike": [
+        {
+          "a": "noa",
+          "b": "ohbelly",
+          "sameTemplate": false,
+          "shared": 0.43,
+          "sameOrder": false
+        },
+        {
+          "a": "ohbelly",
+          "b": "pawby",
+          "sameTemplate": false,
+          "shared": 0.38,
+          "sameOrder": false
+        },
+        {
+          "a": "noa",
+          "b": "boxy",
+          "sameTemplate": false,
+          "shared": 0.29,
+          "sameOrder": false
+        }
+      ],
+      "sameOrder": 0,
+      "templates": [
+        "Broadcast",
+        "Merienda",
+        "Symmetry",
+        "Mimo"
+      ]
+    }
+  },
+  "stores": [
+    {
+      "key": "noa",
+      "name": "NOA VARGAS Atelier",
+      "storeId": "cmwfsmh8h0001rxj4n91aivzo",
+      "template": "Broadcast",
+      "versions": [
+        "1:Plantilla: Broadcast",
+        "2:Portada de YAPI"
+      ],
+      "drive": null,
+      "fillReview": null,
+      "filledRevision": 2,
+      "reviewedRevision": null,
+      "home": {
+        "theme": "broadcast",
+        "types": [
+          "cover-half",
+          "statement-inline",
+          "products-tabs",
+          "pay-ways",
+          "visit-store"
+        ],
+        "looks": [
+          "framed",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "homeBefore": {
+        "theme": "broadcast",
+        "types": [
+          "cover-half",
+          "statement-inline",
+          "products-tabs",
+          "pay-ways",
+          "visit-store"
+        ],
+        "looks": [
+          "framed",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "images": {
+        "filled": {
+          "desktop": "shots/noa-r2-desktop.jpg",
+          "desktop-full": "shots/noa-r2-desktop-full.jpg",
+          "phone-full": "shots/noa-r2-phone-full.jpg"
+        }
+      }
+    },
+    {
+      "key": "ohbelly",
+      "name": "Oh Belly",
+      "storeId": "cmwfsmtss0001hzlvvrrs1adv",
+      "template": "Merienda",
+      "versions": [
+        "1:Plantilla: Merienda",
+        "2:Portada de YAPI"
+      ],
+      "drive": null,
+      "fillReview": null,
+      "filledRevision": 2,
+      "reviewedRevision": null,
+      "home": {
+        "theme": "merienda",
+        "types": [
+          "cover-half",
+          "steps-howto",
+          "visit-store",
+          "faq-split",
+          "pay-ways"
+        ],
+        "looks": [
+          "framed",
+          "",
+          "",
+          "lines",
+          ""
+        ]
+      },
+      "homeBefore": {
+        "theme": "merienda",
+        "types": [
+          "cover-half",
+          "steps-howto",
+          "visit-store",
+          "faq-split",
+          "pay-ways"
+        ],
+        "looks": [
+          "framed",
+          "",
+          "",
+          "lines",
+          ""
+        ]
+      },
+      "images": {
+        "filled": {
+          "desktop": "shots/ohbelly-r2-desktop.jpg",
+          "desktop-full": "shots/ohbelly-r2-desktop-full.jpg",
+          "phone-full": "shots/ohbelly-r2-phone-full.jpg"
+        }
+      }
+    },
+    {
+      "key": "boxy",
+      "name": "BOXY",
+      "storeId": "cmwfsn11t0001yrdzdd61zlzv",
+      "template": "Symmetry",
+      "versions": [
+        "1:Plantilla: Symmetry",
+        "2:Portada de YAPI"
+      ],
+      "drive": null,
+      "fillReview": null,
+      "filledRevision": 2,
+      "reviewedRevision": null,
+      "home": {
+        "theme": "symmetry",
+        "types": [
+          "cover-half",
+          "products-grid",
+          "pay-ways",
+          "story-overlap"
+        ],
+        "looks": [
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "homeBefore": {
+        "theme": "symmetry",
+        "types": [
+          "cover-half",
+          "products-grid",
+          "pay-ways",
+          "story-overlap"
+        ],
+        "looks": [
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "images": {
+        "filled": {
+          "desktop": "shots/boxy-r2-desktop.jpg",
+          "desktop-full": "shots/boxy-r2-desktop-full.jpg",
+          "phone-full": "shots/boxy-r2-phone-full.jpg"
+        }
+      }
+    },
+    {
+      "key": "pawby",
+      "name": "Pawby Kitchen",
+      "storeId": "cmwfsn9100001xgyp8qyufpzh",
+      "template": "Mimo",
+      "versions": [
+        "1:Plantilla: Mimo",
+        "2:Portada de YAPI"
+      ],
+      "drive": null,
+      "fillReview": null,
+      "filledRevision": 2,
+      "reviewedRevision": null,
+      "home": {
+        "theme": "mimo",
+        "types": [
+          "cover-split",
+          "products-slider",
+          "usecases",
+          "visit-store",
+          "faq-split",
+          "pay-ways"
+        ],
+        "looks": [
+          "",
+          "",
+          "",
+          "",
+          "lines",
+          ""
+        ]
+      },
+      "homeBefore": {
+        "theme": "mimo",
+        "types": [
+          "cover-split",
+          "products-slider",
+          "usecases",
+          "visit-store",
+          "faq-split",
+          "pay-ways"
+        ],
+        "looks": [
+          "",
+          "",
+          "",
+          "",
+          "lines",
+          ""
+        ]
+      },
+      "images": {
+        "filled": {
+          "desktop": "shots/pawby-r2-desktop.jpg",
+          "desktop-full": "shots/pawby-r2-desktop-full.jpg",
+          "phone-full": "shots/pawby-r2-phone-full.jpg"
+        }
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "a": "noa",
+      "b": "ohbelly",
+      "sameTemplate": false,
+      "shared": 0.43,
+      "sameOrder": false
+    },
+    {
+      "a": "noa",
+      "b": "boxy",
+      "sameTemplate": false,
+      "shared": 0.29,
+      "sameOrder": false
+    },
+    {
+      "a": "noa",
+      "b": "pawby",
+      "sameTemplate": false,
+      "shared": 0.22,
+      "sameOrder": false
+    },
+    {
+      "a": "ohbelly",
+      "b": "boxy",
+      "sameTemplate": false,
+      "shared": 0.29,
+      "sameOrder": false
+    },
+    {
+      "a": "ohbelly",
+      "b": "pawby",
+      "sameTemplate": false,
+      "shared": 0.38,
+      "sameOrder": false
+    },
+    {
+      "a": "boxy",
+      "b": "pawby",
+      "sameTemplate": false,
+      "shared": 0.11,
+      "sameOrder": false
+    }
+  ]
+}

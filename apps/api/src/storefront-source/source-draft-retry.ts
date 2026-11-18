@@ -17,6 +17,12 @@ const ID = /^[a-z0-9-]{1,40}$/;
 const POINT_PAGES = ['home', 'product', 'about', 'contact', 'faq', 'shipping'];
 const pointAt = (value: unknown) => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 40;
 
+/** Owner 2026-11-11: a request that saved the current revision and then left a PARTIAL polish pass on it is done; offering
+ * its draft as unsaved made the next message resend the whole request through «Guardar borrador». */
+export function draftSavedByItsRequest(job: { lastCommittedRevision: number | null } | null, currentRevision: number): boolean {
+  return job?.lastCommittedRevision != null && job.lastCommittedRevision === currentRevision;
+}
+
 export function sourceDraftRetry(input: unknown): SourceDraftRetry | undefined {
   const job = input && typeof input === 'object' ? input as Record<string, any> : null;
   if (!job || typeof job.instruction !== 'string' || !job.instruction.trim()) return undefined;

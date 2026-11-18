@@ -1,0 +1,76 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://sugarfina.com/",
+    "title": "sugarfina.com",
+    "width": 1440,
+    "pageHeight": 900,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": null,
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://sugarfina.com/",
+    "title": "sugarfina.com",
+    "width": 390,
+    "pageHeight": 844,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": null,
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "from": "cmvu1omfc0001lvqo92rneukd",
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvuc1e9r00011w9u5afs7lv9",
+  "slug": "pomxzpd5",
+  "categories": {
+    "cmvu1omfo0003lvqoelkupz3e": "cmvuc1ea200031w9ugt3af8r9",
+    "cmvu1omfq0005lvqoeajm10c0": "cmvuc1ea300051w9u70cq5pbz",
+    "cmvu1omfq0007lvqo8tkoywqm": "cmvuc1ea400071w9uu0rsnjab",
+    "cmvu1omfr0009lvqorpujr0ox": "cmvuc1ea400091w9urptepqsn"
+  },
+  "products": {
+    "cmvu1omg4000blvqo1s5rpao1": "cmvuc1eai000b1w9u5vzlzq1n",
+    "cmvu1omgu000dlvqo8okmzw6v": "cmvuc1eb7000d1w9u0122t4md",
+    "cmvu1omgz000flvqombjajqal": "cmvuc1ebb000f1w9u618unerd",
+    "cmvu1omh4000hlvqopjobvrcv": "cmvuc1ebe000h1w9uph28mjj9",
+    "cmvu1omh7000jlvqo9mxkjitp": "cmvuc1ebh000j1w9uakh08o5s",
+    "cmvu1omhb000llvqohpnepnrc": "cmvuc1ebj000l1w9ur4wyx58j",
+    "cmvu1omhe000nlvqov1gfjo5s": "cmvuc1ebm000n1w9uu5y9o58m",
+    "cmvu1omhh000plvqo5s7gbwn4": "cmvuc1ebq000p1w9ucqkbka0p",
+    "cmvu1omhk000rlvqowxiwfu7v": "cmvuc1ebs000r1w9ul4ppgkjp",
+    "cmvu1omhn000tlvqort555m8c": "cmvuc1ebv000t1w9uebbp601l",
+    "cmvu1omhq000vlvqond9g0nrq": "cmvuc1ebz000v1w9u1ldcsavr"
+  }
+}

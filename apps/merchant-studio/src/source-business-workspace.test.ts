@@ -239,6 +239,15 @@ describe('marketing workspaces', () => {
         await mount('library=experiments');
         expect(app.querySelector('[data-experiment-blocked]')!.textContent).toContain('Activa tu tienda');
     });
+    // Spec 2026-11-09 YAPI A/B tests: a popup test shows what it compares and its signups.
+    it('a running popup test says it is about the popup, in the merchant own words, with signups per version', async () => {
+        const variants = [{ variant: 'A', revision: 1, visitors: 40, buyers: 1, signups: 4, paidOrders: 1, conversionRate: 0.025, revenue: [] }, { variant: 'B', revision: 1, visitors: 42, buyers: 2, signups: 7, paidOrders: 2, conversionRate: 0.05, revenue: [] }];
+        mocks.source.mockResolvedValue({ ...source(), publication: { revision: 1, version: 3, active: true, experiment: { id: 'e', status: 'RUNNING', kind: 'popup', request: '15% vs 10%', startedAt: '2026-11-08', variants, evidence: { winner: null, reason: 'Recopilando datos.' } } } });
+        await mount('library=experiments');
+        expect(app.querySelector('[data-experiment-kind]')!.textContent).toBe('Ventana de suscripción · «15% vs 10%»');
+        expect(app.textContent).toContain('Suscripciones');
+        expect([...app.querySelectorAll('[data-experiment-signups]')].map(cell => cell.textContent)).toEqual(['4', '7']);
+    });
     it('does not start a live experiment if storefront checks fail', async () => {
         mocks.checks.mockResolvedValue([{ status: 'failed' }]);
         await mount('library=experiments');

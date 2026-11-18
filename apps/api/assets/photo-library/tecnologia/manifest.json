@@ -1,0 +1,123 @@
+{
+  "sector": "tecnologia",
+  "label": "Tecnología",
+  "keywords": [
+    "tecnologia",
+    "celulares",
+    "audifonos",
+    "laptops",
+    "computadoras",
+    "gadgets",
+    "camaras",
+    "cargadores",
+    "electronica",
+    "accesorios para celular"
+  ],
+  "photos": [
+    {
+      "file": "tecnologia-01.jpg",
+      "subject": "tecnología 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3303766/free-photo-image-background-coffee-laptop-wallpaper-macbook",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-02.jpg",
+      "subject": "tecnología 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3337308/free-photo-image-cc0-computer-hardware",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-03.jpg",
+      "subject": "tecnología 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5928246/man-using-laptop-free-public-domain-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-04.jpg",
+      "subject": "tecnología 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/11524342/photo-image-headphones-public-domain-technology",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-05.jpg",
+      "subject": "tecnología 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6113534/photo-image-instagram-phone-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-06.jpg",
+      "subject": "tecnología 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6040111/photo-image-public-domain-black-technology",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-07.jpg",
+      "subject": "tecnología 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6112674/photo-image-public-domain-black-technology",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-08.jpg",
+      "subject": "tecnología 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6111985/photo-image-public-domain-laptop-black",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-09.jpg",
+      "subject": "tecnología 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5925957/photo-image-background-public-domain-technology",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-10.jpg",
+      "subject": "tecnología 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5925918/photo-image-public-domain-headphones-free",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-11.jpg",
+      "subject": "tecnología 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5901322/photo-image-public-domain-vintage-retro",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-12.jpg",
+      "subject": "tecnología 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5920742/photo-image-background-public-domain-hand",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-13.jpg",
+      "subject": "tecnología 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5963143/free-public-domain-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-14.jpg",
+      "subject": "tecnología 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/600081/classic-style-camera",
+      "license": "CC0"
+    },
+    {
+      "file": "tecnologia-15.jpg",
+      "subject": "tecnología 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6031600/photo-image-template-public-domain-hand",
+      "license": "CC0"
+    }
+  ]
+}

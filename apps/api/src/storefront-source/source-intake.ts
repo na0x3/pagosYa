@@ -77,6 +77,23 @@ export function intakeInstruction(state: IntakeState) {
   return lines.length ? `${state.words}\n\nRespuestas del comercio:\n${lines.join('\n')}` : state.words;
 }
 
+/** The merchant's own request with the answers, for the build (live 2026-11-12: after the brand-material question the intake words
+ *  were that answer alone, so «Usa la plantilla Mimo» in the first message no longer reached the template pick). */
+export function intakeRequest(state: IntakeState) {
+  return state.request ? intakeInstruction({ ...state, words: state.request }) : undefined;
+}
+
+/** Live check 2026-11-09: the WhatsApp the merchant typed («Sí, al 71234567») — newest answer first, then the first words — so the
+ *  build can save it as the store's number. A Bolivian 7–8 digit number, with or without +591; null when none. */
+export function intakePhone(state: Pick<IntakeState, 'words' | 'answers'>) {
+  const phone = /(?<![\d+])(?:\+?591[\s-]?)?[2-7](?:[\s-]?\d){6,7}(?!\d)/;
+  for (const text of [...state.answers.map(answer => answer.answer).reverse(), state.words]) {
+    const found = String(text ?? '').match(phone);
+    if (found) return found[0].trim();
+  }
+  return null;
+}
+
 export function intakeMessage(turn: IntakeTurn, first: boolean) {
   return [turn.reply, first && turn.understood ? `Entendí: ${turn.understood}.` : '', turn.question].filter(Boolean).join('\n\n');
 }

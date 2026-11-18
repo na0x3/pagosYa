@@ -27,6 +27,16 @@
       else { const stored = sessionStorage.getItem(key); if (valid(stored)) partnerCode = stored; }
     } catch {}
   }
+  // The discount code the shopper applied (owner 2026-11-07: «no hay ninguna opción para aplicar el cupón»). It rides on every
+  // quote and on the checkout, and stays for this visit so moving between pages keeps it.
+  const PROMO_PATTERN = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
+  const promoKey = `pagosya:promo:${config.slug}`;
+  let promoCode = '';
+  try { const stored = sessionStorage.getItem(promoKey) || ''; if (PROMO_PATTERN.test(stored)) promoCode = stored; } catch {}
+  function rememberPromo(code) {
+    promoCode = code;
+    try { if (code) sessionStorage.setItem(promoKey, code); else sessionStorage.removeItem(promoKey); } catch {}
+  }
 
   const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   // Published stores: personal fields are typed in pagosYa's secure form outside the design, never in this frame.

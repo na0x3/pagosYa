@@ -1,13 +1,13 @@
 {
   "id": "focal",
   "name": "Focal",
-  "category": "tecnologia",
-  "description": "Tecnología y accesorios: amarillo y negro, letra ancha y fuerte, productos con pestañas, la mirada de un producto, colaboraciones y una línea de tiempo.",
+  "category": "moda",
+  "description": "Ropa urbana y moda: amarillo y negro, letra ancha y fuerte, productos con pestañas, la mirada de una prenda, colaboraciones y una línea de tiempo.",
   "tags": [
-    "tecnología",
-    "accesorios",
-    "gadgets",
-    "diseño"
+    "moda",
+    "ropa",
+    "urbana",
+    "streetwear"
   ],
   "sitePurpose": "shop",
   "order": 43,

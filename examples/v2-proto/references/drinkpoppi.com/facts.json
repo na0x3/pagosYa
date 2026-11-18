@@ -1,0 +1,801 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.drinkpoppi.com/",
+    "title": "poppi",
+    "width": 1440,
+    "pageHeight": 4793,
+    "fonts": {
+      "h1": {
+        "family": "font-secondary",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "poppi — the prebiotic soda"
+      },
+      "h2": {
+        "family": "font-secondary",
+        "size": "60px",
+        "weight": "400",
+        "case": "lowercase",
+        "tracking": "-1.2px",
+        "text": "variety is the spice of life"
+      },
+      "body": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "By providing us your email, you agree to receive marketing e"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "lowercase",
+        "tracking": "normal",
+        "text": "shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(236, 0, 140)",
+      "links": [
+        "shop",
+        "our story",
+        "why poppi?",
+        "find poppi",
+        "poppi home",
+        "poppi Cranberry Fizz",
+        "Cranberry Fizz",
+        "Add to Cart",
+        "poppi Cream Soda",
+        "Cream Soda",
+        "Add to Cart",
+        "poppi Lemon Lime",
+        "Lemon Lime",
+        "Add to Cart",
+        "poppi Root Beer",
+        "Root Beer"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 130,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 855,
+        "h": 2818,
+        "bg": "rgb(255, 255, 255)",
+        "images": 38,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "60px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-1.2px",
+          "text": "variety is the spice of life"
+        },
+        "words": 62,
+        "perRow": 7,
+        "fullBleed": false
+      },
+      {
+        "y": 3678,
+        "h": 177,
+        "bg": "rgb(255, 255, 255)",
+        "images": 32,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 16,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.drinkpoppi.com/",
+    "title": "poppi",
+    "width": 390,
+    "pageHeight": 9285,
+    "fonts": {
+      "h1": {
+        "family": "font-secondary",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "poppi — the prebiotic soda"
+      },
+      "h2": {
+        "family": "font-secondary",
+        "size": "46px",
+        "weight": "400",
+        "case": "lowercase",
+        "tracking": "-0.92px",
+        "text": "variety is the spice of life"
+      },
+      "body": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "By providing us your email, you agree to receive marketing e"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(236, 0, 140)",
+      "links": [
+        "menu",
+        "poppi home"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 130,
+        "h": 676,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 811,
+        "h": 7163,
+        "bg": "rgb(255, 255, 255)",
+        "images": 39,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "46px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.92px",
+          "text": "variety is the spice of life"
+        },
+        "words": 62,
+        "perRow": 7,
+        "fullBleed": false
+      },
+      {
+        "y": 7979,
+        "h": 125,
+        "bg": "rgb(255, 255, 255)",
+        "images": 32,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 16,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.drinkpoppi.com/collections/drinks",
+    "title": "Drinks – poppi",
+    "width": 1440,
+    "pageHeight": 5714,
+    "fonts": {
+      "h1": {
+        "family": "font-secondary",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "drinks"
+      },
+      "h2": {
+        "family": "font-secondary",
+        "size": "28px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cranberry Fizz"
+      },
+      "body": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "By providing us your email, you agree to receive marketing e"
+      },
+      "button": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "single flavor"
+      },
+      "nav": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "lowercase",
+        "tracking": "normal",
+        "text": "shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(236, 0, 140)",
+      "links": [
+        "shop",
+        "our story",
+        "why poppi?",
+        "find poppi",
+        "poppi home",
+        "poppi Cranberry Fizz",
+        "Cranberry Fizz",
+        "Add to Cart",
+        "poppi Cream Soda",
+        "Cream Soda",
+        "Add to Cart",
+        "poppi Lemon Lime",
+        "Lemon Lime",
+        "Add to Cart",
+        "poppi Root Beer",
+        "Root Beer"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 593,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "drinks"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 665,
+        "h": 4021,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "28px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cranberry Fizz"
+        },
+        "words": 116,
+        "perRow": 3,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.drinkpoppi.com/collections/drinks",
+    "title": "Drinks – poppi",
+    "width": 390,
+    "pageHeight": 13377,
+    "fonts": {
+      "h1": {
+        "family": "font-secondary",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "drinks"
+      },
+      "h2": {
+        "family": "font-secondary",
+        "size": "28px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cranberry Fizz"
+      },
+      "body": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "By providing us your email, you agree to receive marketing e"
+      },
+      "button": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "single flavor"
+      },
+      "nav": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(236, 0, 140)",
+      "links": [
+        "menu",
+        "poppi home"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 247,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "drinks"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 374,
+        "h": 11733,
+        "bg": "rgb(255, 255, 255)",
+        "images": 18,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "28px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cranberry Fizz"
+        },
+        "words": 116,
+        "perRow": 1,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.drinkpoppi.com/products/cranberry-fizz",
+    "title": "Cranberry Fizz – poppi",
+    "width": 1440,
+    "pageHeight": 5234,
+    "fonts": {
+      "h1": {
+        "family": "font-secondary",
+        "size": "60px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.2px",
+        "text": "Cranberry Fizz"
+      },
+      "h2": {
+        "family": "font-secondary",
+        "size": "80px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.6px",
+        "text": "we’re popping up near you"
+      },
+      "body": {
+        "family": "font-primary",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Would it even be the holidays without the return of this fan"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "lowercase",
+        "tracking": "normal",
+        "text": "shop"
+      }
+    },
+    "page": "rgb(238, 20, 32)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(238, 20, 32)",
+      "links": [
+        "shop",
+        "our story",
+        "why poppi?",
+        "find poppi",
+        "poppi home",
+        "poppi Cranberry Fizz",
+        "Cranberry Fizz",
+        "Add to Cart",
+        "poppi Cream Soda",
+        "Cream Soda",
+        "Add to Cart",
+        "poppi Lemon Lime",
+        "Lemon Lime",
+        "Add to Cart",
+        "poppi Root Beer",
+        "Root Beer"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 80,
+        "h": 718,
+        "bg": "rgb(238, 20, 32)",
+        "images": 31,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "60px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "Cranberry Fizz"
+        },
+        "words": 68,
+        "perRow": 24,
+        "fullBleed": true
+      },
+      {
+        "y": 798,
+        "h": 900,
+        "bg": "rgb(238, 20, 32)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1698,
+        "h": 756,
+        "bg": "rgb(238, 20, 32)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2553,
+        "h": 1386,
+        "bg": "rgb(238, 20, 32)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "60px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "tastes like you’ll need more than one"
+        },
+        "words": 38,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 3939,
+        "h": 357,
+        "bg": "rgb(238, 20, 32)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "80px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.6px",
+          "text": "we’re popping up near you"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 916,
+        "h": 104,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 538,
+      "x": 46,
+      "width": 373,
+      "bg": "rgb(238, 20, 32)"
+    },
+    "price": null,
+    "galleryImages": 12,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 2
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.drinkpoppi.com/products/cranberry-fizz",
+    "title": "Cranberry Fizz – poppi",
+    "width": 390,
+    "pageHeight": 5562,
+    "fonts": {
+      "h1": {
+        "family": "font-secondary",
+        "size": "60px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.2px",
+        "text": "Cranberry Fizz"
+      },
+      "h2": {
+        "family": "font-secondary",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.8px",
+        "text": "we’re popping up near you"
+      },
+      "body": {
+        "family": "font-primary",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Would it even be the holidays without the return of this fan"
+      },
+      "button": {
+        "family": "font-primary",
+        "size": "24px",
+        "weight": "400",
+        "case": "lowercase",
+        "tracking": "normal",
+        "text": "Add to Cart"
+      },
+      "nav": {
+        "family": "font-primary",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(238, 20, 32)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(238, 20, 32)",
+      "links": [
+        "menu",
+        "poppi home"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 80,
+        "h": 1036,
+        "bg": "rgb(238, 20, 32)",
+        "images": 31,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "60px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "Cranberry Fizz"
+        },
+        "words": 84,
+        "perRow": 24,
+        "fullBleed": true
+      },
+      {
+        "y": 1161,
+        "h": 694,
+        "bg": "rgb(238, 20, 32)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1855,
+        "h": 1201,
+        "bg": "rgb(238, 20, 32)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3156,
+        "h": 923,
+        "bg": "rgb(238, 20, 32)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.64px",
+          "text": "tastes like you’ll need more than one"
+        },
+        "words": 38,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 4080,
+        "h": 302,
+        "bg": "rgb(238, 20, 32)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "font-secondary",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.8px",
+          "text": "we’re popping up near you"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": false,
+      "top": 3828,
+      "x": 16,
+      "width": 373,
+      "bg": "rgb(142, 0, 17)"
+    },
+    "price": null,
+    "galleryImages": 11,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 2
+  }
+}

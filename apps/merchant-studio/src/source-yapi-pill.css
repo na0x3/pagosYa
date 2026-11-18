@@ -37,7 +37,11 @@
 .yapi-pill__send:hover:not(:disabled) { background: var(--yp-brand-hover); }
 .yapi-pill__send:active:not(:disabled) { transform: scale(.97); }
 .yapi-pill__send:disabled { opacity: .55; cursor: default; }
+.yapi-pill__stop { background: #fff; color: #1c1a05; box-shadow: inset 0 0 0 1.5px #1c1a05; }
+.yapi-pill__send.yapi-pill__stop:hover:not(:disabled) { background: #f1f0ea; }
 .yapi-pill__chip { padding: 5px 10px; border-radius: 999px; background: rgb(29 27 23 / .07); color: var(--yp-ink); font-size: 12.5px; white-space: nowrap; }
+.yapi-pill__chip-action { border: 0; background: var(--yp-ink); color: #fff; font: inherit; font-size: 12.5px; cursor: pointer; }
+.yapi-pill__chip-action:disabled { opacity: .5; cursor: default; }
 .yapi-pill__plus { position: relative; }
 .yapi-pill__menu { position: absolute; bottom: calc(100% + 12px); right: -8px; display: grid; min-width: 180px; padding: 6px; border: 1px solid var(--yp-edge); border-radius: 16px; background: var(--yp-glass-strong); -webkit-backdrop-filter: var(--yp-blur); backdrop-filter: var(--yp-blur); box-shadow: var(--yp-shadow); }
 .yapi-pill__menu[hidden] { display: none; }
@@ -103,7 +107,8 @@
   .yapi-dock::before { content: "YAPI"; position: absolute; top: 20px; left: 64px; color: var(--yp-ink); font: 600 14px/24px ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: .02em; }
   .yapi-dock > .yapi-history, .yapi-dock > .yapi-history[hidden] { position: static; display: flex; flex: 1 1 auto; min-height: 0; width: auto; max-height: none; border: 1px solid rgb(255 255 255 / .45); background: rgb(255 255 255 / .18); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
   .yapi-dock > .yapi-history header { display: none; }
-  .yapi-dock :is(.yapi-cards, .yapi-sheet) { position: static; flex: 0 1 auto; transform: none; width: auto; max-height: 46vh; background: rgb(255 255 255 / .5); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+  /* Owner 2026-11-09: a long chat squeezed the error card to a red sliver; the card keeps its height (up to 46vh) and the chat gives. */
+  .yapi-dock :is(.yapi-cards, .yapi-sheet) { position: static; flex: 0 0 auto; transform: none; width: auto; max-height: 46vh; background: rgb(255 255 255 / .5); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
   .yapi-dock .yapi-pill { position: static; flex: 0 0 auto; width: auto; border-radius: 22px; background: rgb(255 255 255 / .55); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 1px 2px rgb(40 36 28 / .06); }
   .yapi-dock .yapi-pill__star { cursor: default; }
   .yapi-dock [data-yapi-history-open] { display: none; }
@@ -131,6 +136,8 @@
   .yapi-dock .yapi-pill__row { flex-wrap: wrap; row-gap: 4px; }
   .yapi-dock .yapi-pill textarea { order: -1; flex: 1 1 100%; padding-inline: 8px; }
   .yapi-dock .yapi-pill__send { margin-left: auto; }
+  /* NOA 2026-11-11: + sits at the panel's left edge here, so its menu opens rightward (anchored right it was cut off the screen). */
+  .yapi-dock .yapi-pill__menu { right: auto; left: -8px; }
 }
 @media (min-width: 900px) {
   /* The top controls get their own strip above the store instead of covering its header (live check 2026-10-23, goodProtein

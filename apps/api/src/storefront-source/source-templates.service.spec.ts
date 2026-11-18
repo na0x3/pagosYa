@@ -156,6 +156,48 @@ describe('SourceTemplatesService', () => {
     expect(['bar', 'chips', 'sidebar']).toContain(JSON.parse(files.find(f => f.path === 'config.js').content.match(/= ([\s\S]*);\n$/)![1]).filterStyle);
   });
 
+  it('a section keeps the template photo it names by slot when the layout is saved (NOA 2026-11-11: «más secciones» emptied the hero)', async () => {
+    const { templates: base, projects, prisma } = service(0);
+    const uploads = { getBuffer: jest.fn(async () => Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])) };
+    (prisma as any).mediaAsset = { findMany: jest.fn(async () => []) };
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config, uploads as any);
+    const { change } = await (templates as any).bundleMasterPhotos('m1', {
+      layout: [{ type: 'promo-banner', title: 'Hola', photo: 'slot:pa-hero1' }, { type: 'shop-look', photo: 'slot:fi-story', items: [{ title: 'Uno', photo: 'slot:pa-p1' }] }, { type: 'steps-howto', photo: 'https://elsewhere.test/x.jpg' }],
+      pageLayouts: { about: [{ type: 'story-split', photo: 'slot:at-detalle' }] },
+    });
+    expect(change.layout).toEqual([{ type: 'promo-banner', title: 'Hola', photo: 'slot:pa-hero1' }, { type: 'shop-look', photo: 'slot:fi-story', items: [{ title: 'Uno', photo: 'slot:pa-p1' }] }, { type: 'steps-howto' }]);
+    expect(change.pageLayouts.about[0].photo).toBe('slot:at-detalle');
+  });
+
+  it('refillDraft prepares the composed home without saving a revision (spec 2026-11-11)', async () => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const { templates: base, prisma } = service(2);
+    const config = `window.PAGOSYA_CONFIG = ${JSON.stringify({ dna: {}, data: { categories: [], items: [] } })};\n`;
+    const projects = { current: jest.fn(), save: jest.fn(), prepare: jest.fn(async (input: any) => ({ ...input, prepared: true })),
+      version: jest.fn(async () => ({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [{ path: 'config.js', content: config }, { path: 'components/store-data.tsx', content: '' }] } })) };
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    const draft: any = await templates.refillDraft('m1', 's1', 2, { layout: [{ type: 'cover-mega', title: 'Hola' }] } as never);
+    expect(projects.save).not.toHaveBeenCalled();
+    expect(draft.prepared).toBe(true);
+    expect(draft.files.find((file: any) => file.path === 'components/store-data.tsx').content).toContain('"cover-mega"');
+  });
+
+  it('recentThemeHomes reads the latest home of recent stores on the same template, newest first (spec 2026-11-11)', async () => {
+    const { templates, prisma } = service(0);
+    const real = jest.requireActual('./source-templates');
+    const data = (theme: string, types: string[]) => real.templateStoreDataFile({ name: 'x' }, {}, { copy: {}, look: {}, variants: { theme }, layout: types.map(type => ({ type })) }).content;
+    (prisma as any).$queryRaw = jest.fn(async () => [
+      { name: 'Miga', data: data('merienda', ['cover-mega', 'products-rows']) },
+      { name: 'Brillo', data: data('neon', ['cover-ribbon']) },
+      { name: 'Canasta', data: data('merienda', ['cover-mega', 'story-split']) },
+      { name: 'Vacía', data: null },
+    ]);
+    const homes = await templates.recentThemeHomes('s1', 'merienda');
+    expect(homes.map(home => home.store)).toEqual(['Miga', 'Canasta']);
+    expect(homes[0]).toEqual({ store: 'Miga', cover: 'cover-mega:', types: ['cover-mega', 'products-rows'] });
+  });
+
   it('a menu change is checked against the live catalog, so a category made after the build can be linked (final review 2026-10-21)', async () => {
     const real = jest.requireActual('@pagosya/store-templates');
     const { templates: base, prisma } = service(2);

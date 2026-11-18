@@ -120,8 +120,8 @@ export function evaluateCalmTitles(): string[] {
 /** Owner 2026-10-30 («oh belly … plain still»): a fun store keeps something moving on the first screen — a floating or turning
  *  piece, not only letters that bounce once. Runs in the page. */
 export function evaluatePlayfulCover(): string[] {
-  const moving = Array.from(document.querySelectorAll('main .ui-float, main .ui-sticker')).some(el => { const r = el.getBoundingClientRect(); return r.width > 20 && r.top < window.innerHeight && r.bottom > 0; });
-  return moving ? [] : ['BLOQUEA: Tienda divertida: en la primera pantalla nada se mueve sin parar. Pon un <Float> o un <Sticker> dentro de la portada (junto al titular o sobre la foto), visible sin bajar.'];
+  const moving = Array.from(document.querySelectorAll('main .ui-float')).some(el => { const r = el.getBoundingClientRect(); return r.width > 20 && r.top < window.innerHeight && r.bottom > 0; });
+  return moving ? [] : ['BLOQUEA: Tienda divertida: en la primera pantalla nada se mueve sin parar. Pon un <Float> dentro de la portada (un producto o un detalle de la marca dibujado en SVG, junto al titular o sobre la foto), visible sin bajar.'];
 }
 
 const HEADER = /^Encabezado/;

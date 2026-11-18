@@ -1,0 +1,691 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://flybyjing.com/",
+    "title": "Shop the Best Chinese Chili Sauce – FLY BY JING",
+    "width": 1440,
+    "pageHeight": 6447,
+    "fonts": {
+      "h1": {
+        "family": "JeanLuc",
+        "size": "44px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "JeanLuc",
+        "size": "68px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "2026 Limited Edition 12-Day Advent Calendar"
+      },
+      "body": {
+        "family": "Muoto",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free shipping on $75+ after discounts"
+      },
+      "button": {
+        "family": "JeanLuc",
+        "size": "24px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Add to cart"
+      },
+      "nav": null
+    },
+    "page": "rgb(4, 97, 53)",
+    "header": {
+      "height": 54,
+      "position": "sticky",
+      "bg": "rgb(4, 97, 53)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 131,
+        "h": 5246,
+        "bg": "rgb(64, 0, 4)",
+        "images": 29,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "104px",
+          "weight": "800",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Up to 50% off"
+        },
+        "words": 398,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 27,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://flybyjing.com/",
+    "title": "Shop the Best Chinese Chili Sauce – FLY BY JING",
+    "width": 390,
+    "pageHeight": 7238,
+    "fonts": {
+      "h1": {
+        "family": "JeanLuc",
+        "size": "17.6px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "JeanLuc",
+        "size": "46px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "2026 Limited Edition 12-Day Advent Calendar"
+      },
+      "body": {
+        "family": "Muoto",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free shipping on $75+ after discounts"
+      },
+      "button": {
+        "family": "JeanLuc",
+        "size": "22px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Add to cart"
+      },
+      "nav": null
+    },
+    "page": "rgb(4, 97, 53)",
+    "header": {
+      "height": 34,
+      "position": "sticky",
+      "bg": "rgb(4, 97, 53)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 6068,
+        "bg": "rgb(64, 0, 4)",
+        "images": 28,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "62px",
+          "weight": "800",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Up to 50% off"
+        },
+        "words": 399,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 21,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://flybyjing.com/collections/all",
+    "title": "All – FLY BY JING",
+    "width": 1440,
+    "pageHeight": 13655,
+    "fonts": {
+      "h1": {
+        "family": "JeanLuc",
+        "size": "88px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "All"
+      },
+      "h2": {
+        "family": "JeanLuc",
+        "size": "88px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "YOU WILL FIND YOURSELF PUTTING THIS ON EVERYTHING"
+      },
+      "body": {
+        "family": "Publico",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Available in 2-Pack & More"
+      },
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(4, 97, 53)",
+    "header": {
+      "height": 54,
+      "position": "sticky",
+      "bg": "rgb(4, 97, 53)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 131,
+        "h": 158,
+        "bg": "rgb(4, 97, 53)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "88px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "All"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 289,
+        "h": 11575,
+        "bg": "rgb(4, 97, 53)",
+        "images": 47,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "29.3665px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Original Sichuan Chili Crisp"
+        },
+        "words": 441,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 11864,
+        "h": 721,
+        "bg": "rgb(4, 97, 53)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "88px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "YOU WILL FIND YOURSELF PUTTING THIS ON EVERYTHING"
+        },
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://flybyjing.com/collections/all?_su_rec=ARR6-BBUwSnhRiyEH6l7Q_WH4oCPI_slQh3jmzFTXxKmQEpizeCDonr7NcaZMOfqFjV3K3rlsKntB8jik8iKqpL_X192gmaaFE5j6AxZ6huu7-ZeHTl43wgiVnyrG0-mcuR8JszKZW1kq52pd5AO9Ehui2GrP8_KBEzbb80p6h1TqInJb_fpsbNEhmI6yCmXyLq2pdvsU0DMwra1ENGv8K7DKb4mWtUJdV7jMYZyhTah8OlabO42Al2Yzjj2RyqfdFrMi1SL4t--rgR6dXZvWxOZzHAXf7aJ3QQas4mh_37WWbUL0p5WbFJmUTyS3eP3RIV94v0-6oFlTDz6P0PXXEVNtZpIcceFUv0DQ2E&_su_rec_id=a65a9bb7-c660-47e9-95a9-c2d98b3776fd-1794666813",
+    "title": "All – FLY BY JING",
+    "width": 390,
+    "pageHeight": 7451,
+    "fonts": {
+      "h1": {
+        "family": "JeanLuc",
+        "size": "46.9864px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "All"
+      },
+      "h2": {
+        "family": "JeanLuc",
+        "size": "46.9864px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "YOU WILL FIND YOURSELF PUTTING THIS ON EVERYTHING"
+      },
+      "body": {
+        "family": "Publico",
+        "size": "17.6px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Available in 2-Pack & More"
+      },
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(4, 97, 53)",
+    "header": {
+      "height": 34,
+      "position": "sticky",
+      "bg": "rgb(4, 97, 53)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 172,
+        "h": 5628,
+        "bg": "rgb(4, 97, 53)",
+        "images": 47,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "23.4932px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Original Sichuan Chili Crisp"
+        },
+        "words": 441,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 5800,
+        "h": 580,
+        "bg": "rgb(4, 97, 53)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "46.9864px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "YOU WILL FIND YOURSELF PUTTING THIS ON EVERYTHING"
+        },
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://flybyjing.com/products/triple-threat-gift-box",
+    "title": "Triple Threat Gift Box | Fly By Jing – FLY BY JING",
+    "width": 1440,
+    "pageHeight": 3914,
+    "fonts": {
+      "h1": {
+        "family": "JeanLuc",
+        "size": "78.3991px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Triple Threat Gift Box"
+      },
+      "h2": {
+        "family": "JeanLuc",
+        "size": "88px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "PLAYS NICE WITH"
+      },
+      "body": {
+        "family": "Publico",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Our best-selling trio of addictive Sichuan Sauces, now in a "
+      },
+      "button": {
+        "family": "Publico",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Previous slide"
+      },
+      "nav": null
+    },
+    "page": "rgb(4, 97, 53)",
+    "header": {
+      "height": 54,
+      "position": "sticky",
+      "bg": "rgb(4, 97, 53)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 131,
+        "h": 1324,
+        "bg": "rgb(4, 97, 53)",
+        "images": 17,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "78.3991px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Triple Threat Gift Box"
+        },
+        "words": 148,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1455,
+        "h": 908,
+        "bg": "rgb(4, 97, 53)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "88px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "PLAYS NICE WITH"
+        },
+        "words": 69,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2363,
+        "h": 481,
+        "bg": "rgb(4, 97, 53)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "88px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Praise for Triple Threat Gift Box"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 839,
+      "x": 964,
+      "width": 367,
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    "price": {
+      "family": "JeanLuc",
+      "size": "22px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$50.00 $32.50"
+    },
+    "galleryImages": 10,
+    "swatches": 2,
+    "selects": 1,
+    "accordions": 8
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://flybyjing.com/products/triple-threat-gift-box",
+    "title": "Triple Threat Gift Box | Fly By Jing – FLY BY JING",
+    "width": 390,
+    "pageHeight": 4294,
+    "fonts": {
+      "h1": {
+        "family": "JeanLuc",
+        "size": "62.7193px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Triple Threat Gift Box"
+      },
+      "h2": {
+        "family": "JeanLuc",
+        "size": "46.9864px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "PLAYS NICE WITH"
+      },
+      "body": {
+        "family": "Publico",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Our best-selling trio of addictive Sichuan Sauces, now in a "
+      },
+      "button": {
+        "family": "Publico",
+        "size": "17.6px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Previous slide"
+      },
+      "nav": null
+    },
+    "page": "rgb(4, 97, 53)",
+    "header": {
+      "height": 34,
+      "position": "sticky",
+      "bg": "rgb(4, 97, 53)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 1725,
+        "bg": "rgb(4, 97, 53)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "62.7193px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Triple Threat Gift Box"
+        },
+        "words": 148,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1823,
+        "h": 1063,
+        "bg": "rgb(4, 97, 53)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "46.9864px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "PLAYS NICE WITH"
+        },
+        "words": 69,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2887,
+        "h": 336,
+        "bg": "rgb(4, 97, 53)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "46.9864px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Praise for Triple Threat Gift Box"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": false,
+      "top": 1362,
+      "x": 11,
+      "width": 368,
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    "price": {
+      "family": "JeanLuc",
+      "size": "17.6px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$50.00 $32.50"
+    },
+    "galleryImages": 10,
+    "swatches": 2,
+    "selects": 1,
+    "accordions": 8
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://flybyjing.com/cart",
+    "title": "Your Shopping Cart – FLY BY JING",
+    "width": 1440,
+    "pageHeight": 2360,
+    "fonts": {
+      "h1": {
+        "family": "JeanLuc",
+        "size": "88px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Your cart"
+      },
+      "h2": {
+        "family": "JeanLuc",
+        "size": "88px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "electrify your inbox⚡️"
+      },
+      "body": {
+        "family": "Publico",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Product"
+      },
+      "button": {
+        "family": "Publico",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(4, 97, 53)",
+    "header": {
+      "height": 54,
+      "position": "sticky",
+      "bg": "rgb(4, 97, 53)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 175,
+        "h": 1071,
+        "bg": "rgb(4, 97, 53)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "JeanLuc",
+          "size": "88px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Your cart"
+        },
+        "words": 40,
+        "perRow": 1,
+        "fullBleed": false
+      }
+    ]
+  }
+}

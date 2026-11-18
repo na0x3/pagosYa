@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { PlansService } from "../plans/plans.service";
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { customAlphabet } from "nanoid";
 import { MerchantStatus, PaymentMethodType, Prisma, StoreStatus } from "@prisma/client";
 import * as QRCode from "qrcode";
@@ -29,6 +30,7 @@ export class StoresService {
     private readonly prisma: PrismaService,
     private readonly paymentIntents: PaymentIntentsService,
     private readonly uploads: UploadsService,
+    @Optional() private readonly plans?: PlansService,
   ) {}
 
   async onboardingState(merchantId: string, enabled: boolean, storeId?: string) {
@@ -224,6 +226,8 @@ export class StoresService {
   async update(merchantId: string, id: string, dto: UpdateStoreDto) {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
     if (!store) throw new NotFoundException("Store not found");
+    // Plans 2026-11-07: turning a store public is publishing, which the Gratis plan does not include.
+    if (dto.publicVisibility === true && !store.publicVisibility) await this.plans?.assertCanPublish(merchantId);
     await this.assertOwnedSiteSectionMedia(merchantId, dto, store.siteDocument);
     if (dto.locations !== undefined) {
       assertValidStoreLocations(dto.locations);
@@ -243,6 +247,8 @@ export class StoresService {
   async saveSettings(merchantId: string, id: string, dto: SaveStoreSettingsDto) {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId } });
     if (!store) throw new NotFoundException("Store not found");
+    // Plans 2026-11-07: turning a store public is publishing, which the Gratis plan does not include.
+    if (dto.publicVisibility === true && !store.publicVisibility) await this.plans?.assertCanPublish(merchantId);
     await this.assertOwnedSiteSectionMedia(merchantId, dto, store.siteDocument);
     const { links, locations, ...storeDto } = dto;
     if (locations !== undefined) assertValidStoreLocations(locations);
@@ -302,6 +308,7 @@ export class StoresService {
   async publishWebsiteDraft(merchantId: string, id: string, revision: number) {
     const store = await this.prisma.store.findFirst({ where: { id, merchantId }, include: { links: { orderBy: { sortOrder: "asc" } } } });
     if (!store) throw new NotFoundException("Store not found");
+    await this.plans?.assertCanPublish(merchantId);
     assertWebsiteRevision(store, revision);
     const draft = websiteDraft(store);
     if (!draft) throw new BadRequestException("Guarda un borrador antes de publicarlo.");

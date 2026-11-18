@@ -2,8 +2,9 @@
  *  Pure; the template apply and the content edits (source-templates.ts) both use it. */
 import type { MasterCopy, MasterSettings } from '@pagosya/store-templates';
 import { SOURCE_FONT_CATALOG } from './source-font-catalog';
+import { loudAccent } from './source-palette';
 import { bestInkFor, contrastRatio } from './sketch/sketch-schema';
-import type { StoreMenuGroup } from './source-store-menu';
+import type { StoreMenu, StoreMenuGroup } from './source-store-menu';
 import type { FeatureCopy } from './source-master-features';
 import { TITLE_STYLES, isTitleStyle, type TitleStyle } from './source-title-style';
 
@@ -18,8 +19,51 @@ const HEX = /^#[0-9a-f]{6}$/i;
 
 export type MasterColour = 'paper' | 'ink' | 'muted' | 'accent' | 'deep';
 export const MASTER_COLOURS: readonly MasterColour[] = ['paper', 'ink', 'muted', 'accent', 'deep'];
-export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>>; titles?: string[] };
+/** Miga Dorada 2026-11-07 («que el footer sea rosado»): the parts a merchant may colour on their own, over the theme's fixed colour. */
+export type MasterPart = 'header' | 'footer' | 'announce';
+export const MASTER_PARTS: readonly MasterPart[] = ['header', 'footer', 'announce'];
+export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>>; titles?: string[];
+  /** A part's own background colour (#rrggbb); a part left out keeps its theme's colour. */
+  parts?: Partial<Record<MasterPart, string>>;
+  /** Owner 2026-11-13 («custom letters»): the store name as a lettered logo — its own catalog font, case, spacing and colour. */
+  logo?: LookLogo;
+  /** Owner 2026-11-13 («custom icons», brand style): the platform icons drawn thin or bold, in a circle or a square or bare. */
+  icons?: LookIcons;
+  /** Owner 2026-11-13 («shapes should change store from store… buttons need animations when hovered»): one corner family for every
+   *  button, field, chip and panel, and one hover motion. */
+  shape?: LookShape;
+  /** Owner 2026-11-13 («clean like Aesop»): one ground, product photos on even tiles, calm titles, small spaced labels, hairlines. */
+  clean?: boolean };
+export type LookShape = { corners: 'sharp' | 'soft' | 'round' | 'pill' | 'cut'; hover: 'lift' | 'sweep' | 'arrow' | 'glow' | 'press' };
+export const SHAPE_CORNERS = ['sharp', 'soft', 'round', 'pill', 'cut'] as const;
+export const SHAPE_HOVERS = ['lift', 'sweep', 'arrow', 'glow', 'press'] as const;
+export type LookLogo = { font: string; case: 'upper' | 'lower' | 'as-is'; track: 'tight' | 'normal' | 'wide'; colour: 'ink' | 'accent' };
+export type LookIcons = { stroke: 'thin' | 'regular' | 'bold'; frame: 'none' | 'circle' | 'square' };
+export const LOGO_CASES = ['upper', 'lower', 'as-is'] as const;
+export const LOGO_TRACKS = ['tight', 'normal', 'wide'] as const;
+export const LOGO_COLOURS = ['ink', 'accent'] as const;
+export const ICON_STROKES = ['thin', 'regular', 'bold'] as const;
+export const ICON_FRAMES = ['none', 'circle', 'square'] as const;
+const oneOf = <T extends string>(list: readonly T[], value: unknown): T | undefined => (list as readonly string[]).includes(String(value)) ? value as T : undefined;
+/** A lettered logo only with a catalog font and known choices; anything else is no logo style (the theme's own name). */
+export function lookLogo(value: unknown): LookLogo | undefined {
+  const given = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  if (!SOURCE_FONT_CATALOG.some(font => font.id === given.font)) return undefined;
+  return { font: String(given.font), case: oneOf(LOGO_CASES, given.case) ?? 'as-is', track: oneOf(LOGO_TRACKS, given.track) ?? 'normal', colour: oneOf(LOGO_COLOURS, given.colour) ?? 'ink' };
+}
+export function lookShape(value: unknown): LookShape | undefined {
+  const given = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const corners = oneOf(SHAPE_CORNERS, given.corners), hover = oneOf(SHAPE_HOVERS, given.hover);
+  return corners || hover ? { corners: corners ?? 'soft', hover: hover ?? 'lift' } : undefined;
+}
+export function lookIcons(value: unknown): LookIcons | undefined {
+  const given = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const stroke = oneOf(ICON_STROKES, given.stroke), frame = oneOf(ICON_FRAMES, given.frame);
+  return stroke || frame ? { stroke: stroke ?? 'regular', frame: frame ?? 'none' } : undefined;
+}
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
+  /** Owner 2026-11-13 (product page «duo»): each product photo's ground colour, by upload path (store-data `features.productGrounds`). */
+  productGrounds?: Record<string, string>;
   /** Section library (spec 2026-10-31): the home's blocks, in order (store-data `layout`); photos already bundled. */
   layout?: unknown[];
   /** Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box (store-data
@@ -36,6 +80,8 @@ export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook
   brandPhotos?: string[];
   /** Owner 2026-10-28: the colours the merchant named for the brand (source-palette.ts coloursFromWords), as hex, in the order written. */
   namedColours?: string[];
+  /** Owner 2026-11-13 (ZARA): colours the merchant gave a job («fondo blanco, texto negro») and a black-and-white brand. */
+  namedRoles?: import('./source-palette').ColourRoles;
   /** Variety spec: the business's character, its sections and any variant the merchant named. */
   character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants>;
   /** The uploads the bundled hero/story photos came from, so product slots holding the same photo can point at the bundle. */
@@ -80,7 +126,134 @@ export function masterLook(settings: MasterSettings, partial: Partial<MasterLook
   for (const key of MASTER_COLOURS) { const value = partial.colors?.[key]; if (typeof value === 'string' && HEX.test(value)) colors[key] = value.toLowerCase(); }
   // Chunky colour titles (spec 2026-11-03): up to four title colours from the store's photos.
   const titles = (partial.titles ?? []).filter(value => typeof value === 'string' && HEX.test(value)).map(value => value.toLowerCase()).slice(0, 4);
-  return { palette, fonts, colors, ...(titles.length ? { titles } : {}) };
+  const parts = lookParts(partial.parts);
+  const logo = lookLogo(partial.logo), icons = lookIcons(partial.icons), shape = lookShape(partial.shape);
+  return { palette, fonts, colors, ...(titles.length ? { titles } : {}), ...(Object.keys(parts).length ? { parts } : {}), ...(logo ? { logo } : {}), ...(icons ? { icons } : {}), ...(shape ? { shape } : {}), ...(partial.clean === true ? { clean: true } : {}) };
+}
+
+/** The part colours that are #rrggbb, lower case. */
+function lookParts(parts: unknown): Partial<Record<MasterPart, string>> {
+  const given = (parts && typeof parts === 'object' ? parts : {}) as Record<string, unknown>;
+  return Object.fromEntries(MASTER_PARTS.flatMap(part => typeof given[part] === 'string' && HEX.test(given[part] as string) ? [[part, (given[part] as string).toLowerCase()]] : []));
+}
+
+/** The saved part colours with a change over them: a hex sets the part, "" gives it back to the theme, anything else is ignored. */
+export function mergeLookParts(current: unknown, change: unknown): Partial<Record<MasterPart, string>> {
+  const out = lookParts(current);
+  const asked = (change && typeof change === 'object' ? change : {}) as Record<string, unknown>;
+  for (const part of MASTER_PARTS) {
+    const value = asked[part];
+    if (value === '') delete out[part];
+    else if (typeof value === 'string' && HEX.test(value)) out[part] = value.toLowerCase();
+  }
+  return out;
+}
+
+/** A part's colour drawn over every theme (they paint it a fixed hex): its words follow in a colour that reads on it, but not a box
+ *  inside with its own colour — the footer's ticker strip, signup form and dark boxes, a dropdown panel, the cart count, a button. */
+export function masterPartsCss(parts: Partial<Record<MasterPart, string>> | undefined): string {
+  const rules: string[] = [];
+  const ink = (hex: string) => bestInkFor(hex, '#ffffff');
+  if (parts?.announce) rules.push(`.es-announce{background:${parts.announce}!important;color:${ink(parts.announce)}!important}`,
+    '.es-announce :is(p,span,a){color:inherit!important}');
+  if (parts?.header) rules.push(`.es-header{background:${parts.header}!important;color:${ink(parts.header)}!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}`,
+    '.es-header :is(a,button,span,p,.es-logo,.es-icon-btn):not(.es-btn):not(.es-btn *):not(.es-cart-count):not(.es-header__search *):not([class*="panel"] *):not([class*="drop"] *){color:inherit!important}');
+  if (parts?.footer) rules.push(`.es-footer{background-color:${parts.footer}!important;color:${ink(parts.footer)}!important}`,
+    '.es-footer:not([data-es-footer="column"]) :is(a,p,h2,h3,label,span,small,li,.es-footer__big,.es-footer__word):not(.es-footer__ticker *):not(.es-footer__signup *):not(button *):not([data-es-footer="twotone"] .es-footer__brand *){color:inherit!important}');
+  return rules.join('\n');
+}
+
+/** Owner 2026-11-13 (Oh Belly: «did not like the colors»; calm-colours rule 2026-10-22): a loud accent stays on buttons and words —
+ *  the bands the kit paints in the accent (the ribbon cover, accent bands) take the store's deep colour instead. */
+export function loudAccentCss(accent: string): string {
+  if (!loudAccent(accent)) return '';
+  return ':is(.lb-cover-ribbon,.lb-bleed[data-lb-band="accent"],.lb[data-es-band="accent"]){background:var(--es-base-deep);--es-paper:var(--es-base-deep);'
+    + '--es-ink:var(--es-base-on-deep);--es-muted:color-mix(in srgb,var(--es-base-on-deep) 10%,var(--es-base-deep));--es-accent:var(--es-base-accent);--es-on-accent:var(--es-base-on-accent);color:var(--es-ink)}';
+}
+
+/** Owner 2026-11-13: the library answer's «brand» as a look change — a known font pair, the lettered logo and the icon style. */
+export function brandStyleLook(value: unknown, pairs: readonly string[]): Partial<MasterLook> | undefined {
+  const given = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const fonts = pairs.includes(String(given.fonts)) ? String(given.fonts) : undefined;
+  const logo = lookLogo({ font: given.logoFont, case: given.logoCase, track: given.logoTrack, colour: given.logoColour });
+  const icons = lookIcons({ stroke: given.iconStroke, frame: given.iconFrame });
+  const shape = lookShape({ corners: given.corners, hover: given.hover });
+  return fonts || logo || icons || shape ? { ...(fonts ? { fonts } : {}), ...(logo ? { logo } : {}), ...(icons ? { icons } : {}), ...(shape ? { shape } : {}) } : undefined;
+}
+
+/** Owner 2026-11-13 («custom letters»): the store's name in its own font, case, spacing and colour — the header name and the
+ *  footer's name, big name and wordmark. An uploaded logo image is untouched; its font file comes with the theme block. */
+export function lookLogoCss(logo: LookLogo | undefined, heading: string, body: string): string {
+  if (!logo) return '';
+  const font = catalogFont(logo.font);
+  const names = '.es-logo,.es-footer__name,.es-footer__big,.es-footer__word';
+  const track = { tight: '-0.03em', normal: '0', wide: '0.14em' }[logo.track];
+  const kase = { upper: 'uppercase', lower: 'lowercase', 'as-is': 'none' }[logo.case];
+  return [logo.font !== heading && logo.font !== body ? face(logo.font) : '',
+    `:is(${names}){font-family:'${font.family}',var(--es-heading)!important;text-transform:${kase}!important;letter-spacing:${track}!important}`,
+    logo.colour === 'accent' ? `.es-header .es-logo{color:var(--es-accent)!important}` : ''].filter(Boolean).join('\n');
+}
+
+/** Owner 2026-11-13 («custom icons», brand style): every outline icon (lucide, stroke="currentColor") a little thinner or bolder,
+ *  and the section icons' holders a soft circle or square in the accent; «regular» and «none» keep the template's own. */
+export function lookIconsCss(icons: LookIcons | undefined): string {
+  if (!icons) return '';
+  const rules: string[] = [];
+  if (icons.stroke !== 'regular') rules.push(`svg[stroke="currentColor"]{stroke-width:${icons.stroke === 'thin' ? 1 : 2.25}}`);
+  if (icons.frame !== 'none') rules.push(`.lb [class$="__icon"]:not(svg){display:inline-grid!important;place-items:center!important;width:52px!important;height:52px!important;padding:0!important;`
+    + `border-radius:${icons.frame === 'circle' ? '50%' : '14px'}!important;background:color-mix(in srgb,var(--es-accent) 14%,transparent)!important;color:var(--es-accent)!important}`,
+    '.lb [class$="__icon"]:not(svg) svg{width:24px!important;height:24px!important}');
+  return rules.join('\n');
+}
+
+/** Owner 2026-11-13 («shapes should change store from store… thats why sites feel the same»): the store's corner family on every
+ *  button, field, chip and panel (the template's own corners lose), and its hover motion on every button. Product photos keep their
+ *  card's skin. Motion stays still for visitors who turn it off. */
+const SHAPE_RADII: Record<LookShape['corners'], { button: string; field: string; panel: string }> = {
+  sharp: { button: '0', field: '0', panel: '0' },
+  soft: { button: '8px', field: '8px', panel: '16px' },
+  round: { button: '999px', field: '14px', panel: '26px' },
+  pill: { button: '999px', field: '999px', panel: '32px' },
+  cut: { button: '16px 0', field: '14px 0', panel: '28px 0' },
+};
+const SHAPE_BUTTONS = '.es .es-btn,.es .lb-btn,.es .lb-card__buy,.es .cf-open,.es .pym-pack__add,.es .lb-promo__chip,.es .lb-stepp__tabs button,.es .lb-visit__maptap,'
+  + '.es .es-pdp__buy :is(button[data-add],button[data-variant-add]),.es [data-part=pair-add],.es [data-product-jump]';
+const SHAPE_FIELDS = '.es .catalog-search input,.es input:is([type=email],[type=text],[type=search],[type=tel]),.es select,.es textarea';
+const SHAPE_PANELS = '.es :is(.lb-visit,.lb-promo,.lb-stepp__card,.lb-stepp__media,.pym-pack,.pym-pay li,[data-part=pair]),.es .es-pdp[data-es-pdp="duo"] :is(.es-pdp__gallery,.es-pdp__info)';
+export function lookShapeCss(shape: LookShape | undefined): string {
+  if (!shape) return '';
+  const radius = SHAPE_RADII[shape.corners];
+  const hover = {
+    lift: ['transform:translateY(-3px);box-shadow:0 16px 28px -16px rgb(0 0 0 / .5)', 'transform:translateY(0) scale(.98)'],
+    sweep: ['background-size:100% 100%', 'transform:scale(.98)'],
+    arrow: ['transform:translateY(-1px)', 'transform:scale(.98)'],
+    glow: ['box-shadow:0 0 0 5px color-mix(in srgb,var(--es-accent) 30%,transparent)', 'transform:scale(.98)'],
+    press: ['transform:scale(1.04)', 'transform:scale(.94)'],
+  }[shape.hover];
+  return [
+    `:is(${SHAPE_BUTTONS}){border-radius:${radius.button}!important;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s ease,background-color .3s ease,color .3s ease,background-size .45s cubic-bezier(.2,.8,.2,1)!important}`,
+    `:is(${SHAPE_FIELDS}){border-radius:${radius.field}!important}`,
+    `:is(${SHAPE_PANELS}){border-radius:${radius.panel}!important}`,
+    shape.hover === 'sweep' ? `:is(${SHAPE_BUTTONS}){background-image:linear-gradient(color-mix(in srgb,currentColor 18%,transparent),color-mix(in srgb,currentColor 18%,transparent))!important;background-repeat:no-repeat!important;background-position:0 0!important;background-size:0% 100%!important}` : '',
+    shape.hover === 'arrow' ? `:is(${SHAPE_BUTTONS}) svg{transition:transform .3s cubic-bezier(.2,.8,.2,1)}\n:is(${SHAPE_BUTTONS}):hover svg{transform:translateX(5px)}` : '',
+    `@media (prefers-reduced-motion:no-preference){:is(${SHAPE_BUTTONS}):hover:not(:disabled){${hover[0]}${shape.hover === 'sweep' ? '!important' : ''}}:is(${SHAPE_BUTTONS}):active:not(:disabled){${hover[1]}}}`,
+  ].filter(Boolean).join('\n');
+}
+
+/** Owner 2026-11-13 («a clean site like Aesop», Mirror Water, Moment): one ground under every section, product photos whole on even
+ *  tiles of one soft tone, titles in a regular weight and sentence case, small spaced labels, hairlines between sections, no seals. */
+export function lookCleanCss(clean: boolean | undefined): string {
+  if (!clean) return '';
+  return [
+    '.es{--es-t-weight:400;--es-t-case:none;--es-t-track:-0.01em}',
+    '.es main>.lb:not(:first-child):is([data-lb-band],[data-es-band]){background:var(--es-paper)!important;color:var(--es-ink)!important}',
+    '.es :is(.es-card__media,.lb-card__media){background:color-mix(in srgb,var(--es-ink) 5%,var(--es-paper))!important}',
+    '.es :is(.es-card__media,.lb-card__media) img{object-fit:contain!important}',
+    '.es :is(.lb-title,.es-h2,.es-display):not(.lb-cover *){font-weight:400!important;text-transform:none!important;letter-spacing:-0.01em!important}',
+    '.es :is(.lb-eyebrow,.es-eyebrow){font-size:11.5px!important;font-weight:500!important;letter-spacing:.14em!important;text-transform:uppercase!important}',
+    '.es main>.lb:not(.lb-bleed):not(:first-child){border-top:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}',
+    '.es .lb-seal{display:none!important}',
+  ].join('\n');
 }
 
 /** The palette with the merchant's own colours over it; text is always readable on paper, accent and deep. */
@@ -157,7 +330,10 @@ export function masterThemeBlock(colours: Record<MasterColour, string>, headingF
 export function masterThemeCss(settings: MasterSettings, look: MasterLook, titleStyle?: string): string {
   const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
   const c = masterColours(settings, look);
-  return masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body, (pair as { mono?: string }).mono, { colours: look.titles, style: titleStyle });
+  const block = masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body, (pair as { mono?: string }).mono, { colours: look.titles, style: titleStyle });
+  // Inside the block, so every refill redraws the part colours, the lettered logo and the icon style from the look.
+  const parts = [masterPartsCss(look.parts), lookLogoCss(look.logo, pair.heading, pair.body), lookIconsCss(look.icons), lookShapeCss(look.shape), lookCleanCss(look.clean), loudAccentCss(c.accent)].filter(Boolean).join('\n');
+  return parts ? block.replace(MASTER_THEME_END, `${parts}\n${MASTER_THEME_END}`) : block;
 }
 
 /** 34 templates (2026-10-31): the template stylesheet carries every theme between «/* theme:id *\/» and «/* /theme:id *\/»; a store
@@ -178,7 +354,8 @@ export function withOnlyTheme(css: string, theme: string | undefined, sections?:
 const NOTE = /\/\*(?! ?\/?(?:theme|lb|v):| ?pagosya)[\s\S]*?\*\//g;
 const VARIANT_BLOCK = /\/\* v:([a-z]+)=([a-z0-9-]+) \*\/[\s\S]*?\/\* \/v:\1=\2 \*\//g;
 const emptyVariant = (part: string, value: string) => `/* v:${part}=${value} *//* /v:${part}=${value} */`;
-const PRODUCT_SECTIONS = ['products-grid', 'products-tabs', 'products-slider'];
+// Hand-made styles (2026-11-10): their own product sections carry the store's card too.
+const PRODUCT_SECTIONS = ['products-grid', 'products-tabs', 'products-slider', 'products-rows', 'products-words'];
 
 /** Template frame variety (spec 2026-11-03): the template sheet carries every footer, button, library card and product page between
  *  «/* v:part=value *\/» markers; a store keeps the blocks of the ones it uses and an empty marker for the rest, so a refill that
@@ -253,7 +430,11 @@ export function templateLook(settings: MasterSettings, current: MasterLook, chan
   const asked = String(change.colors?.accent ?? '').toLowerCase();
   const palette = after.palette !== before.palette ? settings.palettes.find(p => p.id === after.palette) : undefined;
   const accent = HEX.test(asked) && asked !== before.colors.accent ? asked : palette ? palette.accent.toLowerCase() : before.colors.accent;
-  return { palette: after.palette, fonts: after.fonts, colors: { ...before.colors, ...(accent ? { accent } : {}) }, ...(change.titles ? { titles: after.titles } : before.titles ? { titles: before.titles } : {}) };
+  const parts = mergeLookParts(before.parts, change.parts);
+  // Owner 2026-11-13: the hero photo's backdrop may set the page colours too (paper, ink, bands); only real hex values count.
+  const given = Object.fromEntries((['paper', 'ink', 'muted', 'deep'] as const).map(role => [role, String(change.colors?.[role as keyof typeof change.colors] ?? '').toLowerCase()]).filter(([, value]) => HEX.test(value)));
+  return { palette: after.palette, fonts: after.fonts, colors: { ...before.colors, ...given, ...(accent ? { accent } : {}) }, ...(change.titles ? { titles: after.titles } : before.titles ? { titles: before.titles } : {}),
+    ...(Object.keys(parts).length ? { parts } : {}), ...(after.logo ? { logo: after.logo } : {}), ...(after.icons ? { icons: after.icons } : {}), ...(after.shape ? { shape: after.shape } : {}), ...(after.clean ? { clean: true } : {}) };
 }
 
 export function withMasterTheme(css: string, block: string): string {
@@ -344,6 +525,17 @@ export function menuGroupsFromRead(groups: MasterRead['menuGroups'], photos: rea
       ...(group.footerTarget ? { footer: { label: group.footerLabel, to: group.footerTarget } } : {}),
     };
   });
+}
+
+/** The menu as the fill sees it: each tile's photo is its number in the photo list (added when missing), the way the fill answers;
+ *  shown as a URL it had no way to keep, and a menu edit dropped every dropdown photo (NOA VARGAS 2026-11-11). */
+export type FillMenu = { style: StoreMenu['style']; groups: Array<Omit<StoreMenuGroup, 'tiles'> & { tiles?: Array<{ title: string; photo: number; to: string }> }> };
+export function menuForFill(menu: StoreMenu | null, photos: readonly string[]): { photos: string[]; menu: FillMenu | null } {
+  const list = [...photos];
+  if (!menu) return { photos: list, menu: null };
+  const number = (image: string) => { if (!list.includes(image)) list.push(image); return list.indexOf(image); };
+  const groups = (menu.groups ?? []).map(({ tiles, ...group }) => ({ ...group, ...(tiles ? { tiles: tiles.map(tile => ({ title: tile.title, photo: number(tile.image), to: tile.to })) } : {}) }));
+  return { photos: list, menu: { style: menu.style, groups } };
 }
 
 /** Variety spec §2–3: the rolled variant per part (header, hero, grid…) plus the chosen business sections. */

@@ -3,7 +3,8 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { MAX_COMMERCE_RUNTIME, sourceProjectArchive, sourceProjectDigest, sourceProjectSnapshot } from "./source-project";
+import { MAX_COMMERCE_RUNTIME, MAX_KIT_SOURCE, sourceProjectArchive, sourceProjectDigest, sourceProjectSnapshot } from "./source-project";
+import { uiRuntime } from "./source-creative";
 import { SaveSourceProjectDto } from "./dto/save-source-project.dto";
 import { kitPath } from '@pagosya/storefront-kit';
 
@@ -53,13 +54,16 @@ describe("Independent source artifacts", () => {
     expect(() => layout('data/layout.json')).toThrow('Invalid source file content');
   });
   // Palo Alto 2026-11-03: Tailwind's styles.css (compiled from styles/globals.css) came out at 181 167 characters and the template
-  // could not be built at all. Compiled output gets the compiled budget; the stylesheet a merchant or YAPI writes keeps 180 kB.
+  // could not be built at all. Compiled output gets the compiled budget; the stylesheet a merchant or YAPI writes has its own
+  // (2026-11-13: 400 kB, MAX_STORE_SHEET — an Esencial store's sheet had reached 175 kB).
   it('gives the compiled stylesheet of a Next store the compiled budget, never an authored one', () => {
     const big = 'a{color:red}'.padEnd(200_000, ' ');
     const withSheet = (files: { path: string; content: string }[]) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files.filter(f => !files.some(x => x.path === f.path)), ...files] });
     expect(() => withSheet([{ path: 'styles/globals.css', content: 'a{color:red}' }, { path: 'styles.css', content: big }])).not.toThrow();
     expect(() => withSheet([{ path: 'styles.css', content: big }])).toThrow('Invalid source file content');
-    expect(() => withSheet([{ path: 'styles/globals.css', content: big }])).toThrow('Invalid source file content');
+    expect(() => withSheet([{ path: 'styles/globals.css', content: big }])).not.toThrow();
+    expect(() => withSheet([{ path: 'styles/globals.css', content: 'a{color:red}'.padEnd(400_001, ' ') }])).toThrow('Invalid source file content');
+    expect(() => withSheet([{ path: 'styles/other.css', content: big }])).toThrow('Invalid source file content');
   });
   // Focal 2026-11-03: 25 compiled pages (3.1 MB) and the kit (0.7 MB) counted against the store's 8 MiB, so the template with its
   // photos and fonts could not be built. Platform output has its own total; the merchant's files keep the 8 MiB.
@@ -76,6 +80,14 @@ describe("Independent source artifacts", () => {
     expect(sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, runtime] }).files.some(f => f.path === 'commerce.js')).toBe(true);
     expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path: 'site.js', content: runtime.content }] })).toThrow('Invalid source file content');
     expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path: 'commerce.js', content: ''.padEnd(MAX_COMMERCE_RUNTIME + 1, ' ') }] })).toThrow('Invalid source file content');
+  });
+
+  it('live 2026-11-16: a new store saves with the kit UI library (lib/ui.tsx passed the 180 kB authored budget), merchant files keep theirs', () => {
+    const ui = { path: 'lib/ui.tsx', content: uiRuntime() };
+    expect(ui.content.length).toBeGreaterThan(180_000);
+    expect(sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, ui] }).files.some(f => f.path === 'lib/ui.tsx')).toBe(true);
+    expect(() => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path: 'components/huge.tsx', content: ui.content }] })).toThrow('Invalid source file content');
+    expect(uiRuntime().length).toBeLessThan(MAX_KIT_SOURCE * 0.8);
   });
 
   it('exports MP4 bytes intact and enforces a separate video budget', () => {

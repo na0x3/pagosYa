@@ -103,9 +103,23 @@ export class UploadsController {
       return;
     }
 
+    // Owner 2026-11-17 (product videos): Safari plays a video only from byte ranges, so a ranged request for an MP4 gets
+    // the slice it asked for (uploads are at most 20 MB).
+    const range = !width && /\.mp4$/i.test(filename) ? /^bytes=(\d*)-(\d*)$/.exec(String(res.req?.headers?.range ?? "").trim()) : null;
+    if (range) {
+      const whole = await this.uploads.getBuffer(filename);
+      if (!whole) throw new NotFoundException("Archivo no encontrado");
+      const size = whole.length;
+      const start = range[1] === "" ? Math.max(0, size - Number(range[2] || 0)) : Number(range[1]);
+      const end = range[1] === "" || range[2] === "" ? size - 1 : Math.min(Number(range[2]), size - 1);
+      if (start >= size || start > end) { res.set({ ...headers, "Content-Range": `bytes */${size}` }); res.status(416); return; }
+      res.set({ ...headers, "Accept-Ranges": "bytes", "Content-Length": end - start + 1, "Content-Range": `bytes ${start}-${end}/${size}` });
+      res.status(206);
+      return new StreamableFile(whole.subarray(start, end + 1));
+    }
     const file = width ? await this.uploads.getResized(filename, width) : await this.uploads.getStream(filename);
     if (!file) throw new NotFoundException(width ? "Esta imagen no tiene versiones de tamaño." : "Archivo no encontrado");
-    res.set({ ...headers, "Content-Length": file.byteSize });
+    res.set({ ...headers, "Content-Length": file.byteSize, ...(/\.mp4$/i.test(filename) && !width ? { "Accept-Ranges": "bytes" } : {}) });
     // A request the browser drops (a video seek, a closed tab) lets go of the file at once.
     if (typeof (res as { once?: unknown }).once === "function") res.once("close", () => file.stream.destroy());
     return new StreamableFile(file.stream);

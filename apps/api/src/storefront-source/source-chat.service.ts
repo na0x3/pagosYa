@@ -1,12 +1,19 @@
+import { SourceTourService } from './source-tour.service';
+import { keepsStep, TOUR_REQUEST } from './source-tour';
+import { AB_END, AB_REQUEST, AB_STATUS, abKind } from './source-ab';
+import { SourceAbService } from './source-ab.service';
 import { appendFileSync } from 'node:fs';
 import { applyPageOps, withExtraPages, type ExtraPage } from './source-extra-pages';
 import { SourceThumbnailsService } from './source-thumbnails.service';
+import { PopupLookService } from '../store-popups/popup-look.service';
+import { PopupGameService } from '../store-popups/popup-game.service';
+import { pickPopupLook, readPopupLook } from '../store-popups/popup-looks';
 import { outsideFocus, pointFocus } from './source-point-focus';
 import { randomUUID } from 'node:crypto';
 import { SOURCE_MODEL_CHOICES } from './source-generation-policy';
 import { merchantAsksForPhotoGroup } from './source-media-design';
 import { firstVideo, withHeroVideo } from './source-master-video';
-import { coloursFromWords } from './source-palette';
+import { colourRolesFromWords, coloursFromWords, groundPalette } from './source-palette';
 import { GUARDED_TOUCH_BRIEF, touchStaysInside } from './source-guarded-touch';
 import { layoutChangeFor, layoutChangeNote } from './source-master-layout';
 import { recentLooks } from './source-recent-looks';
@@ -52,8 +59,18 @@ import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, leastUsedDraw, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
-import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
+import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeRequest, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
+import { blocking as fillReviewBlocking, fillReviewTemplate, reviewChanges, ruleRepairs, runFillReview, type FillReviewFinding } from './source-fill-review';
+import sharp from 'sharp';
+import { join } from 'node:path';
+import { compositeSeam, photoTint, withCoverGround, withHeroShape, withPlainBackgrounds, withRowTints, type HeroGround } from './source-row-tints';
+import { samplePhotoColours } from './source-photo-sampler';
+import { CUTOUT_THEMES, photoCutout, withCutouts } from './source-photo-cutout';
+/** The hand-made styles (2026-11-10, each after a real store): long pages of their own, never topped up with generic sections. */
+const HAND_MADE_THEMES = new Set(['merienda', 'burbuja', 'neon', 'mimo', 'oliva', 'joya', 'origen', 'morada', 'vigor', 'ramo']);
+import { uploadPath } from './source-product-photos';
+import { sourcePublicApiUrl } from './source-store-config';
 /** Owner 2026-11-02: the template a one- or two-product store starts on (the product whole at the top). */
 const ONE_PRODUCT_TEMPLATE = 'unico';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
@@ -61,37 +78,46 @@ import { checklistFixBrief, checklistReply, storeDigest, type BriefChecklist, ty
 import { buildStarters, pickSkeleton, pickStarter, recentStarters, type StarterEntry } from './source-starter-pick';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { writerTemplate } from './source-home-writer-stage';
-import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, type MasterFill, type MasterVariants } from './source-master';
+import { MASTER_TEMPLATE_ID, brandStyleLook, masterCopy, masterFillFromRead, masterLook, menuForFill, type MasterFill, type MasterVariants } from './source-master';
 import { isFashionStore } from './source-master-fashion';
 import { fashionCollections } from './source-fashion-collections';
 import { collectionSlug } from '../collections/collection-slug';
 import { masterLayoutFindings } from './source-master-check';
-import { readMasterState, readPlantillaCopy } from './source-templates';
+import { readMasterState, readPlantillaCopy, resolvePresetTemplate } from './source-templates';
+import { runComposer } from './source-composer-run';
+import { applyComposerChanges, COMPOSER_MIN, composerCheck, composerTemplate, fillableTemplate, readSectionFit } from './source-composer';
+import { captureAgentDraft } from './agent/agent-capture';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
-import { buildLibraryFacts, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
+import { withPhotoWidths } from './source-photo-size';
+import { buildLibraryFacts, withFreshPhotos, withSharpCover, withoutRepeatedProductRows, withPacks, withPayWays, withPersonalizer, withPromoCode, withStepPanels, withVisit, withCleanHome, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
 import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
-import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, layoutAdds, layoutEditReply, menuPagesFor, withPageImprove, type LayoutPage, type MenuPage } from './source-layout-edit';
-import { keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
+import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, bandUnderMenu, layoutAdds, layoutEditReply, menuPagesFor, withPageImprove, type LayoutPage, type MenuPage } from './source-layout-edit';
+import { aboutPageTypes, keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
+import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
 import { visibleChanges } from './source-visible-change';
 import { isPlayfulBusiness } from './home-directions';
 import { instructionAsksStoreMenu, instructionOnlyAboutStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList, withExtraPageLinks, withStoreMenuConfig } from './source-store-menu';
 import { readConfigFile } from './store-look';
-import { FOOTER_PATH, shellWithStoreFooter } from './agent/home-writer-tools';
+import { FOOTER_PATH } from './agent/home-writer-tools';
+import { CHASSIS_PATHS, partsInShell, shellWithStoreParts } from './agent/chassis-parts';
 import { buildSuggestions, withRedesignOffer } from './source-suggestions';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
 import { UploadsService, detectedImageDimensions, detectedMediaMime } from '../uploads/uploads.service';
 import { readSourceReferenceResource, readSourceWebsite } from './source-website-fetch';
+import { studioImageMaker, studioImages } from './source-studio-spike';
+import { VisualAiService } from '../visual-studio/visual-ai.service';
 import { BRAND_SOURCE_QUESTION, brandSourceAnswer, brandSourceIntent, brandSourceOther, brandSourceOwnSite, brandSourcePointsAtSite, brandSourceTouchesLook } from './brand-source-intent';
 import { brandWebsiteNotes, extractBrandWebsite, type BrandQuote } from './brand-source-website';
 import { importBrandImages } from './brand-source-import';
+import { collectSiteArtwork } from './website-copy/site-artwork';
 import type { BrandImageCandidate } from './brand-source-website';
 import { productLinkIn, productSiteName, type ProductLink } from './product-source/product-source-links';
 import { readProductSource, type ProductSourceFailure } from './product-source/product-source-read';
@@ -264,6 +290,9 @@ function blueprintCaptures(blueprint: WebsiteBlueprint): SourceReferenceCapture[
 type ProductImport = { url: string; site: string; productId: string; product: ProductSourceProduct; listingDescription: string; videoUrls?: string[] };
 type ProductRead = { link: ProductLink; site: string; earlier?: ProductImport; listing?: ProductListing; failure?: ProductSourceFailure };
 
+/** Owner 2026-11-13: templates only clothing and fashion stores draw. */
+const CLOTHING_ONLY_TEMPLATES = new Set(['focal']);
+
 @Injectable()
 export class SourceChatService {
   /** The product-link reader; a spec replaces it to stay off the network. */
@@ -274,7 +303,7 @@ export class SourceChatService {
   homeMeasurer = measureBuiltHome;
   private readonly productLogger = new Logger('ProductSource');
   constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService,
-    @Optional() private readonly plans?: SourceStorePlanService, @Optional() private readonly thumbnails?: SourceThumbnailsService) {}
+    @Optional() private readonly plans?: SourceStorePlanService, @Optional() private readonly thumbnails?: SourceThumbnailsService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly popupGames?: PopupGameService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService, @Optional() private readonly visualAi?: VisualAiService) {}
   /** Spec 2026-10-12: how long a pick or a new request waits for a style run that is stopping to let go of the store. */
   /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
   protected styleReleaseWaitMs?: number;
@@ -345,7 +374,7 @@ export class SourceChatService {
   }
 
   /** Spec 2026-09-27 §3: the free first build after a Shopify import. Progress is saved on the user message under requestId = importId. */
-  async importBuild(merchantId: string, storeId: string, input: { importId: string; option: 'same' | 'redesign'; origin: string; productHandle?: string; summary: string }) {
+  async importBuild(merchantId: string, storeId: string, input: { importId: string; option: 'same' | 'redesign'; origin: string; productHandle?: string; summary: string; productImages?: string[] }) {
     const current = await this.projects.current(merchantId, storeId);
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const request = IMPORT_BUILD_REQUEST[input.option];
@@ -355,12 +384,16 @@ export class SourceChatService {
     await workflow.report('interpreting');
     const urls = [input.origin, ...(input.productHandle ? [new URL(`/products/${input.productHandle}`, input.origin).href] : [])];
     const references = await Promise.all(urls.map(url => inspectSourceWebsite(url)));
+    // Owner 2026-11-17 («graza is still way better with way much more artwork»): the shop is the merchant's own, so its
+    // drawings, badges, section photos, phrases and type come along as their brand, not only its screenshots.
+    const brand = await this.importSiteBrand(merchantId, storeId, input.origin, input.productImages ?? [], sourceWebsiteReferenceCaptures(references)).catch(() => null);
     try {
       const revision = await this.generation.generate(merchantId, storeId, {
         revision: current.revision, model: IMPORT_BUILD_MODEL, maxCredits: IMPORT_BUILD_MAX_CREDITS,
         brief: { sitePurpose: 'shop', businessInformation: input.summary, businessType: 'Tienda en línea', audience: 'Clientes de la tienda', primaryAction: 'Comprar', visualDirection: input.option === 'same' ? 'El estilo de su tienda Shopify actual' : 'Diseño nuevo con su marca' },
         instruction: `${sourceRequestExecutionPrompt(request, current.revision > 0)}\n\nContexto del negocio:\n${input.summary}\n\nSu tienda Shopify actual (inspección pública):\n${JSON.stringify(sourceWebsiteReferenceContext(references))}\n\nPedido actual del comercio:\n${request}`,
-      }, this.generation.newBudget(IMPORT_BUILD_MAX_CREDITS), [], workflow.report, { free: true, sponsor: 'shopify-import', referenceCaptures: sourceWebsiteReferenceCaptures(references), ...(input.option === 'redesign' && current.revision ? { redesign: true } : {}) });
+        ...(brand?.uses.length ? { assetUrls: brand.uses.map(use => use.url) } : {}),
+      }, this.generation.newBudget(IMPORT_BUILD_MAX_CREDITS), brand?.uses ?? [], workflow.report, { free: true, sponsor: 'shopify-import', referenceCaptures: sourceWebsiteReferenceCaptures(references), ...(brand ? { brandSource: brand.source } : {}), ...(input.option === 'redesign' && current.revision ? { redesign: true } : {}) });
       if ('styleProposal' in revision) throw new Error('unexpected style proposal');
       await workflow.finish('completed');
       await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT',
@@ -375,7 +408,7 @@ export class SourceChatService {
 
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
   /** Spec 2026-10-19 §2: Esencial applied and filled in one call; the store is saved even when the call fails. */
-  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string, replyPrefix = '', planned?: { plan: StorePlan; applied: AppliedPlan }) {
+  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string, replyPrefix = '', planned?: { plan: StorePlan; applied: AppliedPlan }, pickedModel?: SourceMessageInput['model']) {
     await workflow.report('saving');
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true, logoUrl: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[]; template?: string };
@@ -415,7 +448,10 @@ export class SourceChatService {
     const namedColours = coloursFromWords(askedWords);
     // Owner 2026-10-29 («esencial only not families»): the fill's read plus the brand colours the merchant named — no family, effects,
     // module or animated look.
-    { const plain = filler; filler = async facts => { const read = await plain(facts); return read && namedColours.length ? { ...read, namedColours } : read; }; }
+    // Owner 2026-11-13 (ZARA «Fondo blanco, texto negro y un gris muy suave»): colours with a job, and a black-and-white brand.
+    const namedRoles = colourRolesFromWords(askedWords);
+    const roled = Object.keys(namedRoles).length > 0;
+    { const plain = filler; filler = async facts => { const read = await plain(facts); return read && (namedColours.length || roled) ? { ...read, ...(namedColours.length ? { namedColours } : {}), ...(roled ? { namedRoles } : {}) } : read; }; }
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
     const saved = templatePick ? await this.templates.applyMaster(merchantId, storeId, revision, filler, templatePick.id)
       : chosen ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned?.applied, chosen.id)
@@ -457,7 +493,7 @@ export class SourceChatService {
     // §2: a template from the owner's pool is written by the home writer instead.
     const checklist = this.checklistOn() && userMessage.content.trim() ? userMessage.content.trim().slice(0, 4000) : undefined;
     const followUp: SourceMessageInput | undefined = templatePick
-      ? (this.templateWriterOn(templatePick.id) ? this.writerFollowUp(saved.revision, checklist) : this.libraryFollowUp(saved.revision, checklist))
+      ? (this.v2ChatOn() ? this.v2FollowUp(saved.revision) : this.templateWriterOn(templatePick.id) ? this.writerFollowUp(saved.revision, checklist, pickedModel) : this.libraryFollowUp(saved.revision, checklist))
       : written ? { instruction: `${merchantRequest ? `${written}\n\nMensajes del comercio:\n${merchantRequest}` : written}${coverLine}`, revision: saved.revision, personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, motion: 'expressive', requestId: randomUUID(), model: this.redesignModel(), ...withAssets }
       : planBrief ? { instruction: merchantRequest ? `${planBrief}\n\nMensajes del comercio:\n${merchantRequest}` : planBrief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto', ...withAssets }
       : touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, ...(merchantRequest ? { ownRequest: true } : {}), requestId: randomUUID(), model: 'auto', ...withAssets }
@@ -492,7 +528,10 @@ export class SourceChatService {
     // Owner 2026-11-02 (Brisa Portátil: one AliExpress product got Conecta, a big tech catalogue): a store selling one or two products
     // starts on Único — the product whole at the top; a larger catalogue never gets it.
     const oneProduct = input.products.length > 0 && input.products.length <= 2;
-    const pickable = pickableTemplates(listTemplates(), hidden).filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE));
+    // Owner 2026-11-13 (Oh Belly drew Focal: «that footer i prefer for fashion or clothing stores»): Focal is a clothing template only.
+    const clothing = isFashionStore({ storeName: input.storeName, what: `${input.what} ${input.request}`, products: input.products });
+    const pickable = pickableTemplates(listTemplates(), hidden).filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE)
+      && (clothing || !CLOTHING_ONLY_TEMPLATES.has(template.id)));
     const templates = inTemplatePool(pickable, pool, [ONE_PRODUCT_TEMPLATE]);
     if (!templates.length) return null;
     // Live check 2026-11-04 (Miga Dorada: «Usa la plantilla Grano.» in the first message got Gumdrop): a template the merchant names
@@ -681,17 +720,26 @@ export class SourceChatService {
   /** Spec 2026-11-04 §2: a template from the owner's pool is written by the home writer, not filled by the section library. */
   private templateWriterOn(templateId: string) {
     const pool = this.config.get<string[]>('app.yapiTemplatePool') ?? [];
-    return pool.includes(templateId) && this.config.get<boolean>('app.yapiHomeWriter') === true;
+    // Spike 2026-11-12 (YAPI_STUDIO): the writer, Lovable's way, designs a pooled template store's home.
+    return pool.includes(templateId) && (this.config.get<boolean>('app.yapiHomeWriter') === true || this.config.get<boolean>('app.yapiStudio') === true);
   }
-  private writerFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
+  /** Owner 2026-11-12 («in amboras you can choose the models it uses»): the model picked in the chat writes the first design; «auto»
+   *  (or none) is the dev default (YAPI_HOME_WRITER_MODEL). */
+  private writerFollowUp(revision: number, checklistWords?: string, pickedModel?: SourceMessageInput['model']): SourceMessageInput {
     return { instruction: `${HOME_WRITER_BRIEF}${checklistWords ? `\n\nMensaje del comercio:\n${checklistWords}` : ''}`, revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true,
       ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), maxCredits: HOME_WRITER_MAX_CREDITS,
-      model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] };
+      model: (pickedModel && pickedModel !== 'auto' ? pickedModel : this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] };
   }
   // Owner 2026-11-06 («en miga dorada de panes escribe cosas de zapatos»: the template's demo words showed until the sections were
   // written): the sections are part of the first design, so the Studio keeps «YAPI está diseñando tu tienda» until they are saved.
   private libraryFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
     return { instruction: SECTION_LIBRARY_BRIEF, revision, personalTouch: true, sectionLibrary: true, firstDesign: true, ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), model: 'auto' };
+  }
+  /** Spec 2026-11-17: a new store's first design comes from the V2 engine (Nov 14 rules, the model's own menu) instead of the
+   *  section library or the home writer. Off = today's flow. */
+  private v2ChatOn() { return process.env.YAPI_V2_CHAT === '1'; }
+  private v2FollowUp(revision: number): SourceMessageInput {
+    return { instruction: 'Primer diseño de la tienda con el motor V2.', revision, personalTouch: true, v2Design: true, firstDesign: true, requestId: randomUUID(), model: 'auto' };
   }
   private planOn() { return this.config.get<boolean>('app.yapiPlanCard') !== false && Boolean(this.plans); }
   private startersOn() { return this.config.get<boolean>('app.yapiStarters') === true; }
@@ -753,15 +801,21 @@ export class SourceChatService {
     return { userMessage, assistantMessage, setup: null };
   }
 
-  private async firstBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[], instruction: string, merchantRequest?: string, replyPrefix = '', setupAction?: string, intake?: IntakeState | false) {
+  private async firstBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[], instruction: string, merchantRequest?: string, replyPrefix = '', setupAction?: string, intake?: IntakeState | false, pickedModel?: SourceMessageInput['model']) {
     // Spec 2026-11-04 §1: before a new store's first build, YAPI asks what is still missing; the build then reads the first words
     // with every answer. A link flow (product link, listing screenshot) passes false and is never interrupted.
     if (intake !== false && revision === 0 && this.intakeOn()) {
       const state: IntakeState = intake ?? { pending: true, words: instruction, ...(merchantRequest ? { request: merchantRequest } : {}), photos: chatPhotos, asked: [], answers: [] };
       const asked = await this.askBeforeBuild(merchantId, storeId, threadId, userMessage, workflow, state);
       if (asked) return asked;
+      // Live check 2026-11-09: a WhatsApp given in the answers is saved as the store number (never over one already set), so the
+      // build and its checklist see it.
+      const phone = intakePhone(state);
+      if (phone) await this.prisma.store.updateMany({ where: { id: storeId, OR: [{ contactPhone: null }, { contactPhone: '' }] }, data: { contactPhone: phone } }).catch(() => null);
       if (state.answers.length) {
-        const words = intakeInstruction(state);
+        // Live 2026-11-12 (Remolino studio3): after an earlier question the intake words were the last short answer alone, so the
+        // writer and its checklist never read the store's description; the merchant's whole request goes on when there is one.
+        const words = intakeRequest(state) ?? intakeInstruction(state);
         userMessage = { ...userMessage, content: words };
         instruction = words;
         chatPhotos = state.photos.slice(0, 8);
@@ -772,14 +826,14 @@ export class SourceChatService {
     // Owner 2026-10-24: with starters on, a new store starts from its starter at once; the plan card is for later edits.
     // Owner 2026-10-31: with the template pick on, the picked template is the plan — the plan card's colours and sections are for
     // plain Esencial and would not fit a whole template; the merchant's words still reach its fill and the check.
-    if (!this.planOn() || this.startersOn() || this.templatePickOn()) return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix);
+    if (!this.planOn() || this.startersOn() || this.templatePickOn()) return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix, undefined, pickedModel);
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }).catch(() => null);
     const what = ((store?.onboarding ?? {}) as { what?: string }).what ?? draft.answers?.context ?? '';
     const drafted = await this.plans!.draft(merchantId, storeId, { revision, request: merchantRequest ?? instruction, what, photos: chatPhotos });
     if (!drafted) return this.planFailed(threadId, userMessage, workflow, instruction, setupAction);
     // Free-first: every first build waits for «Construir», so the approved plan is what YAPI designs from.
     if (!merchantRequest || this.freeFirst()) return this.planCard(threadId, userMessage, workflow, drafted, 'new');
-    return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix, drafted);
+    return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix, drafted, pickedModel);
   }
 
   /** «Hacer cambios»: the plan's parts, look and sections saved as data; its own sections go to the follow-up. */
@@ -840,16 +894,27 @@ export class SourceChatService {
   /** Spec 2026-10-29: the home page writer — generate() with execution.homeWriter: no conversation call, no planner. */
   private async homeWriter(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, input: SourceMessageInput, previous: { snapshot: unknown }, budget: ReturnType<SourceGenerationService['newBudget']>) {
     const before = previous.snapshot as unknown as SourceProjectSnapshot;
+    // Spike 2026-11-12 (YAPI_STUDIO): brand images made first reach the writer as the store's photos (Lovable never leaves a placeholder).
+    const studioUrls = this.config.get<boolean>('app.yapiStudio') === true
+      ? await studioImages(this.visualAi?.canGenerateStorefrontImages() ? this.visualAi : studioImageMaker({
+          apiKey: this.config.get<string>('app.yapiStudioImageKey') ?? '', model: this.config.get<string>('app.openAi.imageModel') ?? 'gpt-image-2',
+          save: async bytes => {
+            const stored = await this.uploads!.saveBuffer(bytes, 'image/jpeg');
+            await this.prisma.mediaAsset.create({ data: { merchantId, storeId, url: stored.url, storageKey: stored.filename, kind: 'AI_DERIVED', mimeType: stored.mimeType, byteSize: stored.byteSize } });
+            return { url: stored.url };
+          } }), merchantId, storeId, (await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true } }).catch(() => null))?.name ?? '', input.checklistWords ?? input.instruction) : [];
+    const assetUrls = [...new Set([...(input.assetUrls ?? []), ...studioUrls])];
     const revision = await this.generation.generate(merchantId, storeId, { revision: input.revision, brief: before.brief, instruction: input.instruction, model: input.model,
-      ...(input.assetUrls?.length ? { assetUrls: input.assetUrls } : {}) }, budget, [], workflow.report, { homeWriter: true, redesign: true, firstDesign: true });
+      ...(assetUrls.length ? { assetUrls } : {}) }, budget, [], workflow.report, { homeWriter: true, redesign: true, firstDesign: true });
     if ('styleProposal' in revision) throw new Error('home writer: unexpected style proposal');
     // Spec §1: the writer changes only the home and the theme block; anything else undoes the run.
     const after = (await this.projects.version(merchantId, storeId, revision.revision)).snapshot as unknown as SourceProjectSnapshot;
     // Owner 2026-10-30: the writer also writes the footer; the Shell may change only by pointing at it (live check BOXY eajm1flt
     // was undone here because footer.tsx and the Shell counted as strays).
+    // Store chassis (spec 2026-11-12): the Shell may also point at the store's own header, cart and card, and those part files are its own.
     const swappedShell = (file: { path: string; content: string }) => { const old = before.files.find(entry => entry.path === file.path)?.content;
-      return file.path === 'components/Shell.tsx' && old !== undefined && shellWithStoreFooter(old) === file.content; };
-    const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx', FOOTER_PATH].includes(file.path)
+      return file.path === 'components/Shell.tsx' && old !== undefined && shellWithStoreParts(old, partsInShell(file.content)) === file.content; };
+    const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx', FOOTER_PATH, ...Object.values(CHASSIS_PATHS)].includes(file.path)
       && !swappedShell(file) && before.files.find(old => old.path === file.path)?.content !== file.content).map(file => file.path);
     // Review I4: the product page, cart, checkout and account look live outside the components (config.js, brand.css, frame-draw.json).
     const look = (files: SourceProjectSnapshot['files']) => { const config = readConfigFile(files); const { display: _display, text: _text, ...dna } = (config.dna ?? {}) as Record<string, unknown>;
@@ -873,23 +938,47 @@ export class SourceChatService {
     const home = snapshot.files.find(file => file.path === 'components/home.tsx')?.content ?? '';
     if (!snapshot.files.some(file => file.path === 'components/library.tsx') || !/\blayout\b/.test(home)) throw new PersonalTouchSkipped('the store predates the section library');
     const state = readMasterState(snapshot.files);
+    // «sigue» after a failed call (2026-11-10): the store shows a bare home, so the template's sections come from the revision before it.
+    const templateRevision = input.sectionLibraryFrom ?? revision;
+    const sections = templateRevision !== revision
+      ? readMasterState(((await this.projects.version(merchantId, storeId, templateRevision)).snapshot as unknown as SourceProjectSnapshot).files) : state;
     // 34 templates: a store wearing a whole template (variants.theme) keeps that template's home; YAPI only fills it, from a larger
     // pool of the store's photos (a template home has many photo places).
     const theme = String((state.variants as Record<string, unknown> | undefined)?.theme ?? 'none');
     // Fix 6 (2026-11-02): after a template switch, the sections the store had that the new template lacks ride along, filled anew.
-    const carried = theme !== 'none' && (state.layout ?? []).length && input.carry?.length ? withCarriedSections(state.layout as LayoutBlock[], (input.carry as LayoutBlock[]).filter(block => !(state.layout as LayoutBlock[]).some(own => own.type === block.type))) : undefined;
-    const template = carried ?? (theme !== 'none' && (state.layout ?? []).length ? state.layout as LayoutBlock[] : undefined);
+    const carried = theme !== 'none' && (sections.layout ?? []).length && input.carry?.length ? withCarriedSections(sections.layout as LayoutBlock[], (input.carry as LayoutBlock[]).filter(block => !(sections.layout as LayoutBlock[]).some(own => own.type === block.type))) : undefined;
+    const template = carried ?? (theme !== 'none' && (sections.layout ?? []).length ? sections.layout as LayoutBlock[] : undefined);
     const facts = await this.libraryFacts(merchantId, storeId, snapshot.files, input.checklistWords ?? input.earlierAsks ?? '', template ? 24 : 14);
     if (!facts.photos.length && !template) throw new PersonalTouchSkipped('no photos for the library');
     await workflow.report('design');
+    // Spec 2026-11-11 store composer: a first build on a template with an approved signature gets a home composed for the brand.
+    const composerOn = this.config.get<boolean>('app.yapiComposer') === true && Boolean(template) && !carried && templateRevision === revision
+      && input.firstDesign === true && facts.photos.length > 0;
+    const composedHome = composerOn ? await this.composeTemplateHome(merchantId, storeId, revision, theme, facts).catch(error => {
+      if (quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
+      this.productLogger.warn(JSON.stringify({ event: 'store_composer_failed', storeId, theme, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+      return null;
+    }) : null;
     // A failed call on a template (anything but a spent quota or a cancel) falls back below instead of keeping the demo words.
-    const answer = facts.photos.length ? await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}) }).catch(error => {
+    let callFailed = false;
+    // Owner 2026-11-13 (YAPI_RICH_SECTIONS): a template's home may swap a cover, the strip and one story for the kit's rich sections.
+    // Owner 2026-11-13 («a clean site like Aesop»): clean template homes (with the hero kit) — no motion sections, no row colours.
+    const clean = this.config.get<boolean>('app.yapiClean') === true && this.config.get<boolean>('app.yapiHeroKit') === true && Boolean(template);
+    const rich = this.config.get<boolean>('app.yapiRichSections') === true && Boolean(template) && !clean;
+    // Hero kit (owner 2026-11-13, after Amboras): a template home's cover carries real products, a place label and an accent word.
+    const heroKit = this.config.get<boolean>('app.yapiHeroKit') === true && Boolean(template);
+    // Owner 2026-11-13 («custom letters, custom icons»): a template store's first design picks its own type, lettered logo and icon style.
+    const settings = templateManifest(MASTER_TEMPLATE_ID)?.master;
+    const brand = this.config.get<boolean>('app.yapiBrandStyle') === true && template && settings && input.firstDesign === true && templateRevision === revision
+      ? { pairs: settings.fonts.map(({ id, heading, body }) => ({ id, heading, body })), fonts: SOURCE_FONT_CATALOG.map(({ id, family, personality }) => ({ id, family, personality })) } : undefined;
+    const answer = composedHome ? composedHome.answer : facts.photos.length ? await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}), ...(rich ? { rich } : {}), ...(heroKit ? { heroKit } : {}), ...(brand ? { brand } : {}) }).catch(error => {
       if (!template || quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
       this.productLogger.warn(JSON.stringify({ event: 'section_library_call_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
+      callFailed = true;
       return null;
     }) : null;
     if (!answer && !template) throw new Error('the library call failed');
-    let layout = answer ? validateLibraryLayout(answer as never, facts, template ? { fixed: template } : {}) : [];
+    let layout = composedHome ? composedHome.layout! : answer ? validateLibraryLayout(answer as never, facts, template ? { fixed: template, ...(rich ? { richSwaps: true } : {}),  } : {}) : [];
     // A cover, the grid and a closing are always there; fewer than five blocks means the answer gave almost nothing usable.
     // On a template, against its own length (Foco has two sections): at least half of them, never fewer than one.
     const least = template ? Math.max(1, Math.ceil(template.length / 2)) : 5;
@@ -902,7 +991,38 @@ export class SourceChatService {
     }
     // Owner 2026-11-06 («too short, there should be more things on the main page»): a template home under 11 sections gets
     // library sections the store can really fill (its place, its code, delivery, how it works…), before its closing.
-    if (template) layout = await this.topUpHome(merchantId, storeId, layout, facts);
+    // Owner 2026-11-10 («less sections and like same template»): a hand-made style is a long page of its own; the generic top-up
+    // (visit, code, services) made every style end the same way, so it does not run on them.
+    // Owner 2026-11-11 (Pawby showed its five products in three rows): one row of the catalogue besides the grid (two with 8+ products).
+    layout = withoutRepeatedProductRows(layout, facts);
+    // Owner 2026-11-11 («no blurry cover photos»): a full-width cover gets a photo wide enough, or becomes the framed cover.
+    layout = withSharpCover(layout, facts);
+    // Owner 2026-11-14 («vestido cala appears twice»): each section's own photo once on the home.
+    layout = withFreshPhotos(layout, facts);
+    if (template && !composedHome && !HAND_MADE_THEMES.has(theme) && !clean) layout = await this.topUpHome(merchantId, storeId, layout, facts);
+    // Spec 2026-11-09 personalizador («para todos»): a store with a product that has options gets it once, after its product grid.
+    layout = withPersonalizer(layout, facts);
+    // Owner 2026-11-13 («full kits»): the store's real packs after its product grid (hero kit flag).
+    if (heroKit) layout = withPacks(layout, facts);
+    // Owner 2026-11-13 (ways to pay): an online-payment store says how it takes payment.
+    if (heroKit) layout = withPayWays(layout, facts);
+    // Owner 2026-11-13 («discounts»): the store's public code, with its offer and a copy button.
+    if (heroKit) layout = withPromoCode(layout, facts);
+    // Owner 2026-11-13 (Boosterpack «Visit us»): address, hours, delivery zones and a map on tap.
+    if (heroKit) layout = withVisit(layout, facts);
+    // Spec 2026-11-10 Merienda: each product row in its product's own colour, read from its photo.
+    // A clean home: one ground, at most 7 sections (hero, products, packs, code, place, one story, questions).
+    if (clean) layout = withCleanHome(layout);
+    else layout = await withRowTints(layout, name => this.productPhotoTint(merchantId, storeId, name));
+    // Fuller hero (owner 2026-11-13): a cover photo on a plain backdrop gives the cover its ground.
+    // Owner 2026-11-13 («these two pictures together»): a two-part photo (a design board) never fills a whole band.
+    if (heroKit) layout = await withPlainBackgrounds(layout, facts.photos.map(photo => photo.url), photo => this.photoComposite(photo));
+    // Owner 2026-11-13 («variations of headers»): the hero's shape follows its photo (half picture on the backdrop's colour, or full).
+    let heroGround: HeroGround | undefined;
+    if (heroKit && theme !== 'unico') ({ layout, ground: heroGround } = await withHeroShape(layout, storeId, photo => this.photoBackdrop(photo)));
+    else if (heroKit) layout = await withCoverGround(layout, photo => this.photoBackdrop(photo));
+    // Owner 2026-11-10 («model on our server»): in the styles that float their products, those photos become cut-outs.
+    if (CUTOUT_THEMES.has(theme) && this.config.get<boolean>('app.yapiPhotoCutouts') !== false) layout = await withCutouts(layout, url => this.productCutout(merchantId, storeId, url));
     this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer?.blocks ?? []).length, kept: layout.map(block => block.type),
       // What the model sent for each block (photo indexes, item count): tells a left-out section from one the checks dropped.
       answered: (answer?.blocks as Array<{ type?: string; photo?: number; photo2?: number; items?: Array<{ photo?: number }> }> ?? []).map(block => `${block.type}:${block.photo ?? ''}/${block.photo2 ?? ''}/${(block.items ?? []).length}i[${(block.items ?? []).map(item => item.photo ?? '').join(',')}]`),
@@ -910,25 +1030,183 @@ export class SourceChatService {
     // Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box, filled by a
     // second call the same way. They speak for every product (the page is shared), so the model is told so; the checks read only
     // the merchant's words. A failed call leaves the product page without them, never with the demo words.
-    const productTemplate = template && (state.productLayout ?? []).length ? state.productLayout as LayoutBlock[] : undefined;
-    let productLayout: LayoutBlock[] = [];
-    if (productTemplate) {
-      const pageFacts = { ...facts, request: `${facts.request}\n(Página de producto: estas secciones van debajo del botón de compra de CADA producto. Escríbelas para todos los productos de la tienda — para qué sirven, cómo se usan, por qué elegirlos —, nunca para uno solo, y sin repetir la portada.)`.trim() };
-      const pageAnswer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: pageFacts, template: productTemplate }).catch(() => null);
-      productLayout = pageAnswer ? validateLibraryLayout(pageAnswer as never, facts, { fixed: productTemplate }) : [];
-      this.productLogger.log(JSON.stringify({ event: 'section_library_product_page', storeId, asked: productTemplate.length, kept: productLayout.map(block => block.type) }));
-    }
+    // Owner 2026-11-13 (Clyro's product page): a hero-kit template store's product page is «duo» — photo panel on its own ground,
+    // purchase panel with the price in the button, payment and two products to complete the order. Clothing keeps its fashion page.
+    const pdpLook = heroKit && theme !== 'unico' && (state.variants as Record<string, unknown> | undefined)?.pdp !== 'fashion' ? { pdp: 'duo' } : undefined;
+    const ownProductTemplate = template && (sections.productLayout ?? []).length ? sections.productLayout as LayoutBlock[] : undefined;
+    // Under its buy box the steps come first, as panels (its «(01) Application»).
+    const productTemplate = pdpLook && template ? withStepPanels(ownProductTemplate ?? []) : ownProductTemplate;
+    const productLayout = productTemplate ? await this.productPageSections(merchantId, storeId, facts, productTemplate) : [];
     await workflow.report('saving');
     // Lively one-product stores + chunky colour titles (spec 2026-11-03): YAPI's mood and title style for the product are saved with the home on Único.
     const libraryLook = libraryVariants(theme, answer as never, facts);
-    const saved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook ? { variants: libraryLook } : {}) }, 'Portada de YAPI');
+    // The «duo» photo panel takes each product's own ground (the photo's edge colour), read here: a shopper's browser cannot read the uploads.
+    const productGrounds = pdpLook ? await this.productGrounds(storeId).catch(() => undefined) : undefined;
+    // Owner 2026-11-13 («grabs the background of the main picture and applies it everywhere»): the page takes the hero backdrop's
+    // colours, unless the merchant gave the background or the bands a colour themselves (or asked for black and white).
+    const askedRoles = colourRolesFromWords(input.checklistWords ?? input.earlierAsks ?? '');
+    const fromGround = heroGround && !askedRoles.mono && !askedRoles.paper && !askedRoles.muted ? groundPalette(heroGround.hex) : undefined;
+    const groundLook = fromGround ? { colors: fromGround } : undefined;
+    const brandLook = brand ? brandStyleLook((answer as { brand?: unknown } | null)?.brand, brand.pairs.map(pair => pair.id)) : undefined;
+    if (brand) this.productLogger.log(JSON.stringify({ event: 'section_library_brand_style', storeId, picked: brandLook ?? null }));
+    const homeSaved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook || pdpLook ? { variants: { ...libraryLook, ...pdpLook } } : {}), ...(productGrounds ? { productGrounds } : {}), ...(brandLook || groundLook || clean ? { look: { ...brandLook, ...groundLook, ...(clean ? { clean: true } : {}) } } : {}) }, composedHome ? 'Portada compuesta por YAPI' : 'Portada de YAPI');
+    // Spec 2026-11-13 fill review: the saved home looked at on a desktop and a phone and corrected as data, saved as its own revision
+    // (the one before stays, to compare and to go back to).
+    const reviewed = this.config.get<boolean>('app.yapiFillReview') === true && template && !composedHome
+      ? await this.fillReview(merchantId, storeId, homeSaved.revision, theme, layout, facts) : null;
+    const homeFinal = reviewed?.saved ?? homeSaved;
+    // Owner 2026-11-12 («cant we just reuse sections»): a new template store's «Nosotros» from the template's sections too, as part of
+    // the first design; a failed call leaves the plain page.
+    const paged = template && input.firstDesign === true && templateRevision === revision
+      ? await this.ownPages(merchantId, storeId, homeFinal.revision, input.checklistWords ?? input.earlierAsks ?? '', { product: false }).catch(error => {
+        this.productLogger.warn(JSON.stringify({ event: 'about_page_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+        return null;
+      }) : null;
+    const saved = paged ?? homeFinal;
     await workflow.finish('completed');
+    // Live 2026-11-10 (Oh Belly / Pawby r8: ChatGPT timed out, then could not renew its session): the bare home was saved as if it
+    // were the design. Now the chat says so and keeps the request; «sigue» composes the template's sections again.
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
-      content: 'Armé la portada de tu tienda con secciones pensadas para tus productos y tus fotos. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });
+      content: callFailed
+        ? 'ChatGPT no respondió a tiempo, así que por ahora tu página de inicio muestra solo la portada y tus productos. Escríbeme «sigue» y armo todas las secciones de la plantilla.'
+        : 'Armé la portada de tu tienda con secciones pensadas para tus productos y tus fotos. Revisa la vista previa.',
+      metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label,
+        ...(reviewed ? { fillReview: { ...reviewed.summary, filledRevision: homeSaved.revision } } : {}),
+        ...(callFailed ? { pendingRequest: { instruction: SECTION_LIBRARY_BRIEF, direct: true, sectionLibraryFrom: templateRevision } } : {}) } } });
     // Owner 2026-11-02 («check and log»): the new home is checked in the background; the findings go to the product log and to this
     // reply's metadata (templateQa), never to the merchant's chat.
     if (this.config.get<boolean>('app.yapiTemplateQa') === true) void this.logTemplateQa(merchantId, storeId, saved.revision, assistantMessage.id);
     return { userMessage, assistantMessage, revision: saved };
+  }
+
+  /** Spec 2026-11-13 fill review (docs/YAPI_MIGRATION_PLAN.md §2): the home section fill just saved, rendered at 1280 and 390 px,
+   *  read by the template rules and the composer's reviewer, and corrected with the composer's changes on the layout (no swap). A
+   *  corrected home is saved as the next revision only when no rule fires more than before; any other trouble keeps the saved home
+   *  (a spent quota or a cancel still stops the build). */
+  private async fillReview(merchantId: string, storeId: string, revision: number, theme: string, layout: LayoutBlock[], facts: LibraryFacts) {
+    const started = Date.now();
+    const signal = sourceRequestContext.getStore()?.signal;
+    try {
+      const manifest = this.templates.registry.templateManifest(theme);
+      const resolved = manifest ? resolvePresetTemplate(manifest, id => this.templates.registry.templateManifest(id)) : null;
+      const template = fillReviewTemplate(theme, resolved?.manifest.name ?? theme, resolved?.preset as never, readSectionFit(), layout, type => !librarySectionBlocker(type, facts));
+      const recent = await this.templates.recentThemeHomes(storeId, theme);
+      const photos = facts.photos.map(photo => photo.url);
+      const result = await runFillReview(layout, {
+        render: async next => {
+          const draft = await this.templates.refillDraft(merchantId, storeId, revision, { layout: next });
+          const widths = await templateQaFindings(draft as never, signal, { shots: true });
+          return { findings: widths.flatMap(({ width, findings }) => findings.map((finding): FillReviewFinding => ({ ...finding, viewport: width === 390 ? 'phone' : 'desktop' }))),
+            images: widths.flatMap(({ images }) => images ?? []) };
+        },
+        review: (next, images, findings) => this.dialogue.reviewHome(merchantId, { storeId, layout: next, template, recent, photoCount: photos.length, images,
+          known: fillReviewBlocking(findings).map(finding => `${finding.viewport === 'phone' ? 'celular' : 'escritorio'}, sección ${finding.at ?? '-'}: ${finding.line.slice(9, 160)}`) }),
+        apply: (next, problems) => applyComposerChanges(next, problems, template, photos),
+        repairs: (findings, next) => ruleRepairs(findings, next, photos),
+        pick: (problems, next, taken) => reviewChanges(problems, next, template, taken),
+        fatal: error => quotaSpent(error),
+        trace: entry => this.traceQuickEdit({ storeId, stage: 'fill_review', theme, ...entry }),
+        maxMicroUsd: Math.round((this.config.get<number>('app.yapiFillReviewMaxUsd') ?? 1) * 1_000_000),
+        ...(signal ? { signal } : {}),
+      });
+      const counts = (list: FillReviewFinding[]) => ({ desktop: fillReviewBlocking(list).filter(f => f.viewport === 'desktop').length, phone: fillReviewBlocking(list).filter(f => f.viewport === 'phone').length });
+      const rules = (list: FillReviewFinding[]) => fillReviewBlocking(list).map(f => `${f.rule}@${f.viewport}:${f.at ?? '-'}`);
+      const saved = result.changed ? await this.templates.refill(merchantId, storeId, revision, { layout: result.layout }, 'Portada revisada por YAPI') : null;
+      const summary = { outcome: result.outcome, rounds: result.rounds, applied: result.applied, usd: result.spentMicroUsd / 1e6, ms: Date.now() - started,
+        before: counts(result.before), after: counts(result.after), beforeRules: rules(result.before), afterRules: rules(result.after) };
+      this.productLogger.log(JSON.stringify({ event: 'fill_review', storeId, theme, revision, ...(saved ? { reviewedRevision: saved.revision } : {}), ...summary }));
+      return { saved, summary };
+    } catch (error) {
+      if (quotaSpent(error) || signal?.aborted) throw error;
+      this.productLogger.warn(JSON.stringify({ event: 'fill_review_failed', storeId, theme, revision, ms: Date.now() - started, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+      return null;
+    }
+  }
+
+  /** Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box, filled by their
+   *  own call. They speak for every product (the page is shared), so the model is told so; the checks read only the merchant's words.
+   *  A failed call leaves the product page without them, never with the demo words. */
+  private async productPageSections(merchantId: string, storeId: string, facts: LibraryFacts, productTemplate: LayoutBlock[]): Promise<LayoutBlock[]> {
+    const pageFacts = { ...facts, request: `${facts.request}\n(Página de producto: estas secciones van debajo del botón de compra de CADA producto. Escríbelas para todos los productos de la tienda — para qué sirven, cómo se usan, por qué elegirlos —, nunca para uno solo, y sin repetir la portada.)`.trim() };
+    const pageAnswer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: pageFacts, template: productTemplate }).catch(() => null);
+    const productLayout = pageAnswer ? validateLibraryLayout(pageAnswer as never, facts, { fixed: productTemplate }) : [];
+    this.productLogger.log(JSON.stringify({ event: 'section_library_product_page', storeId, asked: productTemplate.length, kept: productLayout.map(block => block.type) }));
+    return productLayout;
+  }
+
+  /** Owner 2026-11-12 («the entire stores are only product pages… cant we just reuse sections»): after a new template store's home,
+   *  «Nosotros» gets up to five library sections the template fits (aboutPageTypes); with `product` (a studio home) the product
+   *  page's template sections are written for the store too (never the template's demo words). Null when there was nothing to write. */
+  private async ownPages(merchantId: string, storeId: string, revision: number, words: string, opts: { product: boolean }) {
+    const files = ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).files;
+    const template = writerTemplate(files as SourceProjectFileDto[]);
+    if (!template) return null;
+    const state = readMasterState(files);
+    const facts = await this.libraryFacts(merchantId, storeId, files, words, 24);
+    const productTemplate = (state.productLayout ?? []) as LayoutBlock[];
+    const productLayout = opts.product && productTemplate.length ? await this.productPageSections(merchantId, storeId, facts, productTemplate) : undefined;
+    const pages = (state.pageLayouts ?? {}) as Record<string, unknown[]>;
+    const fit = readSectionFit();
+    const home = files.find(file => file.path === 'components/home.tsx')?.content ?? '';
+    // Owner 2026-11-13 («que la persona la personalice después, así es en Amboras, nada existe»): «Nosotros» is not built on its own
+    // unless YAPI_ABOUT_SECTIONS=1; the merchant asks for it later («cambia nosotros»).
+    const types = this.config.get<boolean>('app.yapiAboutSections') !== true || (pages.about ?? []).length || !facts.photos.length || !sectionablePage(files, 'about') ? []
+      : aboutPageTypes({ fit: fit.fit[template.id] ?? [], vetoed: fit.vetoed?.[template.id] ?? [], home: [...((state.layout ?? []) as LayoutBlock[]).map(block => block.type), ...[...home.matchAll(/type:\s*['"]([\w-]+)['"]/g)].map(match => match[1])],
+        blocked: type => Boolean(librarySectionBlocker(type, facts)) });
+    let about: LayoutBlock[] = [];
+    if (types.length) {
+      const fixed = types.map(type => ({ type })) as LayoutBlock[];
+      const aboutFacts = { ...facts, request: `${facts.request}\n(Página «Nosotros» de la tienda: la primera sección es el encabezado de la página — quiénes son, en una línea —; las demás cuentan su historia, lo que defienden y cómo trabajan, con sus fotos y sus datos reales, sin repetir la portada ni inventar fechas, premios o cifras.)`.trim() };
+      const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: aboutFacts, template: fixed }).catch(() => null);
+      about = answer ? validateLibraryLayout(answer as never, aboutFacts, { fixed }) : [];
+      this.productLogger.log(JSON.stringify({ event: 'studio_about_page', storeId, asked: types, kept: about.map(block => block.type) }));
+    }
+    if (productLayout === undefined && !about.length) return null;
+    return this.templates.saveStudioPages(merchantId, storeId, revision, { ...(productLayout ? { productLayout } : {}), ...(about.length ? { pageLayouts: { ...pages, about } } : {}) }, 'Páginas de YAPI');
+  }
+
+  /** Spec 2026-11-11 store composer: the brand's home composed inside its template; null hands the build to fill mode. */
+  private async composeTemplateHome(merchantId: string, storeId: string, revision: number, theme: string, facts: LibraryFacts) {
+    const manifest = this.templates.registry.templateManifest(theme);
+    if (!manifest) return null;
+    const resolved = resolvePresetTemplate(manifest, id => this.templates.registry.templateManifest(id));
+    const found = composerTemplate(theme, resolved.manifest.name, resolved.preset as never, readSectionFit());
+    if (!found) return null;
+    // Live test 2026-11-11: a signature or offer the store cannot fill (press, services, reviews) failed every round.
+    const template = fillableTemplate(found, type => !librarySectionBlocker(type, facts));
+    const recent = await this.templates.recentThemeHomes(storeId, theme);
+    const photos = facts.photos.map(photo => photo.url);
+    const composed = { allowed: template.allowed, looks: template.looks, ...(template.opener ? { opener: template.opener } : {}) };
+    const signal = sourceRequestContext.getStore()?.signal;
+    const result = await runComposer({
+      compose: feedback => this.dialogue.composeHome(merchantId, { storeId, facts, template, recent, feedback }),
+      validate: answer => validateLibraryLayout(answer as never, facts, { composed }),
+      check: layout => composerCheck(layout, template, recent),
+      capture: async layout => {
+        const draft = await this.templates.refillDraft(merchantId, storeId, revision, { layout });
+        const desk = await captureAgentDraft(draft as never, 1280, signal);
+        const phone = await captureAgentDraft(draft as never, 390, signal);
+        return [...(desk.sections?.length ? desk.sections : [desk.image]), ...(phone.sections?.length ? phone.sections : [phone.image])];
+      },
+      review: (layout, images) => this.dialogue.reviewHome(merchantId, { storeId, layout, template, recent, photoCount: photos.length, images }),
+      apply: (layout, problems) => applyComposerChanges(layout, problems, template, photos, COMPOSER_MIN),
+      rewrite: async (layout, at) => {
+        const next = [...layout];
+        // Highest first, so a section that cannot be written can be dropped without shifting the ones still to write.
+        for (const index of [...at].sort((a, b) => b - a)) {
+          const fixed = [{ type: next[index].type }];
+          const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts, template: fixed }).catch(error => { if (quotaSpent(error)) throw error; return null; });
+          const [block] = answer ? validateLibraryLayout(answer as never, facts, { fixed }) : [];
+          if (block) next[index] = { ...block, ...(next[index].band ? { band: next[index].band } : {}) }; else next.splice(index, 1);
+        }
+        return { layout: next, microUsd: 0 };
+      },
+      trace: entry => this.traceQuickEdit({ storeId, stage: 'composer', theme, ...entry }),
+      maxMicroUsd: Math.round((this.config.get<number>('app.yapiComposerMaxUsd') ?? 10) * 1_000_000),
+      ...(signal ? { signal } : {}),
+    });
+    this.productLogger.log(JSON.stringify({ event: 'store_composer', storeId, theme, outcome: result.outcome, rounds: result.rounds, usd: result.spentMicroUsd / 1e6, kept: result.layout?.map(block => block.type) ?? [] }));
+    return result.layout ? result : null;
   }
 
   /** Owner 2026-11-06 («no podemos dejar nada a la suerte»): one JSON line per quick edit in YAPI_TRACE_FILE (dev only) — what the
@@ -981,8 +1259,83 @@ export class SourceChatService {
     }
   }
 
+  /** Spec 2026-11-10 Merienda: a product's colour from its first photo — only an upload of this platform, read from this API (never
+   *  a link the merchant pasted), shrunk to 32 px; null without a clear colour. */
+  private async productPhotoTint(merchantId: string, storeId: string, name: string): Promise<string | null> {
+    this.catalogForTints ??= new Map();
+    const catalog = this.catalogForTints.get(storeId) ?? this.generation.catalog(merchantId, storeId);
+    this.catalogForTints.set(storeId, catalog);
+    setTimeout(() => this.catalogForTints?.delete(storeId), 60_000).unref?.();
+    const item = ((await catalog).items as Array<{ name?: string; imageUrls?: string[] }>).find(entry => entry.name === name);
+    const path = item?.imageUrls?.map(uploadPath).find(url => /^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(url));
+    if (!path) return null;
+    const response = await fetch(new URL(path, sourcePublicApiUrl(this.config)), { signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return null;
+    const { data, info } = await sharp(Buffer.from(await response.arrayBuffer())).resize(32, 32, { fit: 'cover' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    return photoTint(data, info.channels);
+  }
+  private catalogForTints?: Map<string, ReturnType<SourceGenerationService['catalog']>>;
+  /** A photo made of two parts — one flat (a poster, a colour block) and one a photo — split by a hard seam. */
+  private async photoComposite(photo: string): Promise<boolean> {
+    const path = uploadPath(photo);
+    if (!/^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(path)) return false;
+    const response = await fetch(new URL(path, sourcePublicApiUrl(this.config)), { signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return false;
+    const { data, info } = await sharp(Buffer.from(await response.arrayBuffer())).resize(48, 48, { fit: 'fill' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const mean = (pick: (x: number, y: number) => boolean) => { let r = 0, g = 0, b = 0, n = 0; for (let y = 0; y < 48; y++) for (let x = 0; x < 48; x++) if (pick(x, y)) { const at = (y * 48 + x) * info.channels; r += data[at]; g += data[at + 1]; b += data[at + 2]; n++; } return [r / n, g / n, b / n] as const; };
+    return compositeSeam(Array.from({ length: 48 }, (_, row) => mean((_x, y) => y === row)), Array.from({ length: 48 }, (_, col) => mean((x) => x === col)));
+  }
+  /** Product page «duo» (owner 2026-11-13): each product's first photo → the median colour of its outer edge, by upload path. */
+  private async productGrounds(storeId: string): Promise<Record<string, string> | undefined> {
+    const items = await this.prisma.paymentLink.findMany({ where: { storeId }, select: { imageUrls: true }, orderBy: { createdAt: 'asc' }, take: 40 });
+    const paths = [...new Set(items.map(item => item.imageUrls?.[0]).filter((url): url is string => Boolean(url)).map(url => uploadPath(url)))]
+      .filter(path => /^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(path));
+    const read = async (path: string): Promise<[string, string] | null> => {
+      const response = await fetch(new URL(path, sourcePublicApiUrl(this.config)), { signal: AbortSignal.timeout(5_000) });
+      if (!response.ok) return null;
+      const size = 24, { data, info } = await sharp(Buffer.from(await response.arrayBuffer())).resize(size, size, { fit: 'fill' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      // The median, not the mean: a product resting on the bottom edge (a blender's dark base) must not darken the backdrop.
+      const channels: number[][] = [[], [], []];
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        if (x > 1 && x < size - 2 && y > 1 && y < size - 2) continue;
+        const at = (y * size + x) * info.channels; for (const c of [0, 1, 2]) channels[c].push(data[at + c]);
+      }
+      const median = (values: number[]) => values.sort((a, b) => a - b)[values.length >> 1];
+      return [path, `#${channels.map(values => median(values).toString(16).padStart(2, '0')).join('')}`];
+    };
+    const found = (await Promise.all(paths.map(path => read(path).catch(() => null)))).filter((entry): entry is [string, string] => Boolean(entry));
+    return found.length ? Object.fromEntries(found) : undefined;
+  }
+  /** Fuller hero: a cover photo's backdrop colour and how plain it is (only this platform's uploads are read). */
+  private async photoBackdrop(photo: string): Promise<{ hex: string; uniformity: number; width?: number; height?: number } | null> {
+    const path = uploadPath(photo);
+    if (!/^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(path)) return null;
+    const response = await fetch(new URL(path, sourcePublicApiUrl(this.config)), { signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return null;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const sample = (await samplePhotoColours([{ url: path, path, bytes }])).get(path);
+    // Its size too (owner 2026-11-13, Oh Belly's 736 px photo stretched across the screen): a small photo is never a full-width hero.
+    const { width, height } = await sharp(bytes).metadata().catch(() => ({ width: undefined, height: undefined }));
+    return sample?.backdropHex && typeof sample.uniformity === 'number' ? { hex: sample.backdropHex, uniformity: sample.uniformity, width, height } : null;
+  }
+  /** A product photo's cut-out, saved as a new upload of the store (only this platform's uploads are read); null for a scene.
+   *  It is filed in the store's media like any upload: the save bundles only the merchant's own photos and dropped the rest. */
+  private async productCutout(merchantId: string, storeId: string, url: string): Promise<string | null> {
+    const path = uploadPath(url);
+    const filename = /^\/v1\/uploads\/([a-f0-9-]+\.(?:png|jpe?g|webp))$/i.exec(path)?.[1];
+    if (!filename || !this.uploads) return null;
+    const original = await this.uploads.getBuffer(filename);
+    if (!original) return null;
+    const cut = await photoCutout(original, join(this.config.get<string>('app.uploadsDir') ?? 'uploads', '..', 'models', 'silueta.onnx'));
+    if (!cut) return null;
+    const stored = await this.uploads.saveBuffer(cut, 'image/webp');
+    await this.prisma.mediaAsset.create({ data: { merchantId, storeId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
+    return stored.url;
+  }
+
   /** The store's real facts for the section library: catalogue, uploads, shown codes, reviews, links (spec 2026-10-31). */
-  private async libraryFacts(merchantId: string, storeId: string, files: SourceProjectSnapshot['files'], request: string, maxPhotos: number) {
+  /** Public for V2 (spec 2026-11-14 v2-library-sections): a written home fills library sections from the same facts. */
+  async libraryFacts(merchantId: string, storeId: string, files: SourceProjectSnapshot['files'], request: string, maxPhotos: number) {
     const state = readMasterState(files);
     const [record, catalog, uploads, codes, reviews, retention, links, zones, assistant] = await Promise.all([
       this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true, contactPhone: true, policies: true } }),
@@ -1003,11 +1356,16 @@ export class SourceChatService {
     const onboarding = (record?.onboarding ?? {}) as { what?: string; story?: string };
     const storeData = files.find(file => file.path === 'components/store-data.tsx')?.content ?? '';
     const bold = (state.variants as Record<string, unknown> | undefined)?.mood === 'bold' || isPlayfulBusiness(`${request}\n${onboarding.what ?? ''}\n${storeData}`);
-    return buildLibraryFacts({ storeName: state.store?.name || catalog.storeName, what: onboarding.what ?? '', story: onboarding.story ?? '', city: state.store?.city ?? '', request, tone: bold ? 'bold' : 'calm',
+    const facts = buildLibraryFacts({ storeName: state.store?.name || catalog.storeName, what: onboarding.what ?? '', story: onboarding.story ?? '', city: state.store?.city ?? '', request, tone: bold ? 'bold' : 'calm',
       items: catalog.items as never, categories: catalog.categories ?? [], locations: catalog.locations as never, shippingEnabled: catalog.shippingEnabled, shippingPickupEnabled: catalog.shippingPickupEnabled,
       contactPhone: record?.contactPhone ?? catalog.contactPhone, uploads: uploads.map(asset => asset.url),
       codes: codes.filter(code => code.showInEmails || code.showInAssistant || code.id === popupCode), reviews, links,
       zones, policies: (record?.policies ?? {}) as Record<string, unknown>, assistantNotes: assistant?.notes ?? '' }, maxPhotos);
+    // Owner 2026-11-11 («no blurry cover photos»): how wide each photo is, for the cover.
+    // Packs show only on a store that turned them on (Store.bundlesEnabled).
+    const packs = await this.prisma.storeBundle.count({ where: { storeId, active: true, store: { bundlesEnabled: true } } }).catch(() => 0);
+    const checkoutMode = (await this.prisma.store.findFirst({ where: { id: storeId }, select: { checkoutMode: true } }).catch(() => null))?.checkoutMode ?? undefined;
+    return { ...facts, packs, checkoutMode, photos: await withPhotoWidths(facts.photos, this.config.get<string>('app.uploadsDir') ?? 'uploads') };
   }
 
   private async masterPolish(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown } | null) {
@@ -1102,10 +1460,13 @@ export class SourceChatService {
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
     const recent = await Promise.resolve(this.prisma.mediaAsset.findMany({ where: { merchantId }, orderBy: { createdAt: 'desc' }, take: 8, select: { url: true } })).catch(() => [] as Array<{ url: string }>);
     // Photos only: the hero video sits in the same record, and a video chosen as the hero photo draws a broken image.
-    const photos = [...new Set([...Object.values(state.photos), ...(recent ?? []).map(asset => asset.url)])].filter(url => url && !/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url)).slice(0, 8);
+    const still = (url: string) => Boolean(url) && !/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
+    // The menu's tile photos come right after the store's own, numbered, so a menu edit keeps the ones it was not asked to change.
+    const shownMenu = menuForFill(currentMenu, [...new Set(Object.values(state.photos))].filter(still));
+    const photos = [...new Set([...shownMenu.photos, ...(recent ?? []).map(asset => asset.url)])].filter(still).slice(0, 8);
     const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: options.polish?.what ?? '', story: options.polish?.story ?? '', city: state.store?.city ?? '', products: options.polish?.products ?? [], photos,
       palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: withoutPhotoGroups(manifest.master!.sections ?? [], request, (state.sections ?? []).some(section => section.id === 'gallery')),
-      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: currentMenu, featureCopy: ((state.features ?? {}) as { copy?: object }).copy ?? {} }, request, menuTargets });
+      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: shownMenu.menu, featureCopy: ((state.features ?? {}) as { copy?: object }).copy ?? {} }, request, menuTargets });
     // The merchant's clear words win over a read that missed them: «quiero un menú desplegable» turns it on, «quita…» off.
     const asked = instructionAsksStoreMenu(request);
     const fullFill = read ? masterFillFromRead(read, photos, true) : null;
@@ -1205,6 +1566,8 @@ export class SourceChatService {
     const trace = (outcome: string, extra: Record<string, unknown> = {}) => this.traceQuickEdit({ storeId, request: input.instruction.slice(0, 300),
       ...(read ? { ops: read.ops.length, store: read.store.length, catalog: (read.catalog ?? []).length, rest: read.rest.slice(0, 300), ask: read.ask ?? '' } : {}), outcome, ...extra });
     if (!read) { trace('no-answer'); return null; }
+    // Live Remolino 2026-11-09: a classic home (no sections) is not this edit's to change; a home op hands the whole request on.
+    if (!layout.length && read.ops.some(op => (op.page ?? 'home') === 'home' && !op.op.startsWith('page-'))) { trace('classic-home'); return null; }
     // Owner 2026-11-06 («no podemos dejar nada a la suerte»): improving a menu page always adds its sections, whatever the model read.
     read = withPageImprove(read, input.instruction, pages, templateTypes);
     // Live 2026-11-05: a change that needs the merchant's words first (a FAQ answer) is asked for, never «No logré que se vea».
@@ -1246,7 +1609,8 @@ export class SourceChatService {
         const sectionFacts = { ...facts, request, ...(fresh.length >= 3 ? { photos: fresh } : {}) };
         const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: sectionFacts, template: [{ type: add.type }] }).catch(error => { if (error instanceof SourceProviderQuotaException) throw error; return null; });
         const [block] = answer ? validateLibraryLayout(answer as never, sectionFacts, { fixed: [{ type: add.type }] }) : [];
-        if (block) added.push({ to: add.to, block }); else refusedAdds.push(`No pude agregar esa sección: ${libraryDropReason(add.type)}.`);
+        if (!block) this.traceQuickEdit({ storeId, stage: 'section-dropped', type: add.type, to: add.to, about: add.about, answer: JSON.stringify(answer ?? null).slice(0, 2000) });
+        if (block) added.push({ to: bandUnderMenu(block.type, input.instruction) ? 0 : add.to, block }); else refusedAdds.push(`No pude agregar esa sección: ${libraryDropReason(add.type)}.`);
       }
       return { added, refusedAdds };
     };
@@ -1291,11 +1655,14 @@ export class SourceChatService {
       extraPages: extra.map(page => page.slug), focus: focus ? { pagina: focus.pagina, secciones: focus.secciones, partes: focus.partes, mirando: Boolean(focus.mirando) } : null, outsideFocus: outsideFocus(ops, focus) }));
     // The store's data first: a refused write (a check the database makes) is said, never «Listo».
     // The announcement, the footer line, the catalogue title and its filter style are files; everything else the store edit changes is data.
-    const { copy: _copy, catalogTitle: _title, filterStyle: _filters, ...data } = store.change;
+    const { copy: _copy, catalogTitle: _title, filterStyle: _filters, parts: _parts, footerStyle: _footer, ...data } = store.change;
     let dataChanged = false;
     const catalogWrite = !catalogChangeEmpty(catalog.change);
     const dataEmpty = storeChangeEmpty({ ...data, products: data.products });
-    if (!storeChangeEmpty(store.change) || catalogWrite) {
+    // Final review 2026-11-09: a design test's B is a revision — the store's data and catalog are live for everyone, so they wait.
+    const testB = Boolean(input.abRequest) && (!dataEmpty || catalogWrite);
+    if (testB) refused.push('En una prueba A/B solo cambian el diseño o la ventana; no cambié los datos de tu tienda (textos de páginas, productos o precios).');
+    if (!testB && (!storeChangeEmpty(store.change) || catalogWrite)) {
       const written = dataEmpty && !catalogWrite ? true : await (async () => {
         await workflow.report('saving');
         return this.writeStoreChange(merchantId, storeId, store.change, catalogWrite ? catalog.change : undefined).then(() => (dataChanged = true), error => {
@@ -1303,8 +1670,11 @@ export class SourceChatService {
           return false;
         });
       })();
-      if (written) { done.push(...store.done, ...catalog.done); refused.push(...catalog.notes); }
-      else refused.push(catalogWrite && dataEmpty ? 'No pude guardar los cambios del catálogo. Inténtalo de nuevo en un momento.'
+      if (written) {
+        done.push(...store.done, ...catalog.done); refused.push(...catalog.notes);
+        // Spec 2026-11-09 A/B tests: the live popup is version A of a running popup test — the merchant is told the change reaches it.
+        if ((store.change.popup || store.change.popupLook) && await this.ab?.popupTestRunning(storeId).catch(() => false)) refused.push('Ojo: tienes una prueba de la ventana corriendo; este cambio también lo ve la versión A.');
+      } else refused.push(catalogWrite && dataEmpty ? 'No pude guardar los cambios del catálogo. Inténtalo de nuevo en un momento.'
         : 'No pude guardar los cambios de los datos de tu tienda. Inténtalo de nuevo en un momento.');
     }
     // Links to a renamed or removed category follow it on every page, only once the change is saved; the menu follows in the files.
@@ -1324,7 +1694,9 @@ export class SourceChatService {
       ...(JSON.stringify(productNow) !== JSON.stringify(productLayout) ? { productLayout: productNow } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
       ...(pagesNowChanged ? { pageLayouts: pagesNow } : {}), ...(extraNowChanged ? { extraPages: extraNow } : {}),
       // Browse catalogue (spec 2026-11-06): the catalogue's style is the store's filters variant, written to config.js by the refill.
-      ...(store.change.filterStyle ? { variants: { filters: store.change.filterStyle } } : {}) };
+      ...(store.change.filterStyle || store.change.footerStyle ? { variants: { ...(store.change.filterStyle ? { filters: store.change.filterStyle } : {}), ...(store.change.footerStyle ? { footer: store.change.footerStyle } : {}) } } : {}),
+      // Miga Dorada 2026-11-07: a part's own colour rides in the look; the refill draws it over the theme's.
+      ...(store.change.parts ? { look: { parts: store.change.parts } } : {}) };
     // Final review 2026-11-06: a question, or catalog ops that changed nothing, is answered here — never the slow design edit.
     if (!done.length && !refused.length && !read.ask && !(read.catalog ?? []).length) { trace('handed-on'); return null; }
     trace('replied', { done: done.length, refused: refused.length });
@@ -1353,9 +1725,12 @@ export class SourceChatService {
         ? { files: <T extends { path: string; content: string }>(list: T[]) => withoutRemovedCategories(withExtra(withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned))) } : {};
       // Spec §6: data already saved stays saved when the preview fails to build; the merchant is told, never a bare error.
       try {
-        saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || store.change.filterStyle || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
+        saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || store.change.filterStyle || store.change.parts || store.change.footerStyle || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
           { refreshData: true, ...pageFiles });
       } catch (error) {
+        // NOA 2026-11-11: «una sección rg en el menú» failed as «el código del diseño nuevo tenía un error» with the cause only on the
+        // console; the trace keeps the error and the change, so the save can be replayed.
+        trace('save-failed', { reason: String((error as Error)?.message ?? error).slice(0, 2000), change: JSON.stringify(filesChange).slice(0, 12000) });
         if (!dataChanged) throw error;
         this.productLogger.warn(JSON.stringify({ event: 'store_edit_refill_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
         previewFailed = true;
@@ -1378,7 +1753,7 @@ export class SourceChatService {
   /** YAPI edits everything (spec 2026-11-03): the store's own data as the edit call reads it. */
   private async storeEditState(merchantId: string, storeId: string, files: SourceProjectSnapshot['files']): Promise<StoreEditState> {
     const [record, links, retention, catalog] = await Promise.all([
-      this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { tagline: true, aboutText: true, contactPhone: true, contactEmail: true, policies: true } }),
+      this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { slug: true, tagline: true, aboutText: true, contactPhone: true, contactEmail: true, whatsappButton: true, policies: true } }),
       this.prisma.storeLink.findMany({ where: { storeId }, orderBy: { sortOrder: 'asc' }, select: { label: true, url: true } }),
       this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } }),
       this.generation.catalog(merchantId, storeId),
@@ -1386,7 +1761,8 @@ export class SourceChatService {
     if (!record) throw new Error('store not found');
     const settings = { ...DEFAULT_RETENTION, ...((retention?.settings ?? {}) as Record<string, unknown>) } as typeof DEFAULT_RETENTION & { popupPromoCodeId?: string | null };
     const code = settings.popupPromoCodeId ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId, isActive: true }, select: { discountType: true, discountValue: true } }) : null;
-    const copy = (readMasterState(files).copy ?? {}) as { announcement?: string; tagline?: string };
+    const master = readMasterState(files);
+    const copy = (master.copy ?? {}) as { announcement?: string; tagline?: string };
     const items = (catalog.items ?? []) as Array<{ id: string; name: string; amount: number; description?: string | null; imageUrls?: string[]; variants?: unknown[] }>;
     // Part 2 (spec 2026-11-05 creates anything): the catalog rows the chat may change; any read that fails leaves its part out.
     const safely = <T,>(run: () => Promise<T>, fallback: T): Promise<T> => Promise.resolve().then(run).catch(() => fallback);
@@ -1401,14 +1777,17 @@ export class SourceChatService {
     ]);
     const row = new Map(rows.map(entry => [entry.id, entry]));
     return {
-      tagline: record.tagline ?? '', aboutText: record.aboutText ?? '', contactPhone: record.contactPhone ?? '', contactEmail: record.contactEmail ?? '',
+      tagline: record.tagline ?? '', aboutText: record.aboutText ?? '', contactPhone: record.contactPhone ?? '', contactEmail: record.contactEmail ?? '', whatsappButton: record.whatsappButton,
       policies: storePolicies(record.policies), faq: storeFaq(record.policies),
       announcement: copy.announcement ?? '', footer: copy.tagline ?? '',
       links,
       popup: { on: Boolean(settings.signupEnabled), title: String(settings.signupTitle ?? ''), text: String(settings.signupBody ?? ''), button: String(settings.signupButton ?? ''),
-        discount: code?.discountType === 'PERCENT' ? Number(code.discountValue) : 0 },
+        discount: code?.discountType === 'PERCENT' ? Number(code.discountValue) : 0,
+        look: readPopupLook((settings as Record<string, unknown>).popupLook) ?? pickPopupLook(record.slug), previous: Boolean(readPopupLook((settings as Record<string, unknown>).popupLookPrevious)) },
       catalogTitle: readCatalogTitle(files),
       ...(typeof readConfigFile(files).filterStyle === 'string' ? { filterStyle: String(readConfigFile(files).filterStyle) } : {}),
+      ...(master.look?.parts ? { parts: master.look.parts } : {}),
+      ...(typeof master.variants?.footer === 'string' ? { footerStyle: master.variants.footer, footerStyles: templateManifest(MASTER_TEMPLATE_ID)?.master?.variants?.footer ?? [] } : {}),
       products: items.map(item => {
         const saved = row.get(item.id);
         return { id: item.id, name: item.name, amount: Number(item.amount) || 0, description: item.description ?? '', imageUrls: (item.imageUrls ?? []).map(url => uploadOnly(url) ?? url),
@@ -1445,8 +1824,8 @@ export class SourceChatService {
   /** YAPI edits everything (spec 2026-11-03): the store's data the edit changed, written as Ajustes and the product editor write it. */
   private async writeStoreChange(merchantId: string, storeId: string, change: StoreChange, catalog?: CatalogChange) {
     await this.prisma.$transaction(async tx => {
-      if (change.store || change.policies) {
-        await tx.store.update({ where: { id: storeId }, data: { ...(change.store ?? {}), ...(change.policies ? { policies: change.policies as Prisma.InputJsonValue } : {}) } });
+      if (change.store || change.policies || change.whatsappButton !== undefined) {
+        await tx.store.update({ where: { id: storeId }, data: { ...(change.store ?? {}), ...(change.whatsappButton !== undefined ? { whatsappButton: change.whatsappButton } : {}), ...(change.policies ? { policies: change.policies as Prisma.InputJsonValue } : {}) } });
       }
       if (change.links) {
         await tx.storeLink.deleteMany({ where: { storeId } });
@@ -1474,6 +1853,21 @@ export class SourceChatService {
       const next = { ...DEFAULT_RETENTION, ...(current ?? {}), ...words, ...(code ? { popupPromoCodeId: code.id } : {}) };
       await this.prisma.storeRetention.upsert({ where: { storeId }, create: { storeId, settings: next as never }, update: { settings: next as never } });
     }
+    // Spec 2026-11-09 popup looks: the look, its photo or one step back, after the popup's words.
+    if (change.popupLook?.action === 'look') await this.popupLooks?.setLook(storeId, change.popupLook.look);
+    if (change.popupLook?.action === 'photo') await this.popupLooks?.setPhoto(storeId, change.popupLook.photo);
+    if (change.popupLook?.action === 'undo') await this.popupLooks?.undo(storeId);
+    // Spec 2026-11-09 popup games: on/off (four real codes on), the top prize, the question.
+    const game = change.popupGame;
+    // One message may carry several (review 2026-11-09: «una ruleta con premio mayor de 30 %»): the game first, then its prize and question.
+    if (game?.game) await (game.game === 'off' ? this.popupGames?.disable(storeId) : this.popupGames?.enable(storeId, game.game));
+    if (game?.topPrize !== undefined) await this.popupGames?.setTopPrize(storeId, game.topPrize);
+    if (game?.prizes) await this.popupGames?.setPrizes(storeId, game.prizes);
+    if (game?.question !== undefined) await this.popupGames?.setQuestion(storeId, game.question);
+    // Spec 2026-11-10 rasca y elige: the card's shape, the contact asked for, the interests.
+    if (game?.shape !== undefined) await this.popupGames?.setShape(storeId, game.shape);
+    if (game?.contact !== undefined) await this.popupGames?.setContact(storeId, game.contact);
+    if (game?.interests !== undefined) await this.popupGames?.setInterests(storeId, game.interests);
   }
 
   /** Fix 4 (2026-11-02): the shipping price the merchant named, set on the store's delivery zones (all of them: one price for the
@@ -1693,7 +2087,7 @@ export class SourceChatService {
     if (input.directionId && (!tappedDirection || current.revision)) throw new BadRequestException('Elige una de las direcciones sugeridas en el último mensaje de YAPI.');
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const userMessage = await this.prisma.storeAgentMessage.create({ data: {
-      threadId: thread.id, channel: 'source', role: 'USER', content: input.resumeWords?.trim() || (input.personalTouch ? 'Toque personal' : input.instruction.trim()),
+      threadId: thread.id, channel: 'source', role: 'USER', content: input.tourWords?.trim() || input.resumeWords?.trim() || (input.personalTouch ? 'Toque personal' : input.instruction.trim()),
       metadata: { assetUrls: input.assetUrls || [], revision: input.revision, ...(input.requestId ? { requestId: input.requestId } : {}) },
     } });
     // Store voice (spec 2026-10-14): the message right after YAPI's kind question is its answer. It is kept word for word on the
@@ -1711,6 +2105,32 @@ export class SourceChatService {
     // Studio sent with it (a chip tap carries no setupAction). Photos sent with it join the build.
     // Final review 2026-11-04: only a plain answer does — a product photo, a pasted link, «restart» or a template/style/plan tap keeps
     // its own flow (the open question is left behind). Photos answering it are images only and lead the build's photos.
+    // Spec 2026-11-09 A/B tests: status, end and popup test asks are answered from the test's own numbers (no model call); a design ask
+    // (abRequest, set when the job was queued) first checks the test can start, then builds B by the usual edit.
+    if (current.revision && this.ab && !input.personalTouch && !input.resumeWords && !input.tourStepId) {
+      const text = input.instruction;
+      const asked = input.abRequest ? null : AB_STATUS.test(text) ? () => this.ab!.status(storeId) : AB_END.test(text) ? () => this.ab!.end(storeId) : null;
+      if (asked) { await workflow.finish('completed'); return { userMessage, assistantMessage: await asked(), setup: null }; }
+      if (input.abRequest || AB_REQUEST.test(text)) {
+        const blocked = await this.ab.blocker(merchantId, storeId);
+        if (blocked) {
+          await workflow.finish('completed');
+          return { userMessage, assistantMessage: await this.ab.blocked(storeId, blocked), setup: null };
+        }
+        if (!input.abRequest && abKind(text) === 'popup') { await workflow.finish('completed'); return { userMessage, assistantMessage: await this.ab.proposePopup(storeId, text), setup: null }; }
+        if (input.abRequest) input = { ...input, instruction: `Versión B para una prueba A/B (no publicar): ${input.abRequest}` };
+      }
+    }
+    // YAPI store tour (spec 2026-11-09): «muéstrame mi tienda» walks the store section by section — no model call, no credits.
+    if (current.revision && this.tour && !input.personalTouch && !input.resumeWords && !input.tourStepId && TOUR_REQUEST.test(input.instruction)) {
+      await workflow.finish('completed');
+      return { userMessage, assistantMessage: await this.tour.start(storeId), setup: null };
+    }
+    // Owner 2026-11-09: «perdón me equivoqué, sí me gustaba» answers the tour — the section stays, the next step comes.
+    if (input.tourStepId && this.tour && keepsStep(input.tourWords ?? input.instruction)) {
+      const kept = await this.tour.keep(storeId);
+      if (kept) { await workflow.finish('completed'); return { userMessage, assistantMessage: kept, setup: null }; }
+    }
     const plainAnswer = (!input.setupAction || input.setupAction === 'generate') && !input.templateId && !input.directionId && !input.planId && !input.stylePick
       && !/https?:\/\/|www\./i.test(input.instruction);
     const openIntake = plainAnswer && !input.personalTouch && !input.resumeWords && this.intakeOn() ? pendingIntake(history.messages, current.revision) : null;
@@ -1720,7 +2140,7 @@ export class SourceChatService {
       const state: IntakeState = { ...openIntake, photos: [...new Set([...images, ...openIntake.photos])].slice(0, 24),
         answers: [...openIntake.answers, { topic: openIntake.question?.topic ?? 'what', question: openIntake.question?.text ?? '', answer }] };
       await workflow.report('interpreting');
-      return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, state.photos.slice(0, 8), state.words, state.request, '', 'generate', state);
+      return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, state.photos.slice(0, 8), state.words, state.request, '', 'generate', state, input.model);
     }
     // Owner 2026-10-31 (switching templates later): «cámbiala a la plantilla Tacón» or «prueba otra plantilla» on a built store
     // switches it to that whole template (or YAPI's next-best pick), filled again with the store's own words and photos.
@@ -1823,7 +2243,7 @@ export class SourceChatService {
       const onboarding = walkthrough?.onboarding as { purpose?: string } | null | undefined;
       if (onboarding && onboarding.purpose !== 'showcase') {
         await workflow.report('interpreting');
-        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8), input.instruction, ownDesignRequest(input.instruction, history.messages), '', input.setupAction);
+        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8), input.instruction, ownDesignRequest(input.instruction, history.messages), '', input.setupAction, undefined, input.model);
       }
     }
     let retryDecision: SourceConversationDecision | undefined;
@@ -1894,7 +2314,14 @@ export class SourceChatService {
           const templated = writerTemplate(((previous.snapshot as unknown as SourceProjectSnapshot)?.files ?? []) as SourceProjectFileDto[]);
           throw new PersonalTouchSkipped('home writer kept the template', templated ? this.libraryFollowUp(revisionNow, input.checklistWords) : checkAfter(revisionNow));
         }
-        const after = checkAfter(written.revision.revision);
+        // Owner 2026-11-12 («the entire stores are only product pages»): a studio store's product page and «Nosotros» follow its home.
+        // The home is saved already, so a failed step only leaves those pages as they were.
+        const pages = this.config.get<boolean>('app.yapiStudio') === true
+          ? await this.ownPages(merchantId, storeId, written.revision.revision, input.checklistWords ?? input.earlierAsks ?? '', { product: true }).catch(error => {
+            this.productLogger.warn(JSON.stringify({ event: 'studio_pages_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+            return null;
+          }) : null;
+        const after = checkAfter(pages?.revision ?? written.revision.revision);
         return after ? { ...written, followUp: after } : written;
       }
       if (input.briefCheck) return await this.briefCheck(merchantId, storeId, thread.id, userMessage, workflow, input, current.revision, previous);
@@ -1948,15 +2375,16 @@ export class SourceChatService {
       // YAPI edits everything (spec 2026-11-03; live on Miga: «activa una ventana de suscripción con 10%» got a cadence question
       // from the conversation step): on a template store the store edit reads a change request first. What it cannot do follows as
       // its own request; a request it has nothing for (a question, a redesign, a logo) goes on to the conversation step unchanged.
+      // Live Remolino 2026-11-09: a store without home sections too — its popup, policies and codes are the store edit's, never a rewrite.
       let storeEditTried = false;
       const firstFiles = previous ? (previous.snapshot as unknown as SourceProjectSnapshot).files : [];
       // Final review 2026-11-05 (point-at): a template section or circle goes here too; a classic section id still does not.
       const pointed = Boolean(input.selection && (input.selection.area || input.selection.page));
       if (previous && !input.personalTouch && !input.redesign && !input.layoutRest && (!input.selection || pointed) && !input.resumeDraft && !productLink && !referenceUrls.length
         && this.config.get<boolean>('app.yapiMasterTemplate') === true && (previous.snapshot as unknown as SourceProjectSnapshot).brief?.templateId === MASTER_TEMPLATE_ID
-        && readsMasterData(firstFiles) && !sourceRedesignRequested(input.instruction) && (readMasterState(firstFiles).layout ?? []).length) {
+        && readsMasterData(firstFiles) && !sourceRedesignRequested(input.instruction)) {
         storeEditTried = true;
-        const done = await this.templateLayoutEdit(merchantId, storeId, thread.id, userMessage, workflow, input, current.revision, readMasterState(firstFiles).layout as LayoutBlock[]);
+        const done = await this.templateLayoutEdit(merchantId, storeId, thread.id, userMessage, workflow, input, current.revision, (readMasterState(firstFiles).layout ?? []) as LayoutBlock[]);
         if (done) return done;
       }
       // A personal-touch redesign (the first design included) is rework of the template, never a local edit (live check 2026-10-28).
@@ -2247,7 +2675,7 @@ export class SourceChatService {
         const chatPhotos = assetUrls.filter(url => ['product', 'business', 'team', 'background'].includes(decision.imageUses.find(use => use.url === url)?.role ?? ''));
         const ownRequest = ownDesignRequest(input.instruction, history.messages);
         const productRequest = productImport ? `${ownRequest ?? input.instruction}\n\n${productSourcePrompt(productImport.product, productImport.listingDescription, productImport.videoUrls?.length ?? 0)}\nConstruye la tienda alrededor de este producto.` : undefined;
-        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, input.instruction, productRequest ?? ownRequest, productNote, undefined, productImport ? false : undefined);
+        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, input.instruction, productRequest ?? ownRequest, productNote, undefined, productImport ? false : undefined, input.model);
       }
       // "Elige tu estilo": new stores and full redesigns get two styles to pick from (one calm, one bold); a kept template stays its own style.
       // A copy follows its blueprint: no style cards (spec 2026-10-18 B §3).
@@ -2387,7 +2815,7 @@ export class SourceChatService {
       if (input.quotaRetry && (shown instanceof SourceProviderQuotaException || shown instanceof Error && shown.message === MODEL_LIMIT_MERCHANT_FAILURE)) throw shown;
       const failureReason = shown instanceof SourceConversationFailure || shown instanceof SourceProviderQuotaException || shown instanceof HttpException && (shown.getStatus() < 500 || shown.getStatus() === 502) ? shown.message : 'No pude completar tu pedido.';
       await this.prisma.storeAgentMessage.create({ data: {
-        threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: input.ownRequest ? unfinishedNote(failureReason, true) : `${failureReason} Tu mensaje y los archivos quedaron guardados; no necesitas volver a adjuntarlos. ${this.generation.usesChatGptPlan ? 'Un nuevo intento usa tu saldo del plan de ChatGPT, sin recurrir a una API de pago.' : 'Un nuevo intento puede consumir créditos de IA.'}`, metadata: { failed: true, progress: workflow.value, pendingRequest: { instruction: input.instruction, direct: Boolean(input.personalTouch) }, ...(error instanceof SourceConversationFailure ? { failure: { stage: 'conversation', ...safeConversationDiagnostic(error.diagnostic) } } : {}), ...(retryDecision ? { sourceRetry: { fingerprint: retryFingerprint, decision: retryDecision } } : {}), sourceSetup: { ...setupDraft, assetUrls: error instanceof BadRequestException ? setupDraft.assetUrls : allAssets } },
+        threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: input.ownRequest ? unfinishedNote(failureReason, true) : `${failureReason} Tu mensaje y los archivos quedaron guardados; no necesitas volver a adjuntarlos. ${this.generation.usesChatGptPlan && !process.env.YAPI_CHAT_ON_CLAUDE ? 'Un nuevo intento usa tu saldo del plan de ChatGPT, sin recurrir a una API de pago.' : 'Un nuevo intento puede consumir créditos de IA.'}`, metadata: { failed: true, progress: workflow.value, pendingRequest: { instruction: input.instruction, direct: Boolean(input.personalTouch) }, ...(error instanceof SourceConversationFailure ? { failure: { stage: 'conversation', ...safeConversationDiagnostic(error.diagnostic) } } : {}), ...(retryDecision ? { sourceRetry: { fingerprint: retryFingerprint, decision: retryDecision } } : {}), sourceSetup: { ...setupDraft, assetUrls: error instanceof BadRequestException ? setupDraft.assetUrls : allAssets } },
       } });
       // Throw what the merchant may read, not the original diagnostic. The gate
       // returns aborts, timeouts and Prisma faults unchanged, so callers that
@@ -2446,6 +2874,45 @@ export class SourceChatService {
     const result = await this.productReader(link);
     this.productLogger.log(JSON.stringify({ event: 'product_source_read', storeId, host: link.host, ok: result.ok, ...(result.ok ? { tier: result.tier, images: result.listing.images.length, price: result.listing.price !== null } : { reason: result.reason }), durationMs: Date.now() - started }));
     return result.ok ? { link, site, listing: result.listing } : { link, site, failure: result.reason };
+  }
+
+  /** The merchant's own shop as brand material for an import build: its artwork into their uploads (photos at most 1600 px,
+   *  about 3.5 MB in all so the catalog's covers still fit the project), its phrases and its type. Product photos the import
+   *  already brought are skipped by file name; the header's drawing becomes the logo when the store has none. */
+  private async importSiteBrand(merchantId: string, storeId: string, origin: string, productImages: string[], captures: Array<{ url?: string }>): Promise<{ uses: SourceImageUse[]; source: BrandSourceInput } | null> {
+    if (!this.uploads) return null;
+    const fileName = (url: string) => { try { return new URL(url, origin).pathname.split('/').pop()!.replace(/_(?:\d+x\d*|\d*x\d+|small|medium|large|grande|master)(?=\.)/i, '').toLowerCase(); } catch { return ''; } };
+    const known = new Set(productImages.map(fileName).filter(Boolean));
+    const [site, page] = await Promise.all([
+      collectSiteArtwork(origin, source => known.has(fileName(source)), 16),
+      readSourceWebsite(origin, 'html', AbortSignal.timeout(10_000)).catch(() => null),
+    ]);
+    const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { logoUrl: true } });
+    const uses: SourceImageUse[] = [];
+    const imported: BrandSourceInput['imported'] = [];
+    let room = 3_500_000, logo = Boolean(store?.logoUrl);
+    for (const art of site.artwork) {
+      let body = art.body, mimeType: string = art.mimeType;
+      if (art.width > 1600 || body.length > 600_000) {
+        const resized = sharp(body).resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true });
+        body = art.kind === 'drawing' ? await resized.png({ compressionLevel: 9 }).toBuffer() : await resized.webp({ quality: 84 }).toBuffer();
+        mimeType = art.kind === 'drawing' ? 'image/png' : 'image/webp';
+      }
+      if (body.length > room || body.length > 1_900_000) continue;
+      room -= body.length;
+      const stored = await this.uploads.saveBuffer(body, mimeType);
+      await this.prisma.mediaAsset.create({ data: { merchantId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
+      const takeLogo = !logo && art.kind === 'drawing' && art.inHeader;
+      if (takeLogo) logo = true;
+      imported.push({ url: stored.url, source: art.source, kind: takeLogo ? 'logo' : 'photo' });
+      uses.push({ url: stored.url, role: takeLogo ? 'logo' : 'business', description: takeLogo ? 'Logo de su tienda Shopify (su propio dibujo).'
+        : `${art.kind === 'drawing' ? 'Ilustración propia de la marca (dibujo de su tienda Shopify, fondo transparente): úsala como arte de la marca' : 'Foto propia de la marca, de su tienda Shopify'}${art.alt ? `: ${art.alt}` : ''}.` });
+    }
+    const extracted = page ? extractBrandWebsite(page.content, page.url) : undefined;
+    const fontFamilies = [site.fonts.display, site.fonts.text, ...(extracted?.fontFamilies ?? [])].filter((name): name is string => Boolean(name));
+    const captureIndexes = captures.flatMap((capture, index) => capture.url === origin || capture.url === `${origin}/` ? [index] : []);
+    const notes = site.artwork.length ? [] : ['No pude traer el arte de tu tienda; usé tus fotos de productos.'];
+    return { uses, source: { imageUrls: [], captureIndexes, quotes: extracted?.quotes ?? [], fontFamilies: [...new Set(fontFamilies)].slice(0, 4), imported, look: true, notes } };
   }
 
   /** Images from the web into this merchant's uploads, one by one; a failed one is skipped (brand source and product links). */

@@ -1,16 +1,19 @@
 import { useEffect, useState, type ReactNode, type CSSProperties } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
 import { store, copy, variants, photos, layout } from './store-data';
+import * as storeData from './store-data';
 import { CardRibbons, CardTemplate, ThemeMotion, libraryCard, type LibraryBlock } from './library';
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
-import { IconApple, IconBaby, IconBeef, IconBookOpen, IconCake, IconCircleUser, IconCoffee, IconCookie, IconCroissant, IconCupSoda, IconDroplet, IconDumbbell, IconFlame, IconFlaskConical, IconFlower2, IconGem, IconGift, IconIceCreamCone, IconLamp, IconLogIn,
+import { IconApple, IconBaby, IconBeef, IconBookOpen, IconCake, IconCoffee, IconCookie, IconCroissant, IconCupSoda, IconDroplet, IconDumbbell, IconFlame, IconFlaskConical, IconFlower2, IconGem, IconGift, IconIceCreamCone, IconLamp,
   IconMapPin, IconMenu, IconMessageCircle, IconPalette, IconPawPrint, IconSearch, IconShirt, IconShoppingBag, IconShoppingBasket, IconShoppingCart, IconSofa, IconSparkles, IconSprout, IconUser, IconUtensils, IconWatch, IconWine, IconX } from './icons';
 
 /** 34 templates (2026-10-31): the header glyphs of each theme — Palo Alto's person in a circle, a cart, a basket, or words. */
 const HEADER_ICONS: Record<string, { account: typeof IconSearch; cart: typeof IconSearch }> = {
-  line: { account: IconLogIn, cart: IconShoppingBag }, person: { account: IconCircleUser, cart: IconShoppingBag },
+  // Owner 2026-11-14 («the icons are the same up top, like little shirt, search button and create profile»): the account is the
+  // same person on every theme (it was a log-in arrow or a person in a circle); the cart still follows the theme or the goods.
+  line: { account: IconUser, cart: IconShoppingBag }, person: { account: IconUser, cart: IconShoppingBag },
   cart: { account: IconUser, cart: IconShoppingCart }, basket: { account: IconUser, cart: IconShoppingBasket },
 };
 /** Owner 2026-11-06 («siempre íconos, nunca palabras; si es una joyería que el carrito sea un anillo»): the cart shows what the store
@@ -70,7 +73,9 @@ function useMenu(): NavLink[] {
   // Premium landing (spec 2026-11-03): the shop header names the home's own parts.
   if (shopPage()) return [{ label: 'Producto', href: 'index.html#comprar' },
     ...((layout as LibraryBlock[]).some(block => block.type === 'variant-cards') ? [{ label: 'Colores', href: 'index.html#colores' }] : []), ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
-  return [{ label: frame().shop, href: 'productos.html' }, ...categories, ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
+  // Owner 2026-11-12 («the entire stores are only product pages»): «Nosotros» once YAPI gave it sections.
+  const about = ((storeData as { pageLayouts?: Record<string, unknown[]> }).pageLayouts?.about ?? []).length > 0;
+  return [{ label: frame().shop, href: 'productos.html' }, ...categories, ...(about ? [{ label: 'Nosotros', href: 'nosotros.html' }] : []), ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
 }
 
 /** Lively one-product stores (spec 2026-11-03): in the colourful mood a store with no logo image shows its name letter by letter,
@@ -119,6 +124,64 @@ export function Header() {
         {menu.map(link => <a key={link.href} href={link.href} {...colourLink(link.href)} onClick={() => setOpen(false)}>{link.label}</a>)}
       </nav>
     </div>
+  </>;
+}
+
+/** A store photo no section of the home names (by slot or by address). */
+function sparePhoto(): string {
+  const home = JSON.stringify(layout);
+  const map = photos as Record<string, unknown>;
+  // The same photo can sit under two names (hero and its slot): what the home shows is compared by address.
+  const shown = new Set([...home.matchAll(/"slot:([^"]+)"/g)].map(match => map[match[1]]).filter(Boolean));
+  const entry = Object.entries(map).find(([, src]) => typeof src === 'string' && src && !shown.has(src) && !home.includes(src));
+  return entry ? String(entry[1]) : '';
+}
+
+export function Footer() {
+  const tagline = copy.tagline || store.tagline;
+  // store-data is `as const`: widen so an empty value still type-checks as text.
+  const phone: string = store.phone;
+  const footer = variant('footer', 'columns');
+  // John Smedley sections (spec 2026-10-21): the `column` footer sits on a band of the store's hero photo.
+  // Template frame variety (2026-11-03): the `photo` footer (Brightland / Pipeline) fills one side with a store photo the home does not
+  // already show (each photo once); with none spare it is drawn without one.
+  const footerPhoto = footer === 'photo' ? sparePhoto() : footer === 'column' ? photos.hero : '';
+  const band = footerPhoto ? { ['--es-footer-photo' as string]: `url("${footerPhoto}")` } as CSSProperties : undefined;
+  const categories = useCategoryLinks();
+  const themed = libraryStore();
+  const words = frame();
+  // A template home with its own newsletter section never shows a second one in the footer.
+  const news = !themed || !(layout as LibraryBlock[]).some(block => block.type === 'newsletter-split');
+  return <footer className="es-footer" data-es-footer={footer} style={band}>
+    {/* Owner 2026-11-14 («footer is huge»): the big name is sized by its length, so a long name gets smaller letters. */}
+    {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true" data-es-len="" style={{ ['--es-word-len' as string]: Math.max(4, store.name.length) } as CSSProperties}>{store.name}</p> : null}
+    {/* BonBonBon: the tagline (or the name) scrolling on a strip above the footer; still under reduced motion. */}
+    {footer === 'ticker' ? <div className="es-footer__ticker" aria-hidden="true"><p>{[0, 1].map(half => <span key={half}>{Array.from({ length: 4 }, (_, i) => <span key={i}>{tagline || store.name}<i>{'\u2726'}</i></span>)}</span>)}</p></div> : null}
+    <div className="es-footer__grid">
+      <div className="es-footer__brand">{store.logo ? <a className="es-footer__logo" href="index.html"><img src={store.logo} alt={store.name} /></a> : <p className="es-footer__name">{store.name}</p>}{tagline ? <p>{tagline}</p> : null}</div>
+      {themed ? <div><h2>{words.footShop}</h2><nav aria-label={words.footShop}><a href="productos.html">Ver todo</a>{categories.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav></div>
+        : <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>}
+      <div><h2>{themed ? words.footHelp : 'Ayuda'}</h2><nav data-pagosya-pages className="pagosya-info-nav es-footer__pages" aria-label="Información" /></div>
+      {store.city || phone ? <div className="es-footer__contact"><h2>{footer === 'visit' ? 'Visítanos' : 'Contacto'}</h2>
+        {store.city ? <p className="es-footer__line"><IconMapPin /> {store.city}</p> : null}
+        {phone ? <a className="es-footer__line" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}
+      </div> : null}
+    </div>
+    {/* The newsletter: the email is typed right here, in a field the kit draws once signup is on (owner 2026-10-25). */}
+    {news ? <div className="es-footer__news" data-pagosya-subscribe-block>
+      <div><h2>Recibe novedades</h2><p>Lanzamientos y ofertas de {store.name} en tu correo.</p></div>
+      <div className="es-footer__signup" data-pagosya-subscribe-inline data-track="newsletter" />
+    </div> : null}
+    <p className="es-footer__legal">{'\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa</p>
+    {/* Graza / Ridge / Scratch: the store's name across the whole bottom edge. */}
+    {footer === 'wordmark' ? <p className="es-footer__word" aria-hidden="true" style={{ ['--es-word-len' as string]: Math.max(4, store.name.length) } as CSSProperties}>{store.name}</p> : null}
+  </footer>;
+}
+
+/** Store chassis (spec 2026-11-12): the cart's templates, beside the header instead of inside it, so a store can draw its own
+ *  header (components/header.tsx) or its own cart (components/cart.tsx) and keep the other. */
+export function CartParts() {
+  return <>
     <CartTemplate>
       <div className="es-cart">
         <header className="es-cart__head">
@@ -178,56 +241,6 @@ export function Header() {
   </>;
 }
 
-/** A store photo no section of the home names (by slot or by address). */
-function sparePhoto(): string {
-  const home = JSON.stringify(layout);
-  const map = photos as Record<string, unknown>;
-  // The same photo can sit under two names (hero and its slot): what the home shows is compared by address.
-  const shown = new Set([...home.matchAll(/"slot:([^"]+)"/g)].map(match => map[match[1]]).filter(Boolean));
-  const entry = Object.entries(map).find(([, src]) => typeof src === 'string' && src && !shown.has(src) && !home.includes(src));
-  return entry ? String(entry[1]) : '';
-}
-
-export function Footer() {
-  const tagline = copy.tagline || store.tagline;
-  // store-data is `as const`: widen so an empty value still type-checks as text.
-  const phone: string = store.phone;
-  const footer = variant('footer', 'columns');
-  // John Smedley sections (spec 2026-10-21): the `column` footer sits on a band of the store's hero photo.
-  // Template frame variety (2026-11-03): the `photo` footer (Brightland / Pipeline) fills one side with a store photo the home does not
-  // already show (each photo once); with none spare it is drawn without one.
-  const footerPhoto = footer === 'photo' ? sparePhoto() : footer === 'column' ? photos.hero : '';
-  const band = footerPhoto ? { ['--es-footer-photo' as string]: `url("${footerPhoto}")` } as CSSProperties : undefined;
-  const categories = useCategoryLinks();
-  const themed = libraryStore();
-  const words = frame();
-  // A template home with its own newsletter section never shows a second one in the footer.
-  const news = !themed || !(layout as LibraryBlock[]).some(block => block.type === 'newsletter-split');
-  return <footer className="es-footer" data-es-footer={footer} style={band}>
-    {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true">{store.name}</p> : null}
-    {/* BonBonBon: the tagline (or the name) scrolling on a strip above the footer; still under reduced motion. */}
-    {footer === 'ticker' ? <div className="es-footer__ticker" aria-hidden="true"><p>{[0, 1].map(half => <span key={half}>{Array.from({ length: 4 }, (_, i) => <span key={i}>{tagline || store.name}<i>{'\u2726'}</i></span>)}</span>)}</p></div> : null}
-    <div className="es-footer__grid">
-      <div className="es-footer__brand">{store.logo ? <a className="es-footer__logo" href="index.html"><img src={store.logo} alt={store.name} /></a> : <p className="es-footer__name">{store.name}</p>}{tagline ? <p>{tagline}</p> : null}</div>
-      {themed ? <div><h2>{words.footShop}</h2><nav aria-label={words.footShop}><a href="productos.html">Ver todo</a>{categories.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav></div>
-        : <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>}
-      <div><h2>{themed ? words.footHelp : 'Ayuda'}</h2><nav data-pagosya-pages className="pagosya-info-nav es-footer__pages" aria-label="Información" /></div>
-      {store.city || phone ? <div className="es-footer__contact"><h2>{footer === 'visit' ? 'Visítanos' : 'Contacto'}</h2>
-        {store.city ? <p className="es-footer__line"><IconMapPin /> {store.city}</p> : null}
-        {phone ? <a className="es-footer__line" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}
-      </div> : null}
-    </div>
-    {/* The newsletter: the email is typed right here, in a field the kit draws once signup is on (owner 2026-10-25). */}
-    {news ? <div className="es-footer__news" data-pagosya-subscribe-block>
-      <div><h2>Recibe novedades</h2><p>Lanzamientos y ofertas de {store.name} en tu correo.</p></div>
-      <div className="es-footer__signup" data-pagosya-subscribe-inline data-track="newsletter" />
-    </div> : null}
-    <p className="es-footer__legal">{'\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa</p>
-    {/* Graza / Ridge / Scratch: the store's name across the whole bottom edge. */}
-    {footer === 'wordmark' ? <p className="es-footer__word" aria-hidden="true" style={{ ['--es-word-len' as string]: Math.max(4, store.name.length) } as CSSProperties}>{store.name}</p> : null}
-  </footer>;
-}
-
 function HeaderIcons() {
   const set = HEADER_ICONS[variant('icons', 'line')] ?? HEADER_ICONS.line;
   const Cart = GOODS_ICONS[variant('goods', '')] ?? set.cart;
@@ -242,6 +255,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   return <div className="es" data-es-theme={variant('theme', 'none')} data-es-mood={variant('mood', 'calm')} data-pya-lively={variant('theme', 'none') === 'unico' ? '' : undefined} data-es-icons={variant('icons', 'line')} data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')} data-es-titles={variant('titles', 'normal')}>
     <a className="es-skip" href="#contenido">Ir al contenido</a>
     <Header />
+    <CartParts />
     {/* Section library stores: one product card on every page (owner 2026-10-31). */}
     {(layout as LibraryBlock[]).length ? <><CardTemplate card={libraryCard(layout as LibraryBlock[])} /><CardRibbons /><ThemeMotion /></> : null}
     {children}

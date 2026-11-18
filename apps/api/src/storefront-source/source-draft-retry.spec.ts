@@ -1,4 +1,4 @@
-import { sourceDraftRetry } from './source-draft-retry';
+import { draftSavedByItsRequest, sourceDraftRetry } from './source-draft-retry';
 
 describe('sourceDraftRetry', () => {
   it('keeps the original request a preserved draft was built from', () => {
@@ -22,4 +22,17 @@ it('carries a template address, a circle and a viewing back to the Studio (spec 
   expect(sourceDraftRetry({ instruction: 'x', selection: { sectionId: 'lb-1', at: 1, page: 'faq', area }, viewing: { page: 'faq', at: 2 } }))
     .toMatchObject({ selection: { sectionId: 'lb-1', at: 1, page: 'faq', area }, viewing: { page: 'faq', at: 2 } });
   expect(sourceDraftRetry({ instruction: 'x', viewing: { page: 'blog' } })?.viewing).toBeUndefined();
+});
+
+describe('draftSavedByItsRequest', () => {
+  // Owner 2026-11-11: «la foto más grande» saved revision 4, its follow-up polish pass ended PARTIAL on revision 4, and the
+  // next message resent the whole request (7 minutes) as «Guardar borrador».
+  it('is true when the run\'s own request already saved the current revision', () => {
+    expect(draftSavedByItsRequest({ lastCommittedRevision: 4 }, 4)).toBe(true);
+  });
+  it('is false for a request that never saved, or saved an older revision', () => {
+    expect(draftSavedByItsRequest({ lastCommittedRevision: null }, 4)).toBe(false);
+    expect(draftSavedByItsRequest({ lastCommittedRevision: 3 }, 4)).toBe(false);
+    expect(draftSavedByItsRequest(null, 4)).toBe(false);
+  });
 });

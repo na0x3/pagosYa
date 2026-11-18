@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { compactPreviewImageData, createPreviewImageLoader, hostedCatalogImages } from './source-preview-media';
+import { compactPreviewImageData, createPreviewImageLoader, hostedCatalogImages, PREVIEW_EMBED_BYTES } from './source-preview-media';
 import type { SourceSnapshot } from './source-preview';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -157,4 +157,22 @@ describe('preview variant photography', () => {
     await createPreviewImageLoader('http://localhost:3001/v1')(snapshot);
     expect(fetch).not.toHaveBeenCalled();
   });
+});
+
+// Copy a store 2026-11-17: Graza's 225 photos embedded made a page too big for the browser («Invalid string length»).
+it('embeds covers first and leaves photos past the room as upload links', async () => {
+  vi.stubGlobal('location', { href: 'http://localhost:5175' });
+  vi.stubGlobal('FileReader', class {
+    result = ''; onload?: () => void;
+    readAsDataURL(blob: Blob) { void blob.text().then(value => { this.result = 'data:' + value; this.onload?.(); }); }
+  });
+  const big = new Uint8Array(PREVIEW_EMBED_BYTES / 3 + 1);
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(new Blob([big], { type: 'image/jpeg' }), { headers: { 'content-type': 'image/jpeg' } }))));
+  const photo = (n: number) => `/v1/uploads/${n}aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg`;
+  const data = { items: [{ imageUrls: [photo(1), photo(2)] }, { imageUrls: [photo(3)] }] };
+  const result = await createPreviewImageLoader('http://localhost:3001/v1')({ files: [{ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ data })};` }] } as SourceSnapshot);
+  const items = JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, '')).data.items;
+  expect(items[0].imageUrls[0]).toMatch(/^data:/);
+  expect(items[1].imageUrls[0]).toMatch(/^data:/);
+  expect(items[0].imageUrls[1]).toBe('http://localhost:3001/v1/uploads/2aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg');
 });

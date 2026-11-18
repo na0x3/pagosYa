@@ -1,0 +1,1103 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://fellowproducts.com/",
+    "title": "Fellow - Everyday Magic.™",
+    "width": 1440,
+    "pageHeight": 7792,
+    "fonts": {
+      "h1": {
+        "family": "Fellow Solar",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Fellow Solar",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop by category"
+      },
+      "body": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free US shipping on orders $75+ Shop Now🚀 Free US shipping "
+      },
+      "button": {
+        "family": "Sohne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": "Shop By Moments"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 35,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "2026 Onyx Advent Calenda",
+        "Holiday Gift Guides",
+        "Opus 2 is here",
+        "Fellow Drops",
+        "Shop Now",
+        "2026 Onyx Advent Calenda"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 700,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 799,
+        "h": 514,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop by category"
+        },
+        "words": 18,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 1313,
+        "h": 690,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 20,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2002,
+        "h": 700,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Espresso, evolved."
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2702,
+        "h": 617,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best Sellers"
+        },
+        "words": 37,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 3320,
+        "h": 700,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4020,
+        "h": 690,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Get the best coffees via text"
+        },
+        "words": 30,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4709,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best sellers"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5429,
+        "h": 246,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5675,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6395,
+        "h": 690,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 52,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 8,
+      "columns": 8,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://fellowproducts.com/?_su_rec=CgwEL3Vcw3U1mMxKRKRyjPFygRI-ZlgW2JhEMGf6MHSRXaO1CWKpxAR2tAKeejKhu3IqXZ0d1zJqmdFNflnqrhK3zCX70ZBnoWBM3Fx1yV0Gf38QDfEidnObvWP7qwSwJoFZcUYIfwzr7eFpaT4ohZz9macqC-R6RuOdF2tQVlxjlZHgxJxLolnBbEdkGaYC6hlUxqnhFWlRLqxVr2WmVxCDZItrEyKXB7Dp-39CXKfchKaKKl4hJZmuXEoGU97lrzu9OFil3l3J0W28fW8OIy8ITRTHEmD3umLP_gp5iJgwty0s9Ud_KNkFwg8xYkd2i3pygP4oYQqJySLTQzNHH3Vx9i1dXt5HmGSYZyO-fl48hA&_su_rec_id=85005bcb-4ec8-4f0d-9107-bcf0dcfba26e-1794668271",
+    "title": "Fellow - Everyday Magic.™",
+    "width": 390,
+    "pageHeight": 7980,
+    "fonts": {
+      "h1": {
+        "family": "Fellow Solar",
+        "size": "42px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Fellow Solar",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop by category"
+      },
+      "body": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free US shipping on orders $75+ Shop Now🚀 Free US shipping "
+      },
+      "button": {
+        "family": "Sohne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": "Shop By Moments"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 35,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "2026 Onyx Advent Calenda",
+        "Holiday Gift Guides",
+        "Opus 2 is here",
+        "Fellow Drops",
+        "Shop Now",
+        "2026 Onyx Advent Calenda"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 135,
+        "h": 688,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 822,
+        "h": 472,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop by category"
+        },
+        "words": 18,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 1294,
+        "h": 691,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 20,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1986,
+        "h": 615,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Espresso, evolved."
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2601,
+        "h": 435,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best Sellers"
+        },
+        "words": 37,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 3035,
+        "h": 613,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3648,
+        "h": 662,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "42px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Get the best coffees via text"
+        },
+        "words": 30,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4310,
+        "h": 780,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best sellers"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5090,
+        "h": 202,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5292,
+        "h": 780,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6072,
+        "h": 678,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 52,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 8,
+      "columns": 8,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://fellowproducts.com/collections/all",
+    "title": "All",
+    "width": 1440,
+    "pageHeight": 3684,
+    "fonts": {
+      "h1": {
+        "family": "Fellow Solar",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "All"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free US shipping on orders $75+ Shop Now🚀 Free US shipping "
+      },
+      "button": {
+        "family": "Sohne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "+ Filter & Sort"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 35,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "2026 Onyx Advent Calenda",
+        "Holiday Gift Guides",
+        "Opus 2 is here",
+        "Fellow Drops",
+        "Shop Now",
+        "2026 Onyx Advent Calenda"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 152,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "All"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 251,
+        "h": 2727,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 295,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 20,
+      "columns": 4,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://fellowproducts.com/collections/all",
+    "title": "All",
+    "width": 390,
+    "pageHeight": 4879,
+    "fonts": {
+      "h1": {
+        "family": "Fellow Solar",
+        "size": "42px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "All"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free US shipping on orders $75+ Shop Now🚀 Free US shipping "
+      },
+      "button": {
+        "family": "Sohne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "+ Filter & Sort"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 35,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "2026 Onyx Advent Calenda",
+        "Holiday Gift Guides",
+        "Opus 2 is here",
+        "Fellow Drops",
+        "Shop Now",
+        "2026 Onyx Advent Calenda"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 135,
+        "h": 146,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "42px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "All"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 280,
+        "h": 3368,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 295,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 20,
+      "columns": 2,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://fellowproducts.com/products/equator-holiday-blend",
+    "title": "Equator Holiday Blend",
+    "width": 1440,
+    "pageHeight": 2634,
+    "fonts": {
+      "h1": {
+        "family": "Sohne",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Equator Holiday Blend"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free US shipping on orders $75+ Shop Now🚀 Free US shipping "
+      },
+      "button": {
+        "family": "ui-sans-serif",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Zoom"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 35,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "2026 Onyx Advent Calenda",
+        "Holiday Gift Guides",
+        "Opus 2 is here",
+        "Fellow Drops",
+        "Shop Now",
+        "2026 Onyx Advent Calenda"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 1325,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Sohne",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Equator Holiday Blend"
+        },
+        "words": 205,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1423,
+        "h": 504,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 21,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 484,
+      "x": 931,
+      "width": 479,
+      "bg": "rgb(30, 30, 31)"
+    },
+    "price": {
+      "family": "Sohne",
+      "size": "14px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Regular price $23.00 Unit price / per"
+    },
+    "galleryImages": 1,
+    "swatches": 1,
+    "selects": 0,
+    "accordions": 39
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://fellowproducts.com/products/equator-holiday-blend",
+    "title": "Equator Holiday Blend",
+    "width": 390,
+    "pageHeight": 3574,
+    "fonts": {
+      "h1": {
+        "family": "Sohne",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Equator Holiday Blend"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free US shipping on orders $75+ Shop Now🚀 Free US shipping "
+      },
+      "button": {
+        "family": "ui-sans-serif",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Zoom"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 35,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "2026 Onyx Advent Calenda",
+        "Holiday Gift Guides",
+        "Opus 2 is here",
+        "Fellow Drops",
+        "Shop Now",
+        "2026 Onyx Advent Calenda"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 135,
+        "h": 2113,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Sohne",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Equator Holiday Blend"
+        },
+        "words": 216,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": false,
+      "top": 1110,
+      "x": 123,
+      "width": 252,
+      "bg": "rgb(30, 30, 31)"
+    },
+    "price": {
+      "family": "Sohne",
+      "size": "12px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Regular price $23.00 Unit price / per"
+    },
+    "galleryImages": 1,
+    "swatches": 1,
+    "selects": 0,
+    "accordions": 39
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://fellowproducts.com/?",
+    "title": "Fellow - Everyday Magic.™",
+    "width": 1440,
+    "pageHeight": 7792,
+    "fonts": {
+      "h1": {
+        "family": "Fellow Solar",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Fellow Solar",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop by category"
+      },
+      "body": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free US shipping on orders $75+ Shop Now🚀 Free US shipping "
+      },
+      "button": {
+        "family": "Sohne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": "Shop By Moments"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 35,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "2026 Onyx Advent Calenda",
+        "Holiday Gift Guides",
+        "Opus 2 is here",
+        "Fellow Drops",
+        "Shop Now",
+        "2026 Onyx Advent Calenda"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 700,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 799,
+        "h": 514,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop by category"
+        },
+        "words": 18,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 1313,
+        "h": 690,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 20,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2002,
+        "h": 700,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Espresso, evolved."
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2702,
+        "h": 617,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best Sellers"
+        },
+        "words": 37,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 3320,
+        "h": 700,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4020,
+        "h": 690,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Get the best coffees via text"
+        },
+        "words": 30,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4709,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Fellow Solar",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best sellers"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5429,
+        "h": 246,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5675,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6395,
+        "h": 690,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 52,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

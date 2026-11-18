@@ -9,7 +9,7 @@ export const NAV_SECTIONS = [
   { id: "inicio", label: "Inicio", description: "Tus ventas y lo que sigue, de un vistazo.",
     tabs: [{ view: "overview", label: "Resumen" }, { view: "growth", label: "Crecimiento" }] },
   { id: "tienda", label: "Tienda", description: "Diseña con YAPI y cuida tu catálogo.",
-    tabs: [{ view: "products", label: "Productos" }, { view: "workspace", label: "Diseño" }, { view: "media", label: "Medios" }, { view: "stores", label: "Tus tiendas" }] },
+    tabs: [{ view: "products", label: "Productos" }, { view: "workspace", label: "Diseño" }, { view: "tasks", label: "Tareas" }, { view: "media", label: "Medios" }, { view: "stores", label: "Tus tiendas" }] },
   { id: "pedidos", label: "Pedidos", description: "Lo que te compraron y lo que te escribieron.",
     tabs: [{ view: "payments", label: "Pedidos" }, { view: "inbox", label: "Mensajes" }] },
   { id: "cobrar", label: "Cobrar", description: "Un QR o un link para cobrar al instante.",

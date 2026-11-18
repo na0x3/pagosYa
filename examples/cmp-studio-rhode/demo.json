@@ -1,0 +1,34 @@
+{
+  "from": "cmvwgh64y0001vv1dyzie6now",
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwd3nuo70001zp0q36da86bv",
+  "slug": "phmkuzij",
+  "categories": {
+    "cmvwgh65a0003vv1ds1xmccps": "cmwd3nuod0003zp0qul80ro9z",
+    "cmvwgh65d0005vv1d4q89wvfn": "cmwd3nuoe0005zp0q78rv418x",
+    "cmvwgh65e0007vv1duuy7hgsj": "cmwd3nuoe0007zp0qtsq23txh"
+  },
+  "products": {
+    "cmvwgh663000bvv1ds3155h71": "cmwd3nuop000bzp0qdw10q7zq",
+    "cmvwgh66v000fvv1d02l05i71": "cmwd3nuov000fzp0q8svqoq3q",
+    "cmvwgh673000jvv1dg4iftdxb": "cmwd3nupl000jzp0qrhziv5oa",
+    "cmvwgh679000nvv1d2cscsmrg": "cmwd3nupp000nzp0q3uasa5k0",
+    "cmvwgh67d000rvv1dc516y3ew": "cmwd3nupv000rzp0qfxexsbzr",
+    "cmvwgh67h000vvv1d495uul8t": "cmwd3nupz000vzp0qlqcazesu",
+    "cmvwgh67l000zvv1d79cs5zv6": "cmwd3nuq3000zzp0qz04ky7tz",
+    "cmvwgh67t0013vv1djw3kg98r": "cmwd3nuq70013zp0qz4mqohgh",
+    "cmvwgh6840017vv1df0cd1fmu": "cmwd3nuqb0017zp0q7n4iwob6",
+    "cmvwgh68p001bvv1d5c541d4i": "cmwd3nuqm001bzp0q2grwe67n",
+    "cmvwgh68u001fvv1dspv4axxw": "cmwd3nuqr001fzp0qxpis1oo1"
+  },
+  "assetUrls": [
+    "/v1/uploads/0b366007-83e8-44e5-9153-e3ad828a6e0a.jpg",
+    "/v1/uploads/c8891b8d-31e6-4abc-9a5e-ab7bec6de05d.jpg",
+    "/v1/uploads/8b65af27-5ad0-4511-9050-f2e869efbff4.jpg",
+    "/v1/uploads/8dfcb01b-81ab-439b-9e40-f75a346a4d15.jpg",
+    "/v1/uploads/cde9de38-0ccf-4785-86d5-b6bcfce467e2.jpg",
+    "/v1/uploads/9387a3db-5cae-4b6b-9764-5296ac1a239a.jpg",
+    "/v1/uploads/86e9c3d0-ea1b-4a05-8a61-dd1eb6b72f2f.jpg",
+    "/v1/uploads/1d8a4788-4eaf-4b04-8f89-1ffc24500c44.jpg"
+  ]
+}

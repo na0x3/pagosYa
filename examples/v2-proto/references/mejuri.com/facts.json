@@ -1,0 +1,775 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://mejuri.com/world/en/?",
+    "title": "Fine Jewelry For Every Day | Mejuri",
+    "width": 1440,
+    "pageHeight": 7200,
+    "fonts": {
+      "h1": {
+        "family": "SyndicatGrotesk",
+        "size": "64px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "3.2px",
+        "text": "Holiday Gifts Campaign"
+      },
+      "h2": {
+        "family": "SyndicatGrotesk",
+        "size": "32px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "Picked Just For You"
+      },
+      "body": {
+        "family": "SyndicatGrotesk",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "button": {
+        "family": "SyndicatGrotesk",
+        "size": "14px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.28px",
+        "text": "All Jewelry"
+      },
+      "nav": {
+        "family": "SyndicatGrotesk",
+        "size": "14px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 38,
+      "position": "relative",
+      "bg": "rgb(0, 0, 0)",
+      "links": [
+        "Caret",
+        "Caret",
+        "Shop Now"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 3,
+    "sections": [
+      {
+        "y": 38,
+        "h": 640,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "64px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "3.2px",
+          "text": "Holiday Gifts Campaign"
+        },
+        "words": 39,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 678,
+        "h": 1833,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": true,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "32px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "PUZZLE COLLECTION"
+        },
+        "words": 15,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2510,
+        "h": 1833,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": true,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "32px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "DÔME COLLECTION"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4343,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "32px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "MOST GIFTED"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5087,
+        "h": 284,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5371,
+        "h": 570,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "32px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Picked Just For You"
+        },
+        "words": 114,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 5941,
+        "h": 546,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "32px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Stores & services"
+        },
+        "words": 71,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://mejuri.com/world/en/?",
+    "title": "Fine Jewelry For Every Day | Mejuri",
+    "width": 390,
+    "pageHeight": 10224,
+    "fonts": {
+      "h1": {
+        "family": "SyndicatGrotesk",
+        "size": "40px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Holiday Gifts Campaign"
+      },
+      "h2": {
+        "family": "SyndicatGrotesk",
+        "size": "24px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "1.2px",
+        "text": "Picked Just For You"
+      },
+      "body": {
+        "family": "SimonMono",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.14px",
+        "text": "New solid gold styles, just in time to make someone’s holida"
+      },
+      "button": {
+        "family": "SimonMono",
+        "size": "16px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": ""
+      },
+      "nav": {
+        "family": "SyndicatGrotesk",
+        "size": "12px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 38,
+      "position": "relative",
+      "bg": "rgb(0, 0, 0)",
+      "links": [
+        "Caret",
+        "Caret",
+        "Shop Now"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 3,
+    "sections": [
+      {
+        "y": 38,
+        "h": 626,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "40px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "2px",
+          "text": "Holiday Gifts Campaign"
+        },
+        "words": 16,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 664,
+        "h": 2532,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": true,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "24px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "PUZZLE COLLECTION"
+        },
+        "words": 15,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3196,
+        "h": 2532,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": true,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "24px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "DÔME COLLECTION"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5728,
+        "h": 929,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "24px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "MOST GIFTED"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6680,
+        "h": 360,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7040,
+        "h": 428,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "24px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Picked Just For You"
+        },
+        "words": 106,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 7467,
+        "h": 1307,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "24px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Stores & services"
+        },
+        "words": 71,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://mejuri.com/world/en/collections/best-sellers?",
+    "title": "Best Selling Jewelry Pieces | Mejuri",
+    "width": 1440,
+    "pageHeight": 6052,
+    "fonts": {
+      "h1": {
+        "family": "SyndicatGrotesk",
+        "size": "32px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "Best Sellers"
+      },
+      "h2": null,
+      "body": {
+        "family": "SyndicatGrotesk",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "button": {
+        "family": "SyndicatGrotesk",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Sort By: Top MatchCaret"
+      },
+      "nav": {
+        "family": "SyndicatGrotesk",
+        "size": "14px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "In Stores"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 38,
+      "position": "relative",
+      "bg": "rgb(0, 0, 0)",
+      "links": [
+        "Caret",
+        "Caret",
+        "In Stores"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 264,
+        "h": 5026,
+        "bg": "rgb(255, 255, 255)",
+        "images": 51,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Sort By: Top MatchCaret"
+        },
+        "words": 520,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://mejuri.com/world/en/collections/best-sellers?",
+    "title": "Best Selling Jewelry Pieces | Mejuri",
+    "width": 390,
+    "pageHeight": 9150,
+    "fonts": {
+      "h1": {
+        "family": "SyndicatGrotesk",
+        "size": "24px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "1.2px",
+        "text": "Best Sellers"
+      },
+      "h2": null,
+      "body": {
+        "family": "SyndicatGrotesk",
+        "size": "10px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.2px",
+        "text": "Bold Huggie Hoops"
+      },
+      "button": {
+        "family": "SimonMono",
+        "size": "16px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Category"
+      },
+      "nav": {
+        "family": "SyndicatGrotesk",
+        "size": "12px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 38,
+      "position": "relative",
+      "bg": "rgb(0, 0, 0)",
+      "links": [
+        "Caret",
+        "Caret",
+        "Shop Now"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 258,
+        "h": 7361,
+        "bg": "rgb(255, 255, 255)",
+        "images": 51,
+        "video": false,
+        "heading": null,
+        "words": 459,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://mejuri.com/world/en/products/tube-huggie-hoops?Material=18k+Gold+Vermeil",
+    "title": "Tube Hoop Huggie Earrings - Jewelry | Mejuri",
+    "width": 1440,
+    "pageHeight": 3781,
+    "fonts": {
+      "h1": {
+        "family": "SyndicatGrotesk",
+        "size": "20px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Tube Huggie Hoops"
+      },
+      "h2": {
+        "family": "SyndicatGrotesk",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Bundles"
+      },
+      "body": {
+        "family": "SyndicatGrotesk",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "button": {
+        "family": "SimonMono",
+        "size": "16px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Pause"
+      },
+      "nav": {
+        "family": "SyndicatGrotesk",
+        "size": "14px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 38,
+      "position": "relative",
+      "bg": "rgb(0, 0, 0)",
+      "links": [
+        "Caret",
+        "Caret",
+        "Shop Now"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 95,
+        "h": 1145,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": true,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "20px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1px",
+          "text": "Tube Huggie Hoops"
+        },
+        "words": 144,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1240,
+        "h": 1829,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "32px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "You May Also Like"
+        },
+        "words": 242,
+        "perRow": 10,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag",
+      "aboveFold": true,
+      "top": 548,
+      "x": 851,
+      "width": 370,
+      "bg": "rgb(0, 0, 0)"
+    },
+    "price": null,
+    "galleryImages": 16,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 20
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://mejuri.com/world/en/products/tube-huggie-hoops?Material=18k+Gold+Vermeil",
+    "title": "Tube Hoop Huggie Earrings - Jewelry | Mejuri",
+    "width": 390,
+    "pageHeight": 5460,
+    "fonts": {
+      "h1": {
+        "family": "SyndicatGrotesk",
+        "size": "18px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.9px",
+        "text": "Tube Huggie Hoops"
+      },
+      "h2": {
+        "family": "SyndicatGrotesk",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Bundles"
+      },
+      "body": {
+        "family": "SyndicatGrotesk",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "2 Year Warranty"
+      },
+      "button": {
+        "family": "SimonMono",
+        "size": "16px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Pause"
+      },
+      "nav": {
+        "family": "SyndicatGrotesk",
+        "size": "12px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 38,
+      "position": "relative",
+      "bg": "rgb(0, 0, 0)",
+      "links": [
+        "Caret",
+        "Caret",
+        "Shop Now"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 81,
+        "h": 1922,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": true,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "18px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Tube Huggie Hoops"
+        },
+        "words": 189,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2003,
+        "h": 2008,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "SyndicatGrotesk",
+          "size": "24px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "You May Also Like"
+        },
+        "words": 234,
+        "perRow": 10,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag",
+      "aboveFold": false,
+      "top": 980,
+      "x": 16,
+      "width": 296,
+      "bg": "rgb(0, 0, 0)"
+    },
+    "price": null,
+    "galleryImages": 14,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 20
+  }
+}

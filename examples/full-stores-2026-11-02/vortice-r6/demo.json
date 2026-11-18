@@ -1,0 +1,43 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwaz4t0f0001yn0ewemg0qnx",
+  "slug": "snw72n29",
+  "photos": {
+    "brand:2cbf2782594080a5f120da0f087dd71d.jpg": "/v1/uploads/82a842b9-d080-4ddd-915d-d4d679fb5a3a.jpg",
+    "brand:555d6f24c3eb269149d501f274787c24.jpg": "/v1/uploads/0246b86b-216a-45c1-8bec-c57d5148212a.jpg",
+    "brand:5b297b20bbcdc217cc5098d1213669b1.jpg": "/v1/uploads/26875b53-ae1e-4a23-b52d-a099f3304467.jpg",
+    "brand:5ed5e8b3d5dd2fb458881877364480f1.jpg": "/v1/uploads/440e63f6-51b1-4bfd-82af-d1b6499f1f75.jpg",
+    "brand:639363033b6de53a617b9aaa68e172bd.jpg": "/v1/uploads/c7b7e1e8-5f92-4142-9fb5-462ba87fde08.jpg",
+    "brand:665fd50300baa0f77c7ef8039423a5a0.jpg": "/v1/uploads/f8533367-a8e5-4418-9780-835edcc0bce7.jpg",
+    "brand:7fddb31790ebda77f1f2be78a2a182cc.jpg": "/v1/uploads/c3ebcfa1-a544-4074-98a0-5f1d99ee02af.jpg",
+    "brand:9df00367c5ff8e2a6e5a000f303e5688.jpg": "/v1/uploads/5137bd2f-c0f0-4024-92d6-d5a0ed3075fc.jpg",
+    "brand:images.png": "/v1/uploads/d32db6e8-2d34-4c29-b701-8fb9a148622a.png",
+    "brand:spirals.webp": "/v1/uploads/af57d3d6-2a3a-4541-939f-71412ae3758d.webp",
+    "665fd50300baa0f77c7ef8039423a5a0.jpg": "/v1/uploads/df90839d-a7e7-43d0-99c2-0224dea7d2e7.jpg",
+    "5ed5e8b3d5dd2fb458881877364480f1.jpg": "/v1/uploads/67f602e4-5483-4c2b-bfc4-24d8f8a4af7c.jpg",
+    "7fddb31790ebda77f1f2be78a2a182cc.jpg": "/v1/uploads/34e426cc-be39-4181-8621-825589427468.jpg",
+    "9df00367c5ff8e2a6e5a000f303e5688.jpg": "/v1/uploads/e7dc71f2-0159-44d9-adb4-1a646f7783c4.jpg",
+    "555d6f24c3eb269149d501f274787c24.jpg": "/v1/uploads/08a68002-6d4b-4547-b090-1ca9e97f8c47.jpg"
+  },
+  "categories": {
+    "Licuadoras": "cmwaz4t12000nyn0ee6zcnoez",
+    "Accesorios": "cmwaz4t13000pyn0e5h73638p"
+  },
+  "products": {
+    "Licuadora personal 600 W": "cmwaz4t16000tyn0esjc430xa",
+    "Licuadora personal Nube": "cmwaz4t19000xyn0e3tsdm94s",
+    "Licuadora de vaso 1,5 L": "cmwaz4t1b0011yn0evizsjt2p",
+    "Licuadora retro rosa": "cmwaz4t1d0015yn0ey8bk0vz5",
+    "Vaso extra 700 ml": "cmwaz4t1g0019yn0ehvuejz7v"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwaz4t20001hyn0es0skbc6a"
+}

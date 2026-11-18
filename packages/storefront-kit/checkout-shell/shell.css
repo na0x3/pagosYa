@@ -143,3 +143,27 @@
   .pya-checkout .pya-co__row{grid-template-columns:1fr}
 }
 @media (max-width:760px) and (prefers-reduced-motion:no-preference){.pya-checkout[data-summary-open] .pya-co__summary{animation:pya-co-open .2s cubic-bezier(.23,1,.32,1)}}
+
+/* Spec 2026-11-09 Merman checkout: the photo band, the dark summary column, the trust lines and the review card. */
+/* Final review 2026-11-09: scoped to the kit's checkout (.pya-co--kit) — the hosted payment page reads this same file. */
+.pya-checkout.pya-co--kit .pya-co__band{display:flex;align-items:center;justify-content:center;min-height:112px;padding:16px var(--pya-gutter);background:var(--pya-accent) center/cover no-repeat;color:var(--pya-accent-ink)}
+.pya-checkout.pya-co--kit .pya-co__band[data-photo]{color:#fff}
+.pya-checkout.pya-co--kit .pya-co__band .pya-co__brand{display:flex;align-items:center;gap:12px;font-size:20px}
+.pya-checkout.pya-co--kit .pya-co__band .pya-co__logo{max-height:56px;width:auto}
+.pya-checkout.pya-co--kit .pya-co__summary{background:var(--pya-summary,#161616);color:var(--pya-summary-ink,#fff);border-left:0}
+.pya-checkout.pya-co--kit .pya-co__summary :is(.pya-co__title,h2,h3,strong,span,p,dt,dd,label){color:inherit}
+.pya-checkout.pya-co--kit .pya-co__summary :is(input,select){background:rgba(255,255,255,.08);color:inherit;border-color:rgba(255,255,255,.28)}
+.pya-checkout.pya-co--kit .pya-co__summary :is(button:not(.pya-co__pay),a){color:inherit;border-color:rgba(255,255,255,.4)}
+.pya-checkout.pya-co--kit .pya-co__summary .pya-co__totals .order-total strong{font-size:22px}
+.pya-checkout.pya-co--kit .pya-co__assure{display:grid;gap:12px;margin:20px 0 0;padding:0;list-style:none}
+.pya-checkout.pya-co--kit .pya-co__assure li{display:flex;align-items:center;gap:12px;font-size:14px;line-height:1.45}
+.pya-checkout.pya-co--kit .pya-co__assure svg{flex:none;color:var(--pya-accent)}
+.pya-checkout.pya-co--kit .pya-co__review{margin:8px 0 0;padding:16px;border-radius:12px;background:rgba(255,255,255,.08)}
+.pya-checkout.pya-co--kit .pya-co__review-title{margin:0 0 8px;font-size:13px;font-weight:600;letter-spacing:.02em}
+.pya-checkout.pya-co--kit .pya-co__stars{font-size:16px;letter-spacing:2px}
+.pya-checkout.pya-co--kit .pya-co__review blockquote{margin:8px 0;font-size:15px;line-height:1.5}
+.pya-checkout.pya-co--kit .pya-co__review-who{margin:0;font-size:13px;opacity:.85}
+@media (max-width:760px){.pya-checkout.pya-co--kit .pya-co__band{min-height:96px}}
+.pya-checkout.pya-co--kit .pya-co__summary :is(.pya-co__code button,.order-recommendations button,.order-recommendations a){min-height:40px;height:auto;padding:0 16px;border:1px solid rgba(255,255,255,.5);border-radius:999px;background:transparent;color:inherit;font-size:14px;aspect-ratio:auto}
+.pya-checkout.pya-co--kit .pya-co__summary .pya-co__stepper button{background:transparent;color:inherit;border:1px solid rgba(255,255,255,.5)}
+.pya-checkout.pya-co--kit .pya-co__summary :is(small,.pya-co__line-text small,.order-total small,.order-note,.pya-co__hint){color:rgba(255,255,255,.78)}

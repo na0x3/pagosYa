@@ -10,6 +10,7 @@ export async function bundleSourceCatalogMedia(
   assets: SourceProjectFileDto[],
   readUpload: (pathname: string) => Promise<Buffer | null>,
   legend: Array<{ original: string; path: string }> = [],
+  room: { bytes: number } = { bytes: Infinity },
 ) {
   const digest = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex').slice(0, 12);
   const bundled = new Map([...retained, ...assets]
@@ -46,7 +47,11 @@ export async function bundleSourceCatalogMedia(
       if (content.length > 2_000_000) { resolved.set(pathname, url); return url; }
       const hash = digest(content);
       path = bundled.get(hash);
+      // Copy a store (2026-11-17): Graza's 81 products and 225 photos went past the 6 MB a project holds, so the free design
+      // failed. A photo that no longer fits stays a link to the upload folder, which the preview and stores load as well.
+      if (!path && content.length > room.bytes) { const href = new URL(pathname, apiUrl).href; resolved.set(pathname, href); return href; }
       if (!path) {
+        room.bytes -= content.length;
         path = `assets/image-${hash}.${extension}`;
         assets.push({ path, content: content.toString('base64'), encoding: 'base64' });
         bundled.set(hash, path);
@@ -57,8 +62,10 @@ export async function bundleSourceCatalogMedia(
     resolved.set(pathname, path);
     return path;
   };
+  // Every product's cover first, so a big catalog spends its room on the photos its cards show.
+  for (const item of items) if (item.imageUrls.length) item.imageUrls[0] = await hydrate(item.imageUrls[0]);
   for (const item of items) {
-    for (let i = 0; i < item.imageUrls.length; i++) item.imageUrls[i] = await hydrate(item.imageUrls[i]);
+    for (let i = 1; i < item.imageUrls.length; i++) item.imageUrls[i] = await hydrate(item.imageUrls[i]);
     for (const variant of item.variants || []) if (variant.imageUrl) variant.imageUrl = await hydrate(variant.imageUrl);
     // Content blocks (media, before/after, YAPI's details) carry their own photos; usually the product's, so they reuse its asset.
     for (const block of Array.isArray(item.contentBlocks) ? item.contentBlocks : []) {

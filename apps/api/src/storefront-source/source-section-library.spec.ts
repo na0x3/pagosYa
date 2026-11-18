@@ -1,4 +1,4 @@
-import { buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
+import { type LayoutBlock, withFreshPhotos, withPacks, withPayWays, withPromoCode, withVisit, withStepPanels, withCleanHome, libraryDelivery, LIBRARY_FILL_PROMPT, withSharpCover, withoutRepeatedProductRows, withPersonalizer, buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
 
 const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
   storeName: 'Dulce Nube', what: 'Galletas artesanales', story: '', city: 'La Paz', request: '', tone: 'calm',
@@ -12,6 +12,136 @@ const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
 const types = (layout: Array<{ type: string }>) => layout.map(block => block.type);
 
 describe('section library', () => {
+  // Owner 2026-11-13 («full kits»): the store's real packs go right after the product grid, only when it has one.
+  it('keeps a clean home: no strips or stickers or bands, at most 7 sections in their order', () => {
+    const home = ['cover-split', 'strip-marquee', 'products-grid', 'story-split', 'benefits-bento', 'statement-rotate', 'packs-kits', 'pay-ways',
+      'promo-code', 'image-columns', 'visit-store', 'faq-split', 'closing-wordmark', 'closing-photo'].map((type, at) => ({ type, ...(at ? { band: 'accent' } : {}), ...(type === 'promo-code' ? { look: 'sticker' } : {}) }));
+    const out = withCleanHome(home as never) as Array<{ type: string; band?: string; look?: string }>;
+    expect(out.map(block => block.type)).toEqual(['cover-split', 'products-grid', 'story-split', 'packs-kits', 'promo-code', 'visit-store', 'faq-split']);
+    expect(out.slice(1).every(block => !block.band && !block.look)).toBe(true);
+  });
+
+  it('puts the steps first under the duo buy box as panels, the template\'s own or new ones', () => {
+    const own = withStepPanels([{ type: 'faq-split' }, { type: 'steps-howto', look: 'cards', items: [{ title: 'A' }, { title: 'B' }] }] as never);
+    expect(own.map(block => `${block.type}:${block.look ?? ''}`)).toEqual(['steps-howto:panels', 'faq-split:']);
+    const added = withStepPanels([{ type: 'faq-split' }] as never);
+    expect(added.map(block => block.type)).toEqual(['steps-howto', 'faq-split']);
+    expect(added[0].items).toHaveLength(3);
+  });
+
+  it('lists delivery zones cheapest first, with free-above and time', () => {
+    expect(libraryDelivery([{ name: 'Zona Sur', fee: 2000, freeAbove: 30000, estimatedMinutes: 60 }, { name: 'Centro', fee: 1000, freeAbove: null, estimatedMinutes: 2880 }, { name: 'Recojo', fee: 0, freeAbove: null, estimatedMinutes: null }]))
+      .toEqual([{ title: 'Recojo', text: 'Gratis' }, { title: 'Centro', text: 'Bs 10 · en 2 días' }, { title: 'Zona Sur', text: 'Bs 20 · gratis desde Bs 300 · en unos 60 min' }]);
+  });
+
+  it('adds the Visítanos card before the questions, with address, hours, zones and the map', () => {
+    const where = { location: { name: 'Tienda Sopocachi', address: 'Av. 20 de Octubre 123', hours: 'Lunes a viernes, 09:00 a 19:00' }, mapQuery: 'Av. 20 de Octubre 123, La Paz', delivery: [{ title: 'Centro', text: 'Bs 10' }] };
+    const layout = [{ type: 'cover-split', photo: '/v1/uploads/00000000-aaaa.jpg' }, { type: 'products-grid' }, { type: 'faq-split' }, { type: 'closing-photo' }];
+    const out = withVisit(layout as never, facts(where)) as Array<{ type: string; title?: string; map?: string; photo?: string; items?: Array<{ icon?: string }> }>;
+    expect(types(out)).toEqual(['cover-split', 'products-grid', 'visit-store', 'faq-split', 'closing-photo']);
+    expect(out[2]).toMatchObject({ title: 'Tienda Sopocachi', map: 'Av. 20 de Octubre 123, La Paz', photo: '/v1/uploads/00000001-aaaa.jpg' });
+    expect(out[2].items?.map(item => item.icon)).toEqual(['pin', 'clock', 'truck']);
+    expect(types(withVisit(layout as never, facts()))).toEqual(types(layout));
+    const zonesOnly = withVisit(layout as never, facts({ delivery: [{ title: 'Centro', text: 'Bs 10' }] })) as Array<{ type: string; eyebrow?: string; map?: string }>;
+    expect(zonesOnly[2]).toMatchObject({ type: 'visit-store', eyebrow: 'Envíos' });
+    expect(zonesOnly[2].map).toBeUndefined();
+    const listed = [...layout.slice(0, 2), { type: 'icon-columns', items: [{ title: 'Centro', text: 'Bs 10' }] }, ...layout.slice(2)];
+    expect(types(withVisit(listed as never, facts({ delivery: [{ title: 'Centro', text: 'Bs 10' }] })))).toEqual(types(listed));
+  });
+
+  it('shows a public code with its real offer and an unused photo, once', () => {
+    const layout = [{ type: 'cover-split', photo: '/v1/uploads/0000000' + '0-aaaa.jpg' }, { type: 'products-grid' }, { type: 'pay-ways' }, { type: 'faq-split' }];
+    const out = withPromoCode(layout as never, facts()) as Array<{ type: string; code?: string; title?: string; photo?: string }>;
+    expect(types(out)).toEqual(['cover-split', 'products-grid', 'pay-ways', 'promo-code', 'faq-split']);
+    expect(out[3]).toMatchObject({ code: 'DULCE10', title: '*10% de descuento* en tu compra', photo: '/v1/uploads/00000001-aaaa.jpg' });
+    expect(types(withPromoCode(out as never, facts()))).toEqual(types(out));
+    expect(types(withPromoCode(layout as never, facts({ codes: [] })))).toEqual(['cover-split', 'products-grid', 'pay-ways', 'faq-split']);
+  });
+  it('says how an online-payment store takes payment, after its packs or its grid, and nothing for a WhatsApp store', () => {
+    const layout = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'packs-kits' }, { type: 'faq-split' }];
+    expect(types(withPayWays(layout, facts({ checkoutMode: 'payment' })))).toEqual(['cover-split', 'products-grid', 'packs-kits', 'pay-ways', 'faq-split']);
+    expect(types(withPayWays(layout, facts({ checkoutMode: 'whatsapp' })))).toEqual(['cover-split', 'products-grid', 'packs-kits', 'faq-split']);
+  });
+  it('adds the packs section after the grid only for a store with active packs', () => {
+    const layout = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'faq-split' }];
+    expect(types(withPacks(layout, facts({ packs: 2 })))).toEqual(['cover-split', 'products-grid', 'packs-kits', 'faq-split']);
+    expect(types(withPacks(layout, facts()))).toEqual(['cover-split', 'products-grid', 'faq-split']);
+  });
+
+  // Hero kit (owner 2026-11-13): a template cover keeps up to 3 real products by exact name, only with the flag.
+  it('gives a template cover up to 3 real products for its hero shop, never an invented one', () => {
+    const fixed = [{ type: 'cover-full' }, { type: 'products-grid' }] as never;
+    const answer = { blocks: [{ type: 'cover-full', title: 'Hora de *galletas*', photo: 0, products: ['brownie', 'Torta inventada', 'Caja surtida', 'Galleta de chocolate', 'Brownie'] }, { type: 'products-grid', title: 'Todo' }] };
+    expect(validateLibraryLayout(answer as never, facts(), { fixed, heroShop: true })[0].products).toEqual(['Brownie', 'Caja surtida', 'Galleta de chocolate']);
+    expect(validateLibraryLayout(answer as never, facts(), { fixed })[0].products).toBeUndefined();
+  });
+
+  // Owner 2026-11-13 («do your suggestion»): rich sections take a template's cover, strip or one story place; products never move.
+  describe('rich swaps on a template home', () => {
+    const fixed = [{ type: 'cover-split', band: 'muted' }, { type: 'strip-marquee' }, { type: 'products-grid' }, { type: 'story-split', band: 'muted' }, { type: 'benefits-bento' }, { type: 'closing-photo' }] as never;
+    const answer = { blocks: [
+      { type: 'cover-kinetic', title: 'Galletas que abrazan', text: 'Horneadas en La Paz', cta: 'Ver galletas', link: 'products', photo: 0 },
+      { type: 'strip-velocity', items: [{ title: 'Recién horneadas' }, { title: 'Dulce Nube' }, { title: 'Hechas a mano' }] },
+      { type: 'products-grid', title: 'Nuestras galletas' },
+      { type: 'statement-rotate', title: 'Galletas para', items: [{ title: 'la tarde' }, { title: 'regalar' }], photo: 1 },
+      { type: 'tabs-photo', title: 'Otra rica', items: [{ title: 'Cajas', text: 'Caja surtida para regalar', photo: 2 }, { title: 'Brownies', text: 'Brownie de chocolate', photo: 3 }] },
+      { type: 'closing-photo', title: 'Dulce Nube', photo: 4 },
+    ] };
+    it('puts each rich section in the place it replaces, on that band, one per kind; the template cover always stays', () => {
+      const layout = validateLibraryLayout(answer as never, facts(), { fixed, richSwaps: true });
+      // Owner «i like more normal heroes»: cover-kinetic is no swap, so the template cover (unanswered) drops and the frame is the fill's.
+      // The second story-kind swap (tabs-photo for benefits-bento) is refused: one story or benefits swap only, so bento drops out.
+      expect(types(layout)).toEqual(['strip-velocity', 'products-grid', 'statement-rotate', 'closing-photo']);
+      expect(layout[2].band).toBe('muted');
+      expect(layout[2].items?.map(item => item.title)).toEqual(['la tarde', 'regalar']);
+    });
+    it('keeps the template exact without the flag (product page, single sections)', () => {
+      expect(types(validateLibraryLayout(answer as never, facts(), { fixed }))).toEqual(['products-grid', 'closing-photo']);
+    });
+  });
+
+  // Spec 2026-11-10 hand-made styles (Merienda, Burbuja, Neón, Mimo): their own sections inside a template's fixed home.
+  // Live 2026-11-10 (Perra Please on Neón, one category): three campaigns showed the same four sauces three times.
+  it('gives each category\'s products to one campaign only; another campaign keeps its photo and links to the catalogue', () => {
+    const fixed = [{ type: 'campaign-strip' }, { type: 'campaign-strip' }, { type: 'campaign-strip' }] as never;
+    const layout = validateLibraryLayout({ blocks: [
+      { type: 'campaign-strip', title: 'Galletas', photo: 0, cta: 'Comprar', link: 'category:Galletas' },
+      { type: 'campaign-strip', title: 'Más galletas', photo: 1, cta: 'Comprar', link: 'category:Galletas' },
+      { type: 'campaign-strip', title: 'Cajas', photo: 2, cta: 'Comprar', link: 'category:Cajas' },
+    ] as never }, facts(), { fixed });
+    expect(layout.map(block => block.link)).toEqual(['category:Galletas', 'products', 'category:Cajas']);
+  });
+
+  it('keeps a nickname over each real product and drops a name that is not a product', () => {
+    const [block] = validateLibraryLayout({ blocks: [{ type: 'products-nicknames', title: 'Como debe ser', cta: 'Ver todo', items: [
+      { title: 'Brownie', value: '«Para la tarde»' }, { title: 'caja surtida', value: 'Regalo' }, { title: 'Torta inventada', value: 'nada' }] }] as never },
+      facts(), { fixed: [{ type: 'products-nicknames' }] as never });
+    expect(block.items).toEqual([{ title: 'Brownie', value: 'Para la tarde' }, { title: 'Caja surtida', value: 'Regalo' }]);
+  });
+
+  it('puts one lowercase word over each real product in the tall cards and drops a name that is not a product', () => {
+    const [block] = validateLibraryLayout({ blocks: [{ type: 'products-words', title: 'Para cada momento', items: [
+      { title: 'Galleta de chocolate', value: 'Antojo' }, { title: 'caja surtida', value: 'Para Regalar' }, { title: 'Brownie', value: 'merienda' }, { title: 'Torta inventada', value: 'nada' }] }] as never },
+      facts(), { fixed: [{ type: 'products-words' }] as never });
+    expect(block.items).toEqual([{ title: 'Galleta de chocolate', value: 'antojo' }, { title: 'Caja surtida', value: 'para regalar' }, { title: 'Brownie', value: 'merienda' }]);
+  });
+
+  it('keeps the cover\'s ribbon words, one line per real product in the rows, and links each big name to its product', () => {
+    const fixed = [{ type: 'cover-mega' }, { type: 'products-rows' }, { type: 'names-list' }, { type: 'statement-sticker' }] as never;
+    const layout = validateLibraryLayout({ blocks: [
+      { type: 'cover-mega', title: 'Galletas de verdad', photo: 0, eyebrow: 'Hecho hoy', items: [{ title: 'Horneá' }, { title: 'Disfrutá' }] },
+      { type: 'products-rows', title: 'Elige tu sabor', products: ['Galleta de chocolate', 'Caja surtida'], items: [{ title: 'galleta de chocolate', text: 'Chips de chocolate amargo.' }, { title: 'Torta inventada', text: 'No existe.' }] },
+      { type: 'names-list', eyebrow: '¿Cuál es tu favorito?', items: [{ title: 'Brownie', photo: 1 }, { title: 'Caja surtida', photo: 2 }, { title: 'Galleta de chocolate', photo: 3 }] },
+      { type: 'statement-sticker', title: 'Horneado cada mañana', photo: 4, photo2: 1 },
+    ] as never }, facts(), { fixed });
+    const byType = Object.fromEntries(layout.map(block => [block.type, block]));
+    expect(byType['cover-mega'].items).toEqual([{ title: 'Horneá' }, { title: 'Disfrutá' }]);
+    expect(byType['products-rows'].products).toEqual(['Galleta de chocolate', 'Caja surtida']);
+    expect(byType['products-rows'].items).toEqual([{ title: 'Galleta de chocolate', text: 'Chips de chocolate amargo.' }]);
+    expect(byType['names-list'].items!.map(item => item.link)).toEqual(['product:p3', 'product:p2', 'product:p1']);
+    expect(byType['statement-sticker'].photo2).toBeDefined();
+  });
+
   it('every catalogue id is unique and the schema lists them all', () => {
     const ids = LIBRARY_CATALOG.map(section => section.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -69,6 +199,19 @@ describe('section library', () => {
     const promo = layout.find(block => block.type === 'promo-code')!;
     expect(promo.code).toBe('DULCE10');
     expect(promo.link).toBe('category:Galletas');
+  });
+
+  it('runs one dictated phrase on its own, repeated so the band fills (Meat House 2026-11-07)', () => {
+    const [one] = validateLibraryLayout({ blocks: [{ type: 'strip-marquee', items: [{ title: 'Pedidos con 24 hrs de anticipación' }] }] } as never, facts(), { fixed: [{ type: 'strip-marquee' }] });
+    expect(one.items?.map(item => item.title)).toEqual(Array(3).fill('Pedidos con 24 hrs de anticipación'));
+    const [two] = validateLibraryLayout({ blocks: [{ type: 'strip-marquee', items: [{ title: 'Asado' }, { title: 'Parrilla' }] }] } as never, facts(), { fixed: [{ type: 'strip-marquee' }] });
+    expect(two.items?.map(item => item.title)).toEqual(['Asado', 'Parrilla', 'Asado', 'Parrilla']);
+    // The model cut the dictated phrase into pieces: they run as the one phrase.
+    const request = 'despues del header pon texto moviendose que diga pedidos con 24 hrs de anticipacion';
+    const [cut] = validateLibraryLayout({ blocks: [{ type: 'strip-marquee', items: [{ title: 'Pedidos' }, { title: 'con 24 hrs' }, { title: 'de anticipación' }] }] } as never, facts({ request }), { fixed: [{ type: 'strip-marquee' }] });
+    expect(cut.items?.map(item => item.title)).toEqual(Array(3).fill('Pedidos con 24 hrs de anticipación'));
+    const [words] = validateLibraryLayout({ blocks: [{ type: 'strip-marquee', items: [{ title: 'Asado' }, { title: 'Parrilla' }, { title: 'Carbón' }] }] } as never, facts({ request: 'franja asado parrilla carbón' }), { fixed: [{ type: 'strip-marquee' }] });
+    expect(words.items?.map(item => item.title)).toEqual(['Asado', 'Parrilla', 'Carbón']);
   });
 
   it('never leaves two blocks of one role side by side', () => {
@@ -361,5 +504,164 @@ describe('top-up', () => {
     expect(types(withTopUp(home(['cover-split', 'products-grid', 'closing-photo']), home(['visit-store', 'promo-code']))))
       .toEqual(['cover-split', 'products-grid', 'visit-store', 'promo-code', 'closing-photo']);
     expect(types(withTopUp(home(['cover-split', 'products-grid']), home(['visit-store'])))).toEqual(['cover-split', 'products-grid', 'visit-store']);
+  });
+});
+
+// Spec 2026-11-09 personalizador: the product with real options on a big stage; the frame only in art stores.
+describe('personalizador (2026-11-09)', () => {
+  const opt = (pairs: Array<[string, string]>, photo?: string) => ({ options: pairs.map(([name, value]) => ({ name, value })), ...(photo ? { imageUrls: [photo] } : {}) });
+  const input = (over: Record<string, unknown> = {}) => ({ storeName: 'Vórtice', what: 'Licuadoras en Santa Cruz', story: '', city: 'Santa Cruz', request: '', tone: 'calm' as const,
+    items: [{ id: 'cup', name: 'Vaso extra', imageUrls: ['/v1/uploads/cup.jpg'] },
+      { id: 'one', name: 'Licuadora uno', imageUrls: ['/v1/uploads/one.jpg'], variants: [opt([['Color', 'Negro']]), opt([['Color', 'Rosa']])] },
+      { id: 'two', name: 'Licuadora dos', imageUrls: ['/v1/uploads/two.jpg'], variants: [opt([['Color', 'Negro']], '/v1/uploads/n.jpg'), opt([['Color', 'Rosa']], '/v1/uploads/r.jpg')] }],
+    categories: [], uploads: [], codes: [], reviews: 0, ...over });
+
+  it('facts: the product with options and the most photographed ones; art stores by their words', () => {
+    const out = buildLibraryFacts(input() as never);
+    expect(out.optioned).toEqual({ id: 'two', name: 'Licuadora dos', groups: ['Color'] });
+    expect(out.art).toBe(false);
+    expect(buildLibraryFacts(input({ what: 'Láminas de arte para decorar' }) as never).art).toBe(true);
+    expect(buildLibraryFacts(input({ items: [{ id: 'cup', name: 'Vaso extra' }, { id: 'x', name: 'Uno solo', variants: [opt([['Color', 'Negro']])] }] }) as never).optioned).toBeUndefined();
+  });
+
+  it('validation: always the optioned product, the frame only in art stores, never on a dark band; no options → no section', () => {
+    const optioned = { id: 'p2', name: 'Caja surtida', groups: ['Sabor'] };
+    const [block] = validateLibraryLayout({ blocks: [{ type: 'product-personalizer', product: 'p1', look: 'frame', band: 'deep' } as never] }, facts({ optioned }), { fixed: [{ type: 'product-personalizer' }] });
+    expect(block).toMatchObject({ type: 'product-personalizer', product: 'p2', look: 'stage' });
+    expect(block.band).toBeUndefined();
+    expect(validateLibraryLayout({ blocks: [{ type: 'product-personalizer' } as never] }, facts({ optioned, art: true }), { fixed: [{ type: 'product-personalizer' }] })[0].look).toBe('frame');
+    expect(validateLibraryLayout({ blocks: [{ type: 'product-personalizer', product: 'p1' } as never] }, facts(), { fixed: [{ type: 'product-personalizer' }] })).toEqual([]);
+    expect(librarySectionBlocker('product-personalizer', facts())).toBe('ninguno de tus productos tiene opciones (colores, tallas o sabores)');
+    expect(librarySectionBlocker('product-personalizer', facts({ optioned }))).toBeNull();
+  });
+
+  it('every eligible home gets it once: after the main grid, else before the closing section', () => {
+    const optioned = { id: 'p2', name: 'Caja surtida', groups: ['Sabor'] };
+    const home = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'faq-split' }, { type: 'closing-photo' }];
+    const out = withPersonalizer(home, facts({ optioned }));
+    expect(types(out)).toEqual(['cover-split', 'products-grid', 'product-personalizer', 'faq-split', 'closing-photo']);
+    expect(out[2]).toEqual({ type: 'product-personalizer', product: 'p2', look: 'stage' });
+    expect(withPersonalizer(out, facts({ optioned }))).toBe(out);
+    expect(types(withPersonalizer([{ type: 'cover-split' }, { type: 'closing-photo' }], facts({ optioned, art: true })))).toEqual(['cover-split', 'product-personalizer', 'closing-photo']);
+    expect(withPersonalizer(home, facts())).toBe(home);
+  });
+
+  it('skips a product the home already spotlights (owner 2026-11-14, «vestido cala appears twice»)', () => {
+    const optioned = { id: 'p2', name: 'Vestido Cala', groups: ['Talla'] };
+    const home = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'products-spotlight', product: 'p2' }];
+    expect(withPersonalizer(home, facts({ optioned }))).toBe(home);
+  });
+});
+
+describe('each section photo once on the home (owner 2026-11-14, composed NOA)', () => {
+  it('a section photo the home already shows becomes an unused store photo; list items and the first section keep theirs', () => {
+    const photos = ['/a.jpg', '/b.jpg', '/c.jpg', '/d.jpg'].map(url => ({ url }));
+    const home: LayoutBlock[] = [{ type: 'cover-split', photo: '/a.jpg' }, { type: 'steps-howto', photo: '/b.jpg' }, { type: 'categories-list', items: [{ title: 'Novias', photo: '/b.jpg' }] }, { type: 'story-split', photo: '/a.jpg' }];
+    const out = withFreshPhotos(home, { photos });
+    expect(out.map(block => block.photo)).toEqual(['/a.jpg', '/c.jpg', undefined, '/d.jpg']);
+    expect(out[2].items![0].photo).toBe('/b.jpg');
+    expect(withFreshPhotos(home, { photos: photos.slice(0, 2) })[1].photo).toBe('/b.jpg');
+  });
+});
+
+// Owner 2026-11-11 (Nov 10 vs Oct 30 comparison): Pawby showed its five products in three rows; Oct 30 carried one brand idea.
+describe('no repeated product rows', () => {
+  const products = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `Producto ${i}` }));
+  const types = (layout: { type: string }[]) => layout.map(block => block.type);
+  const home = [{ type: 'cover-full' }, { type: 'products-grid' }, { type: 'products-slider' }, { type: 'story-split' }, { type: 'products-cards' }, { type: 'faq-split' }, { type: 'products-slider' }, { type: 'closing-photo' }];
+  it('a store with few products keeps the main grid and one more product row', () => {
+    expect(types(withoutRepeatedProductRows(home, facts({ products: products(5) } as never)))).toEqual(['cover-full', 'products-grid', 'products-slider', 'story-split', 'faq-split', 'closing-photo']);
+  });
+  it('a store with 8 or more products keeps two', () => {
+    expect(types(withoutRepeatedProductRows(home, facts({ products: products(8) } as never)))).toEqual(['cover-full', 'products-grid', 'products-slider', 'story-split', 'products-cards', 'faq-split', 'closing-photo']);
+  });
+  it('one featured product, categories and the main grid never count as a row', () => {
+    const page = [{ type: 'products-grid' }, { type: 'products-spotlight' }, { type: 'categories-tiles' }, { type: 'products-rows' }, { type: 'product-personalizer' }];
+    expect(types(withoutRepeatedProductRows(page, facts({ products: products(3) } as never)))).toEqual(types(page));
+  });
+});
+
+// Owner 2026-11-11 («no blurry cover photos»): Oh Belly's 736 px photos filled a 1280 px cover.
+describe('no blurry cover photos', () => {
+  const photos = (...widths: (number | undefined)[]) => widths.map((width, i) => ({ url: `/v1/uploads/p${i}.jpg`, ...(width ? { width } : {}) }));
+  const cover = { type: 'cover-stage', look: 'right', eyebrow: 'Oh Belly', title: 'Que la panza baile', text: 'Soda prebiótica.', cta: 'Ver sodas', link: 'products', photo: '/v1/uploads/p0.jpg', items: [{ title: 'x', photo: '/v1/uploads/p2.jpg' }] };
+  it('a full-width cover takes the widest sharp photo, and the section that had it gets the small one', () => {
+    const layout = [cover, { type: 'story-split', photo: '/v1/uploads/p1.jpg' }];
+    const out = withSharpCover(layout as never, facts({ photos: photos(736, 1600, 800) } as never));
+    expect(out[0]).toEqual(expect.objectContaining({ type: 'cover-stage', photo: '/v1/uploads/p1.jpg', title: 'Que la panza baile' }));
+    expect(out[1].photo).toBe('/v1/uploads/p0.jpg');
+  });
+  it('with no photo wide enough it becomes the framed cover with the same words and photo', () => {
+    const out = withSharpCover([cover, { type: 'faq-split' }] as never, facts({ photos: photos(736, 736) } as never));
+    expect(out[0]).toEqual({ type: 'cover-split', look: 'frame', eyebrow: 'Oh Belly', title: 'Que la panza baile', text: 'Soda prebiótica.', cta: 'Ver sodas', link: 'products', photo: '/v1/uploads/p0.jpg' });
+    expect(out[1].type).toBe('faq-split');
+  });
+  it('leaves a sharp full-width cover, a framed cover and a photo of unknown size alone', () => {
+    const sharp = [{ ...cover, photo: '/v1/uploads/p1.jpg' }];
+    expect(withSharpCover(sharp as never, facts({ photos: photos(736, 1600) } as never))).toEqual(sharp);
+    const framed = [{ type: 'cover-split', photo: '/v1/uploads/p0.jpg' }];
+    expect(withSharpCover(framed as never, facts({ photos: photos(500) } as never))).toEqual(framed);
+    expect(withSharpCover([cover] as never, facts({ photos: photos(undefined) } as never))).toEqual([cover]);
+  });
+});
+
+describe('one brand idea in a template home', () => {
+  it('the fill asks for one idea of the brand in the cover, the titles, the strip and the closing line', () => {
+    expect(LIBRARY_FILL_PROMPT).toMatch(/UNA idea de marca/);
+    expect(LIBRARY_FILL_PROMPT).toMatch(/franja/);
+    expect(LIBRARY_FILL_PROMPT).toMatch(/cierre/);
+  });
+  // Owner 2026-11-11: Pawby put «momento» in 8 of 10 titles; the idea stays in the cover, at most two titles and the closing line.
+  it('keeps the idea light: at most two other titles, the rest say plainly what their section shows', () => {
+    expect(LIBRARY_FILL_PROMPT).toMatch(/como máximo dos títulos/);
+    expect(LIBRARY_FILL_PROMPT).toMatch(/los demás títulos dicen claro lo que muestra su sección/);
+    expect(LIBRARY_FILL_PROMPT).not.toMatch(/dos o tres títulos/);
+  });
+});
+
+describe('press quotes need the press in the merchant\'s words (live test 2026-11-11)', () => {
+  it('blocks press-quotes until the merchant names a newspaper, magazine, radio or interview', () => {
+    expect(librarySectionBlocker('press-quotes', facts())).toMatch(/medio/);
+    expect(librarySectionBlocker('press-quotes', facts({ story: 'La revista Ego nos dijo «el mejor pan de La Paz».' }))).toBeNull();
+  });
+  it('a style word is not press: «una tienda elegante, de revista» (NOA, composer test 2026-11-12)', () => {
+    expect(librarySectionBlocker('press-quotes', facts({ request: 'Quiero una tienda completa y elegante, de revista, con muchas secciones.' }))).toMatch(/medio/);
+    expect(librarySectionBlocker('press-quotes', facts({ story: 'Salimos en el diario Página Siete.' }))).toBeNull();
+  });
+  it('a countdown needs the end date in the merchant\'s words (Oh Belly, composer test 2026-11-12)', () => {
+    expect(librarySectionBlocker('promo-countdown', facts({ request: 'Usa el código BELLY10.' }))).toMatch(/fecha/);
+    expect(librarySectionBlocker('promo-countdown', facts({ request: 'La oferta dura hasta el 30 de noviembre.' }))).toBeNull();
+  });
+});
+
+describe('composed mode (spec 2026-11-11 store composer)', () => {
+  const composed = { allowed: ['cover-mega', 'products-rows', 'story-split', 'closing-wordmark'], looks: { 'cover-mega': ['side', 'tilt'] } };
+  it('keeps template-only sections the template allows, with the template\'s looks, and drops the rest', () => {
+    const out = validateLibraryLayout({ blocks: [
+      { type: 'cover-mega', look: 'tilt', title: 'Hola', photo: 0, items: [{ title: 'Uno' }, { title: 'Dos' }] },
+      { type: 'products-rows', title: 'Sabores' },
+      { type: 'reviews-cards', title: 'Opiniones' },
+      { type: 'story-split', title: 'Nuestra historia', text: 'Horneamos cada día.', photo: 1 },
+      { type: 'closing-wordmark', title: 'Hasta pronto' },
+    ] } as never, facts(), { composed });
+    expect(out.map(block => block.type)).toEqual(expect.arrayContaining(['cover-mega', 'story-split', 'closing-wordmark']));
+    expect(out.map(block => block.type)).not.toContain('reviews-cards');
+    expect(out.find(block => block.type === 'cover-mega')?.look).toBe('tilt');
+  });
+  it('a template that opens without a cover keeps its opener first and gets no cover added (owner 2026-11-11)', () => {
+    const opened = { allowed: ['promo-banner', 'products-grid', 'story-split', 'closing-wordmark'], looks: {}, opener: 'promo-banner' };
+    const out = validateLibraryLayout({ blocks: [
+      { type: 'story-split', title: 'Nuestra historia', text: 'Horneamos cada día.', photo: 1 },
+      { type: 'promo-banner', title: 'Temporada', text: 'Lo nuevo de la casa.', photo: 0 },
+      { type: 'products-grid', title: 'Productos' },
+      { type: 'closing-wordmark', title: 'Hasta pronto' },
+    ] } as never, facts(), { composed: opened });
+    expect(out[0].type).toBe('promo-banner');
+    expect(out[1].type).toBe('products-grid');
+    expect(out.some(block => block.type.startsWith('cover-'))).toBe(false);
+  });
+  it('without composed, a template-only section is still dropped (free mode unchanged)', () => {
+    const out = validateLibraryLayout({ blocks: [{ type: 'cover-mega', look: 'tilt', title: 'Hola', photo: 0 }] } as never, facts());
+    expect(out.map(block => block.type)).not.toContain('cover-mega');
   });
 });

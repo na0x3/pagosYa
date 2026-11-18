@@ -1,0 +1,883 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://fromourplace.com/",
+    "title": "Our Place | The Best Non-Toxic Cookware & Kitchen Essentials",
+    "width": 1440,
+    "pageHeight": 3797,
+    "fonts": {
+      "h1": {
+        "family": "Chelt",
+        "size": "60px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale, Save Up to 45%*"
+      },
+      "h2": {
+        "family": "Chelt",
+        "size": "48px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Keep in touch"
+      },
+      "body": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is a carousel with auto-rotating slides. Activate any o"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(252, 250, 246)",
+    "header": {
+      "height": 65,
+      "position": "sticky",
+      "bg": "rgb(252, 250, 246)",
+      "links": [
+        "BLACK FRIDAY",
+        "Cookware",
+        "Bakeware",
+        "Appliances",
+        "Tableware",
+        "Kitchen Tools",
+        "Gifts",
+        "items in cart 0"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 105,
+        "h": 612,
+        "bg": "rgb(252, 250, 246)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Chelt",
+          "size": "60px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Black Friday Sale, Save Up to 45%*"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 783,
+        "h": 911,
+        "bg": "rgb(252, 250, 246)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 224,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 1694,
+        "h": 416,
+        "bg": "rgb(252, 250, 246)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cookware"
+        },
+        "words": 8,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2110,
+        "h": 109,
+        "bg": "rgb(252, 250, 246)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2219,
+        "h": 868,
+        "bg": "rgb(252, 250, 246)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts on Sale"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 10,
+      "columns": 10,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://fromourplace.com/?_su_rec=5v1VDxXI898AI47FyQGbMnAAnSiRuoPIwHjVXjcvSR_XbKn6pH6sbFX1R9MUlRyxuYPEQkPRItizWP6NKrB5MO6YilEjrKOHjwx43ewS9Oy1x6acYZ9D7qr_nfriY6owItBBd8haEPSLu4oL37BGg9Kdn7oUA3XdDpCauE2a7o5fTZXQjVUmDnVE2imOLmD-eoyw5X26kokUgPbeUJUvJLuSizg46QU6Z9BeXOqzeN5ms9E25FL05ASIpz736oD7AAODuOSPeELOU_0ivC18fkNfW35KWV9NE4GX53ybGISIiKEJDqw0ErUSU7qWADJwsp8qzugRBvPInsxX4jnaOCEP1W-3nW3ueUJJJyCrHCk&_su_rec_id=f4e2dde4-a04e-4767-9936-d0fd993bd8c7-1794668243",
+    "title": "Our Place | The Best Non-Toxic Cookware & Kitchen Essentials",
+    "width": 390,
+    "pageHeight": 3008,
+    "fonts": {
+      "h1": {
+        "family": "Chelt",
+        "size": "36px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Black Friday Sale, Save Up to 45%*"
+      },
+      "h2": null,
+      "body": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is a carousel with auto-rotating slides. Activate any o"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(252, 250, 246)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(252, 250, 246)",
+      "links": [
+        "items in cart 0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 96,
+        "h": 473,
+        "bg": "rgb(252, 250, 246)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Chelt",
+          "size": "36px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Black Friday Sale, Save Up to 45%*"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 626,
+        "h": 562,
+        "bg": "rgb(252, 250, 246)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 160,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 1188,
+        "h": 419,
+        "bg": "rgb(252, 250, 246)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cookware"
+        },
+        "words": 8,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1607,
+        "h": 264,
+        "bg": "rgb(252, 250, 246)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1871,
+        "h": 1091,
+        "bg": "rgb(252, 250, 246)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts on Sale"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://fromourplace.com/collections/all",
+    "title": "Shop All Our Place Products | Cookware, Utensils & More",
+    "width": 1440,
+    "pageHeight": 3448,
+    "fonts": {
+      "h1": {
+        "family": "Chelt",
+        "size": "48px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": null,
+      "body": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is a carousel with auto-rotating slides. Activate any o"
+      },
+      "button": {
+        "family": "Calibre",
+        "size": "16px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "1.28px",
+        "text": "Filter"
+      },
+      "nav": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(252, 250, 246)",
+    "header": {
+      "height": 65,
+      "position": "sticky",
+      "bg": "rgb(252, 250, 246)",
+      "links": [
+        "BLACK FRIDAY",
+        "Cookware",
+        "Bakeware",
+        "Appliances",
+        "Tableware",
+        "Kitchen Tools",
+        "Gifts",
+        "items in cart 0"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 105,
+        "h": 346,
+        "bg": "rgb(252, 250, 246)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 543,
+        "h": 2843,
+        "bg": "rgb(252, 250, 246)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Ceramic Nonstick Perfect Pot"
+        },
+        "words": 306,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 12,
+      "columns": 3,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://fromourplace.com/collections/all",
+    "title": "Shop All Our Place Products | Cookware, Utensils & More",
+    "width": 390,
+    "pageHeight": 2749,
+    "fonts": {
+      "h1": {
+        "family": "Chelt",
+        "size": "36px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": null,
+      "body": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is a carousel with auto-rotating slides. Activate any o"
+      },
+      "button": {
+        "family": "Calibre",
+        "size": "16px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "1.28px",
+        "text": "Filter"
+      },
+      "nav": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(252, 250, 246)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(252, 250, 246)",
+      "links": [
+        "items in cart 0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 96,
+        "h": 311,
+        "bg": "rgb(252, 250, 246)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "36px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 488,
+        "h": 2215,
+        "bg": "rgb(252, 250, 246)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Ceramic Nonstick Perfect Pot"
+        },
+        "words": 190,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 12,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://fromourplace.com/products/petite-perfect-pot",
+    "title": "Ceramic Nonstick Perfect Pot 1.75 qt. | Mini Ceramic Pot Made Without PFAS",
+    "width": 1440,
+    "pageHeight": 4492,
+    "fonts": {
+      "h1": {
+        "family": "Chelt",
+        "size": "36px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Ceramic Nonstick Perfect Pot"
+      },
+      "h2": {
+        "family": "Chelt",
+        "size": "48px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Tinies Up Close"
+      },
+      "body": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is a carousel with auto-rotating slides. Activate any o"
+      },
+      "button": {
+        "family": "Calibre",
+        "size": "16px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "1.28px",
+        "text": "Add to Cart"
+      },
+      "nav": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(252, 250, 246)",
+    "header": {
+      "height": 65,
+      "position": "sticky",
+      "bg": "rgb(252, 250, 246)",
+      "links": [
+        "BLACK FRIDAY",
+        "Cookware",
+        "Bakeware",
+        "Appliances",
+        "Tableware",
+        "Kitchen Tools",
+        "Gifts",
+        "items in cart 0"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 105,
+        "h": 1700,
+        "bg": "rgb(252, 250, 246)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Ceramic Nonstick Perfect Pot"
+        },
+        "words": 261,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1805,
+        "h": 949,
+        "bg": "rgb(252, 250, 246)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Tinies Up Close"
+        },
+        "words": 122,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2754,
+        "h": 694,
+        "bg": "rgb(252, 250, 246)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Frequently Asked Questions"
+        },
+        "words": 80,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3448,
+        "h": 982,
+        "bg": "rgb(252, 250, 246)",
+        "images": 32,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Pairs Well With"
+        },
+        "words": 202,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 7,
+      "x": 1208,
+      "width": 184,
+      "bg": "rgb(175, 90, 60)"
+    },
+    "price": {
+      "family": "Calibre",
+      "size": "20px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$75"
+    },
+    "galleryImages": 24,
+    "swatches": 8,
+    "selects": 0,
+    "accordions": 63
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://fromourplace.com/products/petite-perfect-pot",
+    "title": "Ceramic Nonstick Perfect Pot 1.75 qt. | Mini Ceramic Pot Made Without PFAS",
+    "width": 390,
+    "pageHeight": 5092,
+    "fonts": {
+      "h1": {
+        "family": "Chelt",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Ceramic Nonstick Perfect Pot"
+      },
+      "h2": {
+        "family": "Chelt",
+        "size": "36px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Tinies Up Close"
+      },
+      "body": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is a carousel with auto-rotating slides. Activate any o"
+      },
+      "button": {
+        "family": "Calibre",
+        "size": "16px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "1.28px",
+        "text": "Add to Cart"
+      },
+      "nav": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(252, 250, 246)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(252, 250, 246)",
+      "links": [
+        "items in cart 0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 96,
+        "h": 2208,
+        "bg": "rgb(252, 250, 246)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Ceramic Nonstick Perfect Pot"
+        },
+        "words": 251,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2304,
+        "h": 1576,
+        "bg": "rgb(252, 250, 246)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "36px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Tinies Up Close"
+        },
+        "words": 122,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3880,
+        "h": 616,
+        "bg": "rgb(252, 250, 246)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Frequently Asked Questions"
+        },
+        "words": 80,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4496,
+        "h": 550,
+        "bg": "rgb(252, 250, 246)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Chelt",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Pairs Well With"
+        },
+        "words": 136,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": false,
+      "top": 853,
+      "x": 16,
+      "width": 358,
+      "bg": "rgb(175, 90, 60)"
+    },
+    "price": {
+      "family": "Calibre",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$75"
+    },
+    "galleryImages": 16,
+    "swatches": 8,
+    "selects": 0,
+    "accordions": 63
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://fromourplace.com/cart",
+    "title": "Your Shopping Cart",
+    "width": 1440,
+    "pageHeight": 1265,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Chelt",
+        "size": "48px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Keep in touch"
+      },
+      "body": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is a carousel with auto-rotating slides. Activate any o"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Plaid-XS-Web",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(252, 250, 246)",
+    "header": {
+      "height": 65,
+      "position": "sticky",
+      "bg": "rgb(252, 250, 246)",
+      "links": [
+        "BLACK FRIDAY",
+        "Cookware",
+        "Bakeware",
+        "Appliances",
+        "Tableware",
+        "Kitchen Tools",
+        "Gifts",
+        "items in cart 1"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": []
+  }
+}

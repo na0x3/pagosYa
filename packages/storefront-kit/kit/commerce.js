@@ -281,6 +281,30 @@
       if (control?.matches('a[href]') && WHATSAPP_LINK.test(control.href)) { analytics('whatsapp_click'); flushAnalytics(); }
     }, true);
     document.addEventListener('change', event => { if (event.target?.matches?.('input[type=search]') && event.target.value.trim()) analytics('search'); });
+    // «La tienda que vende sola» (spec 2026-11-16): which home sections are seen (half on screen for a second, once a page) and clicked.
+    // A section keeps the number it was written with (data-pagosya-s), so a reordered home still reports the same section.
+    window.addEventListener('click', event => {
+      const section = ANALYTICS_PAGE === 'index.html' && event.target?.closest ? event.target.closest('main > *') : null;
+      if (section && event.target.closest('a,button')) analytics('section_click', { target: 's' + homeSectionIndex(section) });
+    }, true);
+    if (ANALYTICS_PAGE === 'index.html' && typeof IntersectionObserver === 'function') {
+      const timers = new Map();
+      const sectionObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+        const index = homeSectionIndex(entry.target);
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (!timers.has(index)) timers.set(index, setTimeout(() => { analytics('section_view', { target: 's' + index }, 'section:' + index); sectionObserver.unobserve(entry.target); }, 1000));
+        } else { clearTimeout(timers.get(index)); timers.delete(index); }
+      }), { threshold: [0, 0.5] });
+      const watch = () => document.querySelectorAll('main > :not([data-pya-selling-extra])').forEach(section => { if (homeSectionIndex(section) < 40) sectionObserver.observe(section); });
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch, { once: true }); else watch();
+    }
+  }
+  /** A home section's number as written (its place among main's children before anything moved it). */
+  function homeSectionIndex(section) {
+    const main = section.parentElement;
+    if (main && !main.dataset.pagosyaNumbered) { main.dataset.pagosyaNumbered = ''; [...main.children].forEach((child, index) => { if (!child.dataset.pagosyaS) child.dataset.pagosyaS = String(index); }); }
+    const value = Number(section.dataset.pagosyaS);
+    return Number.isInteger(value) ? value : [...(main?.children || [])].indexOf(section);
   }
   let cardObserver = null;
   const watchedCards = new WeakSet();
@@ -324,6 +348,16 @@
       if (partnerCode) sessionStorage.setItem(key, partnerCode);
       else { const stored = sessionStorage.getItem(key); if (valid(stored)) partnerCode = stored; }
     } catch {}
+  }
+  // The discount code the shopper applied (owner 2026-11-07: «no hay ninguna opción para aplicar el cupón»). It rides on every
+  // quote and on the checkout, and stays for this visit so moving between pages keeps it.
+  const PROMO_PATTERN = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
+  const promoKey = `pagosya:promo:${config.slug}`;
+  let promoCode = '';
+  try { const stored = sessionStorage.getItem(promoKey) || ''; if (PROMO_PATTERN.test(stored)) promoCode = stored; } catch {}
+  function rememberPromo(code) {
+    promoCode = code;
+    try { if (code) sessionStorage.setItem(promoKey, code); else sessionStorage.removeItem(promoKey); } catch {}
   }
 
   const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -448,7 +482,12 @@
     const written = typeof p.cardEyebrow === 'string' ? p.cardEyebrow.trim() : '';
     const category = chosen ? (store.categories || []).find(c => c.id === p.categoryId)?.name || '' : '';
     const eyebrow = (written || category).slice(0, 28);
-    const points = chosen ? (Array.isArray(p.highlights) ? p.highlights : []).map(h => typeof h === 'string' ? h : h?.label).filter(text => typeof text === 'string' && text.trim()).slice(0, 3) : [];
+    // Owner 2026-11-17 («longer personalized product cards depending on each product»): every store's card shows the product's own
+    // highlights with the product page's icons (up to 3); a store that chose the showcase card still lists plain ones with a ✓.
+    const rows = Array.isArray(p.highlights) ? p.highlights : [];
+    const iconRows = rows.filter(h => h && typeof h === 'object' && highlightIcons[h.icon] && typeof h.label === 'string' && h.label.trim()).slice(0, 3);
+    const points = iconRows.length ? iconRows.map(h => ({ text: h.label.trim(), icon: h.icon }))
+      : chosen ? rows.map(h => typeof h === 'string' ? h : h?.label).filter(text => typeof text === 'string' && text.trim()).slice(0, 3).map(text => ({ text })) : [];
     const chips = [];
     if (chosen) for (const group of optionGroups(p) || []) for (const value of group.values) {
       const color = swatchColor(group.name, value);
@@ -469,11 +508,13 @@
     return best.id;
   }
   const chipsHtml = parts => parts.chips.map(c => c.color ? `<span data-swatch style="--swatch:${escape(c.color)}" role="img" aria-label="${escape(c.text)}" title="${escape(c.text)}"></span>` : `<span>${escape(c.text)}</span>`).join('') + (parts.more ? `<span>+${parts.more}</span>` : '');
+  /** One card point: the highlight's icon (the product page's drawing, still) and its words, or the words alone. */
+  const cardPointMarkup = point => point.icon ? `<li data-icon><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${highlightIcons[point.icon].paths}</svg><span>${escape(point.text)}</span></li>` : `<li>${escape(point.text)}</li>`;
   function cardInsidesMarkup(p) {
     const parts = cardInsides(p), chips = chipsHtml(parts);
     return {
       eyebrow: parts.eyebrow ? `<p class="menu-item__eyebrow">${escape(parts.eyebrow)}</p>` : '',
-      points: parts.points.length ? `<ul class="menu-item__points">${parts.points.map(t => `<li>${escape(t)}</li>`).join('')}</ul>` : '',
+      points: parts.points.length ? `<ul class="menu-item__points">${parts.points.map(cardPointMarkup).join('')}</ul>` : '',
       chips: chips ? `<p class="menu-item__chips">${chips}</p>` : '',
       deal: parts.deal ? `<p class="menu-item__deal">${escape(parts.deal)}</p>` : '',
       save: parts.save ? `<span class="menu-item__save">${escape(parts.save)}</span>` : '',
@@ -616,15 +657,78 @@
   document.addEventListener("pagosya:current-product", event => {
     if (event.detail && typeof event.detail === "object" && fullProductPage && selectedProduct) { event.detail.id = selectedProduct.id; event.detail.name = selectedProduct.name; }
   });
-  const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(Boolean);
+  /* Spec 2026-11-09 Merman cart + checkout: the free-shipping bar, each line's saving and frequency, and the guarantee line — drawn in
+   * the store's own accent and fonts. */
+  const CART_TRUCK = '<svg class="cart-free__truck" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/></svg>';
+  const CART_SHIELD = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6z"/><path d="m9 12 2 2 4-4"/></svg>';
+
+  /* «Te faltan Bs 40 para envío gratis» → «¡Tienes envío gratis!»; nothing when the store has no free-shipping amount or the cart is empty. */
+  function freeShippingBar(total, currency) {
+    const goal = Number(store.freeShippingFrom);
+    // A cart of digital products ships nothing (final review 2026-11-09).
+    if (!Number.isInteger(goal) || goal <= 0 || total <= 0 || digitalOnlyCart()) return '';
+    const left = goal - total, done = left <= 0;
+    const width = done ? 100 : Math.max(4, Math.min(96, Math.round(total / goal * 100)));
+    return `<div class="cart-free" data-part="cart-free-shipping"${done ? ' data-done' : ''}><p>${done ? '¡Tienes envío gratis!' : `Te faltan <strong>${money(left, currency)}</strong> para envío gratis`}</p><div class="cart-free__track" aria-hidden="true"><span style="width:${width}%"></span>${CART_TRUCK}</div></div>`;
+  }
+
+  /* «(Ahorras Bs 9)» in the accent, under the line's prices. */
+  function cartLineSave(saved, currency) {
+    return saved > 0 ? `<p class="order-item__save" data-part="cart-line-save">(Ahorras ${money(saved, currency)})</p>` : '';
+  }
+
+  /* «Una vez · Suscripción · cada mes (ahorra 10 %)» for a product that offers subscriptions on a store with them on. The API takes one
+   * frequency per order, so a frequency another line already uses is the only one left open. */
+  function cadenceSelectMarkup(id, line) {
+    const { p } = line;
+    if (line.picks || line.extras || !subscriptionsAvailable() || p.fulfillmentType === 'DIGITAL') return '';
+    const offers = (p.subscriptionOptions || []).filter(offer => CADENCE_TEXT[offer.cadence]);
+    if (!offers.length) return '';
+    const others = [...cart.keys()].filter(key => key !== id).map(keyCadence).filter(Boolean);
+    const options = offers.map(offer => {
+      const blocked = others.some(cadence => cadence !== offer.cadence);
+      return `<option value="${escape(offer.cadence)}"${line.cadence === offer.cadence ? ' selected' : ''}${blocked ? ' disabled' : ''}>Suscripción · ${CADENCE_TEXT[offer.cadence]}${offer.discountPercent ? ` (ahorra ${offer.discountPercent} %)` : ''}</option>`;
+    }).join('');
+    return `<label class="order-item__cadence"><select data-cart-cadence="${escape(id)}" aria-label="Frecuencia de ${escape(p.name)}"><option value=""${line.cadence ? '' : ' selected'}>Una vez</option>${options}</select></label>`;
+  }
+
+  /* The line keeps its place and quantity; only its frequency (and so its price) changes. */
+  function changeLineCadence(id, cadence) {
+    const line = cartLine(id);
+    if (!line || !cart.has(id)) return;
+    const next = lineKey(line.p.id, line.variant?.id, cadence || undefined);
+    if (next === id || (cadence && [...cart.keys()].some(key => key !== id && keyCadence(key) && keyCadence(key) !== cadence))) return;
+    const merged = cart.has(next) ? cart.get(next) : 0;
+    const entries = [...cart].filter(([key]) => key !== next).map(([key, quantity]) => key === id ? [next, quantity + merged] : [key, quantity]);
+    cart.clear();
+    for (const [key, quantity] of entries) cart.set(key, quantity);
+    renderCart();
+  }
+
+  /* The store's own returns promise (its first sentence), else pagosYa's. */
+  function cartGuaranteeText() {
+    const returns = typeof store.policies?.returns === 'string' ? store.policies.returns.trim() : '';
+    const first = returns.split(/(?<=[.!?])\s+/)[0]?.slice(0, 140) || '';
+    return first || 'Compra segura · Pagos protegidos por pagosYa';
+  }
+  function cartGuaranteeLine() {
+    return `<p class="cart-guarantee" data-part="cart-guarantee">${CART_SHIELD}<span>${escape(cartGuaranteeText())}</span></p>`;
+  }
+  // Owner 2026-11-17 («add videos … inside a product card»): a product's media can hold MP4 videos beside its photos. Every photo
+  // place (gallery, cards, cart, share image) keeps reading photos only; the videos are drawn by productVideos' own places.
+  const VIDEO_URL = /\.(?:mp4|webm|m4v|mov)(?:[?#]|$)/i;
+  const isVideoUrl = url => VIDEO_URL.test(String(url || ''));
+  const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(url => url && !isVideoUrl(url));
   const galleryImages = (p) => {
     const sources = [
       ...(Array.isArray(p?.imageUrls) ? p.imageUrls : []),
       ...(typeof p?.imageUrl === "string" ? [p.imageUrl] : []),
       ...(Array.isArray(p?.variants) ? p.variants.flatMap(variantPhotos) : []),
     ];
-    return [...new Set(sources.map(safeUrl).filter(Boolean))];
+    return [...new Set(sources.map(safeUrl).filter(url => url && !isVideoUrl(url)))];
   };
+  /** The product's videos, in the merchant's order (at most three). */
+  const productVideos = (p) => [...new Set((Array.isArray(p?.imageUrls) ? p.imageUrls : []).map(safeUrl).filter(url => url && isVideoUrl(url)))].slice(0, 3);
   const imagePosition = (p, url) => {
     const index = (Array.isArray(p.imageUrls) ? p.imageUrls : []).findIndex(value => safeUrl(value) === url);
     const value = index >= 0 ? p.imagePositions?.[index] : null;
@@ -642,6 +746,32 @@
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
     [data-cart-slot][hidden],[data-cart-field][hidden],[data-added-field][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
+    /* Owner 2026-11-17 (animated card buttons): the fill cards.js puts in every card's add button sweeps across on hover, an icon
+     * moves with it, and a check shows for a moment after an add. Layered, so a store's own button rules still win. */
+    @layer pagosya-commerce {
+      .menu-add__fill,.menu-add__done{position:absolute;inset:0;border-radius:inherit;pointer-events:none}
+      .menu-add__fill{z-index:-1;background:var(--pya-fill,color-mix(in srgb,currentColor 22%,transparent));transform:scaleX(0);transform-origin:left center;transition:transform .8s cubic-bezier(.65,0,.35,1)}
+      .menu-add:not(:disabled):is(:hover,:focus-visible)>.menu-add__fill,.menu-add[data-pya-added]>.menu-add__fill{transform:scaleX(1)}
+      .menu-add>:not(.menu-add__fill,.menu-add__done){transition:transform .4s cubic-bezier(.22,1,.36,1),opacity .2s ease}
+      .menu-add:not([data-pya-plus],:disabled):hover>svg:not(.menu-add__done svg){transform:translateY(-2px)}
+      .menu-add[data-pya-plus]:not(:disabled):hover>svg{transform:rotate(90deg)}
+      .menu-add__done{display:grid;place-items:center;opacity:0;transform:scale(.6);transition:opacity .2s ease,transform .4s cubic-bezier(.34,1.56,.64,1)}
+      .menu-add[data-pya-added]>.menu-add__done{opacity:1;transform:none}
+      .menu-add[data-pya-added]>:not(.menu-add__fill,.menu-add__done){opacity:0}
+      @media (prefers-reduced-motion:reduce){.menu-add__fill,.menu-add__done,.menu-add>*{transition:none!important}}
+    }
+    /* Owner 2026-11-17 (longer, personal cards): a card's own highlights, each with its icon, under the name. The list's spacing is
+     * layered (a store's card keeps its own); a row with an icon is unlayered, so a template's ✓ marker never sits beside the icon
+     * and the icon never takes a line of its own (Remolino's card, live 2026-11-17). */
+    @layer pagosya-commerce {
+      .menu-item .menu-item__points{list-style:none;margin:8px 0 2px;padding:0;display:grid;gap:6px;font-size:13px;line-height:1.35}
+    }
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon]{display:flex;align-items:flex-start;gap:8px;padding-left:0}
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon]::before{content:none;display:none}
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon] svg{flex:none;width:16px;height:16px;margin-top:1px;color:var(--store-accent,currentColor)}
+    /* Unlayered: a clear button filled with its own text colour must change its text, whatever the store's button colour says. */
+    .menu-item .menu-add[data-pya-ink]{transition:color .3s ease .15s}
+    .menu-item .menu-add[data-pya-ink]:not(:disabled):is(:hover,:focus-visible),.menu-item .menu-add[data-pya-ink][data-pya-added]{color:var(--pya-ink)}
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
       .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
@@ -654,6 +784,8 @@
       @media (min-width:761px){:where(:has(> [data-product-slot=gallery]):has(> [data-product-slot=buy], > * [data-product-slot=buy])){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(32px,4vw,64px);align-items:start}}
       :where([data-product-slot=gallery]) :where(img.product-detail__photo,.product-detail__stage img,.product-detail__stage video){max-height:min(78svh,860px);object-fit:cover}
       .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
+      .menu-item__noimage{display:grid;place-items:center;width:100%;aspect-ratio:4/5;border-radius:var(--kit-photo-round,var(--store-radius,0px));background:color-mix(in srgb,currentColor 6%,transparent);color:color-mix(in srgb,currentColor 35%,transparent);font:inherit;font-size:clamp(2rem,6vw,3.5rem);line-height:1;user-select:none}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__noimage{height:100%;aspect-ratio:auto}
       [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:stretch}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p){margin:0}
@@ -693,6 +825,9 @@
     [data-pagosya-product][data-style] .product-detail__decor{display:none}
     [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery{position:sticky;top:0}
     [data-pagosya-product][data-style] .product-detail__stage{position:relative;min-width:0}
+    [data-pagosya-product] .product-detail__videos{display:grid;gap:12px;margin-top:12px;min-width:0}
+    [data-pagosya-product] .product-detail__video{display:block;width:100%;max-height:80vh;border-radius:12px;background:#000;object-fit:contain}
+    [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery:has(.product-detail__videos){position:static}
     [data-pagosya-product][data-style] .product-detail__badge{position:absolute;top:14px;left:14px;z-index:2;max-width:calc(100% - 28px);padding:6px 12px;border-radius:999px;background:var(--pd-accent,#111);color:var(--pd-on-accent,#fff);font-size:13px;font-weight:600;line-height:1.2;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
     [data-pagosya-product][data-style] .product-detail__photo{display:block;width:100%;height:min(calc(100dvh - 64px),760px);min-height:420px;max-height:none;margin:0;object-fit:cover;border:0;border-radius:0;background:var(--pd-tint);touch-action:pan-y}
     dialog[data-pagosya-product][data-style] .product-detail__photo{height:min(calc(100dvh - 34px),640px);min-height:360px}
@@ -948,14 +1083,14 @@
       [data-pagosya-product][data-style] .product-detail__sticky-space:not([hidden]){display:block;height:72px}
     }
     /* Lively one-product stores (spec 2026-11-03): the buy bar also shows on laptops, a floating pill with the photo and choice. */
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){position:fixed;left:50%;right:auto;bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:12px;width:min(720px,calc(100% - 24px));padding:10px 10px 10px 12px;border:1px solid var(--pd-line);border-radius:20px;background:var(--pd-paper);color:var(--pd-ink);box-shadow:0 18px 40px -18px #0000004d;transform:translateX(-50%)}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky img:not([hidden]){display:block;width:44px;height:44px;border-radius:12px;object-fit:cover;flex:0 0 auto}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky [data-product-sticky-choice]{display:block;color:var(--pd-muted)}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){position:fixed;left:50%;right:auto;bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:12px;width:min(720px,calc(100% - 24px));padding:10px 10px 10px 12px;border:1px solid var(--pd-line);border-radius:20px;background:var(--pd-paper);color:var(--pd-ink);box-shadow:0 18px 40px -18px #0000004d;transform:translateX(-50%)}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky img:not([hidden]){display:block;width:44px;height:44px;border-radius:12px;object-fit:cover;flex:0 0 auto}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky [data-product-sticky-choice]{display:block;color:var(--pd-muted)}
     [data-pagosya-product][data-style] .product-detail__sticky img{display:none}
-    @media (prefers-reduced-motion:no-preference){:root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){animation:pya-bar-in .35s cubic-bezier(.2,.9,.2,1) both}}
+    @media (prefers-reduced-motion:no-preference){:root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){animation:pya-bar-in .35s cubic-bezier(.2,.9,.2,1) both}}
     /* Lively one-product stores (spec 2026-11-03): short facts floating over the product photo, each with a pinging dot. */
     .product-detail__pills{position:absolute;left:14px;top:14px;z-index:2;display:grid;gap:8px;margin:0;padding:0;list-style:none;pointer-events:none}
     .product-detail__pills li{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:7px 12px;border-radius:999px;background:color-mix(in srgb,var(--pd-paper,#fff) 92%,transparent);color:var(--pd-ink,#111);font-size:12.5px;font-weight:600;box-shadow:0 8px 22px -12px #0000004d;backdrop-filter:blur(8px)}
@@ -1647,14 +1782,50 @@
     });
     return offers.length ? `<section class="product-detail__bundles" aria-labelledby="product-bundles-title"><h2 id="product-bundles-title">Llévalo en paquete</h2>${offers.join('')}</section>` : '';
   }
+  /* Owner 2026-11-13 (Clyro «Complete your routine»): a product page template with a «pairs» slot shows two more of the store's own
+   * products beside the buy box — the merchant's picks for this product first, then its category, then the rest — each added with one
+   * tap when it is simple, else a link to choose its options. */
+  function pairsMarkup(p) {
+    if (!productTemplateHas('pairs')) return '';
+    const picks = Array.isArray(p.recommendedProductIds) ? p.recommendedProductIds : [];
+    const rank = item => picks.includes(item.id) ? 0 : item.categoryId && item.categoryId === p.categoryId ? 1 : 2;
+    const items = products().map((item, index) => ({ item, index })).filter(({ item }) => item.id !== p.id && limit(item) !== 0 && !isMembership(item))
+      .sort((a, b) => rank(a.item) - rank(b.item) || a.index - b.index).slice(0, 2).map(entry => entry.item);
+    if (!items.length) return '';
+    return `<section class="product-detail__pairs" data-part="pairs" aria-labelledby="product-pairs-title"><h2 id="product-pairs-title">Completa tu compra</h2><ul>${items.map(item => {
+      const image = galleryImages(item)[0], href = escape(productHref(item));
+      const amounts = item.variants?.length ? item.variants.map(v => price({ ...item, amount: v.amount })) : [price(item)];
+      const low = Math.min(...amounts), from = new Set(amounts).size > 1;
+      return `<li data-part="pair">${image ? `<a class="product-detail__pair-photo" data-part="pair-photo" href="${href}" tabindex="-1" aria-hidden="true"><img src="${escape(image)}" alt="" loading="lazy" /></a>` : ''}`
+        + `<span class="product-detail__pair-copy" data-part="pair-copy"><a href="${href}">${escape(item.name)}</a><span>${from ? 'desde ' : ''}${escape(money(low, item.currency))}</span></span>`
+        + (simpleProduct(item) ? `<button type="button" class="product-detail__pair-add" data-part="pair-add" data-add="${escape(lineKey(item.id))}" aria-label="Agregar ${escape(item.name)} al pedido">Agregar</button>` : `<a class="product-detail__pair-add" data-part="pair-add" href="${href}">Elegir</a>`)
+        + '</li>';
+    }).join('')}</ul></section>`;
+  }
+  /* Owner 2026-11-13 (Clyro's logo row): under the buy button, how the store takes payment — the methods pagosYa processes, only for
+   * a store that takes payment online, and only in a template with a «payments» slot. */
+  function paymentsMarkup() {
+    if (!productTemplateHas('payments') || (config.data?.checkoutMode || 'payment') !== 'payment') return '';
+    return `<div class="product-detail__payments" data-part="payments"><p>Paga con QR, tarjeta, Tigo Money o transferencia</p><div class="product-detail__payment-logos" data-part="payment-logos" aria-hidden="true">${['qr', 'visa', 'mastercard', 'amex', 'tigo', 'bank'].map(name => PAYMENT_LOGOS.logos?.[name] || '').join('')}</div></div>`;
+  }
   /* "Súmale algo más": the owner's cart picks that are not in the cart yet. */
-  function cartSuggestionsMarkup() {
-    if (store.cartRecommendationsEnabled === false || !cart.size) return '';
+  /* Spec 2026-11-09 Merman cart: the merchant's chosen products first; with none chosen, «Te puede gustar» picks — the cart's categories
+   * first, then the best-seller, then the catalogue — never one already in the cart. Up to 6 (the checkout's «Completa tu compra» takes the first). */
+  function cartSuggestionItems() {
+    if (store.cartRecommendationsEnabled === false || !cart.size) return [];
     const inCart = new Set(cartItems().map(item => item.id));
     const ids = Array.isArray(store.cartRecommendationProductIds) ? store.cartRecommendationProductIds : [];
-    const items = [...new Set(ids)].map(id => products().find(item => item.id === id)).filter(item => item && !inCart.has(item.id) && limit(item) !== 0).slice(0, 3);
+    const chosen = [...new Set(ids)].map(id => products().find(item => item.id === id)).filter(Boolean);
+    const categories = new Set([...inCart].map(id => products().find(item => item.id === id)?.categoryId).filter(Boolean));
+    const rank = item => categories.has(item.categoryId) ? 0 : item.id === store.topSellerId ? 1 : 2;
+    const picked = chosen.length ? chosen : products().map((item, index) => ({ item, index })).sort((a, b) => rank(a.item) - rank(b.item) || a.index - b.index).map(entry => entry.item);
+    // A membership joins through its own page (final review 2026-11-09: its «Añadir» did nothing here).
+    return picked.filter(item => item && !inCart.has(item.id) && !isMembership(item) && limit(item) !== 0).slice(0, 6);
+  }
+  function cartSuggestionsMarkup() {
+    const items = cartSuggestionItems();
     if (!items.length) return '';
-    return `<section class="order-recommendations" aria-label="Súmale algo más"><h3>Súmale algo más</h3><ul>${items.map(item => {
+    return `<section class="order-recommendations" data-part="cart-suggestions" aria-label="Te puede gustar"><h3>Te puede gustar</h3><ul>${items.map(item => {
       const image = galleryImages(item)[0];
       return `<li>${image ? `<img src="${escape(image)}" alt="" loading="lazy" />` : ''}<span><strong>${escape(item.name)}</strong><span>${money(price(item), item.currency)}</span></span>${simpleProduct(item) ? `<button type="button" data-add="${escape(lineKey(item.id))}" aria-label="Añadir ${escape(item.name)}">Añadir</button>` : `<a href="${escape(productHref(item))}" aria-label="Elegir opciones de ${escape(item.name)}">Elegir</a>`}</li>`;
     }).join('')}</ul></section>`;
@@ -1689,7 +1860,10 @@
     jump.textContent = pending ? 'Elegir opciones' : isMembership(selectedProduct) ? 'Hacerme miembro' : 'Añadir';
     jump.disabled = !pending && (!buy || buy.disabled);
     const phone = matchMedia('(max-width: 640px)').matches, lively = document.documentElement.hasAttribute('data-pya-lively');
-    const show = buyPassed && !footerSeen && (lively || phone);
+    // Owner 2026-11-13 (product page «duo»): a template with a «sticky» slot gets the lively stores' floating bar on every width.
+    const sticky = productTemplateHas('sticky') || config.selling?.stickyBuy === true; // «La tienda que vende sola» switch (spec 2026-11-16)
+    document.documentElement.toggleAttribute('data-pya-sticky-buy', sticky);
+    const show = buyPassed && !footerSeen && (lively || phone || sticky);
     bar.hidden = !show; detail.querySelector('[data-product-sticky-space]').hidden = !show || !phone;
   }
   let highlightObserver = null;
@@ -2661,7 +2835,13 @@
       if (at > -1) html = html.slice(0, at) + `<div class="product-detail__stack" data-part="thumbs">${images.map((url, index) => `<img data-part="thumb" data-photo-zoom="${index}" src="${escape(url)}"${responsiveAttrs(url, "(max-width: 820px) 100vw, 55vw")} alt="${escape(`${p.name} · imagen ${index + 1} de ${images.length}`)}" loading="${index ? 'lazy' : 'eager'}" />`).join('')}</div>`;
     }
     const tiles = productPageStyle() === 'conversion' && images.length ? tilesMarkup(conversionHighlights(p).tiles) : '';
-    return html + tiles + '<span class="product-detail__decor" data-part="decor-a" aria-hidden="true"></span>';
+    return html + tiles + videosMarkup(p) + '<span class="product-detail__decor" data-part="decor-a" aria-hidden="true"></span>';
+  }
+  /* The product's videos under its photos (owner 2026-11-17): with controls, muted until the shopper turns the sound on, loaded
+   * only when asked (preload=metadata shows the first frame). */
+  function videosMarkup(p) {
+    const videos = productVideos(p);
+    return videos.length ? `<div class="product-detail__videos" data-part="videos">${videos.map((url, index) => `<video class="product-detail__video" src="${escape(url)}" controls muted playsinline loop preload="metadata" aria-label="${escape(p.name)} · video ${index + 1} de ${videos.length}"></video>`).join('')}</div>` : '';
   }
   function plainGalleryMarkup(images, p) {
     return images.length ? `<div class="product-detail__stage" data-part="stage"><img class="product-detail__photo" src="${escape(images[0])}"${responsiveAttrs(images[0], "(max-width: 820px) 100vw, 55vw")} alt="${escape(p.name)}" data-photo-zoom="" role="button" tabindex="0" aria-label="${escape(`Ampliar foto de ${p.name}`)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" data-part="thumbs" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-part="thumb" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}"${responsiveAttrs(url, "56px")} alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>';
@@ -2702,7 +2882,7 @@
     let authoredTrail = false;
     for (let node = fullProductPage ? detail.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) if (node.matches('a[href]') || node.querySelector('a[href]')) { authoredTrail = true; break; }
     const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('productos.html'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
-    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}${pillsMarkup(images)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape(eyebrowText)}</p>${style === 'conversion' || style === 'atelier' ? rating : ''}<${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${lead ? `<p class="product-detail__subtitle" data-part="subtitle">${escape(lead.lead)}</p>` : ''}${style !== 'conversion' && style !== 'atelier' ? rating : ''}<div class="product-detail__pricing" data-product-pricing>${isMembership(p) ? `<strong class="product-detail__price">${escape(membershipPriceText(p))}</strong>` : priceMarkup(p)}</div>${style === 'conversion' ? checksMarkup(conversionHighlights(p).checks) : ''}${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(lead ? lead.rest : p.description)}</p>` : ''}${style === 'fashion' && (p.description || '').length > 220 ? '<button type="button" class="product-detail__more" data-product-more aria-expanded="false">Leer más</button>' : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' && style !== 'conversion' ? highlightsMarkup(p) : ''}${isMembership(p) ? membershipMarkup(p) : groups ? `${optionsMarkup(groups)}${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">${addText}<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><img data-product-sticky-photo alt="" hidden /><div><strong>${escape(p.name)}</strong><span data-product-sticky-choice></span><span data-product-sticky-price></span></div><button type="button" data-product-jump>${isMembership(p) ? 'Hacerme miembro' : 'Añadir'}</button></div>` : ''}`;
+    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}${pillsMarkup(images)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape(eyebrowText)}</p>${style === 'conversion' || style === 'atelier' ? rating : ''}<${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${lead ? `<p class="product-detail__subtitle" data-part="subtitle">${escape(lead.lead)}</p>` : ''}${style !== 'conversion' && style !== 'atelier' ? rating : ''}<div class="product-detail__pricing" data-product-pricing>${isMembership(p) ? `<strong class="product-detail__price">${escape(membershipPriceText(p))}</strong>` : priceMarkup(p)}</div>${style === 'conversion' ? checksMarkup(conversionHighlights(p).checks) : ''}${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(lead ? lead.rest : p.description)}</p>` : ''}${style === 'fashion' && (p.description || '').length > 220 ? '<button type="button" class="product-detail__more" data-product-more aria-expanded="false">Leer más</button>' : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' && style !== 'conversion' ? highlightsMarkup(p) : ''}${isMembership(p) ? membershipMarkup(p) : groups ? `${optionsMarkup(groups)}${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">${addText}<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${pairsMarkup(p)}${paymentsMarkup()}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><img data-product-sticky-photo alt="" hidden /><div><strong>${escape(p.name)}</strong><span data-product-sticky-choice></span><span data-product-sticky-price></span></div><button type="button" data-product-jump>${isMembership(p) ? 'Hacerme miembro' : 'Añadir'}</button></div>` : ''}`;
     detail.removeAttribute('data-page-template');
     applyProductPageTemplate();
     showImage(0);
@@ -3190,6 +3370,7 @@
     // A template's own entrance runs when it is first inserted; every later add plays it again.
     if (templateRoot) for (const animation of addedNotice.getAnimations?.({ subtree: true }) || []) if (animation instanceof CSSAnimation) { animation.cancel(); animation.play(); }
     placeAddedNotice(button);
+    if (button.matches('.menu-item .menu-add')) markCardAdded(button);
     clearTimeout(addedTimer);
     addedTimer = setTimeout(() => { if (!addedNotice.contains(document.activeElement)) delete addedNotice.dataset.visible; }, 4000);
     // The confirmation remains visible with reduced motion or motion explicitly off.
@@ -3649,7 +3830,7 @@
     if (document.body) startIdentity(); else document.addEventListener('DOMContentLoaded', startIdentity, { once: true });
   }
   // Generated by tools/build-commerce.mjs from checkout-shell/shell.css and checkout-shell/logos.json.
-  const CHECKOUT_SHELL_CSS = "/* One calm checkout (docs/superpowers/specs/2026-10-20-calm-checkout-design.md). The same shell in every store and on\n   the hosted payment page. Unlayered and two classes deep, so a store's element and class rules never reach it; the\n   resets use :where() so the shell's own component rules (same weight, later) always win over them. */\n.pya-checkout{--pya-ink:#1a1a1a;--pya-muted:#6b6b6b;--pya-line:#d9d9d9;--pya-soft:#f7f7f7;--pya-divider:#ececec;--pya-accent:#1a1a1a;--pya-accent-ink:#ffffff;--pya-gutter:clamp(20px,4vw,56px);position:fixed;inset:0;z-index:2147483000;display:block;margin:0;padding:0;overflow:auto;overscroll-behavior:contain;background:#fff;color:var(--pya-ink);color-scheme:light;font:400 15px/1.5 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif;letter-spacing:normal;text-align:left;text-transform:none;-webkit-font-smoothing:antialiased}\n.pya-checkout.pya-checkout{width:auto;height:auto;min-width:0;min-height:0;max-width:none;max-height:none}\n.pya-checkout[hidden]{display:none}\n.pya-checkout.pya-checkout--page{position:static;inset:auto;z-index:auto;min-height:100dvh;overflow:visible}\n.pya-checkout.pya-checkout :is(*,*::before,*::after){box-sizing:border-box}\n.pya-checkout.pya-checkout :where(h1,h2,h3,p,ul,ol,li,dl,dt,dd,fieldset,legend,figure,small,strong,output){margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none}\n.pya-checkout.pya-checkout :where(strong){font-weight:600}\n.pya-checkout.pya-checkout :where(ul,ol){list-style:none}\n.pya-checkout.pya-checkout :where(button,input,select,textarea){margin:0;border-radius:0;font:inherit;color:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none;filter:none;-webkit-text-fill-color:currentColor}\n.pya-checkout.pya-checkout :where(a){color:inherit;text-decoration:underline;text-underline-offset:3px}\n.pya-checkout.pya-checkout :where(img){display:block;max-width:100%;border:0;border-radius:0;filter:none}\n.pya-checkout.pya-checkout :focus-visible{outline:2px solid var(--pya-ink);outline-offset:2px}\n.pya-checkout.pya-checkout [hidden]{display:none!important}\n.pya-checkout .pya-co__bar{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:10px var(--pya-gutter);border-bottom:1px solid var(--pya-divider);background:#fff}\n.pya-checkout .pya-co__brand{display:flex;align-items:center;gap:10px;min-width:0;font-size:17px;font-weight:600}\n.pya-checkout .pya-co__logo{width:auto;height:32px;max-width:120px;object-fit:contain}\n.pya-checkout .pya-co__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.pya-checkout .pya-co__back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0;border:0;background:none;color:var(--pya-muted);font-size:14px;text-decoration:none;cursor:pointer}\n.pya-checkout .pya-co__back:hover{color:var(--pya-ink)}\n.pya-checkout .pya-co__secure{display:inline-flex;align-items:center;gap:6px;color:var(--pya-muted);font-size:13px;white-space:nowrap}\n.pya-checkout .pya-co__summary-toggle{display:none}\n.pya-checkout .pya-co__frame{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-rows:auto 1fr;min-height:calc(100dvh - 65px)}\n.pya-checkout [data-pagosya-cart][data-checkout-review]{display:contents!important}\n.pya-checkout .pya-co__lead,.pya-checkout .pya-co__main{grid-column:1;justify-self:end;width:min(100% - 2 * var(--pya-gutter),580px);margin-right:var(--pya-gutter)}\n.pya-checkout .pya-co__lead{grid-row:1;padding-top:32px}\n.pya-checkout .pya-co__main{grid-row:2;display:grid;align-content:start;gap:0;padding:4px 0 56px}\n.pya-checkout .pya-co__steps{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px;font-size:13px;color:var(--pya-muted)}\n.pya-checkout .pya-co__steps li{display:inline-flex;align-items:center;gap:6px}\n.pya-checkout .pya-co__steps li+li::before{content:\"›\";color:var(--pya-line)}\n.pya-checkout .pya-co__steps [aria-current=step]{color:var(--pya-ink);font-weight:600}\n.pya-checkout .pya-co__steps button{min-height:32px;padding:0;border:0;background:none;color:var(--pya-ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}\n.pya-checkout .pya-co__lead h1{font-size:26px;line-height:1.2;font-weight:600}\n.pya-checkout .pya-co__lead h1:focus{outline:none}\n.pya-checkout .pya-co__note{margin-top:4px;color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__status{margin-top:14px;padding:12px 14px;border-radius:6px;background:var(--pya-soft);font-size:14px}\n.pya-checkout .pya-co__status:empty{display:none}\n/* message() writes the same line at the top and beside the pay button: one shows — beside the button while it has text,\n   at the top on the confirmation, where the order can no longer change. */\n.pya-checkout:has([data-pagosya-checkout-status]:not([hidden]):not(:empty)):not([data-mode=done]) .pya-co__status{display:none}\n.pya-checkout[data-mode=done] [data-pagosya-checkout-status],.pya-checkout[data-mode=done] .pya-co__stepper{display:none}\n.pya-checkout [data-pagosya-checkout-status]:not([hidden]){margin-top:12px;padding:12px 14px;border-radius:6px;background:var(--pya-soft);font-size:14px}\n.pya-checkout .pya-co__section{display:grid;gap:12px;padding:26px 0 0}\n.pya-checkout .pya-co__title{font-size:17px;font-weight:600;line-height:1.3}\n.pya-checkout .pya-co__hint{color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__row{display:grid;grid-template-columns:1fr 1fr;gap:12px}\n.pya-checkout :is(.pya-co__field,.order-field,.field){position:relative;display:grid;gap:2px;padding:8px 14px 9px;border:1px solid var(--pya-line);border-radius:6px;background:#fff;color:var(--pya-muted);font-size:12px;line-height:1.3;cursor:text}\n.pya-checkout :is(.pya-co__field,.order-field,.field):focus-within{border-color:var(--pya-ink);box-shadow:0 0 0 1px var(--pya-ink)}\n.pya-checkout :is(.pya-co__field,.order-field,.field) :is(input,select,textarea){display:block;width:100%;min-height:26px;padding:0;border:0;border-radius:0;background:transparent;color:var(--pya-ink);font-size:16px;line-height:1.4;outline:none;appearance:none}\n.pya-checkout :is(.pya-co__field,.order-field,.field) select{padding-right:28px;background:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\") no-repeat right 0 center}\n.pya-checkout :is(.pya-co__field,.order-field,.field) textarea{min-height:56px;resize:vertical}\n.pya-checkout :is(.pya-co__field,.order-field,.field):has([aria-invalid=true]){border-color:#c0392b}\n.pya-checkout .field>label{color:var(--pya-muted);font-size:12px}\n.pya-checkout :is(.field-error,.field-hint,.hint){color:var(--pya-muted);font-size:12px}\n.pya-checkout .field-error{color:#c0392b}\n.pya-checkout .field-error:empty{display:none}\n.pya-checkout :is(fieldset[data-shipping],fieldset[data-delivery-address],fieldset[data-shipping-destination]){display:grid;gap:12px}\n.pya-checkout :is(fieldset[data-shipping],fieldset[data-delivery-address],fieldset[data-shipping-destination])>legend{margin-bottom:12px;font-size:15px;font-weight:600}\n.pya-checkout .pya-co__mirrored{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;border:0!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}\n.pya-checkout .pya-co__choices,.pya-checkout .pya-co__methods{display:grid;border:1px solid var(--pya-line);border-radius:6px;overflow:hidden;background:#fff}\n.pya-checkout :is(.pya-co__choice,.pya-co__method)+:is(.pya-co__choice,.pya-co__method){border-top:1px solid var(--pya-line)}\n.pya-checkout .pya-co__choice,.pya-checkout .pya-co__method>label{display:flex;align-items:center;gap:12px;min-height:56px;padding:12px 16px;cursor:pointer}\n.pya-checkout .pya-co__methods--preview .pya-co__method{display:flex;align-items:center;gap:12px;min-height:52px;padding:10px 16px}\n.pya-checkout :is(.pya-co__choice,.pya-co__method) input[type=radio]{flex:none;width:18px;height:18px;margin:0;accent-color:var(--pya-accent)}\n.pya-checkout .pya-co__choice:has(input:checked),.pya-checkout .pya-co__method:has(input:checked)>label{background:color-mix(in srgb,var(--pya-accent) 6%,#fff);box-shadow:inset 0 0 0 1px var(--pya-accent)}\n.pya-checkout .pya-co__method-name{flex:1;min-width:0;font-size:15px}\n.pya-checkout .pya-co__method-body{display:grid;gap:10px;padding:16px;border-top:1px solid var(--pya-line);background:var(--pya-soft);font-size:14px;color:var(--pya-muted)}\n@media (prefers-reduced-motion:no-preference){.pya-checkout .pya-co__method-body{animation:pya-co-open .2s cubic-bezier(.23,1,.32,1)}}\n@keyframes pya-co-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}\n.pya-checkout .pya-co__logos{display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}\n.pya-checkout .pya-co__logo-badge{display:inline-flex;flex:none;width:38px;height:24px;border:1px solid var(--pya-line);border-radius:4px;overflow:hidden;background:#fff}\n.pya-checkout .pya-co__logo-badge svg{display:block;width:100%;height:100%}\n.pya-checkout .pya-co__pay{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:56px;margin-top:24px;padding:14px 20px;border:0;border-radius:6px;background:var(--pya-accent);color:var(--pya-accent-ink);font-size:17px;font-weight:600;cursor:pointer;transition:filter .15s ease}\n.pya-checkout .pya-co__pay:hover:not(:disabled){filter:brightness(.92)}\n.pya-checkout .pya-co__pay:disabled{background:#a6a6a6;color:#fff;cursor:default}\n.pya-checkout .pya-co__pay-total{font-weight:400;opacity:.9}\n.pya-checkout .pya-co__secondary{width:100%;min-height:48px;margin-top:10px;padding:10px 16px;border:1px solid var(--pya-line);border-radius:6px;background:#fff;cursor:pointer}\n.pya-checkout .pya-co__trust{display:grid;justify-items:center;gap:8px;margin-top:16px;color:var(--pya-muted);font-size:12px;text-align:center}\n.pya-checkout .pya-co__trust>span:last-child{display:inline-flex;align-items:center;gap:6px}\n.pya-checkout .pya-co__summary{grid-column:2;grid-row:1 / -1;align-self:stretch;padding:32px var(--pya-gutter) 56px;background:var(--pya-soft);border-left:1px solid var(--pya-divider)}\n.pya-checkout .pya-co__summary-inner{position:sticky;top:24px;display:grid;gap:18px;width:min(100%,440px)}\n.pya-checkout .pya-co__photo{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:#ececec}\n.pya-checkout .pya-co__count{color:var(--pya-muted);font-weight:400}\n.pya-checkout .pya-co__lines{display:grid;gap:16px}\n.pya-checkout .pya-co__line{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:start}\n.pya-checkout .pya-co__line:not(:has(.pya-co__thumb)){grid-template-columns:minmax(0,1fr) auto}\n.pya-checkout .pya-co__thumb{position:relative;width:64px;height:64px;border:1px solid var(--pya-divider);border-radius:8px;background:#fff}\n.pya-checkout .pya-co__thumb img{width:100%;height:100%;object-fit:cover;border-radius:7px}\n.pya-checkout .pya-co__qty{position:absolute;top:-8px;right:-8px;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#6b6b6b;color:#fff;font-size:12px;font-weight:600}\n.pya-checkout .pya-co__line-text{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}\n.pya-checkout .pya-co__line-text small{color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__line-price{white-space:nowrap;font-variant-numeric:tabular-nums}\n.pya-checkout .pya-co__stepper{display:inline-flex;align-items:center;gap:4px;margin-top:6px}\n.pya-checkout .pya-co__stepper button{width:32px;min-height:32px;padding:0;border:1px solid var(--pya-line);border-radius:6px;background:#fff;cursor:pointer}\n.pya-checkout .pya-co__stepper button:disabled{opacity:.4;cursor:default}\n.pya-checkout .pya-co__stepper output{min-width:24px;text-align:center}\n.pya-checkout .pya-co__code{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}\n.pya-checkout .pya-co__code>button{min-height:48px;padding:0 16px;border:1px solid var(--pya-line);border-radius:6px;background:#ececec;color:var(--pya-ink);cursor:pointer}\n.pya-checkout .pya-co__code>p{grid-column:1 / -1;color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__code>p:empty{display:none}\n.pya-checkout [data-retention-recovery]{width:auto;margin:32px 0 0;padding:24px 0 0;border:0;border-top:1px solid var(--pya-divider);background:none;color:var(--pya-ink);font:inherit}\n.pya-checkout [data-retention-recovery] h3{margin:0 0 12px;font-size:15px;font-weight:600;line-height:1.3}\n.pya-checkout [data-retention-recovery] form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 8px;max-width:none}\n.pya-checkout [data-retention-recovery] .retention-consent{grid-column:1 / -1;grid-row:2;display:flex;align-items:flex-start;gap:8px;color:var(--pya-muted);font-size:12.5px;line-height:1.45}\n.pya-checkout [data-retention-recovery] input[type=checkbox]{flex:none;width:15px;height:15px;margin:1px 0 0;accent-color:var(--pya-accent)}\n.pya-checkout [data-retention-recovery] [role=status]{grid-column:1 / -1;color:var(--pya-muted);font-size:13px}\n/* Owner 2026-10-22: the reminder email and the gift card code are slim pills, each with its button beside it. */\n.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email){display:flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid var(--pya-line);border-radius:999px;background:#fff;color:var(--pya-ink);font-size:14px;line-height:1.3;cursor:text}\n.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email):focus-within{border-color:var(--pya-ink);box-shadow:0 0 0 1px var(--pya-ink)}\n.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input{display:block;width:100%;min-width:0;min-height:42px;padding:0;border:0;border-radius:0;background:transparent;color:var(--pya-ink);font-size:14px;outline:none}\n.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input::placeholder{color:var(--pya-muted);opacity:1}\n.pya-checkout :is(.pya-co__code .pya-co__label,[data-retention-recovery] .retention-label){position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}\n.pya-checkout :is(.pya-co__code>button,[data-retention-recovery] button){min-height:44px;padding:0 18px;border:1px solid var(--pya-line);border-radius:999px;background:#fff;color:var(--pya-ink);font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s ease}\n.pya-checkout :is(.pya-co__code>button,[data-retention-recovery] button):hover:not(:disabled){background:var(--pya-soft)}\n@media(pointer:coarse){.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input{font-size:16px}}\n@media(max-width:480px){.pya-checkout [data-retention-recovery] form{grid-template-columns:minmax(0,1fr)}}\n.pya-checkout .pya-co__totals{display:grid;gap:10px;padding-top:4px}\n.pya-checkout .pya-co__totals :is(.order-savings,.order-total,dl>div){display:flex;justify-content:space-between;gap:16px}\n.pya-checkout .pya-co__totals>div{display:flex;justify-content:space-between;gap:16px}\n.pya-checkout .pya-co__totals .order-total{align-items:baseline;padding-top:12px;border-top:1px solid var(--pya-divider);font-size:17px;font-weight:600}\n.pya-checkout .pya-co__totals .order-total strong{font-size:24px;font-variant-numeric:tabular-nums;white-space:nowrap}\n.pya-checkout .pya-co__totals .order-total small{margin-right:6px;color:var(--pya-muted);font-size:12px;font-weight:400}\n.pya-checkout .pya-co__totals :is(.order-note,[data-bundle-quote-status],.pagosya-secure-note){color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__totals [data-bundle-quote-status]:empty{display:none}\n.pya-checkout .pya-co__delivery-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--pya-line);border-radius:6px;font-size:14px}\n.pya-checkout .pya-co__delivery-row button{min-height:40px;padding:0;border:0;background:none;text-decoration:underline;text-underline-offset:3px;cursor:pointer}\n.pya-checkout .pya-co__done{display:grid;gap:16px;padding-top:12px}\n.pya-checkout .pya-co__check{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--pya-accent);color:var(--pya-accent-ink)}\n.pya-checkout .pya-co__next{display:grid;gap:8px;padding-left:20px;list-style:decimal}\n.pya-checkout :is(.commerce-consent,.reminder-consent){display:flex;gap:10px;align-items:flex-start;font-size:14px}\n@media (max-width:760px){\n  .pya-checkout .pya-co__bar{padding:8px 16px}\n  .pya-checkout .pya-co__secure{font-size:0}\n  .pya-checkout .pya-co__summary-toggle{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;padding:12px 16px;border:0;border-bottom:1px solid var(--pya-divider);background:var(--pya-soft);color:var(--pya-ink);cursor:pointer}\n  .pya-checkout .pya-co__frame{grid-template-columns:minmax(0,1fr);grid-template-rows:none}\n  .pya-checkout .pya-co__summary{grid-column:1;grid-row:auto;order:-1;display:none;padding:20px 16px;border-left:0;border-bottom:1px solid var(--pya-divider)}\n  .pya-checkout[data-summary-open] .pya-co__summary{display:block}\n  .pya-checkout .pya-co__summary-inner{position:static;width:100%}\n  .pya-checkout .pya-co__lead,.pya-checkout .pya-co__main{grid-column:1;grid-row:auto;justify-self:stretch;width:auto;margin:0 16px}\n  .pya-checkout .pya-co__lead{padding-top:20px}\n  .pya-checkout .pya-co__row{grid-template-columns:1fr}\n}\n@media (max-width:760px) and (prefers-reduced-motion:no-preference){.pya-checkout[data-summary-open] .pya-co__summary{animation:pya-co-open .2s cubic-bezier(.23,1,.32,1)}}\n";
+  const CHECKOUT_SHELL_CSS = "/* One calm checkout (docs/superpowers/specs/2026-10-20-calm-checkout-design.md). The same shell in every store and on\n   the hosted payment page. Unlayered and two classes deep, so a store's element and class rules never reach it; the\n   resets use :where() so the shell's own component rules (same weight, later) always win over them. */\n.pya-checkout{--pya-ink:#1a1a1a;--pya-muted:#6b6b6b;--pya-line:#d9d9d9;--pya-soft:#f7f7f7;--pya-divider:#ececec;--pya-accent:#1a1a1a;--pya-accent-ink:#ffffff;--pya-gutter:clamp(20px,4vw,56px);position:fixed;inset:0;z-index:2147483000;display:block;margin:0;padding:0;overflow:auto;overscroll-behavior:contain;background:#fff;color:var(--pya-ink);color-scheme:light;font:400 15px/1.5 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif;letter-spacing:normal;text-align:left;text-transform:none;-webkit-font-smoothing:antialiased}\n.pya-checkout.pya-checkout{width:auto;height:auto;min-width:0;min-height:0;max-width:none;max-height:none}\n.pya-checkout[hidden]{display:none}\n.pya-checkout.pya-checkout--page{position:static;inset:auto;z-index:auto;min-height:100dvh;overflow:visible}\n.pya-checkout.pya-checkout :is(*,*::before,*::after){box-sizing:border-box}\n.pya-checkout.pya-checkout :where(h1,h2,h3,p,ul,ol,li,dl,dt,dd,fieldset,legend,figure,small,strong,output){margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none}\n.pya-checkout.pya-checkout :where(strong){font-weight:600}\n.pya-checkout.pya-checkout :where(ul,ol){list-style:none}\n.pya-checkout.pya-checkout :where(button,input,select,textarea){margin:0;border-radius:0;font:inherit;color:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none;filter:none;-webkit-text-fill-color:currentColor}\n.pya-checkout.pya-checkout :where(a){color:inherit;text-decoration:underline;text-underline-offset:3px}\n.pya-checkout.pya-checkout :where(img){display:block;max-width:100%;border:0;border-radius:0;filter:none}\n.pya-checkout.pya-checkout :focus-visible{outline:2px solid var(--pya-ink);outline-offset:2px}\n.pya-checkout.pya-checkout [hidden]{display:none!important}\n.pya-checkout .pya-co__bar{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:10px var(--pya-gutter);border-bottom:1px solid var(--pya-divider);background:#fff}\n.pya-checkout .pya-co__brand{display:flex;align-items:center;gap:10px;min-width:0;font-size:17px;font-weight:600}\n.pya-checkout .pya-co__logo{width:auto;height:32px;max-width:120px;object-fit:contain}\n.pya-checkout .pya-co__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.pya-checkout .pya-co__back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0;border:0;background:none;color:var(--pya-muted);font-size:14px;text-decoration:none;cursor:pointer}\n.pya-checkout .pya-co__back:hover{color:var(--pya-ink)}\n.pya-checkout .pya-co__secure{display:inline-flex;align-items:center;gap:6px;color:var(--pya-muted);font-size:13px;white-space:nowrap}\n.pya-checkout .pya-co__summary-toggle{display:none}\n.pya-checkout .pya-co__frame{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-rows:auto 1fr;min-height:calc(100dvh - 65px)}\n.pya-checkout [data-pagosya-cart][data-checkout-review]{display:contents!important}\n.pya-checkout .pya-co__lead,.pya-checkout .pya-co__main{grid-column:1;justify-self:end;width:min(100% - 2 * var(--pya-gutter),580px);margin-right:var(--pya-gutter)}\n.pya-checkout .pya-co__lead{grid-row:1;padding-top:32px}\n.pya-checkout .pya-co__main{grid-row:2;display:grid;align-content:start;gap:0;padding:4px 0 56px}\n.pya-checkout .pya-co__steps{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px;font-size:13px;color:var(--pya-muted)}\n.pya-checkout .pya-co__steps li{display:inline-flex;align-items:center;gap:6px}\n.pya-checkout .pya-co__steps li+li::before{content:\"›\";color:var(--pya-line)}\n.pya-checkout .pya-co__steps [aria-current=step]{color:var(--pya-ink);font-weight:600}\n.pya-checkout .pya-co__steps button{min-height:32px;padding:0;border:0;background:none;color:var(--pya-ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}\n.pya-checkout .pya-co__lead h1{font-size:26px;line-height:1.2;font-weight:600}\n.pya-checkout .pya-co__lead h1:focus{outline:none}\n.pya-checkout .pya-co__note{margin-top:4px;color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__status{margin-top:14px;padding:12px 14px;border-radius:6px;background:var(--pya-soft);font-size:14px}\n.pya-checkout .pya-co__status:empty{display:none}\n/* message() writes the same line at the top and beside the pay button: one shows — beside the button while it has text,\n   at the top on the confirmation, where the order can no longer change. */\n.pya-checkout:has([data-pagosya-checkout-status]:not([hidden]):not(:empty)):not([data-mode=done]) .pya-co__status{display:none}\n.pya-checkout[data-mode=done] [data-pagosya-checkout-status],.pya-checkout[data-mode=done] .pya-co__stepper{display:none}\n.pya-checkout [data-pagosya-checkout-status]:not([hidden]){margin-top:12px;padding:12px 14px;border-radius:6px;background:var(--pya-soft);font-size:14px}\n.pya-checkout .pya-co__section{display:grid;gap:12px;padding:26px 0 0}\n.pya-checkout .pya-co__title{font-size:17px;font-weight:600;line-height:1.3}\n.pya-checkout .pya-co__hint{color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__row{display:grid;grid-template-columns:1fr 1fr;gap:12px}\n.pya-checkout :is(.pya-co__field,.order-field,.field){position:relative;display:grid;gap:2px;padding:8px 14px 9px;border:1px solid var(--pya-line);border-radius:6px;background:#fff;color:var(--pya-muted);font-size:12px;line-height:1.3;cursor:text}\n.pya-checkout :is(.pya-co__field,.order-field,.field):focus-within{border-color:var(--pya-ink);box-shadow:0 0 0 1px var(--pya-ink)}\n.pya-checkout :is(.pya-co__field,.order-field,.field) :is(input,select,textarea){display:block;width:100%;min-height:26px;padding:0;border:0;border-radius:0;background:transparent;color:var(--pya-ink);font-size:16px;line-height:1.4;outline:none;appearance:none}\n.pya-checkout :is(.pya-co__field,.order-field,.field) select{padding-right:28px;background:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\") no-repeat right 0 center}\n.pya-checkout :is(.pya-co__field,.order-field,.field) textarea{min-height:56px;resize:vertical}\n.pya-checkout :is(.pya-co__field,.order-field,.field):has([aria-invalid=true]){border-color:#c0392b}\n.pya-checkout .field>label{color:var(--pya-muted);font-size:12px}\n.pya-checkout :is(.field-error,.field-hint,.hint){color:var(--pya-muted);font-size:12px}\n.pya-checkout .field-error{color:#c0392b}\n.pya-checkout .field-error:empty{display:none}\n.pya-checkout :is(fieldset[data-shipping],fieldset[data-delivery-address],fieldset[data-shipping-destination]){display:grid;gap:12px}\n.pya-checkout :is(fieldset[data-shipping],fieldset[data-delivery-address],fieldset[data-shipping-destination])>legend{margin-bottom:12px;font-size:15px;font-weight:600}\n.pya-checkout .pya-co__mirrored{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;border:0!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}\n.pya-checkout .pya-co__choices,.pya-checkout .pya-co__methods{display:grid;border:1px solid var(--pya-line);border-radius:6px;overflow:hidden;background:#fff}\n.pya-checkout :is(.pya-co__choice,.pya-co__method)+:is(.pya-co__choice,.pya-co__method){border-top:1px solid var(--pya-line)}\n.pya-checkout .pya-co__choice,.pya-checkout .pya-co__method>label{display:flex;align-items:center;gap:12px;min-height:56px;padding:12px 16px;cursor:pointer}\n.pya-checkout .pya-co__methods--preview .pya-co__method{display:flex;align-items:center;gap:12px;min-height:52px;padding:10px 16px}\n.pya-checkout :is(.pya-co__choice,.pya-co__method) input[type=radio]{flex:none;width:18px;height:18px;margin:0;accent-color:var(--pya-accent)}\n.pya-checkout .pya-co__choice:has(input:checked),.pya-checkout .pya-co__method:has(input:checked)>label{background:color-mix(in srgb,var(--pya-accent) 6%,#fff);box-shadow:inset 0 0 0 1px var(--pya-accent)}\n.pya-checkout .pya-co__method-name{flex:1;min-width:0;font-size:15px}\n.pya-checkout .pya-co__method-body{display:grid;gap:10px;padding:16px;border-top:1px solid var(--pya-line);background:var(--pya-soft);font-size:14px;color:var(--pya-muted)}\n@media (prefers-reduced-motion:no-preference){.pya-checkout .pya-co__method-body{animation:pya-co-open .2s cubic-bezier(.23,1,.32,1)}}\n@keyframes pya-co-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}\n.pya-checkout .pya-co__logos{display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}\n.pya-checkout .pya-co__logo-badge{display:inline-flex;flex:none;width:38px;height:24px;border:1px solid var(--pya-line);border-radius:4px;overflow:hidden;background:#fff}\n.pya-checkout .pya-co__logo-badge svg{display:block;width:100%;height:100%}\n.pya-checkout .pya-co__pay{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:56px;margin-top:24px;padding:14px 20px;border:0;border-radius:6px;background:var(--pya-accent);color:var(--pya-accent-ink);font-size:17px;font-weight:600;cursor:pointer;transition:filter .15s ease}\n.pya-checkout .pya-co__pay:hover:not(:disabled){filter:brightness(.92)}\n.pya-checkout .pya-co__pay:disabled{background:#a6a6a6;color:#fff;cursor:default}\n.pya-checkout .pya-co__pay-total{font-weight:400;opacity:.9}\n.pya-checkout .pya-co__secondary{width:100%;min-height:48px;margin-top:10px;padding:10px 16px;border:1px solid var(--pya-line);border-radius:6px;background:#fff;cursor:pointer}\n.pya-checkout .pya-co__trust{display:grid;justify-items:center;gap:8px;margin-top:16px;color:var(--pya-muted);font-size:12px;text-align:center}\n.pya-checkout .pya-co__trust>span:last-child{display:inline-flex;align-items:center;gap:6px}\n.pya-checkout .pya-co__summary{grid-column:2;grid-row:1 / -1;align-self:stretch;padding:32px var(--pya-gutter) 56px;background:var(--pya-soft);border-left:1px solid var(--pya-divider)}\n.pya-checkout .pya-co__summary-inner{position:sticky;top:24px;display:grid;gap:18px;width:min(100%,440px)}\n.pya-checkout .pya-co__photo{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:#ececec}\n.pya-checkout .pya-co__count{color:var(--pya-muted);font-weight:400}\n.pya-checkout .pya-co__lines{display:grid;gap:16px}\n.pya-checkout .pya-co__line{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:start}\n.pya-checkout .pya-co__line:not(:has(.pya-co__thumb)){grid-template-columns:minmax(0,1fr) auto}\n.pya-checkout .pya-co__thumb{position:relative;width:64px;height:64px;border:1px solid var(--pya-divider);border-radius:8px;background:#fff}\n.pya-checkout .pya-co__thumb img{width:100%;height:100%;object-fit:cover;border-radius:7px}\n.pya-checkout .pya-co__qty{position:absolute;top:-8px;right:-8px;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#6b6b6b;color:#fff;font-size:12px;font-weight:600}\n.pya-checkout .pya-co__line-text{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}\n.pya-checkout .pya-co__line-text small{color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__line-price{white-space:nowrap;font-variant-numeric:tabular-nums}\n.pya-checkout .pya-co__stepper{display:inline-flex;align-items:center;gap:4px;margin-top:6px}\n.pya-checkout .pya-co__stepper button{width:32px;min-height:32px;padding:0;border:1px solid var(--pya-line);border-radius:6px;background:#fff;cursor:pointer}\n.pya-checkout .pya-co__stepper button:disabled{opacity:.4;cursor:default}\n.pya-checkout .pya-co__stepper output{min-width:24px;text-align:center}\n.pya-checkout .pya-co__code{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}\n.pya-checkout .pya-co__code>button{min-height:48px;padding:0 16px;border:1px solid var(--pya-line);border-radius:6px;background:#ececec;color:var(--pya-ink);cursor:pointer}\n.pya-checkout .pya-co__code>p{grid-column:1 / -1;color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__code>p:empty{display:none}\n.pya-checkout [data-retention-recovery]{width:auto;margin:32px 0 0;padding:24px 0 0;border:0;border-top:1px solid var(--pya-divider);background:none;color:var(--pya-ink);font:inherit}\n.pya-checkout [data-retention-recovery] h3{margin:0 0 12px;font-size:15px;font-weight:600;line-height:1.3}\n.pya-checkout [data-retention-recovery] form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 8px;max-width:none}\n.pya-checkout [data-retention-recovery] .retention-consent{grid-column:1 / -1;grid-row:2;display:flex;align-items:flex-start;gap:8px;color:var(--pya-muted);font-size:12.5px;line-height:1.45}\n.pya-checkout [data-retention-recovery] input[type=checkbox]{flex:none;width:15px;height:15px;margin:1px 0 0;accent-color:var(--pya-accent)}\n.pya-checkout [data-retention-recovery] [role=status]{grid-column:1 / -1;color:var(--pya-muted);font-size:13px}\n/* Owner 2026-10-22: the reminder email and the gift card code are slim pills, each with its button beside it. */\n.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email){display:flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid var(--pya-line);border-radius:999px;background:#fff;color:var(--pya-ink);font-size:14px;line-height:1.3;cursor:text}\n.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email):focus-within{border-color:var(--pya-ink);box-shadow:0 0 0 1px var(--pya-ink)}\n.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input{display:block;width:100%;min-width:0;min-height:42px;padding:0;border:0;border-radius:0;background:transparent;color:var(--pya-ink);font-size:14px;outline:none}\n.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input::placeholder{color:var(--pya-muted);opacity:1}\n.pya-checkout :is(.pya-co__code .pya-co__label,[data-retention-recovery] .retention-label){position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}\n.pya-checkout :is(.pya-co__code>button,[data-retention-recovery] button){min-height:44px;padding:0 18px;border:1px solid var(--pya-line);border-radius:999px;background:#fff;color:var(--pya-ink);font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s ease}\n.pya-checkout :is(.pya-co__code>button,[data-retention-recovery] button):hover:not(:disabled){background:var(--pya-soft)}\n@media(pointer:coarse){.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input{font-size:16px}}\n@media(max-width:480px){.pya-checkout [data-retention-recovery] form{grid-template-columns:minmax(0,1fr)}}\n.pya-checkout .pya-co__totals{display:grid;gap:10px;padding-top:4px}\n.pya-checkout .pya-co__totals :is(.order-savings,.order-total,dl>div){display:flex;justify-content:space-between;gap:16px}\n.pya-checkout .pya-co__totals>div{display:flex;justify-content:space-between;gap:16px}\n.pya-checkout .pya-co__totals .order-total{align-items:baseline;padding-top:12px;border-top:1px solid var(--pya-divider);font-size:17px;font-weight:600}\n.pya-checkout .pya-co__totals .order-total strong{font-size:24px;font-variant-numeric:tabular-nums;white-space:nowrap}\n.pya-checkout .pya-co__totals .order-total small{margin-right:6px;color:var(--pya-muted);font-size:12px;font-weight:400}\n.pya-checkout .pya-co__totals :is(.order-note,[data-bundle-quote-status],.pagosya-secure-note){color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__totals [data-bundle-quote-status]:empty{display:none}\n.pya-checkout .pya-co__delivery-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--pya-line);border-radius:6px;font-size:14px}\n.pya-checkout .pya-co__delivery-row button{min-height:40px;padding:0;border:0;background:none;text-decoration:underline;text-underline-offset:3px;cursor:pointer}\n.pya-checkout .pya-co__done{display:grid;gap:16px;padding-top:12px}\n.pya-checkout .pya-co__check{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--pya-accent);color:var(--pya-accent-ink)}\n.pya-checkout .pya-co__next{display:grid;gap:8px;padding-left:20px;list-style:decimal}\n.pya-checkout :is(.commerce-consent,.reminder-consent){display:flex;gap:10px;align-items:flex-start;font-size:14px}\n@media (max-width:760px){\n  .pya-checkout .pya-co__bar{padding:8px 16px}\n  .pya-checkout .pya-co__secure{font-size:0}\n  .pya-checkout .pya-co__summary-toggle{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;padding:12px 16px;border:0;border-bottom:1px solid var(--pya-divider);background:var(--pya-soft);color:var(--pya-ink);cursor:pointer}\n  .pya-checkout .pya-co__frame{grid-template-columns:minmax(0,1fr);grid-template-rows:none}\n  .pya-checkout .pya-co__summary{grid-column:1;grid-row:auto;order:-1;display:none;padding:20px 16px;border-left:0;border-bottom:1px solid var(--pya-divider)}\n  .pya-checkout[data-summary-open] .pya-co__summary{display:block}\n  .pya-checkout .pya-co__summary-inner{position:static;width:100%}\n  .pya-checkout .pya-co__lead,.pya-checkout .pya-co__main{grid-column:1;grid-row:auto;justify-self:stretch;width:auto;margin:0 16px}\n  .pya-checkout .pya-co__lead{padding-top:20px}\n  .pya-checkout .pya-co__row{grid-template-columns:1fr}\n}\n@media (max-width:760px) and (prefers-reduced-motion:no-preference){.pya-checkout[data-summary-open] .pya-co__summary{animation:pya-co-open .2s cubic-bezier(.23,1,.32,1)}}\n\n/* Spec 2026-11-09 Merman checkout: the photo band, the dark summary column, the trust lines and the review card. */\n/* Final review 2026-11-09: scoped to the kit's checkout (.pya-co--kit) — the hosted payment page reads this same file. */\n.pya-checkout.pya-co--kit .pya-co__band{display:flex;align-items:center;justify-content:center;min-height:112px;padding:16px var(--pya-gutter);background:var(--pya-accent) center/cover no-repeat;color:var(--pya-accent-ink)}\n.pya-checkout.pya-co--kit .pya-co__band[data-photo]{color:#fff}\n.pya-checkout.pya-co--kit .pya-co__band .pya-co__brand{display:flex;align-items:center;gap:12px;font-size:20px}\n.pya-checkout.pya-co--kit .pya-co__band .pya-co__logo{max-height:56px;width:auto}\n.pya-checkout.pya-co--kit .pya-co__summary{background:var(--pya-summary,#161616);color:var(--pya-summary-ink,#fff);border-left:0}\n.pya-checkout.pya-co--kit .pya-co__summary :is(.pya-co__title,h2,h3,strong,span,p,dt,dd,label){color:inherit}\n.pya-checkout.pya-co--kit .pya-co__summary :is(input,select){background:rgba(255,255,255,.08);color:inherit;border-color:rgba(255,255,255,.28)}\n.pya-checkout.pya-co--kit .pya-co__summary :is(button:not(.pya-co__pay),a){color:inherit;border-color:rgba(255,255,255,.4)}\n.pya-checkout.pya-co--kit .pya-co__summary .pya-co__totals .order-total strong{font-size:22px}\n.pya-checkout.pya-co--kit .pya-co__assure{display:grid;gap:12px;margin:20px 0 0;padding:0;list-style:none}\n.pya-checkout.pya-co--kit .pya-co__assure li{display:flex;align-items:center;gap:12px;font-size:14px;line-height:1.45}\n.pya-checkout.pya-co--kit .pya-co__assure svg{flex:none;color:var(--pya-accent)}\n.pya-checkout.pya-co--kit .pya-co__review{margin:8px 0 0;padding:16px;border-radius:12px;background:rgba(255,255,255,.08)}\n.pya-checkout.pya-co--kit .pya-co__review-title{margin:0 0 8px;font-size:13px;font-weight:600;letter-spacing:.02em}\n.pya-checkout.pya-co--kit .pya-co__stars{font-size:16px;letter-spacing:2px}\n.pya-checkout.pya-co--kit .pya-co__review blockquote{margin:8px 0;font-size:15px;line-height:1.5}\n.pya-checkout.pya-co--kit .pya-co__review-who{margin:0;font-size:13px;opacity:.85}\n@media (max-width:760px){.pya-checkout.pya-co--kit .pya-co__band{min-height:96px}}\n.pya-checkout.pya-co--kit .pya-co__summary :is(.pya-co__code button,.order-recommendations button,.order-recommendations a){min-height:40px;height:auto;padding:0 16px;border:1px solid rgba(255,255,255,.5);border-radius:999px;background:transparent;color:inherit;font-size:14px;aspect-ratio:auto}\n.pya-checkout.pya-co--kit .pya-co__summary .pya-co__stepper button{background:transparent;color:inherit;border:1px solid rgba(255,255,255,.5)}\n.pya-checkout.pya-co--kit .pya-co__summary :is(small,.pya-co__line-text small,.order-total small,.order-note,.pya-co__hint){color:rgba(255,255,255,.78)}\n";
   const PAYMENT_LOGOS = {"logos":{"visa":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"Visa\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#fff\"/><text x=\"19\" y=\"16.2\" text-anchor=\"middle\" font-family=\"Arial,Helvetica,sans-serif\" font-size=\"11\" font-weight=\"700\" font-style=\"italic\" letter-spacing=\".4\" fill=\"#1434CB\">VISA</text></svg>","mastercard":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"Mastercard\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#fff\"/><circle cx=\"15\" cy=\"12\" r=\"7\" fill=\"#EB001B\"/><circle cx=\"23\" cy=\"12\" r=\"7\" fill=\"#F79E1B\"/><path d=\"M19 6.1a7 7 0 0 1 0 11.8 7 7 0 0 1 0-11.8z\" fill=\"#FF5F00\"/></svg>","amex":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"American Express\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#2E77BC\"/><text x=\"19\" y=\"15.3\" text-anchor=\"middle\" font-family=\"Arial,Helvetica,sans-serif\" font-size=\"8.5\" font-weight=\"700\" letter-spacing=\".4\" fill=\"#fff\">AMEX</text></svg>","qr":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"QR\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#fff\"/><g fill=\"none\" stroke=\"#1a1a1a\" stroke-width=\"1.4\"><rect x=\"11.7\" y=\"4.7\" width=\"5\" height=\"5\"/><rect x=\"21.3\" y=\"4.7\" width=\"5\" height=\"5\"/><rect x=\"11.7\" y=\"14.3\" width=\"5\" height=\"5\"/></g><g fill=\"#1a1a1a\"><rect x=\"13.5\" y=\"6.5\" width=\"1.4\" height=\"1.4\"/><rect x=\"23.1\" y=\"6.5\" width=\"1.4\" height=\"1.4\"/><rect x=\"13.5\" y=\"16.1\" width=\"1.4\" height=\"1.4\"/><rect x=\"21\" y=\"14\" width=\"2\" height=\"2\"/><rect x=\"24.5\" y=\"16.4\" width=\"2\" height=\"2\"/><rect x=\"21\" y=\"18\" width=\"2\" height=\"1.6\"/></g></svg>","tigo":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"Tigo Money\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#00377B\"/><text x=\"19\" y=\"12.6\" text-anchor=\"middle\" font-family=\"Arial,Helvetica,sans-serif\" font-size=\"9\" font-weight=\"700\" fill=\"#fff\">tigo</text><text x=\"19\" y=\"19.2\" text-anchor=\"middle\" font-family=\"Arial,Helvetica,sans-serif\" font-size=\"5\" font-weight=\"700\" letter-spacing=\".6\" fill=\"#FFD100\">MONEY</text></svg>","bank":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"Transferencia bancaria\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#fff\"/><g fill=\"none\" stroke=\"#1a1a1a\" stroke-width=\"1.3\" stroke-linejoin=\"round\" stroke-linecap=\"round\"><path d=\"M12 10l7-4 7 4z\"/><path d=\"M13.6 11v5.6M17.2 11v5.6M20.8 11v5.6M24.4 11v5.6\"/><path d=\"M12 18.4h14\"/></g></svg>"},"methods":[{"type":"CARD","label":"Tarjeta","logos":["visa","mastercard","amex"],"note":"Paga con Visa, Mastercard o American Express."},{"type":"QR","label":"QR","logos":["qr"],"note":"Escanea el código con la app de tu banco."},{"type":"TIGO_MONEY","label":"Tigo Money","logos":["tigo"],"note":"Confirmas el pago desde tu billetera Tigo Money."},{"type":"BANK_TRANSFER","label":"Transferencia","logos":["bank"],"note":"Transfiere desde tu banco; el comercio confirma al recibirla."}]};
   // One calm checkout (spec 2026-10-20): shell pieces shared by the order review, the test payment and its confirmation.
   // The look is checkout-shell/shell.css, the same file the hosted payment page imports; stores only lend their logo,
@@ -3720,6 +3901,28 @@
     const readable = accent && ink && contrastRatio(accent, ink) >= 4.5 && contrastRatio(accent, [255, 255, 255]) >= 3;
     root.style.setProperty('--pya-accent', readable ? `rgb(${accent.join(',')})` : '#1a1a1a');
     root.style.setProperty('--pya-accent-ink', readable ? `rgb(${ink.join(',')})` : '#ffffff');
+    // Spec 2026-11-09 Merman checkout: the summary column in the store's darkest colour (its text or its accent) with white text; a store
+    // whose colours are all light gets near-black, so the column always reads.
+    let text = null;
+    try { text = parseRgb(getComputedStyle(document.body).color); } catch { text = null; }
+    const white = [255, 255, 255];
+    const darkest = [text, accent].filter(Boolean).sort((a, b) => contrastRatio(b, white) - contrastRatio(a, white))[0];
+    const summary = darkest && contrastRatio(darkest, white) >= 7 ? darkest : [22, 22, 22];
+    root.style.setProperty('--pya-summary', `rgb(${summary.join(',')})`);
+    root.style.setProperty('--pya-summary-ink', '#ffffff');
+  }
+  /* Spec 2026-11-09 Merman checkout: three promises with icons — the store's guarantee, secure payment and its delivery time. */
+  function checkoutTrustLines() {
+    const delivery = typeof store.policies?.delivery === 'string' ? store.policies.delivery.trim().split(/(?<=[.!?])\s+/)[0]?.slice(0, 120) : '';
+    const icon = path => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+    return `<ul class="pya-co__assure" data-part="checkout-trust"><li>${icon('<path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6z"/><path d="m9 12 2 2 4-4"/>')}<span>${escape(cartGuaranteeText())}</span></li><li>${icon('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}<span>Pagos seguros · Tus datos viajan cifrados</span></li><li>${icon('<path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/>')}<span>Envío · ${escape(delivery || 'Coordinamos la entrega contigo')}</span></li></ul>`;
+  }
+  /* «Lo que dicen nuestros clientes»: one real review the API chose (a real order's, 4★+); none → nothing. */
+  function checkoutReviewCard() {
+    const review = store.checkoutReview;
+    if (!review || typeof review.body !== 'string' || !review.body.trim()) return '';
+    const stars = Math.max(1, Math.min(5, Math.round(Number(review.rating) || 5)));
+    return `<figure class="pya-co__review" data-part="checkout-review"><figcaption class="pya-co__review-title">Lo que dicen nuestros clientes</figcaption><span class="pya-co__stars" aria-label="${stars} de 5 estrellas">${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}</span><blockquote>«${escape(review.body.trim())}»</blockquote><p class="pya-co__review-who"><strong>${escape(review.name || '')}</strong> · Compra verificada${review.productName ? ` · ${escape(review.productName)}` : ''}</p></figure>`;
   }
   // Everything around the open checkout leaves the tab order: its own siblings and those of every ancestor.
   function inertAround(node, saved) {
@@ -3737,6 +3940,11 @@
     toggle.querySelector('[data-shell-summary-label]').textContent = open ? 'Ocultar resumen del pedido' : 'Ver resumen del pedido';
   });
   function checkoutPhoto(firstLineImage) { return storeAssetUrl(store.bannerUrl) || firstLineImage || ''; }
+  /* Spec 2026-11-09 Merman checkout: a band across the top — the store's banner photo (else its accent) with the logo centred. */
+  function checkoutBand() {
+    const photo = storeAssetUrl(store.bannerUrl);
+    return `<div class="pya-co__band" data-part="checkout-band"${photo ? ` data-photo style="background-image:linear-gradient(rgba(0,0,0,.28),rgba(0,0,0,.28)),url('${escape(photo).replace(/'/g, '%27')}')"` : ''}>${shellBrand()}</div>`;
+  }
   function shellLineMarkup({ id, p, name, amount, quantity, image, option, unit, stock, canAdd }) {
     return `<li class="pya-co__line" data-part="cart-line">${image ? `<span class="pya-co__thumb"><img src="${escape(image)}" alt="" loading="lazy"><b class="pya-co__qty" aria-label="Cantidad ${quantity}">${quantity}</b></span>` : ''}<span class="pya-co__line-text"><strong>${escape(p.name)}</strong>${option ? `<small>${escape(option)}</small>` : ''}${unit ? `<small>${escape(unit)}</small>` : ''}${stock ? `<small class="order-item__stock">${escape(stock)}</small>` : ''}<span class="pya-co__stepper"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}"${canAdd ? '' : ' disabled'}>+</button></span></span><span class="pya-co__line-price">${money(amount * quantity, p.currency)}</span></li>`;
   }
@@ -3748,11 +3956,18 @@
     const inner = document.createElement('div'); inner.className = 'pya-co__summary-inner';
     inner.innerHTML = `${photo ? `<img class="pya-co__photo" src="${escape(photo)}" alt="">` : ''}<h2 class="pya-co__title">${escape(CART_WORD || 'Tu pedido')}${count ? ` <span class="pya-co__count">· ${count} ${count === 1 ? 'producto' : 'productos'}</span>` : ''}</h2>`;
     inner.append(...take('.pya-co__lines,.order-recommendations'));
+    // Spec 2026-11-09 Merman checkout: one suggestion, «Completa tu compra».
+    const complete = inner.querySelector('.order-recommendations');
+    if (complete) { complete.setAttribute('aria-label', 'Completa tu compra'); const title = complete.querySelector('h3'); if (title) title.textContent = 'Completa tu compra'; [...complete.querySelectorAll('li')].slice(1).forEach(item => item.remove()); }
+    const promo = el.querySelector('[data-promo-field]');
+    if (promo) { const code = document.createElement('div'); code.className = 'pya-co__code'; code.append(promo, ...[el.querySelector('[data-promo-apply]'), el.querySelector('[data-promo-status]')].filter(Boolean)); inner.append(code); }
     const credit = el.querySelector('[name=creditCode]')?.closest('label');
     if (credit) { const code = document.createElement('div'); code.className = 'pya-co__code'; code.append(credit, ...[el.querySelector('[data-credit-apply]'), el.querySelector('[data-credit-status]')].filter(Boolean)); inner.append(code); }
     const totals = document.createElement('div'); totals.className = 'pya-co__totals';
     totals.append(...take('.pagosya-secure-note,.order-savings,.order-total,.order-note,[data-bundle-quote-status]'));
-    inner.append(totals); aside.append(inner);
+    inner.append(totals);
+    inner.insertAdjacentHTML('beforeend', checkoutReviewCard());
+    aside.append(inner);
     const main = document.createElement('div'); main.className = 'pya-co__main';
     const delivery = take('label.order-field,fieldset[data-delivery-address],fieldset[data-shipping]');
     if (delivery.length) {
@@ -3772,7 +3987,7 @@
     if (mode === 'done') main.insertAdjacentHTML('beforeend', `<div class="pya-co__done"><span class="pya-co__check">${CHECK_ICON}</span><p><strong>Pedido de prueba</strong></p><ol class="pya-co__next"><li>El comercio confirma tu pago.</li><li>Prepara tu pedido.</li><li>Te avisa cuando sale o está listo para recoger.</li></ol></div>`);
     const button = take('.pya-co__pay')[0];
     main.append(...take('.commerce-consent'));
-    if (button) { main.append(button); if (mode !== 'done' && paying) main.insertAdjacentHTML('beforeend', trustStrip()); }
+    if (button) { main.append(button); if (mode !== 'done' && paying) main.insertAdjacentHTML('beforeend', checkoutTrustLines() + trustStrip()); }
     const feedback = document.createElement('p'); feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
     main.append(feedback, ...[...el.children].filter(child => child !== aside && child !== main));
     el.replaceChildren(main, aside);
@@ -3896,6 +4111,36 @@
     .order-item__unit{white-space:nowrap}.order-item__unit s{margin-left:4px}
     .order-items .order-item .quantity{margin-top:10px}
     .order-savings{display:flex;justify-content:space-between;gap:16px;margin:16px 0 0;font-size:15px}
+    /* Spec 2026-11-09 Merman cart: the free-shipping bar, the saving, the frequency choice and the guarantee — in the store's accent. */
+    .cart-free{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--store-accent,var(--brand-accent,var(--accent,#111))) 8%,transparent)}
+    .cart-free p{margin:0 0 10px;font-size:14px;line-height:1.4}
+    .cart-free__track{position:relative;height:6px;margin-right:26px;border-radius:999px;background:color-mix(in srgb,currentColor 14%,transparent)}
+    .cart-free__track span{display:block;height:100%;border-radius:inherit;background:var(--store-accent,var(--brand-accent,var(--accent,#111)));transition:width .4s ease}
+    .cart-free__truck{position:absolute;right:-26px;top:50%;transform:translateY(-50%);color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}
+    .cart-free[data-done] p{font-weight:600}
+    .order-item__body>.order-item__save{opacity:1;font-weight:600;font-size:13px;color:var(--store-accent,var(--brand-accent,var(--accent,#0a7a3d)))}
+    .order-item__cadence{display:block;margin-top:8px}
+    .order-item__cadence select{width:100%;min-height:36px;padding:6px 10px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px}
+    .cart-guarantee{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 0 0;font-size:13px;line-height:1.4;text-align:center;opacity:.8}
+    .cart-guarantee svg{flex:none}
+    .cart-drawer .order-recommendations ul{grid-auto-flow:column;grid-auto-columns:minmax(128px,36%);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+    .cart-drawer .order-recommendations li,.cart-drawer .order-recommendations li:not(:has(img)){grid-template-columns:1fr;align-items:start;scroll-snap-align:start;padding:10px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:12px}
+    .cart-drawer .order-recommendations li img{width:72px;height:72px;object-fit:cover;border-radius:8px}
+    .cart-drawer .order-recommendations li{gap:6px;font-size:13px}.cart-drawer .order-recommendations li :is(button,a){min-height:36px;padding:6px 12px;font-size:13px}
+    /* Owner 2026-11-09 (Remolino): «Añadir» was plain text beside a filled «Elegir»; both are pills in the pay button's colour.
+       Live Vórtice: a template's Tailwind reset (unlayered) beat this layer, so the pill's colours and shape are !important. */
+    .cart-drawer .order-recommendations li :is(button,a){justify-content:center;border:0!important;border-radius:999px!important;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))))!important;color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)))!important;font-weight:600;text-decoration:none;cursor:pointer}
+    /* «¿Prefieres terminar después?» under the guarantee line: a quiet divider, a small title and an outlined pill — never a second «Pagar». */
+    .cart-drawer [data-retention-recovery]{width:auto;margin:20px 0 0;padding:18px 0 0;border:0;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);background:none;color:inherit;font:inherit}
+    .cart-drawer [data-retention-recovery] h3{margin:0 0 6px;font:inherit;font-size:15px;font-weight:600;line-height:1.3}
+    .cart-drawer [data-retention-recovery] p{margin:0;font-size:13px;line-height:1.45;opacity:.75;max-width:none}
+    .cart-drawer [data-retention-recovery] form{display:grid;gap:10px;max-width:none;margin-top:10px}
+    .cart-drawer [data-retention-recovery] .retention-email{gap:6px;font-size:13px}
+    .cart-drawer [data-retention-recovery] input[type=email]{min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,currentColor 22%,transparent)!important;border-radius:999px!important;background:transparent;color:inherit;font-size:14px}
+    .cart-drawer [data-retention-recovery] .retention-consent{gap:8px;font-size:12.5px;line-height:1.45;opacity:.8}
+    .cart-drawer [data-retention-recovery] input[type=checkbox]{width:16px;height:16px;flex:0 0 16px;margin:1px 0 0}
+    .cart-drawer [data-retention-recovery] button{width:100%;min-height:46px;padding:0 20px;border:1px solid currentColor!important;border-radius:999px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:15px;font-weight:600}
+    .cart-drawer .checkout-button[data-busy]{opacity:.7;cursor:progress}
     .checkout-review__summary>.checkout-review__count{margin:4px 0 8px;font-size:14px;line-height:1.4;opacity:.7}
     .order-recommendations{margin:20px 0 0}
     .order-recommendations h3{margin:0 0 10px;font-size:15px}
@@ -3955,11 +4200,11 @@
     // The calm checkout covers the whole page, an authored checkout page too: what is around it leaves the tab order.
     if (checkoutPage.hidden) { checkoutOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden"; inertAround(checkoutPage, inertBeforeCheckout); }
     checkoutPage.hidden = false;
-    checkoutPage.classList.add('pya-checkout');
+    checkoutPage.classList.add('pya-checkout', 'pya-co--kit');
     const back = fullCheckoutPage && mode === 'review' ? `<a class="pya-co__back" href="index.html">${BACK_ICON} Seguir comprando</a>` : `<button class="pya-co__back" type="button" ${mode === 'done' ? 'data-shell-close' : 'data-checkout-back'}>${BACK_ICON} ${mode === 'payment' ? 'Volver a la entrega' : 'Seguir comprando'}</button>`;
     const heading = mode === 'payment' ? 'Pago de prueba' : mode === 'done' ? '¡Gracias por tu compra!' : 'Revisa tu pedido';
     const note = mode === 'payment' ? 'Puedes completar el recorrido de prueba. No se realizará ningún cobro ni se creará un pedido real.' : preview || config.demo ? 'Vista previa · Sin cobros' : '';
-    checkoutPage.innerHTML = `<header class="pya-co__bar">${back}${shellBrand()}<span class="pya-co__secure">${LOCK_ICON} Pago seguro</span></header><button type="button" class="pya-co__summary-toggle" aria-expanded="false" aria-controls="pya-co-summary" data-shell-summary><span data-shell-summary-label>Ver resumen del pedido</span><strong data-shell-total></strong></button><div class="pya-co__frame"><div class="pya-co__lead">${shellSteps(mode)}<h1 tabindex="-1">${heading}</h1>${note ? `<p class="pya-co__note order-note">${note}</p>` : ''}<p class="pya-co__status" data-pagosya-status role="status" aria-live="polite"></p></div><div data-pagosya-cart data-checkout-review="${mode}"></div></div>`;
+    checkoutPage.innerHTML = `${checkoutBand()}<header class="pya-co__bar">${back}<span class="pya-co__secure">${LOCK_ICON} Pago seguro</span></header><button type="button" class="pya-co__summary-toggle" aria-expanded="false" aria-controls="pya-co-summary" data-shell-summary><span data-shell-summary-label>Ver resumen del pedido</span><strong data-shell-total></strong></button><div class="pya-co__frame"><div class="pya-co__lead">${shellSteps(mode)}<h1 tabindex="-1">${heading}</h1>${note ? `<p class="pya-co__note order-note">${note}</p>` : ''}<p class="pya-co__status" data-pagosya-status role="status" aria-live="polite"></p></div><div data-pagosya-cart data-checkout-review="${mode}"></div></div>`;
     shellAccent(checkoutPage);
     renderCart();
     // Moving focus is for the overlay, which opens over the page. A full checkout page is simply loaded, and
@@ -4029,6 +4274,9 @@
   }
   // The second photo is fetched only when the shopper reaches the card (pointer, focus or touch): see loadCardAlt.
   const CARD_SIZES = '(max-width: 820px) 50vw, 25vw';
+  // Copy a store (owner 2026-11-18): a product without a photo (Graza's and Fishwife's wholesale items) keeps the card's photo space,
+  // a quiet tile with its initial, so the grid row stays even. Its own class: zoom, videos and swatches look for the real photo.
+  const noPhotoMarkup = p => `<div class="menu-item__noimage" aria-hidden="true"><span>${escape((String(p.name || '').trim().match(/\p{L}|\p{N}/u) || ['·'])[0].toUpperCase())}</span></div>`;
   const cardAltMarkup = url => `<img class="menu-item__image-alt" data-src="${escape(url)}"${responsiveSrcset(url) ? ` data-srcset="${escape(responsiveSrcset(url))}" data-sizes="${CARD_SIZES}"` : ''} alt="" aria-hidden="true" decoding="async">`;
   // Swatch thumbnails are 22px: the smallest rendition is enough. A browse strip always shows the colour's photo, 56px.
   const cardSwatchMarkup = (p, swatches, more = 0, strip = false) => `<div class="menu-item__swatches${strip ? ' menu-item__swatches--strip' : ''}" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => { const dot = s.color && !strip; return `<button type="button" data-card-swatch="${escape(s.url)}"${s.value ? ` data-card-colour="${escape(s.value)}"` : ''} aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${dot ? ` style="--swatch:${escape(s.color)}"` : ''}>${dot ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, strip ? '56px' : '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`; }).join('')}${more > 0 ? `<span class="menu-item__swatches-more">+${more}</span>` : ''}</div>`;
@@ -4067,7 +4315,7 @@
     const parts = cardInsides(p);
     const set = (name, html, empty) => { const node = field(name); if (!node) return; node.innerHTML = html; node.hidden = empty; };
     set('eyebrow', escape(parts.eyebrow), !parts.eyebrow);
-    set('points', parts.points.map(t => `<li>${escape(t)}</li>`).join(''), !parts.points.length);
+    set('points', parts.points.map(cardPointMarkup).join(''), !parts.points.length);
     set('chips', chipsHtml(parts), !parts.chips.length);
     set('deal', escape(parts.deal), !parts.deal);
     set('save', escape(parts.save), !parts.save);
@@ -4188,10 +4436,41 @@
   function labelDecoratedAddButtons() {
     document.querySelectorAll('.menu-add[data-add]').forEach(button => {
       if ((button.textContent || '').trim() || !button.querySelector('svg')) return;
+      // Owner 2026-11-16 («que adentro del product card tenga iconos como antes»): a V2 card asks for a word with a hidden «+» marker;
+      // it gets the bag and «Agregar», the atelier card's button, instead of the bare word.
+      const marker = getComputedStyle(button, '::before');
+      if (marker.display === 'none' && /^["']\+["']$/.test(marker.content)) { button.innerHTML = `${BAG_ICON}<span>Agregar</span>`; return; }
       if (['::before', '::after'].some(pseudo => /^["'].*\S.*["']$/.test(getComputedStyle(button, pseudo).content))) button.textContent = 'Añadir';
     });
   }
-  function fitCards() { labelDecoratedAddButtons(); fitCardPhotos(); alignCardPrices(); }
+  // Owner 2026-11-17 («animated buttons inside product cards like when hovered it fills up slowly»): every card's add button gets a
+  // fill layer that sweeps across on hover (dialog-style.js). A clear button fills with its own text colour and its text turns the
+  // colour behind it; a filled button fills with a deeper shade of itself. An icon-only «+» turns a quarter on hover.
+  const clearColour = colour => /^(transparent|rgba\([^)]*[,/]\s*0(\.0+)?\)|color\([^)]*\/\s*0(\.0+)?\))$/.test(String(colour).trim());
+  function backdropColour(node) {
+    for (let el = node; el; el = el.parentElement) { const colour = getComputedStyle(el).backgroundColor; if (!clearColour(colour)) return colour; }
+    return 'rgb(255, 255, 255)';
+  }
+  function fillAddButtons() {
+    document.querySelectorAll('.menu-item .menu-add').forEach(button => {
+      if (button.querySelector(':scope > .menu-add__fill')) return;
+      const style = getComputedStyle(button), clear = clearColour(style.backgroundColor) && style.backgroundImage === 'none';
+      if (style.position === 'static') button.style.position = 'relative';
+      button.style.isolation = 'isolate';
+      if (clear) { button.style.setProperty('--pya-fill', style.color); button.style.setProperty('--pya-ink', backdropColour(button.parentElement)); button.setAttribute('data-pya-ink', ''); }
+      button.toggleAttribute('data-pya-plus', !(button.textContent || '').trim() && Boolean(button.querySelector('svg')));
+      button.insertAdjacentHTML('afterbegin', '<span class="menu-add__fill" aria-hidden="true"></span>');
+    });
+  }
+  const CARD_CHECK_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  /** A card's add button shows a check for a moment after its product goes into the cart (drawer.js addedFeedback). */
+  function markCardAdded(button) {
+    if (!button.querySelector(':scope > .menu-add__done')) button.insertAdjacentHTML('beforeend', `<span class="menu-add__done" aria-hidden="true">${CARD_CHECK_ICON}</span>`);
+    button.setAttribute('data-pya-added', '');
+    clearTimeout(button.pyaAddedTimer);
+    button.pyaAddedTimer = setTimeout(() => button.removeAttribute('data-pya-added'), 1400);
+  }
+  function fitCards() { labelDecoratedAddButtons(); fillAddButtons(); fitCardPhotos(); alignCardPrices(); }
   if (typeof addEventListener === 'function') addEventListener('resize', () => fitCards(), { passive: true });
   const BAG_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg>';
   // ---- Fashion card (spec 2026-10-21 fashion look, the John Smedley card) ----
@@ -4257,7 +4536,7 @@
     // Showcase commerce: richer insides; showcase and split cards say «Agregar» across the card.
     const inside = cardInsidesMarkup(p), wide = ['showcase', 'split'].includes(config.showcase?.cards);
     const addFace = atelier || wide ? `${BAG_ICON}<span>Agregar</span>` : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
-    return `<article class="menu-item" data-product-id="${escape(p.id)}"${atelier ? ' data-anatomy="atelier"' : ''}>${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />${badgeMarkup(p, 'menu-item__badge')}` : ""}${cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches, cardExtras.more, true) : ''}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy">${inside.eyebrow}<h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${inside.points}${cardExtras.swatches ? '' : inside.chips}${inside.deal}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${cardOriginalMarkup(p)}</strong>${inside.save}${cardExtras.swatches && !cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${isMembership(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Hacerme miembro de ${escape(p.name)}">Hacerme miembro</button>` : soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}>${addFace}</button>`}</article>`;
+    return `<article class="menu-item" data-product-id="${escape(p.id)}"${atelier ? ' data-anatomy="atelier"' : ''}>${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />${badgeMarkup(p, 'menu-item__badge')}` : noPhotoMarkup(p)}${cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches, cardExtras.more, true) : ''}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy">${inside.eyebrow}<h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${inside.points}${cardExtras.swatches ? '' : inside.chips}${inside.deal}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${cardOriginalMarkup(p)}</strong>${inside.save}${cardExtras.swatches && !cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${isMembership(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Hacerme miembro de ${escape(p.name)}">Hacerme miembro</button>` : soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}>${addFace}</button>`}</article>`;
   }
   // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
   function structureCatalog(el) {
@@ -4270,6 +4549,46 @@
     decorateZoomButtons(el);
     // Contrast correction must reach every card, including ones nested inside `sections` groups.
     readableText(el);
+  }
+  /* Owner 2026-11-17 («add videos … inside a product card»): a product with a video plays it over its card photo — on hover with a
+   * mouse, while the card is in view on a touch screen — muted and looping, never with reduced motion. The video takes the photo's
+   * own box, whichever card drew it (platform, fashion or the store's own template), and loads only when it first plays. */
+  let cardVideoObserver = null;
+  function markCardVideos(root) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const hover = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!document.querySelector('style[data-pagosya-card-video]')) {
+      const style = document.createElement('style');
+      style.setAttribute('data-pagosya-card-video', '');
+      style.textContent = '.menu-item__video{position:absolute;z-index:1;object-fit:cover;opacity:0;transition:opacity .35s ease;pointer-events:none}.menu-item__video[data-playing]{opacity:1}';
+      document.head.append(style);
+    }
+    root.querySelectorAll('[data-product-id]').forEach(card => {
+      if (card.querySelector('[data-card-video]')) return;
+      const p = products().find(item => item.id === card.getAttribute('data-product-id'));
+      const url = p ? productVideos(p)[0] : '';
+      const photo = url ? card.querySelector('img') : null;
+      const host = photo?.parentElement;
+      if (!host) return;
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      const video = document.createElement('video');
+      video.className = 'menu-item__video';
+      video.muted = true; video.loop = true; video.playsInline = true; video.preload = 'none';
+      ['playsinline', 'muted', 'data-card-video'].forEach(name => video.setAttribute(name, ''));
+      video.setAttribute('aria-hidden', 'true');
+      video.src = url;
+      photo.after(video);
+      const show = () => {
+        Object.assign(video.style, { top: `${photo.offsetTop}px`, left: `${photo.offsetLeft}px`, width: `${photo.offsetWidth}px`, height: `${photo.offsetHeight}px`, borderRadius: getComputedStyle(photo).borderRadius });
+        video.play().then(() => video.setAttribute('data-playing', '')).catch(() => {});
+      };
+      const hide = () => { video.removeAttribute('data-playing'); video.pause(); };
+      if (hover) { card.addEventListener('pointerenter', show); card.addEventListener('pointerleave', hide); return; }
+      if (typeof IntersectionObserver !== 'function') return;
+      cardVideoObserver ||= new IntersectionObserver(entries => entries.forEach(entry => entry.target.dispatchEvent(new Event(entry.isIntersecting ? 'pagosya:card-video-show' : 'pagosya:card-video-hide'))), { threshold: 0.6 });
+      card.addEventListener('pagosya:card-video-show', show); card.addEventListener('pagosya:card-video-hide', hide);
+      cardVideoObserver.observe(card);
+    });
   }
   // Card text must not disappear into the card: switch to the store's text or background color, whichever reads.
   // WCAG AA guard for runtime-owned text only: 4.5:1 for body text, 3:1 for large text. Text over
@@ -4508,19 +4827,41 @@
       const categories = Array.isArray(store.categories) ? store.categories : [];
       state.sets.categoria = state.sets.categoria.map(value => { const named = categories.find(c => c && c.id && filterFold(c.name) === value); return named ? filterFold(named.id) : value; });
     }
+    // Owner 2026-11-14 («when clicked joyas it sends me to the page with all of the products»): V2 designs link a category as
+    // productos.html#joyas or ?category=Joyas / ?categoria=Joyas. Either is read as that category's filter (by name, id or slug);
+    // writeFilterState then keeps only f_categoria, so clearing the chip clears it.
+    if (!state.sets.categoria) {
+      const found = categoryNamed(params.get('categoria') || params.get('category') || (filterQuery == null ? linkedHashCategory() : ''));
+      if (found) state.sets.categoria = [filterFold(found.id)];
+    }
     for (const key of FILTER_TOGGLES) if (params.get(key) === '1') state.toggles.add(key);
     return state;
   }
+  // Hoisted like filterFold: buscar.html reads the filter state before this part has run.
+  function looseFold(text) { return filterFold(text).replace(/[^a-z0-9]+/g, ''); }
+  function categoryNamed(value) {
+    const key = looseFold(value);
+    return key ? (Array.isArray(store.categories) ? store.categories : []).find(c => c && c.id && (looseFold(c.name) === key || looseFold(c.id) === key)) || null : null;
+  }
+  function linkedHashCategory() { try { return decodeURIComponent((location.hash || '').slice(1)); } catch { return ''; } }
+  // A header link to productos.html#joyas clicked on the catalogue page itself only changes the hash.
+  window.addEventListener('hashchange', () => {
+    const found = document.querySelector('[data-catalog-full]') && categoryNamed(linkedHashCategory());
+    if (!found) return;
+    const state = readFilterState(); state.sets.categoria = [filterFold(found.id)];
+    writeFilterState(state); render();
+  });
   function writeFilterState(state) {
     const params = new URLSearchParams(filterQuery ?? (window.PAGOSYA_PREVIEW_QUERY || location.search));
-    [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', 'q', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
+    [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', 'q', 'categoria', 'category', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
     if (state.q && state.q.trim()) params.set('q', state.q.slice(0, 80));
     if (state.orden !== 'destacados') params.set('orden', state.orden);
     if (state.precio) params.set('precio', `${Math.floor(state.precio[0] / 100)}-${Math.ceil(state.precio[1] / 100)}`);
     for (const [key, values] of Object.entries(state.sets)) if (values.length) params.set(`f_${key}`, values.join(','));
     for (const key of state.toggles) params.set(key, '1');
     filterQuery = params.toString() ? `?${params}` : '';
-    try { history.replaceState(history.state, '', `${location.pathname}${filterQuery}${location.hash}`); } catch { /* sandboxed previews keep it in memory */ }
+    const hash = categoryNamed(linkedHashCategory()) ? '' : location.hash;
+    try { history.replaceState(history.state, '', `${location.pathname}${filterQuery}${hash}`); } catch { /* sandboxed previews keep it in memory */ }
   }
   function applyFilters(items, state) {
     const words = searchWords(state.q);
@@ -4811,13 +5152,15 @@
         el.hidden = !set.length;
         el.innerHTML = set.map(productCard).join('');
         structureCatalog(el);
-        markCardDesign(el);
+        markCardDesign(el); markFavourite(el); markCardVideos(el);
         return;
       }
       const priorities = (el.getAttribute('data-design-product-ids') || '').split(',').filter(Boolean);
       const priority = new Map(priorities.map((id, index) => [id, index]));
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
       if (priorities.length) selected.sort((a, b) => (priority.get(a.id) ?? priorities.length) - (priority.get(b.id) ?? priorities.length));
+      // Spec 2026-11-10 rasca y elige: the shopper's favourite first.
+      selected.splice(0, selected.length, ...favouriteFirst(selected));
       const layout = el.hasAttribute('data-catalog-full') ? 'all' : catalogLayout();
       el.dataset.catalogLayout = layout;
       if (collectionPage) {
@@ -4872,7 +5215,7 @@
         el.innerHTML = shown.length ? shown.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
-      markCardDesign(el);
+      markCardDesign(el); markFavourite(el); markCardVideos(el);
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     renderSpotlights();
@@ -4948,6 +5291,48 @@
       });
     });
   }
+  // Spec 2026-11-10 rasca y elige: the favourite the shopper chose in the popup game — remembered on this device, or given by the parent
+  // page on a published store (window.PAGOSYA_FAVOURITE) — comes first in the store's grid, marked «Tu favorito». A flavour
+  // («id:Sabor») counts as its product; a product gone or sold out changes nothing.
+  function favouriteProductId() {
+    let id = typeof window.PAGOSYA_FAVOURITE === 'string' ? window.PAGOSYA_FAVOURITE : '';
+    if (!id) { try { id = localStorage.getItem(`pagosya:fav:${config.slug}`) || ''; } catch {} }
+    id = String(id).split(':')[0];
+    return id && products().some(p => p.id === id && limit(p) !== 0) ? id : '';
+  }
+  function favouriteFirst(list) {
+    const id = favouriteProductId(), at = id ? list.findIndex(p => p.id === id) : -1;
+    return at > 0 ? [list[at], ...list.slice(0, at), ...list.slice(at + 1)] : list;
+  }
+  let favouriteStyled = false;
+  function markFavourite(root) {
+    root.querySelectorAll('.pya-fav-tag').forEach(tag => tag.remove());
+    const id = favouriteProductId();
+    if (!id) return;
+    if (!favouriteStyled) {
+      favouriteStyled = true;
+      const style = document.createElement('style'); style.setAttribute('data-pagosya-favourite', '');
+      style.textContent = '[data-pagosya-catalog] [data-product-id]{position:relative}.pya-fav-tag{position:absolute;left:10px;top:10px;z-index:2;padding:6px 10px;border-radius:999px;background:var(--store-foreground,#111);color:var(--store-background,#fff);font:800 11px/1 var(--store-body-font,system-ui,sans-serif);letter-spacing:.08em;text-transform:uppercase;transform:rotate(-3deg);pointer-events:none}';
+      document.head.append(style);
+    }
+    root.querySelectorAll(`[data-product-id="${CSS.escape(id)}"]`).forEach(card => card.insertAdjacentHTML('afterbegin', '<span class="pya-fav-tag">Tu favorito</span>'));
+  }
+  document.addEventListener('pagosya:favourite', event => {
+    const id = event.detail && typeof event.detail.id === 'string' ? event.detail.id : '';
+    if (!id) return;
+    window.PAGOSYA_FAVOURITE = id;
+    render();
+    if (!event.detail.go) return;
+    // The popup's «Ver …»: its card on this page, else its own page.
+    const productId = id.split(':')[0];
+    const card = document.querySelector(`[data-pagosya-catalog] [data-product-id="${CSS.escape(productId)}"], [data-pagosya-product-page][data-product-id="${CSS.escape(productId)}"]`);
+    if (card) card.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+    // A real link (final review I3): the sandboxed store frame routes link clicks; a relative location.href resolved against the parent page.
+    else if (products().some(p => p.id === productId)) {
+      const link = document.createElement('a'); link.href = pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(productId)); link.hidden = true;
+      document.body.append(link); link.click(); link.remove();
+    }
+  });
   // ---- Catalogue mounts that change (spec 2026-10-21 John Smedley sections) ----
   // A page can switch a mount's category or colour after load (the `explore` section's chips): the catalogue redraws once per
   // change, after the page has finished setting its attributes.
@@ -4994,6 +5379,9 @@
         photo.hidden = !view.image;
         if (view.image) { photo.src = view.image; photo.alt = ''; photo.loading = 'lazy'; } else photo.removeAttribute('src');
       }
+      // Spec 2026-11-09 Merman cart (live Remolino): the line's saving and frequency choice travel with it (the same nodes, so their listeners too).
+      const extras = [li.querySelector('[data-part="cart-line-save"]'), li.querySelector('.order-item__cadence')].filter(Boolean);
+      if (extras.length) field('quantity').before(...extras);
       field('quantity').replaceChildren(li.querySelector('.quantity'));
       const remove = field('remove');
       if (remove) { remove.setAttribute('type', 'button'); remove.setAttribute('data-remove-line', view.id); remove.setAttribute('aria-label', `Quitar ${view.name} del pedido`); }
@@ -5013,6 +5401,8 @@
       const name = Object.keys(CART_PARTS).find(key => part.matches(CART_PARTS[key]));
       const target = name && slot(name);
       if (target) target.append(part);
+      // Spec 2026-11-09 Merman cart (live Remolino): the free-shipping bar leads the panel, above the lines — never under the button.
+      else if (part.matches('.cart-free')) slot('lines').before(part);
       else { anchor.after(part); anchor = part; }
     }
     const policies = slot('policies');
@@ -5054,6 +5444,12 @@
     inner.replaceChildren(root);
     checkoutPage.setAttribute('data-checkout-template', '');
   }
+  /** Owner 2026-11-13 (Clyro product page): parts drawn only for a template that has a place for them (pairs, payments, sticky bar). */
+  function productTemplateHas(name) {
+    const template = document.querySelector('template[data-pagosya-product-page-template]');
+    const source = template && (template.content && template.content.children.length ? template.content : template);
+    return Boolean(source && source.querySelector(`[data-product-slot="${name}"]`));
+  }
   const productPageTemplate = () => kitTemplate('product-page', 'productPageTemplateInvalid', root =>
     ['gallery', 'title', 'pricing', 'buy'].every(slot => root.querySelector(`[data-product-slot="${slot}"]`)));
   // A piece goes to the first slot whose selector it matches; "buy" is last because its "p" catches the sold-out note.
@@ -5063,18 +5459,18 @@
     ['description', '.product-detail__intro,.product-detail__more'], ['highlights', '.product-detail__highlights,.product-detail__chips'],
     ['delivery', '.product-detail__assurances'], ['info', '.product-tabs,[role=tabpanel],.product-detail__facts,.product-delivery-list'],
     ['bundles', '.product-detail__bundles,.product-detail__bundle-links'], ['related', '.product-detail__related'], ['reviews', '.product-detail__reviews'],
-    ['checks', '.product-detail__checks'],
+    ['checks', '.product-detail__checks'], ['pairs', '.product-detail__pairs'], ['payments', '.product-detail__payments'],
     ['buy', '.product-detail__options,.product-detail__box,.product-detail__purchase,.product-detail__buy,.product-detail__status,p'],
   ];
   // Purchase terms and anything unrecognised are never lost: they follow the buy slot when the template has no place for them.
-  const PRODUCT_DROPPABLE = new Set(['breadcrumb', 'category', 'rating', 'description', 'bundles', 'related', 'reviews']);
+  const PRODUCT_DROPPABLE = new Set(['breadcrumb', 'category', 'rating', 'description', 'bundles', 'related', 'reviews', 'pairs', 'payments']);
   function applyProductPageTemplate() {
     const template = productPageTemplate();
     const layout = detail.querySelector(':scope > .product-detail__layout');
     if (!template || !layout) return;
     const copy = layout.querySelector(':scope > .product-detail__copy');
     const pieces = [...[...layout.children].filter(child => child !== copy), ...(copy ? [...copy.children] : []),
-      ...[...detail.children].filter(child => child.matches('.product-detail__bundles,.product-detail__bundle-links,.product-detail__related,.product-detail__reviews'))];
+      ...[...detail.children].filter(child => child.matches('.product-detail__bundles,.product-detail__bundle-links,.product-detail__related,.product-detail__reviews,.product-detail__pairs,.product-detail__payments'))];
     // YAPI's long page (features, story, details, compare, questions): the half drawn before the reviews and the half after them.
     const reviewsPiece = detail.querySelector(':scope > .product-detail__reviews');
     const longParts = [...detail.children].filter(child => child.matches('.product-long'));
@@ -5139,7 +5535,7 @@
       const later = laterUnit !== amount ? `hoy, luego ${money(laterUnit, p.currency)} / ${CADENCE_TEXT[line.cadence]}` : '';
       const unitCopy = quantity > 1 || saved || later ? `<p class="order-item__unit">${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` <s>${money(listUnit, p.currency)}</s>` : ''}</p>` : '';
       const few = Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? `<p class="order-item__stock">${p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`}</p>` : '';
-      rows.push(`<li class="order-item" data-part="cart-line"${image ? ' data-has-image' : ''}>${image ? `<img class="order-item__photo" data-part="cart-line-media" src="${escape(image)}"${responsiveAttrs(image, "72px")} alt="" loading="lazy" style="object-position:${escape(imagePosition(p, image))}" />` : ''}<div class="order-item__body"><div class="order-item__head"><strong>${escape(p.name)}</strong><span>${money(amount * quantity, p.currency)}</span></div>${option ? `<p class="order-item__option">${escape(option)}</p>` : ''}${unitCopy}${few}<div class="quantity"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}" ${checkingOut || remaining(p, variant, line.picks) <= 0 ? "disabled" : ""}>+</button></div></div></li>`);
+      rows.push(`<li class="order-item" data-part="cart-line"${image ? ' data-has-image' : ''}>${image ? `<img class="order-item__photo" data-part="cart-line-media" src="${escape(image)}"${responsiveAttrs(image, "72px")} alt="" loading="lazy" style="object-position:${escape(imagePosition(p, image))}" />` : ''}<div class="order-item__body"><div class="order-item__head"><strong>${escape(p.name)}</strong><span>${money(amount * quantity, p.currency)}</span></div>${option ? `<p class="order-item__option">${escape(option)}</p>` : ''}${unitCopy}${cartLineSave(saved, p.currency)}${few}${cadenceSelectMarkup(id, line)}<div class="quantity"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}" ${checkingOut || remaining(p, variant, line.picks) <= 0 ? "disabled" : ""}>+</button></div></div></li>`);
       lineViews.push({ id, p, name, amount, quantity, image, option,
         unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
@@ -5179,7 +5575,11 @@
       const payment = mode === "payment", done = mode === "done";
       const action = review ? done ? "data-shell-close" : payment ? "data-finish-demo" : "data-pay" : "data-checkout";
       const actionLabel = review ? done ? "Volver a la tienda" : payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
-      el.innerHTML = `<ul class="${review ? "pya-co__lines order-items" : "order-items"}">${(review ? shellRows : rows).join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field"><span class="pya-co__label">Tarjeta de regalo o saldo</span><input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" placeholder="Tarjeta de regalo o saldo" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}${review && !payment && subscriptionLineInCart() ? `<label class="commerce-consent"><input type="checkbox" name="subscriptionConsent"${consentChecked ? ' checked' : ''}> ${escape(consentText(subscriptionLineInCart().cadence))}</label>` : ''}${review ? `<button class="pya-co__pay" ${action} type="button" ${!done && (!ready || !count || checkingOut || previewOptions) ? "disabled" : ""}>${actionLabel}${done ? "" : `<span class="pya-co__pay-total" aria-hidden="true"></span>`}</button>` : `<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`}`;
+      // Spec 2026-11-09 Merman cart: «Pagar • Bs 199» — the store's own checkout; WhatsApp and external orders keep their words.
+      const drawerPayLabel = !review && count && !['whatsapp', 'external'].includes(store.checkoutMode) ? `Pagar • ${money(total, products()[0]?.currency)}` : actionLabel;
+      el.innerHTML = `${review ? '' : freeShippingBar(total, products()[0]?.currency)}<ul class="${review ? "pya-co__lines order-items" : "order-items"}">${(review ? shellRows : rows).join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && cart.size && store.checkoutMode !== 'whatsapp' && store.checkoutMode !== 'external' ? `<label class="order-field" data-promo-field><span class="pya-co__label">Código de descuento</span><input name="promoCode" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Código de descuento" value="${escape(promoCode)}"></label><button type="button" data-promo-apply>${promoCode ? 'Quitar' : 'Aplicar'}</button><p data-promo-status role="status" aria-live="polite"></p>` : ''}${review && store.creditsEnabled ? `<label class="order-field"><span class="pya-co__label">Tarjeta de regalo o saldo</span><input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" placeholder="Tarjeta de regalo o saldo" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>${review ? 'Ahorras' : 'Descuentos'}</span><strong>${review ? '' : '−'}${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}${review && !payment && subscriptionLineInCart() ? `<label class="commerce-consent"><input type="checkbox" name="subscriptionConsent"${consentChecked ? ' checked' : ''}> ${escape(consentText(subscriptionLineInCart().cadence))}</label>` : ''}${review ? `<button class="pya-co__pay" ${action} type="button" ${!done && (!ready || !count || checkingOut || previewOptions) ? "disabled" : ""}>${actionLabel}${done ? "" : `<span class="pya-co__pay-total" aria-hidden="true"></span>`}</button>` : `<button class="checkout-button" ${action} type="button"${checkingOut ? ' data-busy' : ''} ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${drawerPayLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>${count ? cartGuaranteeLine() : ''}`}`;
+      // Spec 2026-11-09 Merman cart: a line's frequency changes in place.
+      el.querySelectorAll('[data-cart-cadence]').forEach(select => select.addEventListener('change', () => changeLineCadence(select.dataset.cartCadence, select.value)));
       const lineTemplate = cartLineTemplate();
       if (lineTemplate && !review) applyLineTemplate(el, lineViews, lineTemplate);
       const panelTemplate = review ? null : cartTemplate();
@@ -5206,10 +5606,15 @@
       el.querySelector('[name=destDepartment]')?.addEventListener('change', () => { if (hosted) checkoutAnswers.set('destDepartment', el.querySelector('[name=destDepartment]').value); if (!shippingDestination(el) && !(hosted && shippingDepartment(el))) return; const rate = el.querySelector('[name=shippingZoneId]'); if (rate) rate.value = ''; void shippingQuote(el); });
       el.querySelectorAll('[name=shippingCountry],[name=shippingPostalCode]').forEach(field => field.addEventListener('input', () => updateShipping(el)));
       el.querySelector('[data-credit-apply]')?.addEventListener('click', () => void applyCredit(el));
+      const promoInput = el.querySelector('[name=promoCode]');
+      el.querySelector('[data-promo-apply]')?.addEventListener('click', () => void applyPromo(el));
+      promoInput?.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); void applyPromo(el); } });
+      promoInput?.addEventListener('input', () => { el.querySelector('[data-promo-apply]').textContent = promoCode && promoInput.value.trim().toUpperCase() === promoCode ? 'Quitar' : 'Aplicar'; });
       el.querySelector('[name=creditCode]')?.addEventListener('input', () => { el.dataset.creditReady = 'false'; el.querySelector('[data-credit-status]').textContent = 'Aplica el código para actualizar el total.'; });
       updateShipping(el);
       if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el);
       if (review && ready && count && store.bundlesEnabled) void bundleQuote(el);
+      if (review && ready && cart.size && promoCode) void promoQuote(el);
       if (review) syncShellTotals(el);
       if (focusedAction) {
         const buttons = [...el.querySelectorAll('button')];
@@ -5320,6 +5725,48 @@
   // weak as the reset and comes after it, handing those properties back to the layers; a store rule with a class still wins.
   contactStyle.textContent += ':where([data-pagosya-contact]) :is(input,textarea),:where([data-pagosya-contact] form)>button:where([type="submit"]){border:revert-layer;border-radius:revert-layer;padding:revert-layer;background:revert-layer;color:revert-layer}';
   document.head.append(contactStyle);
+  // The floating WhatsApp button (owner 2026-11-08: «what if the user wants whatsapp and chatbot at the same time»): every store
+  // with a number and the switch on (Store.whatsappButton), whatever its checkout. With the assistant it is a smaller circle just
+  // above the chat bubble and steps aside while the chat window is open. Never on the checkout. (It used to live only in the
+  // lively look, for WhatsApp-checkout stores without the assistant.)
+  (function whatsappBubble() {
+    const phone = String(store.contactPhone || '').replace(/\D/g, '');
+    if (store.whatsappButton === false || phone.length < 7) return;
+    const style = document.createElement('style');
+    style.setAttribute('data-pagosya-whatsapp', '');
+    // The chat bubble is 56px at 24px (16px on a phone) from the corner: the stacked circle shares its centre line, 12px above it.
+    style.textContent = `@layer pagosya-whatsapp{
+      .pya-wa{position:fixed;right:24px;bottom:calc(24px + var(--pya-lift,0px));z-index:1000;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#25d366;color:#fff;box-shadow:0 10px 26px -10px #25d366b3;transition:bottom .25s,opacity .2s,transform .2s}
+      .pya-wa svg{width:28px;height:28px}
+      @media (hover:hover){.pya-wa:hover{transform:translateY(-2px)}}
+      .pya-wa:focus-visible{outline:3px solid #128c7e;outline-offset:3px}
+      .pya-wa.is-stacked{right:30px;bottom:calc(92px + var(--pya-lift,0px));width:44px;height:44px}
+      .pya-wa.is-stacked svg{width:22px;height:22px}
+      .pya-wa.is-away{opacity:0;pointer-events:none;transform:scale(.8)}
+      @media (max-width:560px){.pya-wa{right:16px;bottom:calc(16px + var(--pya-lift,0px))}.pya-wa.is-stacked{right:22px;bottom:calc(84px + var(--pya-lift,0px))}}
+      @media (prefers-reduced-motion:reduce){.pya-wa{transition:none}}
+    }`;
+    document.head.append(style);
+    const link = document.createElement('a');
+    link.className = 'pya-wa'; link.href = `https://wa.me/${phone}`; link.target = '_blank'; link.rel = 'noopener'; link.setAttribute('aria-label', 'Escríbenos por WhatsApp');
+    link.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.2.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.6.3.1.2.1.8-.1 1.4Z"/></svg>';
+    let queued = false;
+    const place = () => {
+      queued = false;
+      const assistant = document.querySelector('[data-pagosya-assistant]');
+      const checkout = document.querySelector('[data-pagosya-checkout]:not([hidden]),.pya-checkout:not([hidden])');
+      if (checkout) { link.remove(); return; }
+      if (!link.isConnected) document.body.append(link);
+      link.classList.toggle('is-stacked', Boolean(assistant));
+      link.classList.toggle('is-away', Boolean(assistant && assistant.querySelector('.pya-panel:not([hidden])')));
+      // Rides above the product page's buy bar like the chat bubble does.
+      const bar = document.querySelector('[data-product-sticky]');
+      link.style.setProperty('--pya-lift', !bar || bar.hidden ? '0px' : Math.ceil(bar.getBoundingClientRect().height) + 'px');
+    };
+    const later = () => { if (!queued) { queued = true; requestAnimationFrame(place); } };
+    place();
+    new MutationObserver(later).observe(document.body || document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  })();
   // Design DNA variants (sub-project 5): form becomes per store, behaviour stays platform-owned. Every
   // variant is keyed on :root[data-dna-*] and this element exists only when the store has a DNA, so a
   // store without one renders exactly as before. Surfaces read one shared token set.
@@ -5335,6 +5782,8 @@
   const dnaButtonRules = (buttons, steppers) => [
     /* Primary pay, checkout and buy buttons (.checkout-button) keep their full size (52px cart, 48px checkout and product) and padding. */
     `:root[data-dna-button] ${buttons}:not(.checkout-button){min-height:44px;padding:var(--kit-btn-pad)}`,
+    /* An icon-only card button (a round «+») keeps no text padding: the pill's .7em 1.6em left its icon 0 px wide (Remolino 2026-11-17). */
+    `:root[data-dna-button] .menu-add:has(> svg):not(:has(> :not(svg,.menu-add__fill,.menu-add__done))):not(.checkout-button){padding:0}`,
     `:root[data-dna-button] ${buttons}{border:var(--kit-btn-border);border-radius:var(--kit-btn-radius);background:var(--kit-btn-bg);color:var(--kit-btn-fg);text-transform:var(--kit-btn-case);font-variant-caps:var(--kit-btn-caps,normal);letter-spacing:var(--kit-btn-tracking);text-decoration:var(--kit-btn-decor);clip-path:var(--kit-btn-clip);box-shadow:var(--kit-btn-shadow);transition:transform var(--motion-fast,160ms) var(--motion-ease,var(--kit-ease)),box-shadow var(--motion-fast,160ms) var(--kit-ease),background-position var(--motion-slow,480ms) var(--kit-ease),background-size var(--motion-base,240ms) var(--kit-ease),filter var(--motion-fast,160ms)}`,
     `:root[data-dna-button] ${steppers}{border-radius:var(--kit-radius);border-width:max(var(--kit-border),1px)}`,
     /* Hover (and keyboard focus): never the only focus indicator. */
@@ -5817,6 +6266,16 @@
   if (!hasDna) document.addEventListener('click', event => { if (pickCardSwatch(stripSwatch(event))) event.preventDefault(); }, true);
   document.addEventListener('pointerover', event => { const swatch = stripSwatch(event); if (swatch) pickCardSwatch(swatch); }, { passive: true });
   function placeQuickLooks() { if (cardMode() === 'quick-look') document.querySelectorAll('.menu-item').forEach(placeQuickLook); }
+  // Owner 2026-11-16 («inside the product card there are some cropped pictures that dont look good»): a photo whose shape is far from
+  // its card's box (NOA's Antifaz, 3:5 in a 4:5 card, lost a quarter of its height) is shown whole on the card's paper instead of cut.
+  const fitCardPhoto = photo => {
+    const box = photo.getBoundingClientRect();
+    if (!photo.naturalWidth || !photo.naturalHeight || !box.width || !box.height) return;
+    const off = Math.abs((photo.naturalWidth / photo.naturalHeight) / (box.width / box.height) - 1);
+    if (off > 0.08) photo.setAttribute('data-fit', 'contain'); else photo.removeAttribute('data-fit');
+  };
+  document.addEventListener('load', event => { if (event.target?.matches?.('.menu-item .menu-item__image')) fitCardPhoto(event.target); }, true);
+  document.querySelectorAll('.menu-item .menu-item__image').forEach(photo => { if (photo.complete) fitCardPhoto(photo); });
   if (hasDna) {
     const cardOf = event => event.target?.closest?.('.menu-item');
     const reach = card => { syncCardAlt(card); placeQuickLook(card); };
@@ -6002,12 +6461,12 @@
     if (!status || preview || config.demo) return;
     status.textContent = 'Comprobando ofertas…';
     try {
-      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), locationId: panel.querySelector('[name=location]')?.value || undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined }) });
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), promoCode: promoCode || undefined, locationId: panel.querySelector('[name=location]')?.value || undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined }) });
       const quote = await response.json(); if (!response.ok) throw new Error(quote.message || 'No se pudieron comprobar las ofertas.');
       if (panel.querySelector('[data-bundle-quote-status]') !== status) return;
       panel.dataset.discountedSubtotal = String(quote.subtotal - quote.discountAmount);
       if (!panel.querySelector('[name=shippingZoneId]')?.value) panel.querySelector('.order-total strong').textContent = money(quote.subtotal - quote.discountAmount, quote.currency);
-      status.textContent = quote.discountAmount ? `Oferta aplicada: −${money(quote.discountAmount, quote.currency)}.` : 'No hay ofertas aplicables a esta selección.';
+      status.textContent = promoCode ? '' : quote.discountAmount ? `Oferta aplicada: −${money(quote.discountAmount, quote.currency)}.` : 'No hay ofertas aplicables a esta selección.';
     } catch (error) { status.textContent = error.message || 'No se pudieron comprobar las ofertas.'; }
   }
   async function shippingQuote(panel) {
@@ -6020,7 +6479,7 @@
     syncShippingAddress(panel);
     button.disabled = true; status.textContent = 'Calculando envío…';
     try {
-      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), fulfillmentMethod: 'delivery', locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: selected || undefined, creditCode: panel.querySelector('[name=creditCode]')?.value.trim() || undefined, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), promoCode: promoCode || undefined, fulfillmentMethod: 'delivery', locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: selected || undefined, creditCode: panel.querySelector('[name=creditCode]')?.value.trim() || undefined, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
       const quote = await response.json(); if (!response.ok) throw new Error(quote.message || 'No se pudo calcular el envío.');
       for (const option of quote.shippingOptions || []) shippingRateCarriers.set(option.id, option.carrierId || null);
       if (panel.querySelector('[name=shippingZoneId]') !== select || select.value !== selected) return;
@@ -6040,13 +6499,55 @@
     const button = panel.querySelector('[data-credit-apply]'); button.disabled = true;
     panel.dataset.creditReady = 'false'; status.textContent = 'Validando saldo…';
     try {
-      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), creditCode: code || undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined, locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: panel.querySelector('[name=shippingZoneId]')?.value || undefined, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), promoCode: promoCode || undefined, creditCode: code || undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined, locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: panel.querySelector('[name=shippingZoneId]')?.value || undefined, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
       const quote = await response.json(); if (!response.ok) throw new Error(quote.message || 'No se pudo aplicar el saldo.');
       if (panel.querySelector('[name=creditCode]')?.value.trim() !== code || !button.isConnected) return;
       panel.dataset.creditReady = 'true';
       panel.querySelector('.order-total strong').textContent = money(quote.amount, quote.currency);
       status.textContent = `Saldo aplicado: ${money(quote.creditAmount || 0, quote.currency)}. Restante a pagar: ${money(quote.amount, quote.currency)}.`;
     } catch (error) { status.textContent = error.message || 'No se pudo aplicar el saldo.'; }
+    finally { button.disabled = false; }
+  }
+  // Discount code (owner 2026-11-07): pagosYa's own quote says whether the code exists and what it takes off; the frame never decides.
+  async function applyPromo(panel) {
+    const input = panel.querySelector('[name=promoCode]'), status = panel.querySelector('[data-promo-status]'), button = panel.querySelector('[data-promo-apply]');
+    if (!input || !status || !button) return;
+    const typed = input.value.trim().toUpperCase();
+    if (promoCode && typed === promoCode) {
+      rememberPromo(''); input.value = ''; button.textContent = 'Aplicar'; status.textContent = 'Quitaste el código.';
+      if (!preview && !config.demo) await promoQuote(panel, '');
+      return;
+    }
+    if (!PROMO_PATTERN.test(typed)) { status.textContent = typed ? 'Ese código no existe en esta tienda.' : 'Escribe tu código.'; input.focus(); return; }
+    if (preview || config.demo) { status.textContent = 'El código se valida en la tienda publicada.'; return; }
+    await promoQuote(panel, typed);
+  }
+  /** Quotes the cart with `code` (none: without a code) and shows the new total; a code the store refuses is forgotten. */
+  async function promoQuote(panel, code = promoCode) {
+    const status = panel.querySelector('[data-promo-status]'), button = panel.querySelector('[data-promo-apply]');
+    if (!status || !button || preview || config.demo) return;
+    const zone = panel.querySelector('[name=shippingZoneId]')?.value || undefined;
+    button.disabled = true;
+    if (code) status.textContent = 'Validando código…';
+    try {
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), promoCode: code || undefined, creditCode: panel.dataset.creditReady === 'true' ? panel.querySelector('[name=creditCode]')?.value.trim() || undefined : undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined, locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: zone, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
+      const quote = await response.json();
+      if (!button.isConnected) return;
+      if (!response.ok) {
+        if (code === promoCode) { rememberPromo(''); button.textContent = 'Aplicar'; }
+        status.textContent = code ? 'Ese código no existe en esta tienda o ya no está activo.' : (Array.isArray(quote.message) ? quote.message.join(' ') : quote.message) || 'No se pudo actualizar el total.';
+        return;
+      }
+      panel.dataset.discountedSubtotal = String(quote.subtotal - (quote.discountAmount || 0));
+      panel.querySelector('.order-total strong').textContent = money(quote.amount, quote.currency);
+      panel.querySelector('.order-total span').textContent = zone ? 'Total' : 'Subtotal';
+      // The pack-offer line spoke for the cart without the code; the code's own line speaks now.
+      const offers = panel.querySelector('[data-bundle-quote-status]'); if (offers) offers.textContent = '';
+      if (!code) return;
+      rememberPromo(code); button.textContent = 'Quitar';
+      const input = panel.querySelector('[name=promoCode]'); if (input) input.value = code;
+      status.textContent = quote.discountAmount ? `${code} aplicado: −${money(quote.discountAmount, quote.currency)}.` : `${code} está activo, pero tu pedido ya tiene una oferta mayor.`;
+    } catch (error) { if (button.isConnected) status.textContent = error.message || 'No se pudo validar el código. Inténtalo de nuevo.'; }
     finally { button.disabled = false; }
   }
   function validateDelivery(panel) {
@@ -6115,7 +6616,7 @@
     checkingOut = true; button.disabled = true; button.setAttribute("aria-busy", "true"); message("Preparando tu pedido…");
     flushAnalytics();
     try {
-      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/cart-checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", body: JSON.stringify({ partnerCode: window.PAGOSYA_PRIVACY?.analyticsAllowed(config.slug) ? partnerCode : undefined, creditCode, recoveryToken: window.PAGOSYA_RETENTION_STATE?.token || undefined, ...(fulfillmentMethod === 'delivery' ? { shippingAddress, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) } : {}), ...(store.shippingEnabled ? { fulfillmentMethod, shippingZoneId, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined } : {}), items: checkoutItems(), ...(subscriptionLine ? { subscriptionConsent: true } : {}), ...(locationId ? { locationId, fulfillmentMethod } : {}) }) });
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/cart-checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "omit", body: JSON.stringify({ partnerCode: window.PAGOSYA_PRIVACY?.analyticsAllowed(config.slug) ? partnerCode : undefined, creditCode, promoCode: promoCode || undefined, recoveryToken: window.PAGOSYA_RETENTION_STATE?.token || undefined, ...(fulfillmentMethod === 'delivery' ? { shippingAddress, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) } : {}), ...(store.shippingEnabled ? { fulfillmentMethod, shippingZoneId, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined } : {}), items: checkoutItems(), ...(subscriptionLine ? { subscriptionConsent: true } : {}), ...(locationId ? { locationId, fulfillmentMethod } : {}) }) });
       const result = await response.json();
       if (!response.ok) throw new Error(Array.isArray(result.message) ? result.message.join(" ") : result.message || "No pudimos preparar el pedido.");
       if (hosted) return;
@@ -6439,7 +6940,35 @@
     document.head.append(style);
   };
   const blogMarkup = articles => { ensureBlogStyle(); return articles.map(article => `<article class="pagosya-article" id="articulo-${escape(article.slug)}"><h2 class="pagosya-article__title">${escape(article.title)}</h2><p class="pagosya-article__meta">${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p>${article.excerpt ? `<p class="pagosya-article__excerpt">${escape(article.excerpt)}</p>` : ''}<details class="pagosya-article__more"><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details><p class="pagosya-article__links"><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>'; };
+  /* Owner 2026-11-13 («discounts everything like full kits»): the store's real packs as cards — the products' photos, what is inside,
+   * the saving and, for a fixed pack whose products are all simple and in stock, one button that adds the whole pack (data-bundle-add). */
+  function packsMarkup(bundles) {
+    return (Array.isArray(bundles) ? bundles : []).map(bundle => {
+      const entries = (Array.isArray(bundle.items) ? bundle.items : []).map(item => ({ p: products().find(candidate => candidate.id === item?.productId), quantity: Math.max(1, Number(item?.quantity) || 1) }));
+      if (!entries.length || entries.some(entry => !entry.p)) return '';
+      const photos = entries.map(entry => (Array.isArray(entry.p.imageUrls) ? entry.p.imageUrls[0] : '') || entry.p.imageUrl || '').filter(Boolean).slice(0, 3);
+      const percent = Math.max(0, Math.min(100, Number(bundle.discountPercent) || 0));
+      const inside = bundle.kind === 'FIXED' ? entries.map(entry => `${entry.quantity > 1 ? `${entry.quantity} × ` : ''}${escape(entry.p.name)}`).join(' + ')
+        : `${bundle.kind === 'BOGO' ? 'Lleva 2' : `Combina ${Math.max(2, Number(bundle.minimumQuantity) || 2)} o más`} entre ${entries.map(entry => escape(entry.p.name)).join(', ')}`;
+      const save = bundle.kind === 'BOGO' ? 'El de menor precio es gratis' : percent ? `Ahorras ${percent}%` : '';
+      const addable = bundle.kind === 'FIXED' && entries.every(entry => !entry.p.variants?.length && !entry.p.extras?.length);
+      return `<article class="pym-pack">${photos.length ? `<div class="pym-pack__photos" data-count="${photos.length}">${photos.map(src => `<img src="${escape(src)}" alt="" loading="lazy">`).join('')}</div>` : ''}
+        <div class="pym-pack__body">${bundle.label ? `<p class="pym-pack__label">${escape(bundle.label)}</p>` : ''}<h3 class="pym-pack__name">${escape(bundle.name)}</h3>
+        <p class="pym-pack__inside">${inside}</p>${save ? `<p class="pym-pack__save">${escape(save)}</p>` : ''}
+        ${addable ? `<button type="button" class="pym-pack__add" data-bundle-add="${escape(bundle.id)}">Agregar el pack</button>` : '<p class="pym-pack__note">El descuento se aplica solo al pagar.</p>'}</div></article>`;
+    }).join('');
+  }
+  /* Owner 2026-11-13 (ways to pay, «payments are the core»): what the store's checkout really takes, from its checkout mode — online
+   * payment (pagosYa: QR, card, Tigo Money, transfer), an order by WhatsApp, or payment agreed with the store. Never a method it lacks. */
+  function payWaysMarkup(mode) {
+    const ways = mode === 'payment'
+      ? [['QR', 'Escanea con la app de tu banco'], ['Tarjeta', 'Visa, Mastercard o American Express'], ['Tigo Money', 'Desde tu billetera'], ['Transferencia', 'Desde tu banco']]
+      : mode === 'whatsapp' ? [['WhatsApp', 'Confirmas tu pedido y acuerdas el pago con la tienda']] : [['Con la tienda', 'Acuerdas el pago al confirmar tu pedido']];
+    return `<ul class="pym-pay">${ways.map(([name, note]) => `<li><strong>${escape(name)}</strong><span>${escape(note)}</span></li>`).join('')}</ul>`
+      + (mode === 'payment' ? '<p class="pym-pay__note">Pago seguro procesado por pagosYa.</p>' : '');
+  }
   async function loadCommerceContent() {
+    document.querySelectorAll('[data-pagosya-payways]').forEach(slot => { slot.innerHTML = payWaysMarkup(config.data?.checkoutMode || 'payment'); });
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
     if (!slots.length && !fullProductPage) return;
     if (preview || config.demo) {
@@ -6452,6 +6981,18 @@
           return;
         }
         if (slot.hasAttribute('data-pagosya-blog') && Array.isArray(config.data?.articles)) { slot.innerHTML = blogMarkup(config.data.articles); return; }
+        // Packs (owner 2026-11-13): the store's packs are in its config, so the preview shows them as the store will.
+        if (slot.hasAttribute('data-pagosya-bundles') && Array.isArray(config.data?.bundles)) { slot.innerHTML = packsMarkup(config.data.bundles) || '<p>No hay paquetes activos.</p>'; return; }
+        // The product page's own reviews block (the store's design wrote it) shows the two labelled examples the platform's block
+        // shows in the preview, never a placeholder line (owner 2026-11-15, Oh Belly r19: «El contenido publicado… aparecerá aquí»).
+        // A published demo store has no reviews to show: its block stays hidden.
+        if (slot.hasAttribute('data-pagosya-reviews')) {
+          if (preview) { slot.innerHTML = [{ rating: 5, displayName: 'Ejemplo', body: 'Así se verá una reseña verificada de tus clientes después de su compra.' }, { rating: 5, displayName: 'Ejemplo', body: 'Las reseñas reales llegan solas: pagosYa se las pide a quien ya recibió su pedido.' }].map(reviewMarkup).join(''); return; }
+          slot.hidden = true;
+          const section = slot.closest('[data-pagosya-reviews-section]');
+          if (section) section.hidden = true;
+          return;
+        }
         slot.textContent = 'El contenido publicado del comercio aparecerá aquí en la tienda.';
       });
       return;
@@ -6473,7 +7014,7 @@
           if (section) section.hidden = slot.hidden;
           if (slot.hasAttribute('data-pagosya-carousel')) mountCarousel(slot);
         }
-        if (slot.hasAttribute('data-pagosya-bundles')) slot.innerHTML = data.bundles.map(bundle => `<article><h3>${escape(bundle.name)}</h3><p>${bundle.kind === 'BOGO' ? 'Lleva dos; el de menor precio es gratis.' : `${bundle.discountPercent}% de descuento ${bundle.kind === 'FIXED' ? 'al completar el paquete' : 'desde ' + bundle.minimumQuantity + ' unidades'}.`}</p><ul>${bundle.items.map(item => `<li>${escape(products().find(p => p.id === item.productId)?.name || 'Producto del paquete')}${bundle.kind === 'FIXED' ? ' × ' + item.quantity : ''}</li>`).join('')}</ul><p>Añade los productos al carrito. La mejor oferta se aplica automáticamente al pagar; no se acumula con otros códigos.</p></article>`).join('') || '<p>No hay paquetes activos.</p>';
+        if (slot.hasAttribute('data-pagosya-bundles')) slot.innerHTML = packsMarkup(data.bundles) || '<p>No hay paquetes activos.</p>';
       });
     } catch { slots.forEach(slot => { slot.textContent = 'No pudimos cargar esta sección. Recarga la página para intentar de nuevo.'; }); }
   }
@@ -6553,6 +7094,120 @@
     }
   }
   initPlatformHeader();
+  // One look per menu model (spec 2026-11-15 store menu models), read after STORE_MENU_CSS; everything is keyed on [data-model].
+  // Owner 2026-11-16 (Miga Dorada): every colour falls back to the store's own --kit-* tokens (V2 designs never set --store-*), and the
+  // stickers menu is see-through page paper, not a colour wall: only the options carry the store's colours.
+  const STORE_MENU_MODEL_CSS = `
+    .pym-panel[data-model=mega]{padding:28px max(24px,calc((100% - 1280px)/2)) 36px}
+    .pym-panel[data-model=mega] .pym-group{display:grid;grid-template-columns:minmax(180px,240px) repeat(3,minmax(0,1fr));gap:16px}
+    .pym-panel[data-model=mega] .pym-links{grid-template-columns:1fr;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+    .pym-panel[data-model=mega] .pym-tiles,.pym-panel[data-model=mega] .pym-tiles ul{display:contents}
+    .pym-panel[data-model=mega] .pym-tiles-title{display:none}
+    .pym-panel[data-model=mega] .pym-tiles a{position:relative;display:block;aspect-ratio:1;overflow:hidden;border-radius:var(--kit-radius,0)}
+    .pym-panel[data-model=mega] .pym-tiles img{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;object-fit:cover}
+    .pym-panel[data-model=mega] .pym-tile-title{position:absolute;inset:auto 12px 14px;color:#fff;font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:18px;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 12px #0008}
+    .pym-panel[data-model=overlay],.pym-panel[data-model=split]{position:fixed;inset:0;max-height:none;z-index:1000;border:0;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;align-items:center;padding:clamp(24px,5vw,72px)}
+    .pym-panel[data-model=overlay]{background:var(--store-accent,var(--es-ink,#111));color:var(--store-on-accent,var(--es-paper,#fff))}
+    .pym-panel[data-model=overlay] .pym-links a{color:inherit}
+    .pym-panel:is([data-model=overlay],[data-model=split],[data-model=drawer]){padding-top:72px}
+    .pym-close{display:none}
+    .pym-panel[data-model=overlay] .pym-close,.pym-panel[data-model=split] .pym-close,.pym-panel[data-model=drawer] .pym-close,.pym-panel[data-mode=panel] .pym-close{display:grid;place-items:center;position:absolute;top:14px;right:14px;z-index:2;width:44px;height:44px;border:0;border-radius:999px;background:color-mix(in srgb,currentColor 12%,transparent);color:inherit;font:400 28px/1 inherit;cursor:pointer}
+    .pym-panel[data-model=overlay] .pym-tabs{grid-column:1/-1}
+    .pym-panel[data-model=overlay] .pym-links{grid-template-columns:1fr;gap:4px}
+    .pym-panel[data-model=overlay] .pym-links a{font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:clamp(36px,5vw,64px);line-height:1.05;opacity:.55;transition:opacity .2s}
+    .pym-panel[data-model=overlay] .pym-links a:is(:hover,:focus-visible){opacity:1;text-decoration:none;color:inherit}
+    .pym-panel[data-model=overlay] .pym-tiles{display:none}
+    .pym-hero-photo{border-radius:var(--kit-radius-panel,18px);overflow:hidden;aspect-ratio:4/5;max-height:70dvh}
+    .pym-hero-photo img{width:100%;height:100%;object-fit:cover;transition:opacity .2s}
+    .pym-panel[data-model=overlay] .pym-hero-photo{grid-column:2;grid-row:1 / span 3}
+    .pym-panel[data-model=split]{padding:0;gap:0;background:var(--store-surface,var(--kit-paper,var(--store-background,var(--kit-paper,#fff))))}
+    .pym-panel[data-model=split] .pym-hero-photo{grid-row:1 / span 3;height:100dvh;max-height:none;aspect-ratio:auto;border-radius:0}
+    .pym-panel[data-model=split] .pym-group,.pym-panel[data-model=split] .pym-tabs{grid-column:2;margin-inline:clamp(24px,5vw,64px)}
+    .pym-panel[data-model=split] .pym-links a{font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:22px}
+    .pym-panel[data-model=split] .pym-tiles{display:none}
+    .pym-panel[data-model=drawer]{position:fixed;inset:0 auto 0 0;width:min(440px,88vw);max-height:none;z-index:1000;padding:24px 28px;border-top:0;background:var(--store-foreground,var(--kit-ink,#111));color:var(--store-background,var(--kit-paper,#fff))}
+    .pym-panel[data-model=drawer] .pym-group{display:grid;grid-template-rows:1fr auto;gap:24px;min-height:calc(100dvh - 140px)}
+    .pym-panel[data-model=drawer] .pym-links{grid-template-columns:1fr;align-content:start}
+    .pym-panel[data-model=drawer] .pym-links a{font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:28px;font-style:italic;color:inherit}
+    .pym-panel[data-model=drawer] .pym-tiles ul{grid-template-columns:1fr 1fr}.pym-panel[data-model=drawer] .pym-tiles li:nth-child(3){display:none}
+    .pym-panel[data-model=dropdown] .pym-group{grid-template-columns:minmax(0,1fr) 200px}.pym-panel[data-model=dropdown] .pym-links{grid-template-columns:1fr}
+    .pym-panel[data-model=dropdown] .pym-tiles ul{grid-template-columns:1fr}.pym-panel[data-model=dropdown] .pym-tiles li:nth-child(n+2){display:none}
+    .pym-panel[data-model=index] .pym-links{grid-template-columns:1fr;counter-reset:pymi}
+    .pym-panel[data-model=index] .pym-links a{display:grid;grid-template-columns:48px minmax(0,1fr) minmax(0,1fr) 110px;align-items:baseline;border-bottom:1px solid color-mix(in srgb,currentColor 14%,transparent);padding:10px 0}
+    .pym-panel[data-model=index] .pym-links a::before{counter-increment:pymi;content:counter(pymi,decimal-leading-zero);font-size:12px;opacity:.6}
+    .pym-panel[data-model=index] .pym-link-label{font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:22px}
+    .pym-panel[data-model=index] .pym-count{text-align:right;font-size:13px;font-variant-numeric:tabular-nums;opacity:.75}
+    .pym-note{display:block;font-size:13px;opacity:.7}
+    .pym-links a:has(.pym-note){flex-direction:column;align-items:flex-start;justify-content:center;gap:2px}
+    .pym-panel[data-model=dropdown]{left:50%;right:auto;transform:translateX(-50%);width:min(620px,94vw);padding:22px 24px;border-radius:0 0 16px 16px;box-shadow:0 22px 40px -22px #0006}
+    @media (max-width:860px){
+      .pym-panel[data-model=mega] .pym-group{grid-template-columns:1fr}
+      .pym-panel[data-model=mega] .pym-tiles{display:block}.pym-panel[data-model=mega] .pym-tiles ul{display:flex;overflow-x:auto;gap:8px}
+      .pym-panel[data-model=mega] .pym-tiles li{flex:0 0 140px}
+      .pym-panel[data-model=overlay],.pym-panel[data-model=split]{grid-template-columns:1fr;align-content:start;overflow:auto}
+      .pym-panel[data-model=overlay] .pym-hero-photo{grid-column:auto;grid-row:auto;order:9;max-height:30dvh;aspect-ratio:16/10}
+      .pym-panel[data-model=split] .pym-hero-photo{grid-row:auto;height:34dvh}
+      .pym-panel[data-model=split] .pym-group,.pym-panel[data-model=split] .pym-tabs{grid-column:auto}
+      .pym-panel[data-model=drawer]{width:100vw}
+      .pym-panel[data-model=dropdown] .pym-group{grid-template-columns:minmax(0,1fr) 92px}
+      .pym-panel[data-model=index] .pym-links a{grid-template-columns:minmax(0,1fr) auto}
+      .pym-panel[data-model=index] .pym-links a::before,.pym-panel[data-model=index] .pym-note{display:none}
+    }
+    @media (prefers-reduced-motion:reduce){.pym-panel[data-model] *{transition:none!important;animation:none!important}}
+    .pym-best ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;margin:0;padding:0}
+    .pym-best li{display:grid;gap:6px;align-content:start}.pym-best li>a{display:grid;gap:4px;color:inherit;text-decoration:none;font-size:14px}
+    .pym-best img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--kit-radius,8px)}
+    .pym-best-title{margin:0 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+    .pym-add{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;border:0;background:var(--store-accent,var(--kit-accent,#111));color:var(--store-on-accent,var(--kit-on-accent,#fff));font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
+    .pym-panel[data-model=bestsellers] .pym-group{display:grid;grid-template-columns:minmax(160px,220px) minmax(0,1fr);gap:28px}
+    .pym-panel[data-model=bestsellers] .pym-links{grid-template-columns:1fr}.pym-panel[data-model=bestsellers] .pym-tiles{display:none}
+    .pym-panel[data-model=need] .pym-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+    .pym-need{display:grid;grid-template-columns:56px minmax(0,1fr);gap:4px 12px;align-items:center;padding:12px;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:14px}
+    .pym-need img{grid-row:1 / span 3;width:56px;height:56px;border-radius:50%;object-fit:cover}
+    .pym-need-label{font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:18px}.pym-need-from{font-size:12px;opacity:.75}
+    .pym-panel[data-model=need] .pym-tiles{display:none}
+    .pym-offer{position:relative;display:grid;align-content:end;gap:4px;min-height:200px;margin-bottom:20px;padding:18px;border-radius:14px;overflow:hidden;color:#fff;background:var(--store-accent,var(--kit-accent,#111));text-decoration:none;isolation:isolate}
+    .pym-offer img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;filter:brightness(.62)}
+    .pym-offer b{font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:24px;line-height:1.1}
+    .pym-search{margin-bottom:16px}.pym-search input{width:100%;height:52px;border:2px solid currentColor;border-radius:999px;padding:0 20px;font:inherit;font-size:16px;background:transparent;color:inherit}
+    .pym-popular{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}.pym-popular a{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;background:color-mix(in srgb,currentColor 8%,transparent);font-size:13px;color:inherit;text-decoration:none}
+    .pym-panel[data-model=search] .pym-tabs,.pym-panel[data-model=search] .pym-tiles{display:none}
+    .pym-thumbbar{display:none}
+    @media (max-width:860px){
+      .pym-thumbbar{position:fixed;left:0;right:0;bottom:0;z-index:900;display:grid;grid-template-columns:repeat(4,1fr);height:64px;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--store-background,var(--kit-paper,#fff));color:var(--store-foreground,var(--kit-ink,#111));border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+      .pym-thumbbar a,.pym-thumbbar button{display:grid;place-items:center;min-height:44px;border:0;background:none;color:inherit;font:inherit;font-size:12px;text-decoration:none}
+      body{padding-bottom:var(--pym-bottom-bar,0px)}
+      [data-pagosya-contact]:not([data-contact-inline]),.pya-wa,[data-pagosya-assistant]{bottom:calc(var(--pym-bottom-bar,0px) + 16px)!important}
+      .product-detail__sticky{bottom:var(--pym-bottom-bar,0px)!important}
+      .pym-panel[data-model=bestsellers] .pym-group,.pym-panel[data-model=need] .pym-group{grid-template-columns:1fr}
+      .pym-best ul{display:flex;overflow-x:auto}.pym-best li{flex:0 0 140px}
+    }
+    .pym-circles{display:flex;justify-content:center;gap:26px;padding:10px 24px 22px;overflow-x:auto}
+    .pym-circles a{display:grid;justify-items:center;gap:8px;color:inherit;text-decoration:none;font-size:14px;flex:none}
+    .pym-circles img{width:88px;height:88px;border-radius:50%;object-fit:cover;outline:2px solid transparent;outline-offset:4px}
+    .pym-circles a:is(:hover,:focus-visible) img{outline-color:var(--store-accent,var(--kit-accent,currentColor))}
+    .pym-rail{display:none}
+    .pym-panel[data-model=stickers]{position:fixed;inset:0;max-height:none;z-index:1000;border:0;padding:clamp(24px,6vw,80px);background:color-mix(in srgb,var(--store-background,var(--kit-paper,#fff)) 78%,transparent);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);color:var(--store-foreground,var(--kit-ink,#111))}
+    .pym-panel[data-model=stickers] .pym-links{display:flex;flex-wrap:wrap;gap:18px 22px;align-content:center;min-height:60dvh}
+    .pym-panel[data-model=stickers] .pym-links li:nth-child(odd) a{transform:rotate(-5deg)}.pym-panel[data-model=stickers] .pym-links li:nth-child(even) a{transform:rotate(4deg)}
+    .pym-panel[data-model=stickers] .pym-links a{display:inline-flex;align-items:center;gap:10px;padding:10px 22px 10px 10px;border:2px solid currentColor;border-radius:999px;background:var(--store-background,var(--kit-paper,#fff));color:var(--store-foreground,var(--kit-ink,#111));box-shadow:5px 5px 0 var(--store-accent,var(--kit-accent,currentColor));font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:clamp(20px,2.6vw,28px);text-decoration:none;transition:transform .2s}
+    .pym-panel[data-model=stickers] .pym-links a:is(:hover,:focus-visible){transform:rotate(0) scale(1.05)}
+    .pym-sticker-photo img{width:44px;height:44px;border-radius:50%;object-fit:cover;display:block}
+    .pym-panel[data-model=stickers] .pym-tiles{display:none}
+    body:has(.pym-dock) :is(.pya-wa,[data-pagosya-assistant]){bottom:92px!important}body:has(.pym-dock) .product-detail__sticky{bottom:80px!important}
+    .pym-dock{position:fixed;left:50%;bottom:calc(18px + var(--pym-bottom-bar,0px));transform:translateX(-50%);z-index:950;display:flex;gap:6px;padding:6px;border-radius:999px;background:var(--store-foreground,var(--kit-ink,#111));color:var(--store-background,var(--kit-paper,#fff));box-shadow:0 18px 40px -16px #0008}
+    .pym-dock button{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+    .pym-dock button[aria-expanded=true],.pym-dock button:hover{background:var(--store-accent,var(--kit-accent,#fff));color:var(--store-on-accent,var(--kit-on-accent,#111))}
+    .pym-panel[data-model=dock]{position:fixed;left:50%;right:auto;top:auto;bottom:86px;transform:translateX(-50%);width:min(680px,94vw);max-height:60dvh;border:0;border-radius:22px;box-shadow:0 30px 60px -20px #0009}
+    .pym-panel[data-model=dock] .pym-tabs{display:none}
+    @media (min-width:1280px){
+      .pym-rail{position:fixed;inset:0 auto 0 0;width:200px;display:grid;grid-template-rows:auto 1fr auto;gap:24px;padding:24px 22px;border-right:1px solid color-mix(in srgb,currentColor 12%,transparent);background:var(--store-background,var(--kit-paper,#fff));color:var(--store-foreground,var(--kit-ink,#111));z-index:40;overflow:auto}
+      .pym-rail .pym-links{grid-template-columns:1fr;align-content:start}
+      body:has(.pym-rail){padding-left:200px}
+      [data-store-menu-model=rail] [data-pagosya-store-menu="toggle"]{display:none}
+    }
+    @media (max-width:860px){.pym-circles{justify-content:flex-start;gap:14px}.pym-circles img{width:64px;height:64px}.pym-dock{left:10px;right:10px;transform:none;justify-content:space-between}}
+    @media (prefers-reduced-motion:reduce){.pym-panel[data-model=stickers] .pym-links a{transform:none!important}}`;
   // ---- Store menu (spec 2026-10-21 dropdown menu) ----
   // config.header.menu = { style: 'panel' | 'dropdowns', groups? } turns the menu on. The host header holds the mounts
   // [data-pagosya-store-menu="toggle"] (☰, opens the panel) and optionally [data-pagosya-store-menu="links"] (desktop top links
@@ -6568,16 +7223,21 @@
     .pym-toggle{display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer}
     .pym-bars,.pym-bars::before,.pym-bars::after{display:block;width:20px;height:1.5px;background:currentColor;content:""}
     .pym-bars{position:relative}.pym-bars::before{position:absolute;top:-6px}.pym-bars::after{position:absolute;top:6px}
-    .pym-top{min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+    .pym-top{display:inline-flex;align-items:center;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+    /* A menu group with one page (Nosotros) is a link, not a button: same line and look as its neighbours (owner 2026-11-13). */
     .pym-top[aria-expanded="true"]{text-decoration:underline;text-underline-offset:6px}
-    .pym-panel{position:absolute;left:0;right:0;top:100%;z-index:40;max-height:calc(100dvh - 72px);overflow:auto;padding:24px max(20px,calc((100% - 1280px)/2));background:var(--store-background,#fff);color:var(--store-foreground,#111);border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);box-shadow:0 24px 48px -24px rgb(0 0 0 / .25);text-align:left;animation:pym-in .18s ease-out}
+    .pym-panel{position:absolute;left:0;right:0;top:100%;z-index:40;max-height:calc(100dvh - 72px);overflow:auto;padding:24px max(20px,calc((100% - 1280px)/2));background:var(--store-background,var(--kit-paper,#fff));color:var(--store-foreground,var(--kit-ink,#111));border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);box-shadow:0 24px 48px -24px rgb(0 0 0 / .25);text-align:left;animation:pym-in .18s ease-out}
     .pym-panel[hidden],.pym-group[hidden]{display:none!important}
     @keyframes pym-in{from{opacity:0;transform:translateY(-6px)}}
     @media (prefers-reduced-motion: reduce){.pym-panel{animation:none}}
     .pym-tabs{display:flex;width:max-content;max-width:100%;margin:0 0 20px;border:1px solid currentColor}
+    /* Owner 2026-11-16 (Bake Lab phone: «COM-PRAR», «DESA-YUNA-R»): tab names never break; a row too wide scrolls sideways and stays
+       clear of the close button. */
+    .pym-tabs{overflow-x:auto;scrollbar-width:none}.pym-tabs::-webkit-scrollbar{display:none}
+    .pym-panel:is([data-mode=panel],[data-model=overlay],[data-model=split],[data-model=drawer]) .pym-tabs{max-width:calc(100% - 52px)}
     .pym-panel[data-mode="dropdown"] .pym-tabs,.pym-tabs[data-single]{display:none}
-    .pym-tab{min-height:44px;padding:10px 20px;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
-    .pym-tab[aria-selected="true"]{background:var(--store-foreground,#111);color:var(--store-background,#fff)}
+    .pym-tab{flex:none;white-space:nowrap;min-height:44px;padding:10px 20px;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+    .pym-tab[aria-selected="true"]{background:var(--store-foreground,var(--kit-ink,#111));color:var(--store-background,var(--kit-paper,#fff))}
     .pym-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 32px;margin:0;padding:0;list-style:none}
     .pym-links a{display:flex;align-items:center;min-height:44px;color:inherit;font-size:15px;text-decoration:none}
     .pym-links a:hover{text-decoration:underline;text-underline-offset:5px}
@@ -6587,16 +7247,16 @@
     .pym-tiles a{display:grid;gap:8px;color:inherit;font-size:14px;text-decoration:none}
     .pym-tiles img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover}
     .pym-price{font-size:13px;opacity:.75}
-    .pym-footer{display:flex;align-items:center;justify-content:center;min-height:52px;margin-top:24px;background:var(--store-foreground,#111);color:var(--store-background,#fff);font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none}
+    .pym-footer{display:flex;align-items:center;justify-content:center;min-height:52px;margin-top:24px;background:var(--store-foreground,var(--kit-ink,#111));color:var(--store-background,var(--kit-paper,#fff));font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none}
     .pym-extras{display:flex;flex-wrap:wrap;gap:4px 24px;margin-top:20px;padding-top:16px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
     .pym-extras a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-size:14px}
     /* Owner 2026-10-29 («a little menu with the accent of the brand colors, font»): the menu wears the brand where the store sets it. */
-    .pym-panel{background:var(--store-surface,var(--store-background,#fff));border-top:3px solid var(--store-accent,currentColor)}
-    .pym-tab[aria-selected="true"]{background:var(--store-accent,var(--store-foreground,#111));color:var(--store-on-accent,var(--store-background,#fff))}
-    .pym-links a{font-family:var(--store-heading-font,inherit);font-size:19px}
-    .pym-links a:hover{color:var(--store-accent,inherit)}
-    .pym-tiles a{font-family:var(--store-heading-font,inherit)}
-    .pym-footer{background:var(--store-accent,var(--store-foreground,#111));color:var(--store-on-accent,var(--store-background,#fff))}
+    .pym-panel{background:var(--store-surface,var(--kit-paper,var(--store-background,var(--kit-paper,#fff))));border-top:3px solid var(--store-accent,var(--kit-accent,currentColor))}
+    .pym-tab[aria-selected="true"]{background:var(--store-accent,var(--kit-accent,var(--store-foreground,var(--kit-ink,#111))));color:var(--store-on-accent,var(--kit-on-accent,var(--store-background,var(--kit-paper,#fff))))}
+    .pym-links a{font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:19px}
+    .pym-links a:hover{color:var(--store-accent,var(--kit-accent,inherit))}
+    .pym-tiles a{font-family:var(--store-heading-font,var(--kit-display,inherit))}
+    .pym-footer{background:var(--store-accent,var(--kit-accent,var(--store-foreground,var(--kit-ink,#111))));color:var(--store-on-accent,var(--kit-on-accent,var(--store-background,var(--kit-paper,#fff))))}
     .pym-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
     @media (min-width:861px){
       [data-store-menu="dropdowns"][data-store-menu-links] [data-pagosya-store-menu="toggle"]{display:none}
@@ -6610,12 +7270,21 @@
     if (document.querySelector('style[data-pagosya-store-menu-style]')) return;
     const style = document.createElement('style');
     style.setAttribute('data-pagosya-store-menu-style', '');
-    style.textContent = STORE_MENU_CSS;
+    style.textContent = STORE_MENU_CSS + STORE_MENU_MODEL_CSS;
     document.head.appendChild(style);
+  }
+  // Menu models (spec 2026-11-15 store menu models): one look per store. «style» is kept for older stores (panel → tabs,
+  // dropdowns → dropdown); a model the runtime does not know falls back to tabs, never to no menu.
+  const STORE_MENU_MODELS = ['tabs', 'mega', 'overlay', 'dropdown', 'drawer', 'split', 'index', 'dock', 'stickers', 'circles', 'rail', 'bestsellers', 'need', 'offer', 'search', 'thumb'];
+  // Models that open from top links on a computer (the old «dropdowns» style); the rest open from ☰ or never close.
+  const STORE_MENU_TOP_LINKS = new Set(['dropdown', 'mega', 'bestsellers', 'need', 'offer']);
+  function storeMenuModel(menu) {
+    if (STORE_MENU_MODELS.includes(menu.model)) return menu.model;
+    return menu.style === 'dropdowns' ? 'dropdown' : 'tabs';
   }
   function storeMenuConfig() {
     const menu = config.header && config.header.menu;
-    return menu && (menu.style === 'panel' || menu.style === 'dropdowns') ? menu : null;
+    return menu && (menu.style === 'panel' || menu.style === 'dropdowns' || typeof menu.model === 'string') ? menu : null;
   }
   const storeMenuCategories = () => (Array.isArray(store.categories) ? store.categories : []).filter(category => category && typeof category.id === 'string' && products().some(item => item.categoryId === category.id));
   /** A target as { href, label }, or null when the live store has nothing there. */
@@ -6626,7 +7295,8 @@
     if (value === 'all') return { href: pageHref('productos.html'), label: 'Todos los productos' };
     if (value === 'new') return products().length ? { href: pageHref('productos.html', '?orden=novedades'), label: 'Novedades' } : null;
     if (value.startsWith('category:')) {
-      const category = storeMenuCategories().find(entry => entry.id === value.slice(9));
+      // By id, or by name (live 2026-11-16: YAPI wrote «category:Sodas»).
+      const category = storeMenuCategories().find(entry => entry.id === value.slice(9)) || storeMenuCategories().find(entry => filterFold(entry.name) === filterFold(value.slice(9)));
       return category ? { href: pageHref('productos.html', '?f_categoria=' + encodeURIComponent(filterFold(category.id))), label: category.name } : null;
     }
     // Owner 2026-10-28: «Mujer → Zapatos» is the Mujer collection showing one category (collection:<slug>/category:<id>).
@@ -6650,7 +7320,8 @@
     return null;
   }
   // A store photo: an http(s) upload, or the data URL the Studio preview turns it into (live check 2026-10-21, NOA VARGAS).
-  const storeMenuPhoto = url => (typeof url === 'string' && /^(?:https?:\/\/|data:image\/(?:png|jpe?g|webp|avif|gif);)/i.test(url) ? url : '');
+  // …or one of the store's own bundled photos (V2 stores, spec 2026-11-15 menu models: assets/<name>.<ext>, served next to the page).
+  const storeMenuPhoto = url => (typeof url === 'string' && (/^(?:https?:\/\/|data:image\/(?:png|jpe?g|webp|avif|gif);)/i.test(url) || /^assets\/[\w.-]+\.(?:jpe?g|png|webp|avif)$/i.test(url)) ? url : '');
   /** The default menu (spec): «Tienda» from the categories, «Descubre» from the host's own links and the info pages. */
   function defaultStoreMenuGroups(host) {
     const categories = storeMenuCategories();
@@ -6709,12 +7380,14 @@
   }
   /** Groups with every link, tile and footer resolved; a repeated label is shown once, and a group with no link left is dropped. */
   function resolveStoreMenuGroups(groups) {
-    return (Array.isArray(groups) ? groups : []).slice(0, 4).map(group => {
+    return (Array.isArray(groups) ? groups : []).slice(0, 7).map(group => {
       const seen = new Set();
       const links = (Array.isArray(group.links) ? group.links : []).map(link => {
-        if (link.href) return { href: link.href, label: String(link.label).slice(0, 28) };
+        // A link may carry a one-line note (index, need) and its photo (overlay, split swap the big photo to it).
+        const note = String(link.note || '').slice(0, 60);
+        if (link.href) return { href: link.href, label: String(link.label).slice(0, 28), note, image: '' };
         const target = storeMenuTarget(link.to);
-        return target && (link.label || target.label) ? { href: target.href, label: String(link.label || target.label).slice(0, 28) } : null;
+        return target && (link.label || target.label) ? { href: target.href, label: String(link.label || target.label).slice(0, 28), note, image: storeMenuLinkPhoto(link.to) } : null;
       }).filter(link => link && !seen.has(link.label.toLowerCase()) && seen.add(link.label.toLowerCase())).slice(0, 12);
       const named = (Array.isArray(group.tiles) ? group.tiles : []).map(tile => { const target = storeMenuTarget(tile.to); return target && storeMenuPhoto(tile.image) ? { href: target.href, title: String(tile.title || target.label).slice(0, 28), image: tile.image } : null; }).filter(Boolean).slice(0, 3);
       // Owner 2026-10-30 («dropdown menus now dont have pictures»): a group written without tiles shows the first product photo
@@ -6727,22 +7400,46 @@
       }).filter((tile, index, list) => tile && list.findIndex(other => other && (other.image === tile.image || other.href === tile.href)) === index).slice(0, 3);
       const shownTiles = tiles.length ? tiles : storeMenuDiscoverTiles(group);
       const footerTarget = group.footer ? storeMenuTarget(group.footer.to) : null;
-      return { label: String(group.label || '').slice(0, 28), links, direct: group.direct === true && links.length === 1, tilesTitle: shownTiles.length ? String(group.tilesTitle || '') : '', tiles: shownTiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
+      return { label: String(group.label || '').slice(0, 28), note: String(group.note || '').slice(0, 60), links, direct: group.direct === true && links.length === 1, tilesTitle: shownTiles.length ? String(group.tilesTitle || '') : '', tiles: shownTiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
     }).filter(group => group.label && group.links.length);
   }
+  // Selling menus (spec 2026-11-15): only the store's real data — badged products first, a real offer or none, live prices.
+  const STORE_MENU_BADGES = /más vendido|nuevo/i;
+  const storeMenuBadge = item => String(item.highlight || item.badge || '');
+  function storeMenuBest() {
+    const pool = products().filter(item => storeMenuPhoto((item.imageUrls || [])[0]));
+    return [...pool.filter(item => STORE_MENU_BADGES.test(storeMenuBadge(item))), ...pool.filter(item => !STORE_MENU_BADGES.test(storeMenuBadge(item)))].slice(0, 3);
+  }
+  function storeMenuOffer() {
+    const goal = Number(store.freeShippingFrom);
+    if (Number.isInteger(goal) && goal > 0) return { kind: 'shipping', title: `Envío gratis desde ${money(goal, 'BOB')}`, href: pageHref('productos.html') };
+    const pack = store.bundlesEnabled && Array.isArray(store.bundles) ? store.bundles.find(b => b && Number(b.discountPercent) > 0) : null;
+    if (pack) return { kind: 'pack', title: String(pack.label || 'Pack').slice(0, 40), detail: `Ahorras ${Math.round(Number(pack.discountPercent))}%`, href: pageHref('productos.html') };
+    return null;
+  }
+  const storeMenuFrom = links => {
+    const prices = links.flatMap(link => { const id = new URL(link.href, location.href).searchParams.get('f_categoria'); return id ? products().filter(item => filterFold(item.categoryId) === id).map(price) : []; });
+    return prices.length ? `desde ${money(Math.min(...prices), 'BOB')}` : '';
+  };
+  const storeMenuProductHref = item => pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(item.id));
+  // An item with options opens its page (a size or a colour comes first), like the catalogue's cards.
+  const storeMenuBuy = item => optionGroups(item) ? `<a class="pym-add" data-product="${escape(item.id)}" href="${escape(storeMenuProductHref(item))}">Elegir</a>` : `<button type="button" class="pym-add" data-add="${escape(item.id)}" data-quantity="1">Agregar</button>`;
+  const storeMenuCard = item => `<li><a href="${escape(storeMenuProductHref(item))}"><img src="${escape(item.imageUrls[0])}" alt="" loading="lazy"><span>${escape(String(item.name || '').slice(0, 40))}</span><b>${escape(money(price(item), item.currency || 'BOB'))}</b></a>${storeMenuBuy(item)}</li>`;
   let storeMenuCount = 0;
   const storeMenuOpenState = { host: null, close: null };
   function renderStoreMenu(host, menu) {
     const toggleMount = host.querySelector('[data-pagosya-store-menu="toggle"]');
     if (!toggleMount) return;
-    const linksMount = menu.style === 'dropdowns' ? host.querySelector('[data-pagosya-store-menu="links"]') : null;
+    const model = storeMenuModel(menu);
+    const linksMount = STORE_MENU_TOP_LINKS.has(model) ? host.querySelector('[data-pagosya-store-menu="links"]') : null;
     let groups = resolveStoreMenuGroups(menu.groups);
     if (!groups.length) groups = resolveStoreMenuGroups(defaultStoreMenuGroups(host));
     // Only direct page links (spec 2026-11-05 creates anything): the kit's own menu stays, the links follow it.
     else if (groups.every(group => group.direct)) groups = [...resolveStoreMenuGroups(defaultStoreMenuGroups(host)), ...groups];
     if (!groups.length) return;
     const id = 'pym-' + (++storeMenuCount);
-    host.setAttribute('data-store-menu', menu.style);
+    host.setAttribute('data-store-menu', STORE_MENU_TOP_LINKS.has(model) ? 'dropdowns' : 'panel');
+    host.setAttribute('data-store-menu-model', model);
     host.toggleAttribute('data-store-menu-links', Boolean(linksMount));
     if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
     toggleMount.innerHTML = `<button type="button" class="pym-toggle" data-store-menu-toggle aria-expanded="false" aria-controls="${id}"><span class="pym-bars" aria-hidden="true"></span><span class="pym-sr">Menú</span></button>`;
@@ -6756,14 +7453,44 @@
     panel.hidden = true;
     panel.setAttribute('data-store-menu-panel', '');
     panel.setAttribute('aria-label', 'Menú');
-    panel.innerHTML = `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
+    // The rail is a drawer wherever it cannot stand as a column (below 1280 px); its column is drawn below.
+    panel.setAttribute('data-model', model === 'rail' ? 'drawer' : model);
+    const countOf = href => { const id = new URL(href, location.href).searchParams.get('f_categoria'); const n = id ? products().filter(item => filterFold(item.categoryId) === id).length : 0; return n ? `${n} ${n === 1 ? 'producto' : 'productos'}` : ''; };
+    const swaps = model === 'overlay' || model === 'split';
+    const linkHtml = link => `<li><a href="${escape(link.href)}"${swaps && link.image ? ` data-photo-for="${escape(link.image)}"` : ''}>${model === 'stickers' && link.image ? `<span class="pym-sticker-photo"><img src="${escape(link.image)}" alt="" loading="lazy"></span>` : ''}<span class="pym-link-label">${escape(link.label)}</span>${link.note ? `<span class="pym-note">${escape(link.note)}</span>` : ''}${model === 'index' ? `<span class="pym-count">${escape(countOf(link.href))}</span>` : ''}</a></li>`;
+    const tileHtml = tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span${model === 'mega' ? ' class="pym-tile-title"' : ''}>${escape(tile.title)}</span>${tile.price ? `<small class="pym-price">${escape(tile.price)}</small>` : ''}</a></li>`;
+    const firstPhoto = (groups.find(group => group.tiles.length) || { tiles: [] }).tiles[0] || groups.flatMap(group => group.links).find(link => link.image);
+    const heroPhoto = swaps && firstPhoto ? `<div class="pym-hero-photo"><img src="${escape(firstPhoto.image)}" alt="" loading="lazy"></div>` : '';
+    const best = (model === 'bestsellers' || model === 'offer' || model === 'search') ? storeMenuBest() : [];
+    const offer = model === 'offer' ? storeMenuOffer() : null;
+    const offerHtml = model !== 'offer' ? '' : offer
+      ? `<a class="pym-offer" data-kind="${offer.kind}" href="${escape(offer.href)}">${best[0] ? `<img src="${escape(best[0].imageUrls[0])}" alt="" loading="lazy">` : ''}<b>${escape(offer.title)}</b>${offer.detail ? `<span>${escape(offer.detail)}</span>` : ''}</a>`
+      : best[0] ? `<a class="pym-offer" data-kind="product" href="${escape(storeMenuProductHref(best[0]))}"><img src="${escape(best[0].imageUrls[0])}" alt="" loading="lazy"><b>${escape(best[0].name)}</b><span>${escape(money(price(best[0]), best[0].currency || 'BOB'))}</span></a>` : '';
+    const popular = [...storeMenuCategories().map(c => ({ label: c.name, href: pageHref('productos.html', '?f_categoria=' + encodeURIComponent(filterFold(c.id))) })), ...products().map(item => ({ label: item.name, href: storeMenuProductHref(item) }))].slice(0, 6);
+    const searchHtml = model !== 'search' ? '' : `<form class="pym-search" action="${escape(pageHref('buscar.html'))}" role="search"><input type="search" name="q" placeholder="Busca productos" aria-label="Buscar"></form>${popular.length ? `<p class="pym-tiles-title">Populares</p><div class="pym-popular">${popular.map(chip => `<a href="${escape(chip.href)}">${escape(String(chip.label).slice(0, 28))}</a>`).join('')}</div>` : ''}${best.length ? `<div class="pym-best"><ul>${best.map(storeMenuCard).join('')}</ul></div>` : ''}`;
+    // Live 2026-11-16 (DooBoo r11, overlay): a menu that covers the page has its own visible close button.
+    panel.innerHTML = '<button type="button" class="pym-close" data-store-menu-close aria-label="Cerrar menú"><span aria-hidden="true">×</span></button>' + heroPhoto + offerHtml + searchHtml + `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}${model === 'dock' || model === 'search' ? ' hidden' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
       + groups.map((group, index) => `<div class="pym-group" role="tabpanel" id="${id}-group-${index}" aria-labelledby="${id}-tab-${index}"${index ? ' hidden' : ''}>`
-        + `<ul class="pym-links">${group.links.map(link => `<li><a href="${escape(link.href)}">${escape(link.label)}</a></li>`).join('')}</ul>`
-        + (group.tiles.length ? `<div class="pym-tiles">${group.tilesTitle ? `<p class="pym-tiles-title">${escape(group.tilesTitle)}</p>` : ''}<ul>${group.tiles.map(tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span>${escape(tile.title)}</span>${tile.price ? `<small class="pym-price">${escape(tile.price)}</small>` : ''}</a></li>`).join('')}</ul></div>` : '')
+        + (model === 'need' ? `<div class="pym-need">${group.tiles[0] ? `<img src="${escape(group.tiles[0].image)}" alt="" loading="lazy">` : ''}<span class="pym-need-label">${escape(group.label)}</span>${group.note ? `<span class="pym-note">${escape(group.note)}</span>` : ''}<span class="pym-need-from">${escape(storeMenuFrom(group.links))}</span></div>` : '')
+        + `<ul class="pym-links">${group.links.map(linkHtml).join('')}</ul>`
+        + (model === 'bestsellers' && best.length ? `<div class="pym-best"><p class="pym-best-title">${best.some(item => STORE_MENU_BADGES.test(storeMenuBadge(item))) ? 'Lo más vendido' : 'Destacados'}</p><ul>${best.map(storeMenuCard).join('')}</ul></div>` : '')
+        + (group.tiles.length && model !== 'index' ? `<div class="pym-tiles">${group.tilesTitle ? `<p class="pym-tiles-title">${escape(group.tilesTitle)}</p>` : ''}<ul>${group.tiles.map(tileHtml).join('')}</ul></div>` : '')
         + (group.footer ? `<a class="pym-footer" href="${escape(group.footer.href)}">${escape(group.footer.label)}</a>` : '')
         + '</div>').join('')
       + (extras ? `<div class="pym-extras">${extras}</div>` : '');
     host.appendChild(panel);
+    // Thumb bar (spec 2026-11-15): four buttons fixed at the bottom of the phone; the page and the floating buttons sit above it.
+    document.querySelectorAll('.pym-thumbbar').forEach(bar => bar.remove());
+    if (model === 'thumb') {
+      const bar = document.createElement('nav');
+      bar.className = 'pym-thumbbar'; bar.setAttribute('aria-label', 'Accesos');
+      bar.innerHTML = `<a href="${escape(pageHref('index.html'))}">Inicio</a><button type="button" data-thumb-menu aria-controls="${id}">Categorías</button><a href="${escape(pageHref('buscar.html'))}">Buscar</a><button type="button" data-cart-open>Bolsa <span data-cart-count>${escape(([...document.querySelectorAll('[data-cart-count]')].find(el => !el.closest('.pym-thumbbar')) || {}).textContent || '0')}</span></button>`;
+      document.body.appendChild(bar);
+      document.documentElement.style.setProperty('--pym-bottom-bar', '64px');
+      bar.querySelector('[data-thumb-menu]').addEventListener('click', event => { event.stopPropagation(); toggleMount.querySelector('[data-store-menu-toggle]').click(); });
+    } else document.documentElement.style.removeProperty('--pym-bottom-bar');
+    // Overlay and split: the big photo follows the link under the pointer or the keyboard focus.
+    if (swaps) panel.querySelectorAll('a[data-photo-for]').forEach(link => { const show = () => { const img = panel.querySelector('.pym-hero-photo img'); if (img) img.src = link.getAttribute('data-photo-for'); }; link.addEventListener('pointerenter', show); link.addEventListener('focus', show); });
     const toggle = toggleMount.querySelector('[data-store-menu-toggle]');
     const tops = linksMount ? [...linksMount.querySelectorAll('[data-store-menu-top]')] : [];
     const tabs = [...panel.querySelectorAll('[role=tab]')];
@@ -6774,11 +7501,13 @@
     const focusable = () => [...panel.querySelectorAll('a[href],button:not([disabled])')].filter(el => !el.closest('[hidden]') && !el.closest('.pym-tabs[data-single]') && !(panel.getAttribute('data-mode') === 'dropdown' && el.closest('.pym-tabs')));
     const unlock = () => { if (lockedFrom !== null) { document.documentElement.style.overflow = lockedFrom; lockedFrom = null; } };
     const mouse = event => !event.pointerType || event.pointerType === 'mouse';
+    // The dock's buttons open the panel too, so they say whether it is open (minor M4).
+    const openers = () => [toggle, ...tops, ...document.querySelectorAll('.pym-dock [data-dock]')];
     function close(returnFocus) {
       clearTimeout(openTimer); clearTimeout(closeTimer);
       if (panel.hidden) return;
       panel.hidden = true;
-      [toggle, ...tops].forEach(button => button.setAttribute('aria-expanded', 'false'));
+      openers().forEach(button => button.setAttribute('aria-expanded', 'false'));
       unlock();
       storeMenuOpenState.host = storeMenuOpenState.close = null;
       if (returnFocus && opener) opener.focus({ preventScroll: true });
@@ -6790,11 +7519,13 @@
       panel.setAttribute('data-mode', mode);
       select(index);
       panel.hidden = false;
-      [toggle, ...tops].forEach(button => button.setAttribute('aria-expanded', String(button === from)));
+      openers().forEach(button => button.setAttribute('aria-expanded', String(button === from)));
       storeMenuOpenState.host = host; storeMenuOpenState.close = close;
       if (mode === 'panel' && lockedFrom === null) { lockedFrom = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden'; }
       if (mode === 'dropdown') unlock();
-      if (focus) (mode === 'panel' ? tabs.find(tab => tab.getAttribute('aria-selected') === 'true') : focusable()[0])?.focus({ preventScroll: true });
+      // Search opens on its field; models that hide their tabs (dock, search) start on the first thing that can be used.
+      const start = model === 'search' ? panel.querySelector('.pym-search input') : mode === 'panel' && !tabs[0]?.closest('[hidden]') ? tabs.find(tab => tab.getAttribute('aria-selected') === 'true') : focusable()[0];
+      if (focus) start?.focus({ preventScroll: true });
     }
     toggle.addEventListener('click', () => (panel.hidden || panel.getAttribute('data-mode') !== 'panel' ? open('panel', 0, toggle, true) : close(true)));
     // Each top button opens its own group: direct page links (plain <a>) are not buttons, so the list index is not the group's.
@@ -6817,7 +7548,7 @@
         tabs[target].focus();
       });
     });
-    panel.addEventListener('click', event => { if (event.target.closest('a[href]')) close(false); });
+    panel.addEventListener('click', event => { if (event.target.closest('[data-store-menu-close]')) { close(true); return; } if (event.target.closest('a[href]')) close(false); });
     panel.addEventListener('keydown', event => {
       if (event.key !== 'Tab' || panel.getAttribute('data-mode') !== 'panel') return;
       const items = focusable();
@@ -6826,14 +7557,44 @@
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     });
+    // Always-visible menus and the dock (spec 2026-11-15): drawn once per render, outside the panel.
+    document.querySelectorAll('.pym-circles,.pym-rail,.pym-dock').forEach(el => el.remove());
+    if (model === 'circles' && !document.querySelector('[data-pagosya-checkout-page]')) {
+      const row = document.createElement('nav');
+      row.className = 'pym-circles'; row.setAttribute('aria-label', 'Categorías');
+      row.innerHTML = storeMenuCategories().map(category => ({ category, image: storeMenuLinkPhoto('category:' + category.id), target: storeMenuTarget('category:' + category.id) }))
+        .filter(entry => entry.image && entry.target).map(entry => `<a href="${escape(entry.target.href)}"><img src="${escape(entry.image)}" alt="" loading="lazy"><span>${escape(String(entry.category.name).slice(0, 28))}</span></a>`).join('');
+      if (row.children.length) host.after(row);
+    }
+    if (model === 'rail') {
+      const aside = document.createElement('aside');
+      aside.className = 'pym-rail'; aside.setAttribute('aria-label', 'Menú');
+      const logo = host.querySelector('[data-nav-logo]');
+      aside.innerHTML = (logo ? `<div class="pym-rail-logo">${logo.outerHTML}</div>` : '') + `<ul class="pym-links">${groups[0].links.map(link => `<li><a href="${escape(link.href)}">${escape(link.label)}</a></li>`).join('')}</ul>` + (extras ? `<div class="pym-extras">${extras}</div>` : '');
+      document.body.prepend(aside);
+    }
+    if (model === 'dock') {
+      const dock = document.createElement('nav');
+      dock.className = 'pym-dock'; dock.setAttribute('aria-label', 'Menú');
+      dock.innerHTML = groups.map((group, index) => `<button type="button" data-dock="${index}" aria-controls="${id}" aria-expanded="false">${escape(group.label)}</button>`).join('');
+      dock.querySelectorAll('[data-dock]').forEach(button => button.addEventListener('click', event => {
+        event.stopPropagation();
+        const index = Number(button.getAttribute('data-dock'));
+        if (!panel.hidden && panes[index] && !panes[index].hidden) close(true); else open('panel', index, button, true);
+      }));
+      document.body.appendChild(dock);
+    }
     host.__pagosyaStoreMenu = { close, panel };
   }
   function renderStoreMenus() {
     const menu = storeMenuConfig();
+    // Bars drawn outside the header go with every render, so a menu turned off (or left with no groups) leaves none behind (M5).
+    document.querySelectorAll('.pym-circles,.pym-rail,.pym-dock,.pym-thumbbar').forEach(el => el.remove());
     document.querySelectorAll('[data-pagosya-store-menu="toggle"]').forEach(mount => {
       const host = mount.closest('header') || mount.parentElement;
       if (host.__pagosyaStoreMenu) { host.__pagosyaStoreMenu.close(false); host.__pagosyaStoreMenu.panel.remove(); host.__pagosyaStoreMenu = null; }
-      if (!menu) return;
+      // Owner 2026-11-16 («the menu… created by the model»): a header that brings its own menu (NavShell menu) keeps it.
+      if (!menu || host.matches?.('[data-own-menu]')) return;
       ensureStoreMenuStyle();
       renderStoreMenu(host, menu);
     });
@@ -6851,6 +7612,27 @@
   document.addEventListener('pagosya:ready', renderStoreMenus);
   window.pagosyaStoreMenu = { render: renderStoreMenus, close: () => storeMenuOpenState.close && storeMenuOpenState.close(false) };
   renderStoreMenus();
+  // Owner 2026-11-17 (The Bake Lab: «TODO» sliced in half at the edge of a split header): a header row too narrow for its links hides
+  // the ones that do not fit, whole, instead of cutting the last one (they stay in the ☰ menu). Here, not in NavShell, because the
+  // header is compiled into each saved store and this runtime reaches every store at once.
+  const NAV_FIT_CSS = '[data-nav-links] [data-nav-overflow]{display:none!important}';
+  function fitNavLinks() {
+    if (!document.querySelector('style[data-pagosya-nav-fit]')) {
+      const style = document.createElement('style'); style.setAttribute('data-pagosya-nav-fit', ''); style.textContent = NAV_FIT_CSS;
+      document.head.append(style);
+    }
+    document.querySelectorAll('[data-nav-links]').forEach(row => {
+      const links = [...row.querySelectorAll('a')];
+      links.forEach(link => link.removeAttribute('data-nav-overflow'));
+      if (!row.clientWidth || row.scrollWidth <= row.clientWidth + 1) return;
+      const edge = row.getBoundingClientRect().right + 1;
+      for (const link of links) if (link.getBoundingClientRect().right > edge) link.setAttribute('data-nav-overflow', '');
+    });
+  }
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => fitNavLinks()).observe(document.documentElement);
+  document.addEventListener('pagosya:ready', fitNavLinks);
+  document.fonts?.ready?.then(fitNavLinks).catch(() => undefined);
+  fitNavLinks();
   // The kit's own small controls take the store's language: the card "+", the quantity steppers and the cart drawer's close
   // button. Their aria-label and data-* hooks never change; only the inside of the button becomes the face. A store-authored
   // card ([data-custom-product]) keeps its own button.
@@ -6978,7 +7760,7 @@
   })();
   // Lively one-product stores (spec 2026-11-03, after nubecorp.pages.dev): only on a page that carries [data-pya-lively] (Esencial's
   // Único theme). Buttons glow in the accent, the product's own add button pulses until the shopper has scrolled past it once, the
-  // corner bubble ripples, and a WhatsApp store with no assistant gets a WhatsApp bubble. Everything stands still with reduced motion.
+  // corner bubbles ripple (the WhatsApp button itself is contact/whatsapp-bubble.js, on every store). Everything stands still with reduced motion.
   (function lively() {
     // The flagged page may be drawn after the kit starts (the Studio preview renders with React): wait for it a little while.
     if (!document.querySelector('[data-pya-lively]')) {
@@ -6996,9 +7778,6 @@
       :root[data-pya-lively] :is(.es-btn,.checkout-button):not(:disabled){box-shadow:0 12px 26px -14px color-mix(in srgb,var(--kit-accent,var(--es-accent,#2457c5)) 75%,transparent)}
       @media (hover:hover){:root[data-pya-lively] .es-btn:hover{transform:translateY(-2px)}}
       :root[data-pya-lively] .es-btn:active{transform:scale(.96)}
-      .pya-wa{position:fixed;right:24px;bottom:calc(24px + var(--pya-lift,0px));z-index:1000;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#25d366;color:#fff;box-shadow:0 10px 26px -10px #25d366b3;transition:bottom .25s}
-      .pya-wa svg{width:28px;height:28px}
-      @media (max-width:560px){.pya-wa{right:16px;bottom:calc(16px + var(--pya-lift,0px))}}
       @media (prefers-reduced-motion:no-preference){
         :root[data-pya-lively] .product-detail__buy[data-pya-pulse]:not(:disabled){animation:pya-pulse 4s ease-in-out infinite}
         :root[data-pya-lively] [data-pagosya-assistant] .pya-launcher{animation:pya-ripple 2.4s ease-out infinite}
@@ -7020,21 +7799,46 @@
       }));
       seen.observe(buy);
     });
-    // WhatsApp bubble: a WhatsApp store, a number, no assistant, not the checkout.
-    const bubble = () => {
-      const wa = document.querySelector('a.pya-wa'), phone = String(store.contactPhone || '').replace(/\D/g, '');
-      const wanted = store.checkoutMode === 'whatsapp' && phone.length >= 7 && !document.querySelector('[data-pagosya-assistant]') && !document.querySelector('[data-pagosya-checkout]:not([hidden]),.pya-checkout:not([hidden])');
-      if (wanted && !wa) {
-        const link = document.createElement('a');
-        link.className = 'pya-wa'; link.href = `https://wa.me/${phone}`; link.target = '_blank'; link.rel = 'noopener'; link.setAttribute('aria-label', 'Escríbenos por WhatsApp');
-        link.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.7-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3Z"/></svg>';
-        document.body.append(link);
-      } else if (!wanted && wa) wa.remove();
-    };
     // The corner bubble rides above the buy bar when it shows (chat.js does this only for its own launcher).
     const lift = () => { const bar = document.querySelector('[data-product-sticky]'); rootEl.style.setProperty('--pya-lift', !bar || bar.hidden ? '0px' : Math.ceil(bar.getBoundingClientRect().height + 12) + 'px'); };
-    watchBuy(); bubble(); lift();
-    new MutationObserver(() => { watchBuy(); bubble(); lift(); }).observe(document.body || rootEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+    watchBuy(); lift();
+    new MutationObserver(() => { watchBuy(); lift(); }).observe(document.body || rootEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  })();
+  // Every button answers a touch (owner 2026-11-07: «cuando los botones se toquen algo pase alguna animación… en general todos
+  // los botones»): a short squeeze that springs back, played whole even on a quick tap, and a ring that grows out of it. It uses the
+  // separate `scale` property and the outline, so a button's own transform, hover lift and shadow still apply. Nothing moves with
+  // reduced motion.
+  (function pressFeedback() {
+    if (document.querySelector('style[data-pagosya-press]')) return;
+    const PRESSABLE = 'button,[role=button],input[type=submit],input[type=button],a[class*="btn"],a[class*="button"],a[class*="cta"],a[class*="chip"],.pya-launcher';
+    const style = document.createElement('style');
+    style.setAttribute('data-pagosya-press', '');
+    style.textContent = `@layer pagosya-motion{
+      @media (prefers-reduced-motion:no-preference){
+        .pya-pressed{animation:pya-press .36s cubic-bezier(.3,1.5,.5,1),pya-press-ring .5s ease-out}
+        .pya-pressed.pya-pressed--big{animation:pya-press-big .36s cubic-bezier(.3,1.5,.5,1),pya-press-ring .5s ease-out}
+      }
+      @keyframes pya-press{0%{scale:1}28%{scale:.93}100%{scale:1}}
+      @keyframes pya-press-big{0%{scale:1}28%{scale:.985}100%{scale:1}}
+      @keyframes pya-press-ring{0%{outline:2px solid color-mix(in srgb,var(--kit-accent,var(--es-accent,currentColor)) 55%,transparent);outline-offset:0}100%{outline:2px solid transparent;outline-offset:9px}}
+    }`;
+    (document.head || document.documentElement).append(style);
+    const play = target => {
+      const el = target instanceof Element ? target.closest(PRESSABLE) : null;
+      if (!el || el.matches(':disabled,[aria-disabled=true]')) return;
+      const box = el.getBoundingClientRect();
+      // A whole card or a full-width bar only nods: squeezing something that big would jolt the page.
+      el.classList.toggle('pya-pressed--big', box.width > 480 || box.height > 160);
+      el.classList.remove('pya-pressed');
+      void el.offsetWidth;
+      el.classList.add('pya-pressed');
+    };
+    document.addEventListener('pointerdown', event => { if (event.button === 0) play(event.target); }, { capture: true, passive: true });
+    // Enter or Space on a focused button clicks without a pointer (detail 0): it answers the same way.
+    document.addEventListener('click', event => { if (event.detail === 0) play(event.target); }, true);
+    document.addEventListener('animationend', event => {
+      if (event.animationName === 'pya-press-ring' && event.target instanceof Element) event.target.classList.remove('pya-pressed', 'pya-pressed--big');
+    }, true);
   })();
   // Premium landing (spec 2026-11-03): one card per colour that has its own photo, from the product's variants; a tap picks that colour
   // in the buy box and scrolls there. Fewer than two photographed colours: the section and «Ver colores» hide.
@@ -7100,6 +7904,286 @@
     watch.observe(document.body || document.documentElement, { childList: true, subtree: true });
     setTimeout(() => { if (!hosts()) watch.disconnect(); }, 15000);
   })();
+  // Spec 2026-11-09 personalizador (owner: «ese product card me gustaba mucho», approved the examples page): the Oct-27 «Marco» look —
+  // the product on a big stage, its own choices beside it (colour circles, pills), price, quantity and one big button. Only the
+  // product's real options, photos, prices and stock; the frame only where the section asks for it (art stores); a WhatsApp store
+  // orders by WhatsApp with the choice written in. A product without options hides the section.
+  (function personalizer() {
+    const FRAME_GROUP = /^(marco|marcos|frame)$/;
+    const SIZE_GROUP = /^(tamano|tamanos|medida|medidas|size|tallas?)$/;
+    // Frame finishes the kit's swatches do not name; the Oct-27 module's four.
+    const FRAME_COLOURS = { 'madera natural': '#b98a5a', madera: '#b98a5a', natural: '#b98a5a', dorado: '#b8963e', oro: '#b8963e', plateado: '#b9bcc0', plata: '#b9bcc0' };
+    const fold = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+    let styled = false;
+    const ensureStyle = () => {
+      if (styled) return;
+      styled = true;
+      const style = document.createElement('style');
+      style.setAttribute('data-pagosya-personalizer-style', '');
+      const accent = 'var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))))';
+      const accentInk = 'var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)))';
+      style.textContent = `.pz{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(20px,4vw,56px);align-items:center;color:inherit;font:inherit}
+      .pz__stage{position:relative;display:grid;place-items:center;min-height:clamp(320px,42vw,520px);padding:clamp(18px,3vw,40px);border-radius:var(--es-radius,18px);background:color-mix(in srgb,${accent} 16%,transparent);overflow:hidden}
+      .pz__photo{display:block;width:100%;max-width:440px;aspect-ratio:4/5;object-fit:cover;border-radius:12px;transition:opacity .25s ease}
+      .pz__photo.is-swap{opacity:0}
+      .pz__frame{width:52%;border:18px solid #b98a5a;background:#fff;box-shadow:0 18px 40px rgba(0,0,0,.28),inset 0 0 0 10px #fff;transition:border-color .3s ease,width .35s ease}
+      .pz__frame[data-size="1"]{width:66%}.pz__frame[data-size="2"]{width:84%}
+      .pz__frame .pz__photo{max-width:none;aspect-ratio:3/4;padding:10px;border-radius:0;background:#fff;box-sizing:border-box}
+      .pz__main{display:grid;gap:20px;min-width:0}
+      .pz__kicker{margin:0;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+      .pz__title{margin:0;font-family:var(--es-heading,inherit);font-size:clamp(26px,3.4vw,40px);line-height:1.05;text-wrap:balance}
+      .pz__field{display:grid;gap:10px;margin:0;padding:0;border:0;min-width:0}
+      .pz__label{padding:0;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+      .pz__label span{margin-left:6px;font-weight:500;letter-spacing:0;text-transform:none;opacity:.75}
+      .pz__swatches,.pz__chips{display:flex;flex-wrap:wrap;gap:10px}
+      .pz__swatch{width:44px;height:44px;padding:0;border:3px solid transparent;border-radius:50%;background-clip:padding-box;background-size:cover;background-position:center;box-shadow:0 0 0 1px color-mix(in srgb,currentColor 28%,transparent);cursor:pointer}
+      .pz__swatch[aria-pressed="true"]{box-shadow:0 0 0 2px currentColor}
+      .pz__chip{min-width:52px;min-height:44px;padding:0 18px;border:1px solid color-mix(in srgb,currentColor 25%,transparent);border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+      .pz__chip[aria-pressed="true"]{border-color:currentColor;background:currentColor}
+      .pz__chip[aria-pressed="true"]>span{color:var(--store-paper,var(--brand-background,var(--paper,#fff)))}
+      .pz__chip:disabled,.pz__swatch:disabled{opacity:.35;cursor:not-allowed}.pz__chip:disabled{text-decoration:line-through}
+      .pz__stock{margin:-8px 0 0;min-height:1.2em;font-size:14px;font-weight:600}
+      .pz__price{margin:0;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+      .pz__price del{margin-left:8px;font-size:15px;font-weight:500;opacity:.6}
+      .pz__buy{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+      .pz__qty{display:inline-flex;align-items:center;border:2px solid currentColor;border-radius:999px;overflow:hidden}
+      .pz__qty button{width:42px;height:48px;border:0;background:none;color:inherit;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
+      .pz__qty output{min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+      .pz__btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 28px;border:2px solid var(--pz-ink,currentColor);border-radius:999px;background:${accent};color:${accentInk};box-shadow:4px 5px 0 var(--pz-ink,currentColor);font:inherit;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+      .pz__btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 var(--pz-ink,currentColor)}
+      .pz__btn:disabled{opacity:.5;cursor:not-allowed}
+      .pz :focus-visible{outline:3px solid currentColor;outline-offset:3px}
+      @media (max-width:760px){.pz{grid-template-columns:minmax(0,1fr)}.pz__stage{min-height:300px}}
+      @media (prefers-reduced-motion:reduce){.pz__photo,.pz__frame,.pz__btn{transition:none}}`;
+      document.head.append(style);
+    };
+    const usable = product => {
+      const groups = optionGroups(product);
+      return groups && (product.variants || []).length >= 2 ? groups : null;
+    };
+    const valuesOf = variant => variantValues(variant);
+    function draw(host, product, groups) {
+      ensureStyle();
+      const frame = host.dataset.look === 'frame';
+      const keys = groups.map(group => fold(group.name));
+      const colourAt = colourGroupIndex(groups), frameAt = keys.findIndex(key => FRAME_GROUP.test(key)), sizeAt = keys.findIndex(key => SIZE_GROUP.test(key));
+      const swatchAt = new Set([colourAt, frame ? frameAt : -1].filter(at => at >= 0));
+      const swatchOf = (at, value) => swatchColor('color', value) || FRAME_COLOURS[fold(value)] || '';
+      const whatsapp = store.checkoutMode === 'whatsapp' && String(store.contactPhone || '').replace(/\D/g, '');
+      const first = product.variants.find(v => remaining(product, v) > 0) || product.variants[0];
+      let chosen = valuesOf(first), quantity = 1;
+      const current = () => product.variants.find(v => valuesOf(v).every((value, at) => value === chosen[at]));
+      // Choices read in order (colour, then size): a value is open when something is left with it and the choices before it — a sold-out
+      // Rosa / S closes S once Rosa is chosen, never the whole Rosa while S is.
+      const fits = (at, value) => product.variants.some(v => valuesOf(v)[at] === value && valuesOf(v).every((other, i) => i >= at || other === chosen[i]) && remaining(product, v) > 0);
+      const photoOf = variant => variantPhotos(variant)[0]
+        || (colourAt >= 0 && product.variants.map(v => valuesOf(v)[colourAt] === chosen[colourAt] && variantPhotos(v)[0]).find(Boolean))
+        || galleryImages(product)[0] || '';
+      const field = (group, at) => {
+        const swatches = swatchAt.has(at) && group.values.every(value => swatchOf(at, value) || product.variants.some(v => valuesOf(v)[at] === value && variantPhotos(v)[0]));
+        const options = group.values.map(value => {
+          if (!swatches) return `<button type="button" class="pz__chip" data-pz-group="${at}" data-pz-value="${escape(value)}"><span>${escape(value)}</span></button>`;
+          const colour = swatchOf(at, value), photo = colour ? '' : product.variants.map(v => valuesOf(v)[at] === value && variantPhotos(v)[0]).find(Boolean);
+          return `<button type="button" class="pz__swatch" data-pz-group="${at}" data-pz-value="${escape(value)}" aria-label="${escape(value)}" title="${escape(value)}" style="${colour ? `background-color:${colour}` : `background-image:url('${escape(photo)}')`}"></button>`;
+        }).join('');
+        return `<fieldset class="pz__field"><legend class="pz__label">${escape(group.name)} <span data-pz-chosen="${at}"></span></legend><div class="${swatches ? 'pz__swatches' : 'pz__chips'}">${options}</div></fieldset>`;
+      };
+      const picture = `<img class="pz__photo" alt="${escape(product.name)}" src="${escape(photoOf(first))}">`;
+      host.innerHTML = `<div class="pz" data-look="${frame ? 'frame' : 'stage'}"><div class="pz__stage">${frame ? `<div class="pz__frame" data-size="0">${picture}</div>` : picture}</div>
+        <div class="pz__main"><p class="pz__kicker">Elige ${escape(fold(groups[0].name) === 'color' ? 'tu color' : `tu ${fold(groups[0].name)}`)}</p><h3 class="pz__title">${escape(product.name)}</h3>
+        ${groups.map(field).join('')}<p class="pz__stock" role="status"></p><p class="pz__price"></p>
+        <div class="pz__buy">${whatsapp ? '' : '<div class="pz__qty"><button type="button" data-pz-minus aria-label="Uno menos">−</button><output>1</output><button type="button" data-pz-plus aria-label="Uno más">+</button></div>'}
+        <button type="button" class="pz__btn">${whatsapp ? 'Pedir por WhatsApp' : 'Añadir al carrito'}</button></div></div></div>`;
+      // Live 2026-11-09: the button's offset shadow is the section's ink — its own currentColor is the light text on the accent.
+      host.style.setProperty('--pz-ink', getComputedStyle(host).color);
+      const photo = host.querySelector('.pz__photo'), button = host.querySelector('.pz__btn'), frameEl = host.querySelector('.pz__frame');
+      const update = () => {
+        const variant = current(), left = variant ? remaining(product, variant) : 0;
+        host.querySelectorAll('[data-pz-group]').forEach(option => {
+          const at = Number(option.dataset.pzGroup), value = option.dataset.pzValue;
+          option.setAttribute('aria-pressed', String(chosen[at] === value));
+          option.disabled = !fits(at, value) && chosen[at] !== value;
+        });
+        host.querySelectorAll('[data-pz-chosen]').forEach(label => { label.textContent = chosen[Number(label.dataset.pzChosen)] || ''; });
+        const src = variant ? photoOf(variant) : '';
+        if (src && photo.getAttribute('src') !== src) { photo.classList.add('is-swap'); setTimeout(() => { photo.src = src; photo.classList.remove('is-swap'); }, 180); }
+        if (frameEl) {
+          const finish = frameAt >= 0 ? swatchOf(frameAt, chosen[frameAt]) : '';
+          frameEl.style.borderColor = finish || '#b98a5a';
+          frameEl.dataset.size = String(sizeAt >= 0 ? Math.min(2, groups[sizeAt].values.indexOf(chosen[sizeAt])) : 0);
+        }
+        const amount = variant ? price({ ...product, amount: variant.amount }) : 0, full = variant ? variant.amount : 0;
+        host.querySelector('.pz__price').innerHTML = variant ? `${money(amount, product.currency)}${amount < full ? `<del>${money(full, product.currency)}</del>` : ''}` : '';
+        host.querySelector('.pz__stock').textContent = !variant || left <= 0 ? 'Agotado' : left <= 5 ? `¡Quedan ${left}!` : '';
+        quantity = Math.max(1, Math.min(quantity, Math.max(1, left)));
+        const output = host.querySelector('.pz__qty output');
+        if (output) output.textContent = String(quantity);
+        button.disabled = !variant || left <= 0;
+        if (whatsapp) {
+          const choice = groups.map((group, at) => `${group.name}: ${chosen[at]}`).join(' · ');
+          button.dataset.waUrl = `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hola${store.storeName ? ` ${store.storeName}` : ''}, quiero «${product.name}» · ${choice}. ¿Está disponible?`)}`;
+        } else if (variant) {
+          button.setAttribute('data-add', lineKey(product.id, variant.id));
+          button.dataset.quantity = String(quantity);
+        }
+      };
+      host.addEventListener('click', event => {
+        const option = event.target.closest('[data-pz-group]');
+        if (option && !option.disabled) {
+          const at = Number(option.dataset.pzGroup);
+          chosen[at] = option.dataset.pzValue;
+          // A combination that is sold out moves the other choices to one that is not.
+          if (!current() || remaining(product, current()) <= 0) {
+            const next = product.variants.find(v => valuesOf(v)[at] === chosen[at] && remaining(product, v) > 0) || product.variants.find(v => valuesOf(v)[at] === chosen[at]);
+            if (next) chosen = valuesOf(next);
+          }
+          update(); return;
+        }
+        if (event.target.closest('[data-pz-minus]')) { quantity = Math.max(1, quantity - 1); update(); return; }
+        if (event.target.closest('[data-pz-plus]')) { const variant = current(); quantity = Math.min(quantity + 1, variant ? Math.max(1, remaining(product, variant)) : 1); update(); return; }
+        if (event.target.closest('.pz__btn') && whatsapp) {
+          const url = button.dataset.waUrl;
+          analytics('whatsapp_click');
+          if (hosted) parent.postMessage({ type: 'pagosya:source-external', url }, '*'); else window.open(url, '_blank', 'noopener');
+          return;
+        }
+        // The kit's own add path takes the click (stock, cart, notice); the line just added counts against what is left.
+        if (event.target.closest('.pz__btn')) setTimeout(update, 0);
+      });
+      update();
+    }
+    const run = () => {
+      let pending = false;
+      document.querySelectorAll('[data-pagosya-personalizer][data-product-id]').forEach(host => {
+        if (host.dataset.drawn) return;
+        const product = products().find(item => String(item.id) === host.getAttribute('data-product-id'));
+        if (!product && !products().length) { pending = true; return; }
+        host.dataset.drawn = '1';
+        const groups = product && usable(product), section = host.closest('section') || host;
+        if (!groups) { section.hidden = true; return; }
+        draw(host, product, groups);
+      });
+      return !pending;
+    };
+    const hosts = () => document.querySelector('[data-pagosya-personalizer]');
+    if (run() && hosts()) return;
+    const watch = new MutationObserver(() => { if (run() && hosts()) watch.disconnect(); });
+    watch.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => { if (!hosts()) watch.disconnect(); }, 15000);
+  })();
+  /* «La tienda que vende sola» (spec 2026-11-16): small selling switches the API hands each visitor in PAGOSYA_CONFIG.selling —
+   * a section order, the best seller first, the buy word and the sticky buy bar — and the products they looked at last time
+   * (PAGOSYA_CONFIG.recent). Nothing here rebuilds the design: React owns main, so sections move by CSS order (main becomes a
+   * column) and the kit's own rows are appended to main and placed right after the hero by order. */
+  const SELLING = config.selling && typeof config.selling === 'object' && !Array.isArray(config.selling) ? config.selling : {};
+  const SELLING_WORDS = ['Agregar', 'Comprar ahora', 'Lo quiero'];
+  const SELLING_PAGE = typeof window.PAGOSYA_PREVIEW_PAGE === 'string' ? window.PAGOSYA_PREVIEW_PAGE : 'index.html';
+  const SELLING_BUY_TEXT = /^(agregar|añadir)(\s+(al carrito|a la bolsa|a la canasta))?$/i;
+  const sellingBest = () => typeof SELLING.best === 'string' ? products().find(item => item.id === SELLING.best && limit(item) > 0) || null : null;
+  const sellingOrder = () => Array.isArray(SELLING.order) ? SELLING.order.map(value => /^s(\d{1,2})$/.exec(String(value))?.[1]).filter(Boolean).map(Number) : [];
+  const sellingRecent = () => {
+    const ids = Array.isArray(config.recent) ? config.recent.filter(id => typeof id === 'string').slice(0, 8) : [];
+    const items = [...new Set(ids)].map(id => products().find(item => item.id === id)).filter(Boolean).slice(0, 4);
+    return items.length >= 2 ? items : [];
+  };
+  const sellingPhoto = item => safeUrl((item.imageUrls || [])[0]);
+  const sellingHref = item => pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(item.id));
+  function sellingStyle() {
+    if (document.getElementById('pya-selling-style')) return;
+    const style = document.createElement('style');
+    style.id = 'pya-selling-style';
+    style.textContent = `main[data-pya-selling]{display:flex;flex-direction:column}
+.pya-best-badge{position:absolute;top:10px;left:10px;z-index:2;padding:4px 10px;border-radius:999px;background:var(--es-accent,#111);color:var(--es-paper,#fff);font:600 12px/1.3 inherit;letter-spacing:.02em;pointer-events:none}
+.menu-item:has(.pya-best-badge){position:relative}
+.pya-best-feature,.pya-recent{width:100%;max-width:1200px;margin:0 auto;padding:48px clamp(16px,4vw,32px);box-sizing:border-box;color:var(--es-ink,inherit)}
+.pya-best-feature__inner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(20px,4vw,48px);align-items:center;padding:clamp(16px,3vw,28px);border-radius:20px;background:color-mix(in srgb,var(--es-accent,#888) 8%,var(--es-paper,#fff))}
+.pya-best-feature img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;display:block}
+.pya-best-feature__tag{display:inline-block;margin:0 0 10px;padding:4px 12px;border-radius:999px;background:var(--es-accent,#111);color:var(--es-paper,#fff);font-size:13px;font-weight:600}
+.pya-best-feature h2{margin:0 0 8px;font-size:clamp(26px,3.4vw,40px);line-height:1.1}
+.pya-best-feature__price{margin:0 0 20px;font-size:18px;opacity:.85}
+.pya-best-feature__actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.pya-best-feature__actions a{color:inherit;text-underline-offset:4px}
+.pya-recent h2{margin:0 0 18px;font-size:clamp(20px,2.4vw,28px)}
+.pya-recent ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.pya-recent a{display:grid;gap:8px;color:inherit;text-decoration:none}
+.pya-recent img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block}
+.pya-recent span{font-size:15px;line-height:1.3}
+@media (max-width:640px){.pya-best-feature__inner{grid-template-columns:1fr}}`;
+    document.head.appendChild(style);
+  }
+  function sellingFeature(item) {
+    const section = document.createElement('section');
+    section.className = 'pya-best-feature'; section.setAttribute('data-pya-selling-extra', ''); section.setAttribute('aria-label', 'Más vendido');
+    const photo = sellingPhoto(item);
+    const buy = optionGroups(item) ? `<a class="menu-add" href="${escape(sellingHref(item))}">Elegir</a>` : `<button type="button" class="menu-add" data-add="${escape(lineKey(item.id))}" data-quantity="1">Agregar</button>`;
+    section.innerHTML = `<div class="pya-best-feature__inner">${photo ? `<img src="${escape(photo)}" alt="" loading="lazy">` : '<div></div>'}<div><p class="pya-best-feature__tag">Más vendido</p><h2>${escape(item.name)}</h2><p class="pya-best-feature__price">${escape(money(price(item), item.currency))}</p><div class="pya-best-feature__actions">${buy}<a href="${escape(sellingHref(item))}">Ver producto</a></div></div></div>`;
+    return section;
+  }
+  function sellingRecentRow(items) {
+    const section = document.createElement('section');
+    section.className = 'pya-recent'; section.setAttribute('data-pya-selling-extra', ''); section.setAttribute('aria-label', 'Seguir viendo');
+    section.innerHTML = `<h2>Seguir viendo</h2><ul>${items.map(item => `<li><a href="${escape(sellingHref(item))}">${sellingPhoto(item) ? `<img src="${escape(sellingPhoto(item))}" alt="" loading="lazy">` : ''}<span>${escape(item.name)}</span><span>${escape(money(price(item), item.currency))}</span></a></li>`).join('')}</ul>`;
+    return section;
+  }
+  let sellingExtras = null;
+  /** Section order and the kit's rows after the hero; run again whenever React adds to main. */
+  function applySellingHome() {
+    if (SELLING_PAGE !== 'index.html') return;
+    const main = document.querySelector('main');
+    if (!main || !main.children.length) return;
+    if (!sellingExtras) {
+      const best = sellingBest(), recent = sellingRecent();
+      sellingExtras = [...(best ? [sellingFeature(best)] : []), ...(recent.length ? [sellingRecentRow(recent)] : [])];
+    }
+    const order = sellingOrder();
+    if (!order.length && !sellingExtras.length) return;
+    // A design that already lays main out as a grid or flex keeps its own layout; only a plain column of blocks is rearranged.
+    if (!main.hasAttribute('data-pya-selling') && getComputedStyle(main).display !== 'block') return;
+    sellingStyle();
+    main.setAttribute('data-pya-selling', '');
+    const kids = [...main.children].filter(el => !el.hasAttribute('data-pya-selling-extra'));
+    kids.forEach((el, index) => { if (!el.dataset.pagosyaS) el.dataset.pagosyaS = String(index); });
+    const fixed = el => el.dataset.pagosyaS === '0' || el.matches('[data-pagosya-catalog]') || !!el.querySelector('[data-pagosya-catalog]');
+    const movable = kids.filter(el => !fixed(el));
+    const sequence = [...new Set([...order.map(number => movable.find(el => Number(el.dataset.pagosyaS) === number)).filter(Boolean), ...movable])];
+    let next = 0;
+    kids.forEach((el, index) => { (fixed(el) ? el : sequence[next++]).style.order = String((index + 1) * 2); });
+    for (const extra of sellingExtras) { extra.style.order = '3'; if (extra.parentElement !== main) main.appendChild(extra); }
+  }
+  /** The best seller first in every product row the kit drew, with its badge. */
+  function applySellingBest() {
+    const best = sellingBest();
+    if (!best) return;
+    document.querySelectorAll('[data-pagosya-catalog] .menu-item').forEach(card => {
+      if (cardProductId(card) !== best.id) return;
+      if (!card.querySelector('.pya-best-badge')) card.insertAdjacentHTML('afterbegin', '<span class="pya-best-badge">Más vendido</span>');
+      if (card.parentElement && card.parentElement.firstElementChild !== card) card.parentElement.prepend(card);
+    });
+  }
+  /** The chosen buy word on buttons that say «Agregar» or «Añadir» (the kit's and the design's own). */
+  function applySellingWord() {
+    const word = SELLING_WORDS.includes(SELLING.buyWord) ? SELLING.buyWord : '';
+    if (!word || word === 'Agregar') return;
+    document.querySelectorAll('[data-add], .product-detail__buy, [data-product-jump]').forEach(button => {
+      const walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.nodeValue.trim();
+        if (text && SELLING_BUY_TEXT.test(text)) node.nodeValue = node.nodeValue.replace(text, word);
+      }
+    });
+  }
+  let sellingTimer = 0;
+  function applySelling() {
+    clearTimeout(sellingTimer); sellingTimer = 0;
+    try { applySellingHome(); applySellingBest(); applySellingWord(); } catch { /* selling switches never stop the store */ }
+  }
+  const sellingActive = () => sellingOrder().length || SELLING.best || SELLING.buyWord || (Array.isArray(config.recent) && config.recent.length);
+  if (sellingActive()) {
+    const later = () => { if (!sellingTimer) sellingTimer = setTimeout(applySelling, 30); };
+    new MutationObserver(later).observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('pagosya:ready', later);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applySelling, { once: true }); else applySelling();
+  }
   // «Pide una cotización» in the header, and any call to action marked data-pagosya-contact-open, opens the platform contact
   // form; a store without the form keeps the link, which goes to its Contacto page.
   document.addEventListener('click', event => {

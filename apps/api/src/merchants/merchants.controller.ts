@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Body,
   Controller,
   Get,
@@ -25,6 +26,9 @@ import { MerchantsService } from "./merchants.service";
 import { KycService } from "./kyc.service";
 import { IdentityDocumentsService } from "./identity-documents.service";
 import { CreateMerchantDto } from "./dto/create-merchant.dto";
+import { RegisterMerchantDto } from "./dto/register-merchant.dto";
+import { MerchantUserService } from "../dashboard/merchant-user.service";
+import { MerchantSessionService } from "../dashboard/merchant-session.service";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { ReviewKycDto } from "./dto/review-kyc.dto";
 import { UploadKycDocumentDto } from "./dto/upload-kyc-document.dto";
@@ -44,6 +48,8 @@ export class MerchantsController {
     private readonly identityDocuments: IdentityDocumentsService,
     private readonly legal: LegalDocumentsService,
     private readonly terms: TermsAcceptanceService,
+    private readonly users: MerchantUserService,
+    private readonly sessions: MerchantSessionService,
   ) {}
 
   /** Public self-serve signup — tighter limit than the global default since it's the free entry point to everything else (instant TEST keys, dashboard signup). */
@@ -64,6 +70,21 @@ export class MerchantsController {
       });
     }
     return result;
+  }
+
+  /** Owner 2026-11-07: sign up on the dashboard and go straight in — the business, its owner with their password, the first
+   *  session. The confirmation email still goes out; the next login needs it confirmed. */
+  @Post("register")
+  @Throttle({ default: { limit: 5, ttl: 600_000 } })
+  async register(@Body() dto: RegisterMerchantDto, @Req() req: RequestWithContext) {
+    const email = dto.email.trim().toLowerCase();
+    if (await this.users.emailTaken(email)) throw new ConflictException("Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.");
+    const document = dto.termsVersion ? await this.legal.resolveAcceptable(LegalDocumentKind.MERCHANT_TERMS, dto.termsVersion) : null;
+    const { password, ...merchant } = dto;
+    const result = await this.merchants.create({ ...merchant, email });
+    if (document) await this.terms.recordMerchantAcceptance({ merchantId: result.merchant.id, document, source: TermsAcceptanceSource.WEB_SIGNUP, context: requestContext(req) });
+    const user = await this.users.createForNewAccount(result.merchant.id, email, password);
+    return { ...await this.sessions.startNewAccount(user), welcome: true };
   }
 
   @Post("kyc")

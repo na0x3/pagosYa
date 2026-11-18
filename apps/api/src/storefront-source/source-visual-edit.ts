@@ -18,6 +18,7 @@ const FONT_CHOICES = SOURCE_FONT_CATALOG.map(font => {
 });
 const IMAGE_POSITIONS: Record<string, string> = { '0% 0%': 'Arriba izquierda', '50% 0%': 'Arriba centro', '100% 0%': 'Arriba derecha', '0% 50%': 'Centro izquierda', '50% 50%': 'Centro', '100% 50%': 'Centro derecha', '0% 100%': 'Abajo izquierda', '50% 100%': 'Abajo centro', '100% 100%': 'Abajo derecha' };
 const COLORS = /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i;
+const SAVED_PHOTO = /^\/?assets\/[\w./-]+\.(?:png|jpe?g|webp|avif|gif)$/i;
 const VARIANTS: Record<string, Record<string, string[]>> = {
   Hero: { variant: ['split', 'fullbleed', 'editorial', 'typographic'] },
   SiteHeader: { variant: ['classic', 'centered', 'split', 'floating'] },
@@ -107,6 +108,9 @@ function editableFields(files: File[]): Editable[] {
           // Spec 2026-10-20 Plantillas fill: a converted template's (and Esencial's) words, kept in store-data `copy`.
           if (file.path === 'components/store-data.tsx' && inCopy(node)) add(file, literal.getStart(source), literal.end, 'text', literal.text, `Texto · ${property}`, 'js-string');
           if ((property === 'src' || property === 'alt') && imageObject(node)) add(file, literal.getStart(source), literal.end, property === 'src' ? 'image' : 'text', literal.text, `${tagOf(node)} · ${property}`, 'js-string');
+          // Owner 2026-11-17 («easy picture changing»): a written store keeps most photos in its own data ({ img: 'assets/…' } read
+          // as src={r.img}); any saved photo path there is a photo the Studio can swap.
+          else if (SAVED_PHOTO.test(literal.text)) add(file, literal.getStart(source), literal.end, 'image', literal.text, `Foto · ${property}`, 'js-string');
           if (property === 'position' && imageObject(node)) {
             const field = add(file, literal.getStart(source), literal.end, 'select', literal.text, `${tagOf(node)} · Encuadre`, 'js-string', [...new Set([literal.text, ...Object.keys(IMAGE_POSITIONS)])]);
             if (field) field.optionLabels = IMAGE_POSITIONS;
@@ -179,7 +183,13 @@ export function applySourceVisualEdit(files: File[], fieldId: string, value: str
   if (!field) throw new BadRequestException('Este elemento cambió. Actualiza el panel visual e inténtalo de nuevo.');
   if (typeof value !== 'string' || !value.trim() || value.length > 4000) throw new BadRequestException('Escribe un valor de entre 1 y 4000 caracteres.');
   if (field.kind === 'color' && !COLORS.test(value)) throw new BadRequestException('Usa un color hexadecimal, por ejemplo #245344.');
-  if ((field.kind === 'select' || field.kind === 'image') && !field.options?.includes(value)) throw new BadRequestException(field.kind === 'image' ? 'Elige una imagen existente del sitio.' : 'Elige una opción válida.');
+  // Owner 2026-11-17 (the Studio's photo picker): a saved photo may be named with or without its leading «/»; the code keeps the
+  // style the field already has (V2 stores write assets/…, which also works where a published store lives under a path).
+  if (field.kind === 'image' && /^\/?assets\//.test(value) && /^\/?assets\//.test(field.value)) {
+    const bare = normalizedAsset(value);
+    if (field.options?.includes('/' + bare) || field.options?.includes(bare)) value = field.value.startsWith('/') ? '/' + bare : bare;
+  }
+  if ((field.kind === 'select' || field.kind === 'image') && !field.options?.includes(value) && !(field.kind === 'image' && field.options?.includes('/' + normalizedAsset(value)))) throw new BadRequestException(field.kind === 'image' ? 'Elige una imagen existente del sitio.' : 'Elige una opción válida.');
   if (field.value === value) return { files, label: field.label };
   if (field.format === 'section') {
     const regions = sourceHomeRegions(files);

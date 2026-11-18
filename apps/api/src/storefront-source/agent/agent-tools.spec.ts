@@ -25,7 +25,7 @@ describe('AgentToolbox', () => {
   });
 
   it('declares every tool with a strict JSON schema', () => {
-    expect(AGENT_TOOLS.map(t => t.name)).toEqual(['inspect_asset', 'search_illustrations', 'inspect_project', 'find_products', 'plan_task', 'set_account_theme', 'set_motif_pack', 'set_store_policy', 'create_page', 'list_files', 'read_file', 'edit_file', 'edit_file_batch', 'write_file', 'delete_file', 'screenshot', 'verify', 'set_product_card_theme', 'finish']);
+    expect(AGENT_TOOLS.map(t => t.name)).toEqual(['inspect_asset', 'search_illustrations', 'inspect_project', 'find_products', 'plan_task', 'set_account_theme', 'set_motif_pack', 'set_store_policy', 'add_product_media', 'create_page', 'list_files', 'read_file', 'edit_file', 'edit_file_batch', 'write_file', 'delete_file', 'screenshot', 'verify', 'set_product_card_theme', 'finish']);
     for (const tool of AGENT_TOOLS) expect(tool.strict).toBe(true);
   });
   it('reads and edits, recording merchant-facing steps without source code', async () => {

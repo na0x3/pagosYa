@@ -374,3 +374,27 @@ describe('cover photo and logo pick (2026-10-28)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe('the store composer calls (spec 2026-11-11)', () => {
+  const template = { id: 'merienda', name: 'Merienda', signature: ['cover-mega'], allowed: ['cover-mega', 'story-split'], looks: { 'cover-mega': ['side'] } };
+  const facts = { what: 'Cereales', story: '', request: '', products: [], categories: [], photos: [{ url: photo }], codes: [], services: [], reviews: 0, tone: 'calm' } as never;
+  const answer = (value: unknown) => fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ status: 'completed', usage: { input_tokens: 1000, output_tokens: 200 }, output: [{ content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }) });
+  it('composeHome sends the composer prompt and the allowed catalogue, and returns the answer with its cost', async () => {
+    const { service } = setup();
+    answer({ blocks: [{ type: 'cover-mega' }], mood: 'calm', titleStyle: 'firme' });
+    const out = await service.composeHome('m1', { storeId: 's1', facts, template, recent: [], feedback: [] });
+    expect(out.answer?.blocks).toHaveLength(1);
+    expect(out.microUsd).toBeGreaterThan(0);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.model).toBe('gpt-5.6-sol');
+    expect(body.instructions).toMatch(/MODO COMPOSITOR/);
+    expect(JSON.parse(body.input[0].content[0].text).catalogue.map((section: { id: string }) => section.id)).toEqual(['cover-mega', 'story-split']);
+    expect(body.input[0].content.some((part: { type: string }) => part.type === 'input_image')).toBe(true);
+  });
+  it('reviewHome returns the problems it can read', async () => {
+    const { service } = setup();
+    answer({ problemas: [{ problema: 'palabras cortadas', seccion: 0, cambio: 'look', valor: 'side' }] });
+    const out = await service.reviewHome('m1', { storeId: 's1', layout: [{ type: 'cover-mega' }], template, recent: [], photoCount: 1, images: ['data:image/jpeg;base64,AAAA'] });
+    expect(out.problems).toEqual([{ problem: 'palabras cortadas', at: 0, kind: 'look', value: 'side' }]);
+  });
+});

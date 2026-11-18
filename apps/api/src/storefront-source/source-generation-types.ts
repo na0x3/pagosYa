@@ -1,3 +1,4 @@
+import type { AgentProductMedia } from './source-agent-product-media';
 import type { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -107,6 +108,8 @@ export type GenerationLive = {
   agentAccountTheme: AgentToolbox['pendingAccountTheme'];
   agentMotifPack: AgentToolbox['pendingMotifPack'];
   agentPolicies: PendingPolicies;
+  /** Owner 2026-11-17: photos and videos YAPI added to products; written after the revision saves. */
+  agentProductMedia?: AgentProductMedia[];
   agentOutcome: AgentOutcome | undefined;
   /** Live check 2026-10-29: the home writer's save keeps the previous look and takes only the writer's fonts. */
   keptDna?: Record<string, unknown>;

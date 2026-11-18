@@ -1,0 +1,972 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.allbirds.com/",
+    "title": "Allbirds: Comfortable, Sustainable Shoes & Apparel",
+    "width": 1440,
+    "pageHeight": 3662,
+    "fonts": {
+      "h1": {
+        "family": "Geograph",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Our biggest sale. Your comfiest season."
+      },
+      "h2": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Cart (0)"
+      },
+      "body": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Black Friday Early Access. Up to 70% off select styles. Shop"
+      },
+      "button": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.3px",
+        "text": "Shop Womens"
+      },
+      "nav": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Shop Men"
+      }
+    },
+    "page": "rgb(236, 233, 226)",
+    "header": {
+      "height": 32,
+      "position": "sticky",
+      "bg": "rgb(236, 233, 226)",
+      "links": [
+        "Shop Men",
+        "Shop Women"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 42,
+        "h": 784,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Our biggest sale. Your comfiest season."
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 836,
+        "h": 471,
+        "bg": "rgb(236, 233, 226)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "0.3px",
+          "text": "New Arrivals"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1347,
+        "h": 565,
+        "bg": "rgb(236, 233, 226)",
+        "images": 12,
+        "video": false,
+        "heading": null,
+        "words": 121,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1952,
+        "h": 667,
+        "bg": "rgb(236, 233, 226)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Terralux™ Collection"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 12,
+      "columns": 12,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.allbirds.com/",
+    "title": "Allbirds: Comfortable, Sustainable Shoes & Apparel",
+    "width": 390,
+    "pageHeight": 4627,
+    "fonts": {
+      "h1": {
+        "family": "Geograph",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Our biggest sale. Your comfiest season."
+      },
+      "h2": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Cart (0)"
+      },
+      "body": {
+        "family": "Geograph",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "Free ground shipping on orders over $100"
+      },
+      "button": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.3px",
+        "text": "Shop Womens"
+      },
+      "nav": {
+        "family": "Geograph",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "Shop Men"
+      }
+    },
+    "page": "rgb(236, 233, 226)",
+    "header": {
+      "height": 46,
+      "position": "sticky",
+      "bg": "rgb(236, 233, 226)",
+      "links": [
+        "Shop Men",
+        "Shop Women"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 56,
+        "h": 666,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Our biggest sale. Your comfiest season."
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 732,
+        "h": 360,
+        "bg": "rgb(236, 233, 226)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "0.3px",
+          "text": "New Arrivals"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1132,
+        "h": 440,
+        "bg": "rgb(236, 233, 226)",
+        "images": 12,
+        "video": false,
+        "heading": null,
+        "words": 109,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1612,
+        "h": 1650,
+        "bg": "rgb(236, 233, 226)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Terralux™ Collection"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.allbirds.com/collections/all",
+    "title": "Page Not Found - Allbirds",
+    "width": 1440,
+    "pageHeight": 2102,
+    "fonts": {
+      "h1": {
+        "family": "Geograph",
+        "size": "36px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Uh-Oh, Nothing To See Here!"
+      },
+      "h2": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Cart (0)"
+      },
+      "body": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Black Friday Early Access. Up to 70% off select styles. Shop"
+      },
+      "button": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.3px",
+        "text": "Shop Womens"
+      },
+      "nav": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Shop Men"
+      }
+    },
+    "page": "rgb(236, 233, 226)",
+    "header": {
+      "height": 32,
+      "position": "sticky",
+      "bg": "rgb(236, 233, 226)",
+      "links": [
+        "Shop Men",
+        "Shop Women"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 304,
+        "h": 667,
+        "bg": "rgb(236, 233, 226)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.allbirds.com/collections/all?_su_rec=ksjU2Dz7gruP24P4r6gaGBrKxaogkD6hUObaG6I8lqUr_MqGNxSRko7h2UgfUBLPxj3PySum12aEQSJFTvEbJA69eXcJnb_C8_NjN6JZe9I31iuuNgBO9hZZHBbtvl9WBjuJ1TAaL1f941MY0FmmHzW4BlXChJvdXzSHdqEyRtLeJdYZDFbkXygZXqt9OwYaXuzlldH5mqn34n4SASmQUiDP0DtXpBJECkEsVh3D5Ei6BzJU93biSaccVPtAJGDMPeAU0HoO2aYfGkEhwb2_cWRFtTgwanut0ftGl7nT0l2pmaiHP1YbS6OXSRLzUjwKrHWwM5O-URF0IOKMT6mC6p-fImlP6aZ-SnSdDGRfdkDI&_su_rec_id=6144f580-d09d-42df-84f9-61e465a6d756-1794667750",
+    "title": "Page Not Found - Allbirds",
+    "width": 390,
+    "pageHeight": 2838,
+    "fonts": {
+      "h1": {
+        "family": "Geograph",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Uh-Oh, Nothing To See Here!"
+      },
+      "h2": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Cart (0)"
+      },
+      "body": {
+        "family": "Geograph",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "Black Friday Early Access. Up to 70% off select styles. Shop"
+      },
+      "button": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.3px",
+        "text": "Shop Womens"
+      },
+      "nav": {
+        "family": "Geograph",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "Shop Men"
+      }
+    },
+    "page": "rgb(236, 233, 226)",
+    "header": {
+      "height": 46,
+      "position": "sticky",
+      "bg": "rgb(236, 233, 226)",
+      "links": [
+        "Shop Men",
+        "Shop Women"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 294,
+        "h": 1130,
+        "bg": "rgb(236, 233, 226)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.allbirds.com/products/womens-wool-cruiser-port-port-sole",
+    "title": "Women's Wool Cruiser - Port (Port Sole)",
+    "width": 1440,
+    "pageHeight": 7229,
+    "fonts": {
+      "h1": {
+        "family": "Self Modern",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Women's Wool Cruiser"
+      },
+      "h2": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Cart (0)"
+      },
+      "body": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Black Friday Early Access. Up to 70% off select styles. Shop"
+      },
+      "button": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.3px",
+        "text": "Shop Womens"
+      },
+      "nav": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Shop Men"
+      }
+    },
+    "page": "rgb(236, 233, 226)",
+    "header": {
+      "height": 32,
+      "position": "sticky",
+      "bg": "rgb(236, 233, 226)",
+      "links": [
+        "Shop Men",
+        "Shop Women"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 108,
+        "h": 1015,
+        "bg": "rgb(236, 233, 226)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Women's Wool Cruiser"
+        },
+        "words": 63,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1163,
+        "h": 188,
+        "bg": "rgb(236, 233, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "14px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "THE DETAILS"
+        },
+        "words": 112,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1479,
+        "h": 1078,
+        "bg": "rgb(236, 233, 226)",
+        "images": 18,
+        "video": false,
+        "heading": null,
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2685,
+        "h": 554,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "24px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Two Cruisers, one Stan. Do the math."
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3367,
+        "h": 715,
+        "bg": "rgb(236, 233, 226)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4122,
+        "h": 760,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5002,
+        "h": 487,
+        "bg": "rgb(236, 233, 226)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Akkurat Mono",
+          "size": "16px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "You May Also Like"
+        },
+        "words": 94,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 5569,
+        "h": 541,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Better Things in a Better Way"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 39,
+    "swatches": 2,
+    "selects": 1,
+    "accordions": 1
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.allbirds.com/products/womens-wool-cruiser-port-port-sole",
+    "title": "Women's Wool Cruiser - Port (Port Sole)",
+    "width": 390,
+    "pageHeight": 7639,
+    "fonts": {
+      "h1": {
+        "family": "Self Modern",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Women's Wool Cruiser"
+      },
+      "h2": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Cart (0)"
+      },
+      "body": {
+        "family": "Geograph",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "Black Friday Early Access. Up to 70% off select styles. Shop"
+      },
+      "button": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.3px",
+        "text": "Shop Womens"
+      },
+      "nav": {
+        "family": "Geograph",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "Shop Men"
+      }
+    },
+    "page": "rgb(236, 233, 226)",
+    "header": {
+      "height": 46,
+      "position": "sticky",
+      "bg": "rgb(236, 233, 226)",
+      "links": [
+        "Shop Men",
+        "Shop Women"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 154,
+        "h": 1038,
+        "bg": "rgb(236, 233, 226)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Women's Wool Cruiser"
+        },
+        "words": 67,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1232,
+        "h": 470,
+        "bg": "rgb(236, 233, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "12px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "THE DETAILS"
+        },
+        "words": 112,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1862,
+        "h": 1160,
+        "bg": "rgb(236, 233, 226)",
+        "images": 18,
+        "video": false,
+        "heading": null,
+        "words": 59,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3182,
+        "h": 481,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "24px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Two Cruisers, one Stan. Do the math."
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3783,
+        "h": 770,
+        "bg": "rgb(236, 233, 226)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4593,
+        "h": 502,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5135,
+        "h": 460,
+        "bg": "rgb(236, 233, 226)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Akkurat Mono",
+          "size": "12px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "You May Also Like"
+        },
+        "words": 127,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 5675,
+        "h": 530,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.5px",
+          "text": "Better Things in a Better Way"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": false,
+      "top": 5555,
+      "x": 10,
+      "width": 282,
+      "bg": "rgba(255, 255, 255, 0.95)"
+    },
+    "price": null,
+    "galleryImages": 39,
+    "swatches": 2,
+    "selects": 1,
+    "accordions": 1
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.allbirds.com/?openCartDrawer=true",
+    "title": "Allbirds: Comfortable, Sustainable Shoes & Apparel",
+    "width": 1440,
+    "pageHeight": 3662,
+    "fonts": {
+      "h1": {
+        "family": "Geograph",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Our biggest sale. Your comfiest season."
+      },
+      "h2": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Cart (1)"
+      },
+      "body": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Black Friday Early Access. Up to 70% off select styles. Shop"
+      },
+      "button": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.3px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Geograph",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Shop Men"
+      }
+    },
+    "page": "rgb(236, 233, 226)",
+    "header": {
+      "height": 32,
+      "position": "sticky",
+      "bg": "rgb(236, 233, 226)",
+      "links": [
+        "Shop Men",
+        "Shop Women"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 42,
+        "h": 784,
+        "bg": "rgb(236, 233, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Our biggest sale. Your comfiest season."
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 836,
+        "h": 471,
+        "bg": "rgb(236, 233, 226)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Geograph",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "0.3px",
+          "text": "New Arrivals"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1347,
+        "h": 565,
+        "bg": "rgb(236, 233, 226)",
+        "images": 12,
+        "video": false,
+        "heading": null,
+        "words": 121,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1952,
+        "h": 667,
+        "bg": "rgb(236, 233, 226)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Terralux™ Collection"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

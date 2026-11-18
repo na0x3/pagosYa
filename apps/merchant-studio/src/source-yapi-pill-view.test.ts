@@ -20,6 +20,13 @@ describe('pill markup', () => {
     expect(html).toContain('&lt;b&gt;x&lt;/b&gt;');
     expect(html).toMatch(/<textarea[^>]*disabled/);
   });
+  it('offers Detener instead of Enviar while YAPI works on a request', () => {
+    const html = renderPill({ busy: true, stop: true, spin: 'spin', attachments: '', menuOpen: false, logo: '/l.png' });
+    expect(html).toMatch(/<button type="button"[^>]*id="source-cancel-job"[^>]*>Detener<\/button>/);
+    expect(html).not.toMatch(/id="source-cancel-job"[^>]*disabled/);
+    expect(html).not.toContain('Enviar');
+    expect(renderPill({ busy: true, spin: 'idle', attachments: '', menuOpen: false, logo: '/l.png' })).not.toContain('Detener');
+  });
   it('exit and history', () => {
     expect(renderExit()).toContain('aria-label="Salir del diseño"');
     expect(renderHistory(false, '<p>hola</p>')).toMatch(/hidden/);

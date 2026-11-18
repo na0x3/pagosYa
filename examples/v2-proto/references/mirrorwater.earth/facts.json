@@ -1,0 +1,896 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://mirrorwater.earth/",
+    "title": "MIRROR WATER | Luxury Body Care Rooted in the Forest",
+    "width": 1440,
+    "pageHeight": 5522,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Suisse",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "You + MIRROR WATER"
+      },
+      "body": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "michellengatimin"
+      },
+      "button": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(245, 241, 237)",
+    "header": {
+      "height": 30,
+      "position": "static",
+      "bg": "rgb(245, 241, 237)",
+      "links": [
+        "Shop",
+        "Story",
+        "World",
+        "Search",
+        "Account",
+        "£GBP",
+        "Cart 0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 30,
+        "h": 735,
+        "bg": "rgb(245, 241, 237)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1119,
+        "h": 492,
+        "bg": "rgb(245, 241, 237)",
+        "images": 14,
+        "video": false,
+        "heading": null,
+        "words": 244,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1674,
+        "h": 609,
+        "bg": "rgb(245, 241, 237)",
+        "images": 9,
+        "video": true,
+        "heading": {
+          "family": "Suisse",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You + MIRROR WATER"
+        },
+        "words": 35,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2282,
+        "h": 567,
+        "bg": "rgb(245, 241, 237)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The forest is listening..."
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2849,
+        "h": 699,
+        "bg": "rgb(245, 241, 237)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The MIRROR WATER Guide To Dry Brushing"
+        },
+        "words": 33,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3549,
+        "h": 106,
+        "bg": "rgb(245, 241, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Forest-dreamed fragrances"
+        },
+        "words": 270,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3655,
+        "h": 488,
+        "bg": "rgb(245, 241, 237)",
+        "images": 13,
+        "video": false,
+        "heading": null,
+        "words": 26,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4334,
+        "h": 578,
+        "bg": "rgb(245, 241, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Estée Lalonde"
+        },
+        "words": 48,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 15,
+      "columns": 14,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://mirrorwater.earth/",
+    "title": "MIRROR WATER | Luxury Body Care Rooted in the Forest",
+    "width": 390,
+    "pageHeight": 6146,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Suisse",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Forest-dreamed fragrances"
+      },
+      "body": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "michellengatimin"
+      },
+      "button": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(245, 241, 237)",
+    "header": {
+      "height": 30,
+      "position": "static",
+      "bg": "rgb(245, 241, 237)",
+      "links": [
+        "0"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 30,
+        "h": 675,
+        "bg": "rgb(245, 241, 237)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 15,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1017,
+        "h": 473,
+        "bg": "rgb(245, 241, 237)",
+        "images": 9,
+        "video": false,
+        "heading": null,
+        "words": 244,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1602,
+        "h": 571,
+        "bg": "rgb(245, 241, 237)",
+        "images": 9,
+        "video": true,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You + MIRROR WATER"
+        },
+        "words": 35,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2244,
+        "h": 605,
+        "bg": "rgb(245, 241, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The forest is listening..."
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2849,
+        "h": 1154,
+        "bg": "rgb(245, 241, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The MIRROR WATER Guide To Dry Brushing"
+        },
+        "words": 33,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4002,
+        "h": 106,
+        "bg": "rgb(245, 241, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Forest-dreamed fragrances"
+        },
+        "words": 270,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4108,
+        "h": 585,
+        "bg": "rgb(245, 241, 237)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 22,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 4734,
+        "h": 108,
+        "bg": "rgb(245, 241, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Step into the forest. Save 10% on your first order."
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4884,
+        "h": 567,
+        "bg": "rgb(245, 241, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Estée Lalonde"
+        },
+        "words": 48,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://mirrorwater.earth/collections/all",
+    "title": "Shop All",
+    "width": 1440,
+    "pageHeight": 3488,
+    "fonts": {
+      "h1": {
+        "family": "Suisse",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "Suisse",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Naturally sourced materials"
+      },
+      "body": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "button": null,
+      "nav": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(245, 241, 237)",
+    "header": {
+      "height": 30,
+      "position": "static",
+      "bg": "rgb(245, 241, 237)",
+      "links": [
+        "Shop",
+        "Story",
+        "World",
+        "Search",
+        "Account",
+        "£GBP",
+        "Cart 0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 30,
+        "h": 2742,
+        "bg": "rgb(245, 241, 237)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 351,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 21,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://mirrorwater.earth/collections/all?_su_rec=p997GXKEUE20Poc-I9EXpg_V4Pc0BWl3C-aWgmQykZ0wYlVqR3bXnjDPmLEpnNWxodjmXioxV_xTdS_mcxjdIz17-Ey4oaVlJJUJsXGRVgC_GGsX2TTG_9rKuhzR68wz5qbQHEwnQA563XRRJ7VoWGG1sWbx84JK7OsvG0ug3_--NgyJtlR-rH3C7czo8eeSF0pH9a0G0mdmkOJO-618VmAX2PAeOq8SbJtvO28h2tcjp9Rw6cr3PRMoyNdLMbvNCsWEy-TCw-CAruJ5cEoxJ4zQtJ5j-mhdFfLR4QqIb8ZZSNxNeITuWLo-Q3Y9RSD43LbkCU6f8lItG7NH9jVUt7HjSHnW33hPt3BTR8S-&_su_rec_id=7c1b05e6-bc89-47d1-9f98-4b0afffd9253-1794667073",
+    "title": "Shop All",
+    "width": 390,
+    "pageHeight": 11520,
+    "fonts": {
+      "h1": {
+        "family": "Suisse",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "Suisse",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Naturally sourced materials"
+      },
+      "body": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "button": null,
+      "nav": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(245, 241, 237)",
+    "header": {
+      "height": 30,
+      "position": "static",
+      "bg": "rgb(245, 241, 237)",
+      "links": [
+        "0"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 30,
+        "h": 10689,
+        "bg": "rgb(245, 241, 237)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "18px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 351,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://mirrorwater.earth/products/the-radiance-gift",
+    "title": "THE RADIANCE GIFT",
+    "width": 1440,
+    "pageHeight": 3642,
+    "fonts": {
+      "h1": {
+        "family": "Sackers Heavy Gothic",
+        "size": "16px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "THE RADIANCE GIFT"
+      },
+      "h2": {
+        "family": "Suisse",
+        "size": "0px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Customer Reviews"
+      },
+      "body": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Reveal smoother, more radiant skin with The Radiance Gift - "
+      },
+      "button": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "Add to cart"
+      },
+      "nav": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(245, 241, 237)",
+    "header": {
+      "height": 30,
+      "position": "static",
+      "bg": "rgb(245, 241, 237)",
+      "links": [
+        "Shop",
+        "Story",
+        "World",
+        "Search",
+        "Account",
+        "£GBP",
+        "Cart 0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 87,
+        "h": 2099,
+        "bg": "rgb(245, 241, 237)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sackers Heavy Gothic",
+          "size": "16px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "0.5px",
+          "text": "THE RADIANCE GIFT"
+        },
+        "words": 126,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2223,
+        "h": 222,
+        "bg": "rgb(245, 241, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "0px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Customer Reviews"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2516,
+        "h": 489,
+        "bg": "rgb(245, 241, 237)",
+        "images": 7,
+        "video": false,
+        "heading": null,
+        "words": 137,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Suisse",
+      "size": "13px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "£60.00 £60.00"
+    },
+    "galleryImages": 10,
+    "swatches": 0,
+    "selects": 5,
+    "accordions": 2
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://mirrorwater.earth/products/the-radiance-gift",
+    "title": "THE RADIANCE GIFT",
+    "width": 390,
+    "pageHeight": 2634,
+    "fonts": {
+      "h1": {
+        "family": "Sackers Heavy Gothic",
+        "size": "16px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "THE RADIANCE GIFT"
+      },
+      "h2": {
+        "family": "Suisse",
+        "size": "0px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Customer Reviews"
+      },
+      "body": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Reveal smoother, more radiant skin with The Radiance Gift - "
+      },
+      "button": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "Add to cart"
+      },
+      "nav": {
+        "family": "Suisse",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(245, 241, 237)",
+    "header": {
+      "height": 30,
+      "position": "static",
+      "bg": "rgb(245, 241, 237)",
+      "links": [
+        "0"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 74,
+        "h": 1119,
+        "bg": "rgb(245, 241, 237)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sackers Heavy Gothic",
+          "size": "16px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "0.5px",
+          "text": "THE RADIANCE GIFT"
+        },
+        "words": 148,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1213,
+        "h": 193,
+        "bg": "rgb(245, 241, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Suisse",
+          "size": "0px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Customer Reviews"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1447,
+        "h": 472,
+        "bg": "rgb(245, 241, 237)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 137,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Suisse",
+      "size": "13px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "£60.00 £60.00"
+    },
+    "galleryImages": 6,
+    "swatches": 0,
+    "selects": 5,
+    "accordions": 2
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://mirrorwater.earth/cart",
+    "title": "Your Shopping Cart",
+    "width": 1440,
+    "pageHeight": 1078,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": null,
+      "button": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "Proceed to checkout"
+      },
+      "nav": {
+        "family": "Sackers Heavy Gothic",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(245, 241, 237)",
+    "header": {
+      "height": 30,
+      "position": "static",
+      "bg": "rgb(245, 241, 237)",
+      "links": [
+        "Shop",
+        "Story",
+        "World",
+        "Search",
+        "Account",
+        "£GBP",
+        "Cart 1"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 248,
+        "bg": "rgb(245, 241, 237)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 21,
+        "perRow": 1,
+        "fullBleed": false
+      }
+    ]
+  }
+}

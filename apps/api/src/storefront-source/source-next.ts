@@ -16,6 +16,8 @@ import { sourceLocationUrl } from './source-location';
 import { validateSourceDesignImplementation, type SourceDesign } from './source-design';
 import { type SourceSitePurpose } from './source-site-purpose';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+// 2026-11-13: the store sheet's own budget (Oh Belly's refill passed 180 kB and the save failed «Archivo React no permitido»).
+import { MAX_STORE_SHEET } from './source-project';
 
 export const NEXT_SOURCE_MARKER = 'storefront-framework.json';
 export const nextSourceFile = (path: string) => /^components\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.tsx$/.test(path) || path === 'styles/globals.css';
@@ -81,7 +83,7 @@ export function validateNextSources(files: SourceProjectFileDto[], purpose: Sour
   for (const file of files) {
     // DNA motif drawings are the one non-component output; the sanitiser, not this validator, owns them.
     if (file && typeof file.path === 'string' && isSourceMotifFile(file.path) && typeof file.content === 'string' && file.encoding !== 'base64') continue;
-    if (!file || typeof file.path !== 'string' || !nextSourceFile(file.path) || seen.has(file.path.toLowerCase()) || typeof file.content !== 'string' || file.content.length > 180000 || file.encoding === 'base64') throw new BadGatewayException(`Archivo React no permitido: ${file?.path}`);
+    if (!file || typeof file.path !== 'string' || !nextSourceFile(file.path) || seen.has(file.path.toLowerCase()) || typeof file.content !== 'string' || file.content.length > (file.path === 'styles/globals.css' ? MAX_STORE_SHEET : 180000) || file.encoding === 'base64') throw new BadGatewayException(`Archivo React no permitido: ${file?.path}`);
     seen.add(file.path.toLowerCase());
     if (file.path.endsWith('.css')) {
       const root = postcss.parse(file.content, { from: file.path });
@@ -280,7 +282,12 @@ export function nextPageMarkup(files: SourceProjectFileDto[], name: string): str
         if (imports.has(tag)) {
           const imported = imports.get(tag)!;
           const rendered = renderFile(imported.path, imported.exported, renderChildren(), tagAttrs);
-          return imported.path === UI_LIBRARY_PATH && primaryHeadingUiComponents.has(imported.exported) && !/<h1\b/i.test(rendered)
+          // Owner 2026-11-13 rich kit: KineticHeadline / ImageText with a literal as="h1" draw the page's h1 too.
+          const headingAs = imported.path === UI_LIBRARY_PATH && (imported.exported === 'KineticHeadline' || imported.exported === 'ImageText') && tagAttrs.some(([name, value]) => name === 'as' && value === 'h1');
+          // A V2 home's library hero (<LibrarySlot name="hero" />, spec 2026-11-14) draws its cover's h1 through a section map this
+          // reading cannot follow (live round 4: «home necesita un encabezado principal h1» on a home whose cover has one).
+          const libraryHero = imported.path === 'components/v2-library.tsx' && imported.exported === 'LibrarySlot' && tagAttrs.some(([name, value]) => name === 'name' && value === 'hero');
+          return (libraryHero || (imported.path === UI_LIBRARY_PATH && (primaryHeadingUiComponents.has(imported.exported) || headingAs))) && !/<h1\b/i.test(rendered)
             ? `<h1></h1>${rendered}`
             : rendered;
         }

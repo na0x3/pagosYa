@@ -1,0 +1,126 @@
+{
+  "sector": "belleza",
+  "label": "Belleza y cuidado personal",
+  "keywords": [
+    "belleza",
+    "cosmetica",
+    "maquillaje",
+    "skincare",
+    "cuidado de la piel",
+    "cremas",
+    "serum",
+    "labiales",
+    "perfumes",
+    "spa",
+    "cabello",
+    "unas",
+    "brochas"
+  ],
+  "photos": [
+    {
+      "file": "belleza-01.jpg",
+      "subject": "belleza y cuidado personal 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6033264/photo-image-flower-public-domain-plant",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-02.jpg",
+      "subject": "belleza y cuidado personal 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3286540/free-photo-image-makeup-brush-cc0",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-03.jpg",
+      "subject": "belleza y cuidado personal 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/11515764/photo-image-medicine-public-domain-table",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-04.jpg",
+      "subject": "belleza y cuidado personal 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5919258/three-multicolor-bath-bombs-spa-bathroom",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-05.jpg",
+      "subject": "belleza y cuidado personal 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5917345/image-public-domain-brush-mirror",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-06.jpg",
+      "subject": "belleza y cuidado personal 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6112549/skincare-bottles-location-unknown-aug-2015",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-07.jpg",
+      "subject": "belleza y cuidado personal 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6113036/marseille-soaps-location-unknown-dec-23-2015",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-08.jpg",
+      "subject": "belleza y cuidado personal 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5912124/image-public-domain-brush-beauty",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-09.jpg",
+      "subject": "belleza y cuidado personal 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5969546/cosmetics-makeup",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-10.jpg",
+      "subject": "belleza y cuidado personal 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926332/close-makeup-brush-beauty-image",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-11.jpg",
+      "subject": "belleza y cuidado personal 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5922450/photo-image-public-domain-brush-beauty",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-12.jpg",
+      "subject": "belleza y cuidado personal 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5922518/photo-image-background-public-domain-red",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-13.jpg",
+      "subject": "belleza y cuidado personal 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5906913/photo-image-public-domain-makeup-free",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-14.jpg",
+      "subject": "belleza y cuidado personal 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5944151/free-public-domain-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "belleza-15.jpg",
+      "subject": "belleza y cuidado personal 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5925372/free-public-domain-cc0-photo",
+      "license": "CC0"
+    }
+  ]
+}

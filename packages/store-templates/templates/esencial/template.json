@@ -645,6 +645,356 @@
         "heading": "big-shoulders-display",
         "body": "chivo",
         "starterOnly": true
+      },
+      {
+        "id": "merienda-archivo",
+        "name": "Merienda gruesa",
+        "heading": "archivo-black",
+        "body": "dm-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "merienda-bowlby",
+        "name": "Merienda redonda",
+        "heading": "bowlby-one",
+        "body": "figtree",
+        "starterOnly": true
+      },
+      {
+        "id": "merienda-titan",
+        "name": "Merienda dulce",
+        "heading": "titan-one",
+        "body": "nunito",
+        "starterOnly": true
+      },
+      {
+        "id": "merienda-rubik",
+        "name": "Merienda firme",
+        "heading": "rubik",
+        "body": "outfit",
+        "starterOnly": true
+      },
+      {
+        "id": "merienda-unbounded",
+        "name": "Merienda ancha",
+        "heading": "unbounded",
+        "body": "manrope",
+        "starterOnly": true
+      },
+      {
+        "id": "burbuja-dmsans",
+        "name": "Burbuja limpia",
+        "heading": "dm-sans",
+        "body": "dm-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "burbuja-manrope",
+        "name": "Burbuja suave",
+        "heading": "manrope",
+        "body": "manrope",
+        "starterOnly": true
+      },
+      {
+        "id": "burbuja-outfit",
+        "name": "Burbuja redonda",
+        "heading": "outfit",
+        "body": "inter",
+        "starterOnly": true
+      },
+      {
+        "id": "burbuja-figtree",
+        "name": "Burbuja amable",
+        "heading": "figtree",
+        "body": "figtree",
+        "starterOnly": true
+      },
+      {
+        "id": "burbuja-geist",
+        "name": "Burbuja precisa",
+        "heading": "geist",
+        "body": "inter",
+        "starterOnly": true
+      },
+      {
+        "id": "neon-anton",
+        "name": "Neón alta",
+        "heading": "anton",
+        "body": "inter",
+        "starterOnly": true
+      },
+      {
+        "id": "neon-bebas",
+        "name": "Neón afiche",
+        "heading": "bebas-neue",
+        "body": "manrope",
+        "starterOnly": true
+      },
+      {
+        "id": "neon-shoulders",
+        "name": "Neón ancha",
+        "heading": "big-shoulders-display",
+        "body": "chivo",
+        "starterOnly": true
+      },
+      {
+        "id": "neon-oswald",
+        "name": "Neón firme",
+        "heading": "oswald",
+        "body": "hanken-grotesk",
+        "starterOnly": true
+      },
+      {
+        "id": "neon-archivo",
+        "name": "Neón gruesa",
+        "heading": "archivo-black",
+        "body": "archivo",
+        "starterOnly": true
+      },
+      {
+        "id": "mimo-fredoka",
+        "name": "Mimo redonda",
+        "heading": "fredoka",
+        "body": "nunito",
+        "starterOnly": true
+      },
+      {
+        "id": "mimo-baloo",
+        "name": "Mimo alegre",
+        "heading": "baloo-2",
+        "body": "nunito",
+        "starterOnly": true
+      },
+      {
+        "id": "mimo-titan",
+        "name": "Mimo gruesa",
+        "heading": "titan-one",
+        "body": "figtree",
+        "starterOnly": true
+      },
+      {
+        "id": "mimo-bowlby",
+        "name": "Mimo grande",
+        "heading": "bowlby-one",
+        "body": "dm-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "mimo-rubik",
+        "name": "Mimo firme",
+        "heading": "rubik",
+        "body": "outfit",
+        "starterOnly": true
+      },
+      {
+        "id": "oliva-gloock",
+        "name": "Oliva clásica",
+        "heading": "gloock",
+        "body": "space-mono",
+        "starterOnly": true
+      },
+      {
+        "id": "oliva-dmserif",
+        "name": "Oliva redonda",
+        "heading": "dm-serif-display",
+        "body": "space-mono",
+        "starterOnly": true
+      },
+      {
+        "id": "oliva-young",
+        "name": "Oliva suave",
+        "heading": "young-serif",
+        "body": "courier-prime",
+        "starterOnly": true
+      },
+      {
+        "id": "oliva-fraunces",
+        "name": "Oliva cálida",
+        "heading": "fraunces",
+        "body": "dm-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "oliva-caslon",
+        "name": "Oliva libro",
+        "heading": "libre-caslon-text",
+        "body": "dm-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "joya-inter",
+        "name": "Joya precisa",
+        "heading": "inter",
+        "body": "inter",
+        "starterOnly": true
+      },
+      {
+        "id": "joya-manrope",
+        "name": "Joya suave",
+        "heading": "manrope",
+        "body": "manrope",
+        "starterOnly": true
+      },
+      {
+        "id": "joya-hanken",
+        "name": "Joya limpia",
+        "heading": "hanken-grotesk",
+        "body": "hanken-grotesk",
+        "starterOnly": true
+      },
+      {
+        "id": "joya-mona",
+        "name": "Joya moderna",
+        "heading": "mona-sans",
+        "body": "mona-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "joya-jost",
+        "name": "Joya geométrica",
+        "heading": "outfit",
+        "body": "inter",
+        "starterOnly": true
+      },
+      {
+        "id": "origen-cormorant",
+        "name": "Origen clásica",
+        "heading": "cormorant-garamond",
+        "body": "manrope",
+        "starterOnly": true
+      },
+      {
+        "id": "origen-playfair",
+        "name": "Origen elegante",
+        "heading": "playfair-display",
+        "body": "hanken-grotesk",
+        "starterOnly": true
+      },
+      {
+        "id": "origen-bodoni",
+        "name": "Origen fina",
+        "heading": "bodoni-moda",
+        "body": "inter",
+        "starterOnly": true
+      },
+      {
+        "id": "origen-instrument",
+        "name": "Origen editorial",
+        "heading": "instrument-serif",
+        "body": "instrument",
+        "starterOnly": true
+      },
+      {
+        "id": "origen-newsreader",
+        "name": "Origen libro",
+        "heading": "newsreader",
+        "body": "dm-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "morada-newsreader",
+        "name": "Morada libro",
+        "heading": "newsreader",
+        "body": "hanken-grotesk",
+        "starterOnly": true
+      },
+      {
+        "id": "morada-lora",
+        "name": "Morada cálida",
+        "heading": "lora",
+        "body": "figtree",
+        "starterOnly": true
+      },
+      {
+        "id": "morada-crimson",
+        "name": "Morada clásica",
+        "heading": "crimson-pro",
+        "body": "manrope",
+        "starterOnly": true
+      },
+      {
+        "id": "morada-fraunces",
+        "name": "Morada suave",
+        "heading": "fraunces",
+        "body": "dm-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "morada-caslon",
+        "name": "Morada tradición",
+        "heading": "libre-caslon-text",
+        "body": "inter",
+        "starterOnly": true
+      },
+      {
+        "id": "vigor-inter",
+        "name": "Vigor precisa",
+        "heading": "inter",
+        "body": "inter",
+        "starterOnly": true
+      },
+      {
+        "id": "vigor-archivo",
+        "name": "Vigor firme",
+        "heading": "archivo",
+        "body": "archivo",
+        "starterOnly": true
+      },
+      {
+        "id": "vigor-manrope",
+        "name": "Vigor suave",
+        "heading": "manrope",
+        "body": "manrope",
+        "starterOnly": true
+      },
+      {
+        "id": "vigor-outfit",
+        "name": "Vigor redonda",
+        "heading": "outfit",
+        "body": "outfit",
+        "starterOnly": true
+      },
+      {
+        "id": "vigor-plus",
+        "name": "Vigor moderna",
+        "heading": "plus-jakarta-sans",
+        "body": "plus-jakarta-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "ramo-young",
+        "name": "Ramo dulce",
+        "heading": "young-serif",
+        "body": "figtree",
+        "starterOnly": true
+      },
+      {
+        "id": "ramo-fraunces",
+        "name": "Ramo cálida",
+        "heading": "fraunces",
+        "body": "nunito",
+        "starterOnly": true
+      },
+      {
+        "id": "ramo-dmserif",
+        "name": "Ramo clásica",
+        "heading": "dm-serif-display",
+        "body": "dm-sans",
+        "starterOnly": true
+      },
+      {
+        "id": "ramo-playfair",
+        "name": "Ramo elegante",
+        "heading": "playfair-display",
+        "body": "outfit",
+        "starterOnly": true
+      },
+      {
+        "id": "ramo-gloock",
+        "name": "Ramo fina",
+        "heading": "gloock",
+        "body": "manrope",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -739,7 +1089,8 @@
         "fashion",
         "grid-2",
         "panel",
-        "strip"
+        "strip",
+        "duo"
       ],
       "pdpOrder": [
         "story-first",
@@ -780,7 +1131,9 @@
         "natural",
         "rounded",
         "framed",
-        "duotone"
+        "duotone",
+        "sticker",
+        "blend"
       ],
       "cards": [
         "showcase",
@@ -822,7 +1175,8 @@
         "burbuja",
         "redonda",
         "firme",
-        "poster"
+        "poster",
+        "slant"
       ],
       "theme": [
         "none",
@@ -866,7 +1220,17 @@
         "estudio",
         "pulso",
         "ola",
-        "ruta"
+        "ruta",
+        "merienda",
+        "burbuja",
+        "neon",
+        "mimo",
+        "oliva",
+        "joya",
+        "origen",
+        "morada",
+        "vigor",
+        "ramo"
       ],
       "mood": [
         "calm",

@@ -1,0 +1,35 @@
+{
+  "from": "cmwbj4jox0001bod58xeo3r30",
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwcu269m0001j5ks87a3be5b",
+  "slug": "l2k1xjhm",
+  "categories": {
+    "cmwbj4jq4000hbod56eaam83n": "cmwcu26a40003j5ksn986vso5",
+    "cmwbj4jq5000jbod5o3ypk4ly": "cmwcu26a60005j5ks89ykz2fs",
+    "cmwbj4jq5000lbod5fdudv1s6": "cmwcu26a60007j5ks0kodz22s",
+    "cmwbj4jq5000nbod5jfpm9n3u": "cmwcu26a70009j5ks6uowjjo2"
+  },
+  "products": {
+    "cmwbj4jq9000rbod58z0jl9oc": "cmwcu26ax000dj5ksuq9z0f1d",
+    "cmwbj4jqe000vbod54xfy9t4d": "cmwcu26b5000hj5ksaalszw6f",
+    "cmwbj4jqk000zbod55o9bqi01": "cmwcu26c1000lj5ksg0zlnrjx",
+    "cmwbj4jqo0013bod5ljno0hdl": "cmwcu26c7000pj5ks0flmt2j4",
+    "cmwbj4jqr0017bod5x7fq762a": "cmwcu26cc000tj5ks84z29oq6",
+    "cmwbj4jqt001bbod575gyot8q": "cmwcu26ci000xj5kskt6v62c9"
+  },
+  "assetUrls": [
+    "/v1/uploads/1f341d31-56fb-4dcc-873e-369890fba0ad.jpg",
+    "/v1/uploads/3b529240-2610-4255-8d1d-249f57f77e1c.jpg",
+    "/v1/uploads/fe3be875-d02f-45cd-be20-19b20766045c.jpg",
+    "/v1/uploads/d592f12a-8e04-46e9-a256-14d88cec51d1.jpg",
+    "/v1/uploads/02443762-e96d-4229-bdfe-3e112eaaf8d5.jpg",
+    "/v1/uploads/40610a03-8202-439f-a0ce-4afe26c290fc.jpg",
+    "/v1/uploads/c6f443fe-ee96-45bb-bdcc-b069ef4e20c2.jpg",
+    "/v1/uploads/81d901cd-5914-4b04-a4ca-bae9a6e66f61.jpg",
+    "/v1/uploads/0dda5f3a-7dd0-406a-aab3-06770e0c95eb.jpg",
+    "/v1/uploads/87ef3f08-d6cc-4cd7-b295-bb30af622199.jpg",
+    "/v1/uploads/d0cada27-5db4-4333-b12e-8e52ae550e7f.jpg",
+    "/v1/uploads/a02a87d5-67db-4c2f-a451-8a76e6737feb.jpg",
+    "/v1/uploads/25caa7a8-fb2f-4a19-bfd0-79248bfbe629.jpg"
+  ]
+}

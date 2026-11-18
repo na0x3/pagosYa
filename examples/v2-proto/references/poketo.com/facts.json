@@ -1,0 +1,154 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.patternbrands.com/",
+    "title": "Home | Pattern Brands",
+    "width": 1440,
+    "pageHeight": 900,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "P22 Mackinac Pro",
+        "size": "28.8px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Where thoughtful products meet thoughtfulinnovativebeautiful"
+      },
+      "body": {
+        "family": "P22 Mackinac Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore our family of consumer brands— designed to elevate t"
+      },
+      "button": {
+        "family": "P22 Mackinac Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Contact Us"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 2,
+        "h": 721,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "P22 Mackinac Pro",
+          "size": "28.8px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Where thoughtful products meet thoughtfulinnovativebeautiful"
+        },
+        "words": 55,
+        "perRow": 3,
+        "fullBleed": false
+      },
+      {
+        "y": 725,
+        "h": 175,
+        "bg": "rgb(8, 73, 53)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.patternbrands.com/",
+    "title": "Home | Pattern Brands",
+    "width": 390,
+    "pageHeight": 2092,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "P22 Mackinac Pro",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Where thoughtful products meet thoughtfulinnovativebeautiful"
+      },
+      "body": {
+        "family": "P22 Mackinac Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore our family of consumer brands— designed to elevate t"
+      },
+      "button": {
+        "family": "P22 Mackinac Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Contact Us"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 1693,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "P22 Mackinac Pro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Where thoughtful products meet thoughtfulinnovativebeautiful"
+        },
+        "words": 55,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1693,
+        "h": 399,
+        "bg": "rgb(8, 73, 53)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  }
+}

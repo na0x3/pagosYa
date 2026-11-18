@@ -1,0 +1,42 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw9s8z6l0001y726vzkn3f3o",
+  "slug": "npypt25j",
+  "photos": {
+    "canasta-habitos-saludables.jpg": "/v1/uploads/be0cadf4-29b2-44fb-a38f-b4006dba78a6.jpg",
+    "seleccion-fresca-mercado.jpg": "/v1/uploads/e3559d56-fb67-4260-b7cd-922f8a489f54.jpg",
+    "mercado-premium-frutas.jpg": "/v1/uploads/3b3c7356-955c-49a4-a7fe-b1fe98821f85.jpg",
+    "caja-verde-wellness.jpg": "/v1/uploads/850fa302-cbfb-4625-9fbf-f2dd001e341f.jpg",
+    "frutas-premium-surtidas.jpg": "/v1/uploads/ccea7d0b-19fa-4ad1-a1f7-dd3dd067be1c.jpg",
+    "carrito-saludable-familiar.jpg": "/v1/uploads/2b52b386-cc8f-4856-a23c-823177f69213.jpg",
+    "seleccion-verduras-verdes.jpg": "/v1/uploads/39bc319e-4a2c-46ed-a8a5-e229d2442b89.jpg",
+    "canasta-verde-premium.jpg": "/v1/uploads/ce078a56-af9e-4265-a7fc-302b8de88a03.jpg",
+    "caja-semanal-frutas-verduras.jpg": "/v1/uploads/24104ff8-6675-48e5-9476-1480f78ba5f1.jpg"
+  },
+  "categories": {
+    "Bienestar": "cmw9s8z6w0003y726w9ushgsx",
+    "Frutas y verduras": "cmw9s8z6z0005y726fgd9xqp1",
+    "Frutas": "cmw9s8z6z0007y7262ya1q1oc",
+    "Canastas": "cmw9s8z700009y7262vcw1k9j",
+    "Verduras": "cmw9s8z71000by726lrdcahdu"
+  },
+  "products": {
+    "Canasta de hábitos saludables": "cmw9s8z7c000fy7269b9zmxhc",
+    "Selección fresca de mercado": "cmw9s8z7j000jy726bspc82x4",
+    "Mercado premium de frutas": "cmw9s8z7n000ny726uuc5c03b",
+    "Caja verde wellness": "cmw9s8z7r000ry726vy80ugus",
+    "Frutas premium surtidas": "cmw9s8z7u000vy726v30lzgsc",
+    "Carrito saludable familiar": "cmw9s8z7x000zy726jc5ynftg",
+    "Selección de verduras verdes": "cmw9s8z800013y726ws7ohimw",
+    "Canasta verde premium": "cmw9s8z820017y726qi1sbwuk",
+    "Bolsa fresh essentials": "cmw9s8z830019y726efr13zzz",
+    "Caja semanal de frutas y verduras": "cmw9s8z86001dy726wegjet5d",
+    "Carrito de frutas frescas": "cmw9s8z88001fy726qnwjhhgl"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true
+  }
+}

@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PlansService } from '../plans/plans.service';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { DomainOrder, PaymentIntentStatus, Prisma } from '@prisma/client';
@@ -52,7 +53,7 @@ export class DomainCommerceService {
   private warning = false;
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService,
     private readonly payments: PaymentIntentsService, private readonly registrar: NamecomProvider,
-    private readonly hosting: CloudflareHostingProvider, private readonly fx: DomainFxRate) {}
+    private readonly hosting: CloudflareHostingProvider, private readonly fx: DomainFxRate, @Optional() private readonly plans?: PlansService) {}
 
   private async ownedStore(merchantId: string, storeId: string, purchasing = false) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId } });
@@ -99,6 +100,7 @@ export class DomainCommerceService {
   }
   async checkout(merchantId: string, storeId: string, dto: DomainCheckoutDto) {
     await this.ownedStore(merchantId, storeId, true);
+    await this.plans?.assertCustomDomain(merchantId);
     const c = assertDomainCommerceReady(this.config, this.fx.current());
     const platform = await this.prisma.merchant.findFirst({ where: { id: c.platformMerchantId, status: 'ACTIVE' } });
     if (!platform || platform.id === merchantId) throw new BadRequestException('La cuenta de cobro de dominios no está disponible.');

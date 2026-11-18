@@ -54,7 +54,7 @@ test('exported digital checkout applies credit and omits physical delivery', asy
   await page.setContent('<main><div data-pagosya-catalog></div><div data-pagosya-cart></div><p data-pagosya-status></p></main>');
   await page.addScriptTag({ content: `window.PAGOSYA_CONFIG=${JSON.stringify({ slug: 'digital', apiBaseUrl: 'https://commerce.example/v1', checkoutOrigin: 'https://checkout.example', data: store })};` });
   await page.addScriptTag({ content: runtime });
-  await page.getByRole('button', { name: 'Añadir Guía', exact: true }).click(); await page.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await page.getByRole('button', { name: 'Añadir Guía', exact: true }).click(); await page.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   const review = page.locator('[data-checkout-review]');
   await expect(review.getByLabel('Sucursal')).toHaveCount(0); await expect(review.getByLabel('Dirección')).toHaveCount(0);
   await review.getByLabel('Tarjeta de regalo o saldo').fill(code); await review.getByRole('button', { name: 'Aplicar saldo' }).click();

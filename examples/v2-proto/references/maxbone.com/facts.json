@@ -1,0 +1,1297 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.maxbone.com/",
+    "title": "maxbone | Modern Dog Carriers, Beds & Apparel",
+    "width": 1440,
+    "pageHeight": 7357,
+    "fonts": {
+      "h1": {
+        "family": "GoodSans",
+        "size": "50px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "For dogs with great taste."
+      },
+      "h2": {
+        "family": "GoodSans",
+        "size": "45px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Favorites"
+      },
+      "body": {
+        "family": "Oswald",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      },
+      "button": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 132,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Introducing Roller Rabbi",
+        "Sign In",
+        "Rewards",
+        "Blog",
+        "SHOP ALL",
+        "Walk",
+        "Carrier Bags",
+        "Leash Sets",
+        "Leash, Harness & Collar",
+        "Wear",
+        "Apparel",
+        "Supplies",
+        "Beds",
+        "Grooming",
+        "Toys",
+        "Bowls"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 0,
+        "h": 891,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 0,
+        "h": 132,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": null,
+        "words": 125,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 131,
+        "h": 736,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 867,
+        "h": 135,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1002,
+        "h": 238,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "50px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "For dogs with great taste."
+        },
+        "words": 35,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1240,
+        "h": 1095,
+        "bg": "rgb(246, 247, 239)",
+        "images": 104,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "14px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "FAN"
+        },
+        "words": 622,
+        "perRow": 104,
+        "fullBleed": true
+      },
+      {
+        "y": 2335,
+        "h": 798,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 35,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3133,
+        "h": 1106,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "50px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Don’t Just Take Our Word For It."
+        },
+        "words": 390,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4239,
+        "h": 890,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "44px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Real Nutrition. Real Ingredients. Real Happy Dogs."
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5129,
+        "h": 393,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": null,
+        "words": 125,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5523,
+        "h": 139,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5692,
+        "h": 708,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 6430,
+        "h": 147,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6577,
+        "h": 324,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "44px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Let’s stay in touch"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6901,
+        "h": 457,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "19px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Customer Care"
+        },
+        "words": 66,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.maxbone.com/",
+    "title": "maxbone | Modern Dog Carriers, Beds & Apparel",
+    "width": 390,
+    "pageHeight": 6343,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "GoodSans",
+        "size": "34px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Favorites"
+      },
+      "body": {
+        "family": "Oswald",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      },
+      "button": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.28px",
+        "text": ""
+      },
+      "nav": {
+        "family": "GoodSans",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 98,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Introducing Roller Rabbi",
+        ".cls-1{fill:#231f20}",
+        "search",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 0,
+        "h": 836,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 98,
+        "h": 639,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 737,
+        "h": 160,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 897,
+        "h": 835,
+        "bg": "rgb(246, 247, 239)",
+        "images": 102,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "14px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "FAN"
+        },
+        "words": 612,
+        "perRow": 102,
+        "fullBleed": true
+      },
+      {
+        "y": 1732,
+        "h": 1488,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 7,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3220,
+        "h": 536,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 392,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3756,
+        "h": 604,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4360,
+        "h": 367,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": null,
+        "words": 129,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4727,
+        "h": 263,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4990,
+        "h": 340,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 30,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 5330,
+        "h": 162,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5492,
+        "h": 357,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "34px",
+          "weight": "500",
+          "case": "capitalize",
+          "tracking": "-0.4px",
+          "text": "Let’s stay in touch"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5848,
+        "h": 495,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "19px",
+          "weight": "300",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Customer Care"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.maxbone.com/collections/all",
+    "title": "Products – maxbone",
+    "width": 1440,
+    "pageHeight": 4423,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "GoodSans",
+        "size": "44px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Let’s stay in touch"
+      },
+      "body": {
+        "family": "Oswald",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      },
+      "button": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 132,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Introducing Roller Rabbi",
+        "Sign In",
+        "Rewards",
+        "Blog",
+        "SHOP ALL",
+        "Walk",
+        "Carrier Bags",
+        "Leash Sets",
+        "Leash, Harness & Collar",
+        "Wear",
+        "Apparel",
+        "Supplies",
+        "Beds",
+        "Grooming",
+        "Toys",
+        "Bowls"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 891,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 0,
+        "h": 132,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": null,
+        "words": 125,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 132,
+        "h": 3511,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": null,
+        "words": 105,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3643,
+        "h": 324,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "44px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Let’s stay in touch"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3967,
+        "h": 457,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "19px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Customer Care"
+        },
+        "words": 66,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.maxbone.com/collections/all?_su_rec=noM8c4ojXVihq4rWqI4bQ8kyAc7j8uPzgLg34ZZFKfCqclmYKvZtFbuEqvtTlTh0sXpbT_uoW9o7h4GRVxVVIEqWXEz7j3zMK39xcQQdqyCdToFQkaWGYGu1t-Rh042SGu5Zdu75ijqdQKUHIsL_zZH1D3GEwRSm0F8Mi3le4bdsemFRt3FtPtlOLxst-0gWnSCcTWSmX4b09I7oQCTaxvZLcpHbrnS2LMh1PhmP3DIfpdWIZwNjMZ_ImF0IEFPKYSdjs7A_LaeYYQjKNKKUf8T47gUyXGerZSEP5XxOEqL4BKITf0Nuxp8xA24qXuJHCCMby4NOFY4aMaWsUegWiuXEzZyQrQH4d69PR6eNXzNY&_su_rec_id=f3b1c66d-70c1-49b0-9c9a-49b5ecbbd937-1794667847",
+    "title": "Products – maxbone",
+    "width": 390,
+    "pageHeight": 3930,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "GoodSans",
+        "size": "34px",
+        "weight": "500",
+        "case": "capitalize",
+        "tracking": "-0.4px",
+        "text": "Let’s stay in touch"
+      },
+      "body": {
+        "family": "Oswald",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      },
+      "button": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.28px",
+        "text": ""
+      },
+      "nav": {
+        "family": "GoodSans",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 98,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Introducing Roller Rabbi",
+        ".cls-1{fill:#231f20}",
+        "search",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 836,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 98,
+        "h": 2981,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": null,
+        "words": 129,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3079,
+        "h": 357,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "34px",
+          "weight": "500",
+          "case": "capitalize",
+          "tracking": "-0.4px",
+          "text": "Let’s stay in touch"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3436,
+        "h": 495,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "19px",
+          "weight": "300",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Customer Care"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.maxbone.com/products/terrain-gf-beef",
+    "title": "Raw Coated Kibble Terrain – maxbone",
+    "width": 1440,
+    "pageHeight": 9124,
+    "fonts": {
+      "h1": {
+        "family": "Newsreader",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.4px",
+        "text": "Raw Coated Kibble Terrain"
+      },
+      "h2": {
+        "family": "GoodSans",
+        "size": "18px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Raw Coated Kibble Terrain"
+      },
+      "body": {
+        "family": "Oswald",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      },
+      "button": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 132,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Introducing Roller Rabbi",
+        "Sign In",
+        "Rewards",
+        "Blog",
+        "SHOP ALL",
+        "Walk",
+        "Carrier Bags",
+        "Leash Sets",
+        "Leash, Harness & Collar",
+        "Wear",
+        "Apparel",
+        "Supplies",
+        "Beds",
+        "Grooming",
+        "Toys",
+        "Bowls"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 891,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 0,
+        "h": 132,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": null,
+        "words": 125,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 132,
+        "h": 8211,
+        "bg": "rgb(247, 244, 241)",
+        "images": 28,
+        "video": false,
+        "heading": {
+          "family": "Newsreader",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Raw Coated Kibble Terrain"
+        },
+        "words": 950,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 8343,
+        "h": 324,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "44px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Let’s stay in touch"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 8667,
+        "h": 457,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "19px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Customer Care"
+        },
+        "words": 66,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "GoodSans",
+      "size": "16px",
+      "weight": "300",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$24.00 $29.99"
+    },
+    "galleryImages": 0,
+    "swatches": 10,
+    "selects": 25,
+    "accordions": 6
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.maxbone.com/products/terrain-gf-beef",
+    "title": "Raw Coated Kibble Terrain – maxbone",
+    "width": 390,
+    "pageHeight": 10047,
+    "fonts": {
+      "h1": {
+        "family": "Newsreader",
+        "size": "28px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.28px",
+        "text": "Raw Coated Kibble Terrain"
+      },
+      "h2": {
+        "family": "Newsreader",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Three recipes. One smarter bowl."
+      },
+      "body": {
+        "family": "Oswald",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      },
+      "button": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.28px",
+        "text": ""
+      },
+      "nav": {
+        "family": "GoodSans",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 98,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Introducing Roller Rabbi",
+        ".cls-1{fill:#231f20}",
+        "search",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 836,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 98,
+        "h": 9026,
+        "bg": "rgb(247, 244, 241)",
+        "images": 28,
+        "video": false,
+        "heading": {
+          "family": "Newsreader",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "Raw Coated Kibble Terrain"
+        },
+        "words": 913,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 9124,
+        "h": 357,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "34px",
+          "weight": "500",
+          "case": "capitalize",
+          "tracking": "-0.4px",
+          "text": "Let’s stay in touch"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 9480,
+        "h": 495,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "19px",
+          "weight": "300",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Customer Care"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "GoodSans",
+      "size": "16px",
+      "weight": "300",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$24.00 $29.99"
+    },
+    "galleryImages": 0,
+    "swatches": 10,
+    "selects": 25,
+    "accordions": 6
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.maxbone.com/collections",
+    "title": "Collections – maxbone",
+    "width": 1440,
+    "pageHeight": 6698,
+    "fonts": {
+      "h1": {
+        "family": "GoodSans",
+        "size": "72px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "GoodSans",
+        "size": "44px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Let’s stay in touch"
+      },
+      "body": {
+        "family": "Oswald",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      },
+      "button": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "GoodSans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Introducing Roller Rabbit x maxbone. Your holiday magic star"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 132,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Introducing Roller Rabbi",
+        "Sign In",
+        "Rewards",
+        "Blog",
+        "SHOP ALL",
+        "Walk",
+        "Carrier Bags",
+        "Leash Sets",
+        "Leash, Harness & Collar",
+        "Wear",
+        "Apparel",
+        "Supplies",
+        "Beds",
+        "Grooming",
+        "Toys",
+        "Bowls"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 891,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 0,
+        "h": 132,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": null,
+        "words": 125,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 12,
+        "h": 600,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "72px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 612,
+        "h": 5305,
+        "bg": "rgb(255, 255, 255)",
+        "images": 280,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "44px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "New Arrivals"
+        },
+        "words": 1648,
+        "perRow": 56,
+        "fullBleed": true
+      },
+      {
+        "y": 5917,
+        "h": 324,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "44px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Let’s stay in touch"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6241,
+        "h": 457,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "GoodSans",
+          "size": "19px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Customer Care"
+        },
+        "words": 66,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

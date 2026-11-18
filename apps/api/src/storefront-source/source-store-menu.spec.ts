@@ -1,4 +1,4 @@
-import { checkStoreMenu, instructionAsksStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList, withStoreMenuConfig, STORE_MENU_LIMITS, withExtraPageLinks } from './source-store-menu';
+import { checkStoreMenu, instructionAsksStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList, withStoreMenuConfig, STORE_MENU_LIMITS, withAboutLink, withExtraPageLinks } from './source-store-menu';
 
 /** Dropdown menu (spec 2026-10-21): the menu config, its save checks and the chat words that switch it on or off. */
 const data = {
@@ -139,5 +139,21 @@ describe('extra page links', () => {
     const ctx = storeMenuContext({}, files);
     expect(ctx.targets.get('extra:novias')).toBe('Novias');
     expect(checkStoreMenu({ style: 'dropdowns', groups: [{ label: 'Novias', direct: true, links: [{ to: 'extra:novias' }] }] }, ctx)).toEqual({ style: 'dropdowns', groups: [{ label: 'Novias', direct: true, links: [{ label: 'Novias', to: 'extra:novias' }] }] });
+  });
+});
+
+describe('withAboutLink (owner 2026-11-12 «the entire stores are only product pages»)', () => {
+  const shop = { label: 'Sodas', links: [{ label: 'Todas', to: 'all' }] };
+  it('adds «Nosotros» as a plain link to a menu with room, once', () => {
+    const menu = withAboutLink({ style: 'dropdowns', groups: [shop] })!;
+    expect(menu.groups).toEqual([shop, { label: 'Nosotros', links: [{ label: 'Nosotros', to: 'page:about' }], direct: true }]);
+    expect(withAboutLink(menu)).toBe(menu);
+  });
+  it('leaves a full menu, a menu without groups and no menu as they are', () => {
+    const full = { style: 'dropdowns' as const, groups: Array.from({ length: STORE_MENU_LIMITS.groups }, (_, i) => ({ ...shop, label: `G${i}` })) };
+    expect(withAboutLink(full)).toBe(full);
+    const empty = { style: 'panel' as const };
+    expect(withAboutLink(empty)).toBe(empty);
+    expect(withAboutLink(undefined)).toBeUndefined();
   });
 });

@@ -1,0 +1,23 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvrmhvqv0001smsux1rylhsb",
+  "slug": "9y8p4uk9",
+  "categories": {
+    "Labios": "cmvrmhvrf0003smsuespbngcq",
+    "Sets": "cmvrmhvsb0009smsu1d0j3dic",
+    "Rubor": "cmvrmhvts000rsmsuf71ur1cr"
+  },
+  "products": {
+    "RH-LIP-001": "cmvrmhvs70007smsu45xohlpc",
+    "RH-BLU-001": "cmvrmhvsl000dsmsu8wry72q9",
+    "RH-LIP-002": "cmvrmhvtc000hsmsuyinbpivj",
+    "RH-LIP-003": "cmvrmhvtm000lsmsukgjx9s2l",
+    "RH-SET-001": "cmvrmhvtr000psmsug9wvzhsd",
+    "RH-BLU-002": "cmvrmhvtz000vsmsuh914xg8a",
+    "RH-LIP-004": "cmvrmhvub000zsmsukzuuh3s4",
+    "RH-LIP-005": "cmvrmhvup0013smsulnoi8rxp",
+    "RH-LIP-006": "cmvrmhvuu0017smsu2v2u15pu",
+    "RH-LIP-007": "cmvrmhvv4001bsmsum9v82ub0",
+    "RH-LIP-008": "cmvrmhvva001fsmsuxru10a67"
+  }
+}

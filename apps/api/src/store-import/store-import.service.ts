@@ -223,7 +223,7 @@ export class StoreImportService {
     const summary = [`Tienda: ${data.name}`, `Productos: ${data.products.slice(0, 30).map(product => product.title).join(', ')}`,
       data.collections.length ? `Colecciones: ${data.collections.map(collection => collection.title).join(', ')}` : ''].filter(Boolean).join('\n');
     try {
-      const result = await this.chat.importBuild(row.merchantId, row.storeId!, { importId: row.id, option: row.designOption as 'same' | 'redesign', origin: data.origin, productHandle: data.products[0]?.handle, summary });
+      const result = await this.chat.importBuild(row.merchantId, row.storeId!, { importId: row.id, option: row.designOption as 'same' | 'redesign', origin: data.origin, productHandle: data.products[0]?.handle, summary, productImages: data.products.flatMap(product => product.images) });
       await this.prisma.storeImport.updateMany({ where: { id: row.id }, data: { designStatus: 'COMPLETED', designRevision: result.revision } });
       await this.prisma.merchant.update({ where: { id: row.merchantId }, data: { importBuildUsedAt: new Date() } });
     } catch (error) {

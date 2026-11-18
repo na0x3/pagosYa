@@ -1,0 +1,40 @@
+{
+  "host": "sugarfina.com",
+  "name": "Sugarfina",
+  "at": "2026-11-14T14:48:41.697Z",
+  "mood": "No evaluable: ambas capturas muestran un bloqueo de acceso, no la tienda.",
+  "idea": "No puede determinarse la idea visual de Sugarfina porque la portada real fue sustituida por una pantalla de seguridad.",
+  "header": "No visible. La pantalla bloqueada no muestra cabecera comercial, navegación, anuncio, acciones ni adaptación del menú. No se puede establecer si el header es fijo ni cómo funciona en teléfono.",
+  "hero": "No visible. En escritorio de 1440 × 900 y teléfono de 390 × 844 solo aparece el aviso «Access is temporarily restricted»; no hay fotografía, titular promocional ni llamada a la acción de la tienda.",
+  "catalog": "Sin captura. No es posible documentar cabecera, filtros, ordenación, número de columnas ni comportamiento responsive del catálogo.",
+  "card": "Sin captura. No pueden determinarse la proporción fotográfica, jerarquía de nombre y precio, muestras de color, compra rápida o segunda imagen al pasar.",
+  "product": "Sin captura. No puede estudiarse la relación entre galería y caja de compra, el contenido situado sobre el pliegue, las variantes, los acordeones ni las recomendaciones inferiores.",
+  "cart": "Sin captura. No se puede saber si Sugarfina emplea cajón o página de carrito, ni estudiar filas, resumen, totales o ventas adicionales.",
+  "type": "No evaluable. Las mediciones del navegador no detectan fuentes de h1, h2, cuerpo, botones o navegación. La tipografía sans serif del aviso pertenece a la pantalla de seguridad y no debe tomarse como parte del sistema visual de la tienda.",
+  "colour": "No evaluable como sistema comercial. La pantalla de bloqueo usa fondo blanco, texto negro y un logotipo turquesa, pero este contexto no permite confirmar cómo se distribuyen esos colores en la interfaz real, sus fondos, botones o bandas promocionales.",
+  "photos": "No visibles. La pantalla de seguridad no contiene fotografía de producto ni imágenes de estilo de vida, por lo que no pueden estudiarse fondos, recortes, escala o dirección de arte.",
+  "motion": "No visible ni deducible. Las mediciones registran cero vídeos y ninguna marquesina, pero corresponden al bloqueo, no a la tienda real; no permiten descartar carruseles, transiciones o estados hover en el sitio comercial.",
+  "phone": "No puede estudiarse la recomposición comercial. En 390 px solo se adapta la pantalla de bloqueo: logotipo centrado, mensaje principal centrado y detalles técnicos en una banda inferior; esto no representa la navegación ni las secciones de Sugarfina.",
+  "signature": "No identificable con estas capturas. El emblema turquesa aparece en la pantalla de bloqueo, pero no basta para definir un gesto propio de la experiencia de compra.",
+  "home": [
+    {
+      "role": "Estado de acceso, no sección comercial",
+      "composition": "La portada está completamente sustituida por un bloqueo. En escritorio, dentro de un lienzo blanco de 1440 × 900, el logotipo queda centrado cerca de la parte superior, el mensaje de restricción ocupa el centro y la explicación técnica aparece abajo sobre una franja gris muy clara. En teléfono de 390 × 844 se conserva el apilado vertical: marca arriba, aviso centrado y texto técnico debajo. Esta composición debe ignorarse al estudiar la tienda."
+    },
+    {
+      "role": "Resto de la portada",
+      "composition": "No visible. No hay evidencia de hero, categorías, colecciones, módulos editoriales, productos destacados, beneficios, newsletter o pie de página."
+    },
+    {
+      "role": "Bloqueo observado",
+      "composition": "Las métricas automáticas describen una única sección blanca a sangre, sin imágenes comerciales, vídeos, encabezados detectables ni retícula de tarjetas. Son datos del bloqueo y no deben interpretarse como decisiones de diseño de Sugarfina."
+    }
+  ],
+  "lessons": [
+    "No convertir una página de seguridad en una descripción de la tienda: tipografía, espaciado y composición del bloqueo pueden pertenecer al proveedor antifraude.",
+    "Separar siempre hechos observables de inferencias. Aquí solo son verificables el bloqueo, los tamaños de viewport —1440 px y 390 px— y la ausencia de páginas comerciales capturadas.",
+    "No deducir una retícula de catálogo ni una ficha de producto a partir de mediciones con cero tarjetas: el rastreador midió una respuesta bloqueada.",
+    "Repetir la captura desde una sesión autorizada y reunir portada completa, catálogo, producto y carrito en ambos anchos antes de producir una ficha reproducible.",
+    "Tomar medidas sobre la interfaz real: ancho de contenedor, márgenes, alturas de cabecera, proporciones de imagen, columnas, escalas tipográficas y estados interactivos."
+  ]
+}

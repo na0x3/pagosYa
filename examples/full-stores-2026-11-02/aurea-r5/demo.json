@@ -1,0 +1,48 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwaxn49e0001rhm0bf4cywy1",
+  "slug": "gh28inr4",
+  "photos": {
+    "brand:esmeralda.jpg": "/v1/uploads/045eb487-b156-4693-b976-462b63eb99e3.jpg",
+    "brand:manos.jpg": "/v1/uploads/e8551083-69f3-447b-9139-cac14b16ed3c.jpg",
+    "brand:oreja.jpg": "/v1/uploads/6545442f-bd4a-4d53-9778-ffe174621982.jpg",
+    "brand:regalo.jpg": "/v1/uploads/a2d3ca63-c24a-440b-8b2b-a386007eb723.jpg",
+    "brand:retrato.jpg": "/v1/uploads/7d023086-628c-471e-9ea1-42548a4019b2.jpg",
+    "brand:seda.jpg": "/v1/uploads/e2eeefed-e8b5-4f7a-8773-dc7b9d1ca962.jpg",
+    "brand:taller.jpg": "/v1/uploads/f59c3b86-a3eb-41be-b207-fda16d45da8f.jpg",
+    "anillo-sello.jpg": "/v1/uploads/04124916-6d45-44cf-9a3a-714f602574b6.jpg",
+    "aros-argolla.jpg": "/v1/uploads/89a30b8d-e9e5-456b-a649-a56a1d5c0ff4.jpg",
+    "collar-gota.jpg": "/v1/uploads/56271a65-2599-4ced-92ff-2879eaffc363.jpg",
+    "anillo-estuche.jpg": "/v1/uploads/d68e8fa7-58e7-4c0f-b1ae-072c623e007e.jpg",
+    "argollas-finas.jpg": "/v1/uploads/c8307604-6ba8-46a6-a41f-14a12061aef0.jpg",
+    "trio-plata.jpg": "/v1/uploads/0e510a8f-c77f-4e06-be40-7f04d1e52d18.jpg",
+    "pulsera-granate.jpg": "/v1/uploads/eebff328-2c16-4bd5-b01f-6775b3fd84b0.jpg",
+    "cadena-plata.jpg": "/v1/uploads/bc914a11-81c8-434e-a69c-2c3968db4625.jpg"
+  },
+  "categories": {
+    "Anillos": "cmwaxn49z000hrhm0zvuh45ht",
+    "Aros": "cmwaxn4a0000jrhm0hhodb233",
+    "Collares": "cmwaxn4a1000lrhm03tqswd1p",
+    "Pulseras": "cmwaxn4a1000nrhm0ywhfrp8h"
+  },
+  "products": {
+    "Anillo Sello": "cmwaxn4a4000rrhm0yps6kola",
+    "Aros Argolla": "cmwaxn4ab000vrhm0crwrnr91",
+    "Collar Gota": "cmwaxn4ae000zrhm0jq1g3kpv",
+    "Anillo Sello en Estuche": "cmwaxn4ag0013rhm0rfg65xaf",
+    "Argollas Finas": "cmwaxn4ai0017rhm0bbp0u0h1",
+    "Trío de Anillos Plata": "cmwaxn4al001brhm0jbccoj69",
+    "Pulsera Granate": "cmwaxn4ao001frhm00fss4i1d",
+    "Cadena de Plata": "cmwaxn4ar001jrhm06mg3suhy"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwaxn4b9001rrhm0tla5lzzg"
+}

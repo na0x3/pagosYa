@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Header, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { PlansService } from '../plans/plans.service';
+import { Body, Controller, Get, Header, Param, Post, Put, UseGuards, Optional } from '@nestjs/common';
 import { ArrayMaxSize, IsArray, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
@@ -24,7 +25,7 @@ class AnalyzeBrandDto {
 @UseGuards(MerchantAuthGuard)
 @Controller('v1/stores/:storeId/brand')
 export class BrandProfileController {
-  constructor(private readonly brands: BrandProfileService) {}
+  constructor(private readonly brands: BrandProfileService, @Optional() private readonly plans?: PlansService) {}
   @Get() @Header('Cache-Control', 'private, no-store')
   get(@CurrentMerchant() merchant: { id: string }, @Param('storeId') id: string) { return this.brands.get(merchant.id, id); }
   @Put()
@@ -34,5 +35,5 @@ export class BrandProfileController {
   @Post('restore')
   restore(@CurrentMerchant() merchant: { id: string }, @Param('storeId') id: string, @Body() dto: RestoreBrandDto) { return this.brands.restore(merchant.id, id, dto.revision, dto.targetRevision); }
   @Post('analyze') @Throttle({ default: { limit: 3, ttl: 60_000 } })
-  analyze(@CurrentMerchant() merchant: { id: string }, @Param('storeId') id: string, @Body() dto: AnalyzeBrandDto) { return this.brands.analyze(merchant.id, id, dto); }
+  async analyze(@CurrentMerchant() merchant: { id: string }, @Param('storeId') id: string, @Body() dto: AnalyzeBrandDto) { await this.plans?.assertCredits(id, merchant.id); return this.brands.analyze(merchant.id, id, dto); }
 }

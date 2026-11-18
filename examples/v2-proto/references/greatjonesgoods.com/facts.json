@@ -1,0 +1,653 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://greatjonesgoods.com/",
+    "title": "Cast Iron, Ceramic & Stainless Steel Cookware & Bakeware | Great Jones",
+    "width": 1440,
+    "pageHeight": 2294,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "CooperBT",
+        "size": "34px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.68px",
+        "text": "Autumn Sale"
+      },
+      "body": {
+        "family": "HopeSans",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Free shipping $100+, 30-day trial, free returns"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": null
+    },
+    "page": "rgb(250, 237, 223)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(250, 237, 223)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 34,
+        "h": 643,
+        "bg": "rgb(250, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "CooperBT",
+          "size": "34px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.68px",
+          "text": "Autumn Sale"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 787,
+        "h": 577,
+        "bg": "rgb(250, 237, 223)",
+        "images": 16,
+        "video": false,
+        "heading": null,
+        "words": 470,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 16,
+      "columns": 16,
+      "photoRatio": 1.5,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://greatjonesgoods.com/",
+    "title": "Cast Iron, Ceramic & Stainless Steel Cookware & Bakeware | Great Jones",
+    "width": 390,
+    "pageHeight": 2651,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "CooperBT",
+        "size": "34px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.68px",
+        "text": "Autumn Sale"
+      },
+      "body": {
+        "family": "HopeSans",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Free shipping $100+, 30-day trial, free returns"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": null
+    },
+    "page": "rgb(250, 237, 223)",
+    "header": {
+      "height": 52,
+      "position": "relative",
+      "bg": "rgb(250, 237, 223)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 52,
+        "h": 724,
+        "bg": "rgb(250, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "CooperBT",
+          "size": "34px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.68px",
+          "text": "Autumn Sale"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 854,
+        "h": 676,
+        "bg": "rgb(250, 237, 223)",
+        "images": 16,
+        "video": false,
+        "heading": null,
+        "words": 302,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 16,
+      "columns": 8,
+      "photoRatio": 0,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://greatjonesgoods.com/collections/all",
+    "title": "Shop All Cookware and Bakeware Sets, Kitchen Accessories | Great Jones",
+    "width": 1440,
+    "pageHeight": 6891,
+    "fonts": {
+      "h1": {
+        "family": "CooperBT",
+        "size": "30px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "All"
+      },
+      "h2": {
+        "family": "CooperBT",
+        "size": "24px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.4px",
+        "text": "Your Cart 0"
+      },
+      "body": {
+        "family": "HopeSans",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Free shipping $100+, 30-day trial, free returns"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": null
+    },
+    "page": "rgb(250, 237, 223)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(250, 237, 223)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 174,
+        "h": 257,
+        "bg": "rgb(250, 237, 223)",
+        "images": 7,
+        "video": false,
+        "heading": null,
+        "words": 13,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 480,
+        "h": 5522,
+        "bg": "rgb(250, 237, 223)",
+        "images": 30,
+        "video": false,
+        "heading": null,
+        "words": 684,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 32,
+      "columns": 3,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://greatjonesgoods.com/collections/all?_su_rec=fiHRYJ7lSOFE6udCNUDX_deWfUnM9HymBKt0lkY--klIdACBrtKUpIhjPz8Oy9cjRkHf1qg4yCO5RvN6lItW1D4V80VaXKvUG1lkK40cVmbzBJ-yGkljLld-w7Lezfwfyu2gZ4Km-7uXaue4C5k8gQsHZHiSyWldOhEz5S98vv1aYbkxF6Jlh5RIerX7XrJjK1oo4Y_mdRLhny72IolOHOxy6RtjQHlFV4tHXOvm-dTA9sckHK99x3vOPkDJ9k1ySe54-8yjoGK9UT4UfiRIuTOTAb-86zEcv0vAfjPiBeC-Yb48ETW-Vk0UiMTCQANa3GdYc6Ccs9U5jShtBXpayjRMeTXwmzmvDtRHplNFW-uyhGaTrkpt2R2czNSPlKtKChom48E&_su_rec_id=eafd6de3-6c74-4e21-8d61-275b3bfff70d-1794668166",
+    "title": "Shop All Cookware and Bakeware Sets, Kitchen Accessories | Great Jones",
+    "width": 390,
+    "pageHeight": 12760,
+    "fonts": {
+      "h1": {
+        "family": "CooperBT",
+        "size": "30px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "All"
+      },
+      "h2": {
+        "family": "CooperBT",
+        "size": "24px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.4px",
+        "text": "Your Cart 0"
+      },
+      "body": {
+        "family": "HopeSans",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Free shipping $100+, 30-day trial, free returns"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": null
+    },
+    "page": "rgb(250, 237, 223)",
+    "header": {
+      "height": 52,
+      "position": "relative",
+      "bg": "rgb(250, 237, 223)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 142,
+        "h": 158,
+        "bg": "rgb(250, 237, 223)",
+        "images": 7,
+        "video": false,
+        "heading": null,
+        "words": 13,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 318,
+        "h": 157,
+        "bg": "rgb(250, 237, 223)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "CooperBT",
+          "size": "30px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "0.4px",
+          "text": "All"
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 455,
+        "h": 11194,
+        "bg": "rgb(250, 237, 223)",
+        "images": 30,
+        "video": false,
+        "heading": null,
+        "words": 684,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 2,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://greatjonesgoods.com/products/great-jones-gift-card",
+    "title": "Great Jones E-Gift Card",
+    "width": 1440,
+    "pageHeight": 3610,
+    "fonts": {
+      "h1": {
+        "family": "CooperBT",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Great Jones E-Gift Card"
+      },
+      "h2": {
+        "family": "CooperBT",
+        "size": "24px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.4px",
+        "text": "Your Cart 0"
+      },
+      "body": {
+        "family": "HopeSans",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Free shipping $100+, 30-day trial, free returns"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": null
+    },
+    "page": "rgb(250, 237, 223)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(250, 237, 223)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 34,
+        "h": 1237,
+        "bg": "rgb(250, 237, 223)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "CooperBT",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.4px",
+          "text": "Great Jones E-Gift Card"
+        },
+        "words": 200,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1271,
+        "h": 790,
+        "bg": "rgb(250, 237, 223)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "CooperBT",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.4px",
+          "text": "Frequently Bought Together"
+        },
+        "words": 54,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart$25",
+      "aboveFold": false,
+      "top": 926,
+      "x": 986,
+      "width": 434,
+      "bg": "rgb(14, 85, 64)"
+    },
+    "price": {
+      "family": "HopeSans",
+      "size": "18px",
+      "weight": "500",
+      "case": "capitalize",
+      "tracking": "0.4px",
+      "text": "$250"
+    },
+    "galleryImages": 6,
+    "swatches": 136,
+    "selects": 7,
+    "accordions": 17
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://greatjonesgoods.com/products/great-jones-gift-card",
+    "title": "Great Jones E-Gift Card",
+    "width": 390,
+    "pageHeight": 4082,
+    "fonts": {
+      "h1": {
+        "family": "CooperBT",
+        "size": "28px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Great Jones E-Gift Card"
+      },
+      "h2": {
+        "family": "CooperBT",
+        "size": "24px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.4px",
+        "text": "Your Cart 0"
+      },
+      "body": {
+        "family": "HopeSans",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Free shipping $100+, 30-day trial, free returns"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": null
+    },
+    "page": "rgb(250, 237, 223)",
+    "header": {
+      "height": 52,
+      "position": "relative",
+      "bg": "rgb(250, 237, 223)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 52,
+        "h": 1704,
+        "bg": "rgb(250, 237, 223)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "CooperBT",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.4px",
+          "text": "Great Jones E-Gift Card"
+        },
+        "words": 140,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1756,
+        "h": 658,
+        "bg": "rgb(250, 237, 223)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "CooperBT",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.4px",
+          "text": "Frequently Bought Together"
+        },
+        "words": 42,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart$25",
+      "aboveFold": false,
+      "top": 859,
+      "x": 20,
+      "width": 350,
+      "bg": "rgb(14, 85, 64)"
+    },
+    "price": {
+      "family": "HopeSans",
+      "size": "15px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.4px",
+      "text": "$225"
+    },
+    "galleryImages": 3,
+    "swatches": 136,
+    "selects": 7,
+    "accordions": 17
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://greatjonesgoods.com/#cart",
+    "title": "Cast Iron, Ceramic & Stainless Steel Cookware & Bakeware | Great Jones",
+    "width": 1440,
+    "pageHeight": 2294,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "CooperBT",
+        "size": "34px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.68px",
+        "text": "Autumn Sale"
+      },
+      "body": {
+        "family": "HopeSans",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Free shipping $100+, 30-day trial, free returns"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": null
+    },
+    "page": "rgb(250, 237, 223)",
+    "header": {
+      "height": 34,
+      "position": "relative",
+      "bg": "rgb(250, 237, 223)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 34,
+        "h": 643,
+        "bg": "rgb(250, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "CooperBT",
+          "size": "34px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.68px",
+          "text": "Autumn Sale"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 787,
+        "h": 577,
+        "bg": "rgb(250, 237, 223)",
+        "images": 16,
+        "video": false,
+        "heading": null,
+        "words": 470,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

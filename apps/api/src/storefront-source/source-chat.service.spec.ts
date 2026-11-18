@@ -436,7 +436,8 @@ it('never saves or throws a validator diagnostic, whichever stage produced it', 
   });
   const failure = messages.at(-1);
   expect(failure.content).not.toMatch(/assets\/|absent|Display these|image-9eb40d2cb55e/i);
-  expect(failure.content).toContain('comprobaciones automáticas');
+  // Owner 2026-11-09: the kind of problem is said in plain words.
+  expect(failure.content).toContain('una foto no quedó bien puesta');
   expect(failure.content).toContain('quedaron guardados');
   expect(failure.metadata).toMatchObject({ failed: true });
 });
@@ -1064,5 +1065,39 @@ describe('kind answers after the final review (2026-10-15)', () => {
     saving(prisma);
     await service.send('m', 's', { ...request, instruction: 'Cambia el fondo a azul' });
     expect(prisma.store.update).not.toHaveBeenCalled();
+  });
+});
+
+// Spec 2026-11-09 YAPI A/B tests: status, end and popup asks are answered without a model call; a design ask builds B by the usual edit.
+describe('A/B tests through the chat', () => {
+  const reply = (content: string) => ({ id: 'r', role: 'ASSISTANT', content, metadata: {} });
+  function withAb(blocked: string | null = null) {
+    const built = setup();
+    const ab = { status: jest.fn(async () => reply('estado')), end: jest.fn(async () => reply('fin')), blocker: jest.fn(async () => blocked), blocked: jest.fn(async (_s: string, text: string) => reply(text)), proposePopup: jest.fn(async () => reply('tarjeta')) };
+    (built.service as any).ab = ab;
+    return { ...built, ab };
+  }
+  it('«¿cómo va mi prueba?» and «termina la prueba» are answered by the test numbers, never the model', async () => {
+    const { service, ab, dialogue } = withAb();
+    expect((await service.send('m', 's', { ...request, instruction: '¿Cómo va mi prueba?' })).assistantMessage.content).toBe('estado');
+    expect((await service.send('m', 's', { ...request, instruction: 'termina la prueba' })).assistantMessage.content).toBe('fin');
+    expect(ab.status).toHaveBeenCalledWith('s');
+    expect(ab.end).toHaveBeenCalledWith('s');
+    expect(dialogue.decide).not.toHaveBeenCalled();
+  });
+  it('a popup test ask gets its card; a blocked store gets the reason and nothing is built', async () => {
+    const { service, ab, generation } = withAb();
+    expect((await service.send('m', 's', { ...request, instruction: 'prueba si 15% atrae más que 10%' })).assistantMessage.content).toBe('tarjeta');
+    expect(ab.proposePopup).toHaveBeenCalledWith('s', 'prueba si 15% atrae más que 10%');
+    const blocked = withAb('Para hacer una prueba A/B, primero publica tu tienda.');
+    expect((await blocked.service.send('m', 's', { ...request, instruction: 'prueba otra portada', abRequest: 'prueba otra portada' } as any)).assistantMessage.content).toBe('Para hacer una prueba A/B, primero publica tu tienda.');
+    expect(blocked.ab.proposePopup).not.toHaveBeenCalled();
+    expect(generation.generate).not.toHaveBeenCalled();
+    expect(blocked.generation.generate).not.toHaveBeenCalled();
+  });
+  it('a design test ask builds B by the usual edit, told it is a B that is never published', async () => {
+    const { service, dialogue } = withAb();
+    await service.send('m', 's', { ...request, instruction: 'prueba otra portada', abRequest: 'prueba otra portada' } as any);
+    expect(dialogue.decide.mock.calls[0][1].instruction).toBe('Versión B para una prueba A/B (no publicar): prueba otra portada');
   });
 });

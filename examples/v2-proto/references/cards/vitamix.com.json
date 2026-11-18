@@ -1,0 +1,53 @@
+{
+  "host": "vitamix.com",
+  "name": "Vitamix",
+  "at": "2026-11-14T15:37:36.199Z",
+  "mood": "Autoridad industrial, legado centenario y rendimiento profesional trasladado a la cocina doméstica.",
+  "idea": "Construye confianza alternando máquinas mostradas a gran escala, archivo histórico y pruebas técnicas, con una tipografía editorial que convierte un electrodoméstico en una pieza de oficio duradera.",
+  "header": "Cabecera sticky de 84 px en escritorio, con fondo casi blanco rgb(250,250,250) y sin barra de anuncio. El logotipo Vitamix queda a la izquierda; a continuación aparecen cinco enlaces: Household Products, Why Vitamix, Recipes, Support y Commercial. A la derecha se agrupan tres acciones con icono y texto: Search, selector de idioma English (US) y Find Dealer. En teléfono baja a 68 px: logotipo centrado y botón de hamburguesa a la derecha, acompañado por la palabra “Menu”; desaparecen los enlaces y acciones visibles. No se aprecia carrito en esta versión internacional.",
+  "hero": "En escritorio ocupa todo el ancho bajo la cabecera y forma parte de un primer bloque de 1063 px de alto que también contiene los accesos Household/Commercial. La apertura usa una imagen panorámica de dos máquinas a la derecha y una zona azul grisácea para el mensaje a la izquierda. El texto ocupa aproximadamente una cuarta parte del ancho: antetítulo en mayúsculas espaciadas, titular Sentinel de 45 px y peso 300 —“Trusted By Chefs. Chosen by Home Cooks.”— y párrafo Gotham Narrow de 16 px. No hay botón en este mensaje; la navegación comercial se delega a los paneles siguientes. En teléfono la composición deja de ser superpuesta: primero aparece la foto, recortada en vertical y centrada sobre los controles de las dos máquinas, y después una caja azul grisácea con márgenes laterales de unos 32 px. El titular baja a 30 px y el bloque de texto gana mucho aire vertical.",
+  "catalog": "No se proporcionó captura de catálogo. Las medidas disponibles corresponden únicamente a la portada, por lo que no es posible confirmar cabecera de colección, número de columnas, filtros, ordenación ni comportamiento en teléfono.",
+  "card": "No hay una tarjeta de producto verificable: el dato automático de una tarjeta y proporción 0,75 pertenece al análisis estructural de la portada, no a una captura de catálogo. No se pueden afirmar textos, precio, muestras de color, compra rápida ni cambio de imagen al pasar.",
+  "product": "No se proporcionó captura de página de producto. No es posible determinar la distribución de galería y caja de compra, el contenido sobre el pliegue, las variantes, los acordeones ni los módulos posteriores.",
+  "cart": "No se proporcionó captura del carrito; no puede comprobarse si funciona como cajón o página, ni su estructura de filas, totales o ventas adicionales.",
+  "type": "La combinación separa relato y utilidad. Sentinel, una serif de aire editorial, se usa en titulares con peso 300: 45 px en escritorio y 30 px en teléfono, sin transformación de caja ni tracking añadido. Gotham Narrow se reserva para navegación, párrafos y controles: cuerpo y navegación a 16 px/400 y botones a 16 px/700. Los antetítulos —por ejemplo “A CENTURY OF INNOVATION” y “A LEGACY OF INNOVATION”— aparecen en versales pequeñas, con tracking amplio y tamaño sensiblemente menor que el cuerpo. Los títulos históricos y de argumento técnico mantienen la serif; descripciones, fechas, enlaces y etiquetas emplean la sans estrecha. Esta oposición permite que la historia parezca editorial sin perder densidad funcional en menús y explicaciones.",
+  "colour": "La página base es blanca, rgb(255,255,255), y la cabecera usa rgb(250,250,250). El bloque histórico se distingue mediante un marfil cálido rgb(243,241,235); el resto de los grandes bloques medidos vuelve al casi blanco rgb(250,250,250). La apertura utiliza azul grisáceo claro para unir texto y maquinaria; la tinta es gris carbón en lugar de negro puro. El rojo corporativo se concentra en el logotipo y en pequeños antetítulos o fechas. Más abajo aparece una banda azul carbón para el testimonio profesional y tres CTA finales en gris piedra, carbón y verde oscuro. Así, el color organiza familias de contenido antes que decorar cada elemento.",
+  "photos": "Se alternan cuatro registros. Primero, fotografía de producto a escala casi monumental, con recortes que acercan controles, jarras y materiales. Segundo, paneles de contexto doméstico y comercial con degradado u oscurecimiento para sostener texto blanco. Tercero, archivo histórico en sepia, presentado como documentos en una retícula regular. Cuarto, detalle técnico extremo —acero, cuchillas y superficies rayadas— combinado con retrato profesional. Las imágenes suelen llegar al borde de su columna; no se presentan como miniaturas flotantes ni sobre fondos de estudio aislados. En teléfono se conserva el detalle mediante recortes más altos y se separa la foto del texto cuando una superposición sería difícil de leer.",
+  "motion": "Las medidas detectan un vídeo en la portada y ninguna marquesina. Las capturas no permiten confirmar si se reproduce automáticamente ni sus controles. Tampoco se ven carruseles activos. Es probable que los paneles enlazables y flechas tengan estados hover, pero no puede verificarse su tratamiento visual con imágenes estáticas.",
+  "phone": "La cabecera se reduce de 84 a 68 px y condensa toda la navegación en logotipo centrado más hamburguesa. Las composiciones horizontales pasan a una sola columna: en el hero, foto primero y texto después; los paneles Household y Commercial se apilan; la cronología abandona las tres columnas y muestra cada episodio como una secuencia vertical de foto y texto; y los argumentos técnicos alternan imagen de ancho completo con bloque escrito debajo. El contenido suele mantener márgenes laterales cercanos a 20–32 px, mientras algunas fotos llegan a los bordes. Los titulares bajan de 45 a 30 px, pero el cuerpo permanece en 16 px. La página crece de 4575 px en escritorio a 5239 px en 390 px de ancho, señal de que no elimina el relato: lo serializa.",
+  "signature": "El gesto propio es presentar la misma promesa de longevidad como una cadena continua de pruebas —archivo familiar, cuchilla en macro y chef profesional— en vez de resolverla con una simple lista de prestaciones.",
+  "home": [
+    {
+      "role": "Declarar la posición de marca y establecer autoridad.",
+      "composition": "Hero a todo el ancho bajo la cabecera. En escritorio, texto sobre el cuarto izquierdo de un panorama dominado por dos máquinas; antetítulo, titular serif de 45 px y párrafo de 16 px, sin botón. En teléfono, fotografía y caja de texto se convierten en dos bloques verticales independientes."
+    },
+    {
+      "role": "Separar rápidamente las dos audiencias principales.",
+      "composition": "Dos paneles fotográficos iguales en una retícula 50/50: Household y Commercial. Cada imagen lleva una capa oscura, una etiqueta pequeña en versales, un título blanco grande con flecha y una breve explicación. En teléfono se apilan a una columna; la captura muestra Commercial como tarjeta horizontal casi completa dentro de márgenes laterales."
+    },
+    {
+      "role": "Convertir la antigüedad de la empresa en prueba de confianza.",
+      "composition": "Sección sobre fondo marfil rgb(243,241,235), encabezada al centro por un antetítulo rojo y “Vitamix Throughout the Years” en Sentinel. En escritorio organiza tres hitos simultáneos en columnas, cada uno con foto de archivo de proporción vertical o casi cuadrada, fecha roja, subtítulo y párrafo. En teléfono se vuelve una cronología lineal: imagen grande y texto debajo antes de pasar al siguiente hito."
+    },
+    {
+      "role": "Explicar durabilidad y versatilidad mediante evidencia material.",
+      "composition": "Bloque “The one and never done.” sobre fondo casi blanco. En escritorio usa división aproximada 35/65: macro de metal o cuchilla a sangre en la izquierda y, a la derecha, título, párrafo y argumentos con pequeñas imágenes circulares. En teléfono, la macro ocupa todo el ancho y el texto se coloca debajo con margen interior."
+    },
+    {
+      "role": "Añadir validación de profesionales.",
+      "composition": "Banda oscura azul carbón con retrato de chef a un lado y el título “Preferred by the Pros” más testimonio al otro. El contraste blanco sobre oscuro cambia el ritmo después de varias secciones claras; la figura se recorta grande, no como avatar o cita pequeña."
+    },
+    {
+      "role": "Cerrar con rutas claras según intención.",
+      "composition": "Tres CTA del mismo ancho en una fila: For Home, Commercial y Find a Dealer. Cada bloque usa un fondo distinto —gris piedra, carbón y verde oscuro—, texto centrado y una breve línea explicativa. Debajo, el pie se organiza en varias columnas pequeñas de enlaces, selector de privacidad, redes sociales, cambio de ubicación y copyright; en teléfono debería apilarse, aunque esa parte no aparece completa en las capturas móviles."
+    }
+  ],
+  "lessons": [
+    "Cuando la propuesta es longevidad, no repetir el adjetivo “duradero”: demostrarla con tres clases de evidencia —historia, detalle constructivo y uso profesional— distribuidas a lo largo de la página.",
+    "Asignar funciones tipográficas estables: serif ligera para ideas y relato; sans estrecha para navegación, datos, párrafos y acciones. La consistencia importa más que usar muchas escalas.",
+    "En móvil no reducir una composición panorámica hasta volverla ilegible. Separar fotografía y texto en bloques sucesivos, conservar el cuerpo a 16 px y reducir solo el titular de 45 a 30 px.",
+    "Usar cambios de fondo para señalar capítulos largos: casi blanco para producto y técnica, marfil para archivo y carbón para prueba profesional. Así se estructura una página extensa sin añadir divisores ornamentales.",
+    "Dar a cada audiencia una puerta explícita y equivalente. Dos paneles 50/50 en escritorio y apilados en teléfono comunican elección sin convertir una de las rutas en secundaria.",
+    "Recortar el producto con decisión: un control o una cuchilla a gran escala puede explicar precisión y robustez mejor que repetir fotografías completas del objeto."
+  ]
+}

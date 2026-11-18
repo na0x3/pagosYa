@@ -101,6 +101,44 @@ it('sends the store data, the product page and the photos to the one edit call',
   expect(input.photos.map((photo: { url: string; from: string }) => [photo.url, photo.from])).toEqual([['/v1/uploads/bead01.jpg', 'mensaje'], ['/v1/uploads/a.jpg', 'producto']]);
 });
 
+it('a store without home sections: its own parts change, a home op hands the whole request on (live Remolino 2026-11-09)', async () => {
+  const classic = (instruction: string) => chat.templateLayoutEdit('m1', 's1', 't1', { id: 'u1' }, workflow, { instruction, revision: 5, assetUrls: [] }, 5, []);
+  const composeLibrary = jest.fn(); (chat as any).dialogue.composeLibrary = composeLibrary;
+  editLayout.mockResolvedValueOnce(read({ ops: [{ op: 'add', at: -1, field: '', item: -1, value: 'servicios', to: 0, type: 'strip-services' }] }));
+  expect(await classic('agrega reseñas a la portada')).toBeNull();
+  expect(composeLibrary).not.toHaveBeenCalled();
+  expect(refill).not.toHaveBeenCalled();
+  editLayout.mockResolvedValueOnce(read({ store: [{ part: 'popup', field: 'style', at: -1, value: 'revista' }] }));
+  await classic('En la ventana de suscripción: que se vea estilo revista');
+  expect(messages.at(-1).content).toContain('Revista');
+});
+
+it('a store edit that saves never says it could not save (final review 2026-11-09: a dangling else)', async () => {
+  (chat as any).ab = { popupTestRunning: jest.fn(async () => false) };
+  editLayout.mockResolvedValueOnce(read({ store: [{ part: 'popup', field: 'style', at: -1, value: 'revista' }] }));
+  await edit('En la ventana de suscripción: estilo revista');
+  expect(messages.at(-1).content).not.toContain('No pude guardar');
+  (chat as any).ab = undefined;
+  editLayout.mockResolvedValueOnce(read({ store: [{ part: 'popup', field: 'style', at: -1, value: 'revista' }] }));
+  await edit('En la ventana de suscripción: estilo revista');
+  expect(messages.at(-1).content).not.toContain('No pude guardar');
+});
+
+it('a popup change while a popup A/B test runs says the change also reaches version A (spec 2026-11-09)', async () => {
+  (chat as any).ab = { popupTestRunning: jest.fn(async () => true) };
+  editLayout.mockResolvedValueOnce(read({ store: [{ part: 'popup', field: 'style', at: -1, value: 'revista' }] }));
+  await edit('En la ventana de suscripción: estilo revista');
+  expect(messages.at(-1).content).toContain('Ojo: tienes una prueba de la ventana corriendo; este cambio también lo ve la versión A.');
+});
+
+it('a design test B never changes the live store data — B is the design only (final review 2026-11-09)', async () => {
+  editLayout.mockResolvedValueOnce(read({ store: [{ part: 'about', field: 'text', at: -1, title: '', value: 'Otra historia.' }, { part: 'product', field: 'price', at: 0, title: '', value: '35' }] }));
+  await chat.templateLayoutEdit('m1', 's1', 't1', { id: 'u1' }, workflow, { instruction: 'Versión B para una prueba A/B (no publicar): prueba otra historia', abRequest: 'prueba otra historia', revision: 5, assetUrls: [] }, 5, home);
+  expect(prisma.tx.store.update).not.toHaveBeenCalled();
+  expect(prisma.tx.paymentLink.update).not.toHaveBeenCalled();
+  expect(messages.at(-1).content).toContain('En una prueba A/B solo cambian el diseño o la ventana; no cambié los datos de tu tienda');
+});
+
 it('nothing to do with the request: the usual edit runs (null)', async () => {
   editLayout.mockResolvedValue(read({ rest: 'pon todo en verde' }));
   expect(await edit('pon todo en verde')).toBeNull();
@@ -147,6 +185,18 @@ it('changes the catalogue to the Nike shop page as the filters variant', async (
   expect(label).toBe('Cambios de YAPI');
   expect(prisma.$transaction).not.toHaveBeenCalled();
   expect(out.assistantMessage.content).toContain('como Nike');
+});
+
+// Miga Dorada 2026-11-07: «que el pie de página sea rosado» is the footer's own colour in the quick edit, never the store accent.
+it('colours the footer on its own in the look, with no database write', async () => {
+  editLayout.mockResolvedValue(read({ store: [{ part: 'footer', field: 'color', at: -1, title: 'rosado', value: '#f4c2cc' }] }));
+  const out = await edit('pero quiero que el pie de pagina sea rosado');
+  const [, , , change, label] = refill.mock.calls[0];
+  expect(change.look).toEqual({ parts: { footer: '#f4c2cc' } });
+  expect(label).toBe('Cambios de YAPI');
+  expect(prisma.$transaction).not.toHaveBeenCalled();
+  expect(out.assistantMessage.content).toContain('el pie de página ahora es rosado');
+  expect(out.followUp).toBeUndefined();
 });
 
 it('a refused change is said, and nothing is saved', async () => {

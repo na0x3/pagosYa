@@ -1,0 +1,24 @@
+{
+ "390": {
+  "header": "es-header",
+  "logoImgHeader": false,
+  "logoImgFooter": false,
+  "menu": true,
+  "search": true,
+  "account": true,
+  "cart": true,
+  "paper": "rgb(247, 238, 238)",
+  "heading": "\"DM Sans\", system-ui, sans-serif"
+ },
+ "1280": {
+  "header": "es-header",
+  "logoImgHeader": false,
+  "logoImgFooter": false,
+  "menu": true,
+  "search": true,
+  "account": true,
+  "cart": true,
+  "paper": "rgb(247, 238, 238)",
+  "heading": "\"DM Sans\", system-ui, sans-serif"
+ }
+}

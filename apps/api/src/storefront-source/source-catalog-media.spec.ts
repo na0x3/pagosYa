@@ -56,3 +56,14 @@ it('bundles the photos inside product content blocks, so the preview never shows
   expect(features.items).toEqual([{ icon: 'leaf', label: 'Fresco' }]);
   expect(assets).toHaveLength(3);
 });
+
+it('keeps a big catalog under the project room: covers first, the rest stay upload links (copy a store, 2026-11-17)', async () => {
+  const assets: SourceProjectFileDto[] = [];
+  const items = [{ imageUrls: ['/v1/uploads/a1.jpg', '/v1/uploads/a2.jpg'] }, { imageUrls: ['/v1/uploads/b1.jpg'] }];
+  const read = jest.fn(async (path: string) => Buffer.from(path.padEnd(100, '.')));
+  await bundleSourceCatalogMedia(items, origin, [], assets, read, [], { bytes: 250 });
+  expect(items[0].imageUrls[0]).toBe(assets[0].path);
+  expect(items[1].imageUrls[0]).toBe(assets[1].path);
+  expect(items[0].imageUrls[1]).toBe('http://localhost:3001/v1/uploads/a2.jpg');
+  expect(assets).toHaveLength(2);
+});

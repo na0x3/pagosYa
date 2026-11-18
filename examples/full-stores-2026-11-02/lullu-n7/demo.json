@@ -1,0 +1,43 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw5xtqus0001jh3532na7bdv",
+  "slug": "d9c0pqf7",
+  "photos": {
+    "brand:0a90225960a4996522b3a60d9c6df9ff.jpg": "/v1/uploads/596ed7e8-0c67-49a4-b755-38d7cb98c374.jpg",
+    "brand:16c1e98d4112c62d992662bfae3615f7.jpg": "/v1/uploads/f16fcf9d-c1ba-4aac-8355-7e838b4c2819.jpg",
+    "brand:3eb1ef5034b22a6ad20492b4f6ac63b9.jpg": "/v1/uploads/789fd411-1f7d-41e3-8c86-8829508cd790.jpg",
+    "brand:58f28b026b13508b06185291a57c73f7.jpg": "/v1/uploads/ad02b46a-10c8-45f3-86f3-e7bf9dfa5d88.jpg",
+    "brand:69f6699e9c671b8d3b562b59fb0fcf05.jpg": "/v1/uploads/60364f6a-6b36-4a56-a57c-43cea48e64ad.jpg",
+    "brand:8bc5c8c4914825167e6661431a304fdd.jpg": "/v1/uploads/889e80f5-6c9c-4941-8ff5-c58ff0ecba3c.jpg",
+    "brand:ad9345ec404fcf9668ccb0709c4533ec.jpg": "/v1/uploads/a4a51d3d-4262-41d2-bc73-5a8497190038.jpg",
+    "69f6699e9c671b8d3b562b59fb0fcf05.jpg": "/v1/uploads/df487c66-2ae0-4bf8-91f2-b63646ea742a.jpg",
+    "3eb1ef5034b22a6ad20492b4f6ac63b9.jpg": "/v1/uploads/35ab6582-e0dc-48cb-88b7-86aeb3585e83.jpg",
+    "58f28b026b13508b06185291a57c73f7.jpg": "/v1/uploads/ea87dc18-b835-4746-a3a8-5f185599921a.jpg",
+    "16c1e98d4112c62d992662bfae3615f7.jpg": "/v1/uploads/aa663007-ede9-46db-a5bb-d57ead2236fd.jpg",
+    "0a90225960a4996522b3a60d9c6df9ff.jpg": "/v1/uploads/6cdd7ed5-7561-4ace-ae42-e9afdb70a79d.jpg",
+    "8bc5c8c4914825167e6661431a304fdd.jpg": "/v1/uploads/c3f766b5-e3fb-47f8-a26a-711ed96f04b8.jpg"
+  },
+  "categories": {
+    "Kits": "cmw5xtqvf000hjh35y1qsxvnj",
+    "Cabello": "cmw5xtqvg000jjh35etfcabqy",
+    "Piel": "cmw5xtqvg000ljh351b98i06p"
+  },
+  "products": {
+    "Kit viaje cabello": "cmw5xtqvj000pjh35ou0nyrww",
+    "Kit fin de semana": "cmw5xtqvn000tjh35e788dcek",
+    "Neceser esencial": "cmw5xtqvs000xjh35ojx4apyj",
+    "Set cuidado capilar rosa": "cmw5xtqvu0011jh359amkiu4k",
+    "Canasta skincare": "cmw5xtqvw0015jh35kx4vbysx",
+    "Caja de parches y mascarillas": "cmw5xtqvz0019jh35uiv3ma98"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw5xtqwg001hjh35r1981opl"
+}

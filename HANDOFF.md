@@ -8,65 +8,30 @@ see `docs/history/SESSION_LOG.md`. For architecture and how to run locally, see
 **This file is only updated when the user explicitly asks.** The Stop hook
 that used to force this every turn was disabled by request. Don't re-add it.
 
-Updated: 2026-11-03
-Branch: `oct24-clean` — the owner's working branch (their dev servers read this tree; never switch branches
-under them). **Not pushed.** ~600 commits ahead of `main`.
-Working tree: ~220 uncommitted files of earlier work (Oct 31–Nov 3: 34 templates, template quick edits, shipping
-ask, layout edit, screenshot→product, capture fix…). The owner's «commit it in chunks» step is still pending —
-commits from this session stage only their own hunks.
+Updated: 2026-11-18
+Branch: `oct24-clean` — the owner's working branch (their dev servers read this tree; never switch branches under them).
+Pushed to origin up to `2efefb7f` (spec commit `2a68c186` local). Prod is the separate branch `prod/2026-11-07`.
+Local only: `apps/api/.env` has `YAPI_CHAT_ON_CLAUDE` commented out (YAPI on the ChatGPT bridge, owner 2026-11-18).
 
-## 1. Next action — build the Único premium landing (owner chose **Native**)
+## 1. Next actions (owner, 2026-11-18)
 
-Execute `docs/superpowers/plans/2026-11-03-unico-premium-landing.md` (7 tasks) with
-`superpowers:executing-plans`, inline, then one fresh reviewer on the whole range. Spec:
-`docs/superpowers/specs/2026-11-03-unico-premium-landing-design.md`. Ledger: create
-`.superpowers/sdd/2026-11-03-unico-premium-landing/progress.md` (sdd-workspace script).
+**A. International merchants with Mercado Pago — spec written, awaiting owner review.**
+`docs/superpowers/specs/2026-11-18-international-merchants-mercado-pago-design.md`. Owner decisions: foreign merchants are paid
+into their OWN Mercado Pago account (plugin model, pagosYa never holds the money); all 7 Mercado Pago countries (AR, BR, CL, CO, MX,
+PE, UY), each store in its own currency, no conversion; Checkout Pro behind a small payment-connection layer (Stripe/PayPal later);
+free while we launch. Next: owner reviews the spec → confirm whether Mercado Pago needs one application per country (§6.1) →
+`superpowers:writing-plans` → build. Owner also needs terms for foreign merchants reviewed (§6.2).
 
-What it builds: one-product (Único) stores look like nubecorp.pages.dev + Shopify Expanse — split hero (words
-beside the photo, never over it), word band, colour cards (kit-drawn from colour photos; tap picks the colour),
-buy box, benefits band, hotspots, chip band, comparison, calm FAQ, closing photo; a `shop` header with
-«Comprar»; type/spacing/button finish. Also: the `cover-full` look `right` hero (Crocante, Oh Belly…) — the
-owner dislikes its «transparent» words over the photo — gets a solid left-aligned card (Task 1).
+**B. Language versions — next spec (piece 2).** Portuguese (Brazil) everywhere: dashboard, Studio, YAPI replies, store platform
+texts (cart, checkout, account, emails), help; Spanish stays the default. Brainstorm + spec after A is approved.
 
-Rules that bit this session (all in the plan's Global Constraints):
-- Before saving ANY file under `apps/api/src` (spec files too): check no `StoreSourceChatJob` RUNNING/QUEUED —
-  nest --watch restarts and kills YAPI jobs.
-- Jest: name spec files, always `--maxWorkers=2`. **Never pass a folder** — a whole `storefront-source/` run
-  took the entire dev stack down today. Contract suite needs `NODE_OPTIONS=--max-old-space-size=6144`.
-- Files that also hold other uncommitted work: stage as HEAD + exact text replacements, never `-U0` hunks
-  (that once committed an unparseable file; repaired in 07caf590). Check TS/JS parse; check CSS rules land
-  inside their `/* lb:… */` / `/* theme:… */` block.
-- Kit: edit `packages/storefront-kit/commerce-src/`, then `node packages/storefront-kit/tools/build-commerce.mjs`,
-  then `pnpm --filter @pagosya/merchant-dashboard run build:studio` (the Studio preview uses its own bundled kit).
-- Task 7's live check needs the owner's real photos (a sofa fabric close-up, one photo per colour, plus one
-  calm product).
+**C. Copy-a-store runs waiting on AI.** Both AI sources were out on 2026-11-18 (Anthropic balance empty; ChatGPT plan
+`subscription_sharing_usage_limit_exceeded`). When one is back, run the V2 own-site remix with the new login + 404 copying
+(`remixExtras`, never live-tested) on Graza copy 2 (`cmwlk04yi0004h94u7l6fqhad`) and Fishwife (`cmwlnbe4l000asqkii24qqgmc`):
+`POST /v1/stores/:id/source-project/v2-prototype {creative:true, remix:<site>, ownSite:true}`; compare home, login and 404 with
+the real site. The demo merchant's free import design was reset by hand for tests (`importBuildUsedAt`, `designTries`).
 
-### What shipped this session (do not redo it)
-- **Lively one-product stores** — commits `35121d01..0b27abf7`: kit `look/lively.js` (glow, add-button pulse,
-  bubble ripple, WhatsApp bubble, late-page start), buy bar on laptops (photo + choice, hides at the page footer),
-  hero pills, `detail-hotspots` + `chips-marquee` sections, colourful/calm mood (`variants.mood`, letters, blobs),
-  library rules (caps, whole backed numbers), «hazla más tranquila / más colorida» (`source-mood-ask.ts`).
-  Fresh opus review done; all Critical/Important fixed with tests. Spec/plan: `docs/superpowers/*/2026-11-03-lively-*`.
-- **Uncommitted but live in the stack** (inside files with other pending work): `source-chat.service.ts` (mood
-  saved with the home + mood switch routing; screenshot `pendingListing` → photos make the product;
-  `keepOnMessage` fixes progress saves wiping message metadata), `product-screenshot.ts` (nameless reads use the
-  catalog name; prompt avoids dimmed photos), `source-visual-capture.ts` (on-screen = both axes + 5 s decode cap —
-  fixed the 8 templates' 45 s layout timeouts).
-
-### Known gaps, honestly
-- 13 deferred minors from the lively review: `.superpowers/sdd/2026-11-03-lively-one-product-stores/progress.md`.
-- Lively Task 8 with real photos never run (stand-in crops only). Test stores: «Sofá Cama Test» 1–4,
-  «Sofá Nube Test» (11krrr2d, rev 3 colourful).
-- `source-templates-motion` spec fails: the Esencial stylesheet is over the 180 kB source limit (pre-existing,
-  grows with each section; template stores filter CSS per section, unaffected).
-- Product names from screenshots ignore the merchant's own words; CNY prices count as «no price».
-
-### Queued (owner asked; each gets its own spec after the Único work)
-1. Growing stores — a Único store that adds products keeps product 1 as the hero; offer/move to a catalogue
-   template (3+ products), keeping photos/words/colours.
-2. pagosYa browser button — Chrome extension: capture the supplier page + YAPI reads it; «Crear tienda con este
-   producto» or «Agregar a mi tienda»; laptop only (phones keep screenshots).
-3. AliExpress official dropshipping API for plain AliExpress links.
+**D. Older items still open:** a real-phone check of product card videos; deploy is the owner's call (no deploy config in repo).
 
 ## 2. Older sections below are carried forward from 2026-10-05 — NOT re-verified this session.
 

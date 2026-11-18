@@ -1,10 +1,12 @@
 import { Prisma } from '@prisma/client';
+import { homeSummary, type HomeSummary } from './source-composer';
+import { withStudioPages } from './source-content-pages';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import sharp from 'sharp';
 import { UploadsService } from '../uploads/uploads.service';
 import { ProductPageWriterService } from '../product-content/product-page-writer.service';
 import { BrandProfileService } from '../brand/brand-profile.service';
-import { deepFromAccent, paletteFromNamed, proposeStorePalette, type SourcePalette } from './source-palette';
+import { deepFromAccent, neutralInk, paletteFromNamed, proposeStorePalette, richerGround, type SourcePalette } from './source-palette';
 import { coverForPhoto, photoFitVariants, readPhotoFit, styleForCharacter } from './source-photo-fit';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { BUNDLED_PHOTO, bundledPhotoPath, uploadPath } from './source-product-photos';
@@ -14,6 +16,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
+import { drawPresetChoices } from './source-preset-choices';
 import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, resolvePresetTemplate, starterBrandBlock, templateDemoRevision, TEMPLATE_STORE_DATA_PATH, withPreset, type StarterBrandColours } from './source-templates';
 import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, accentInk, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
@@ -34,7 +37,7 @@ export type MasterFacts = { storeName: string; products: string[]; photos: strin
 export type PlantillaFacts = { storeName: string; tagline: string; products: string[]; photos: string[]; slots: NonNullable<registry.TemplateManifest['copy']> };
 const HEX = /^#[0-9a-f]{6}$/i;
 import { sourcePublicApiUrl, sourceStoreConfigData, withLiveCatalog } from './source-store-config';
-import { storeMenuContext, storeMenuTargetList } from './source-store-menu';
+import { readStoreMenu, storeMenuContext, storeMenuTargetList, withAboutLink, withStoreMenuConfig } from './source-store-menu';
 
 /** Plantillas: apply a designer-made store as the next revision (free, no AI call). */
 /** YAPI plan card (spec 2026-10-22): what a checked plan pins on a master store. */
@@ -92,8 +95,10 @@ export class SourceTemplatesService {
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
   private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants, plantillaCopy?: Record<string, string>, dna?: Record<string, string>,
     starterRoll?: { variants: Partial<MasterVariants>; palette?: string; fonts?: string }) {
-    const chosen = this.registry.templateManifest(templateId);
-    if (!chosen) throw new NotFoundException('Esa plantilla no existe.');
+    const listed = this.registry.templateManifest(templateId);
+    if (!listed) throw new NotFoundException('Esa plantilla no existe.');
+    // Spec 2026-11-10 Merienda: a style with choices gets this store's own font, parts and section looks (same store, same draw).
+    const chosen = listed.preset?.choices ? { ...listed, preset: drawPresetChoices(listed.preset, storeId) } : listed;
     // Plantillas presets (2026-10-22): a preset is saved as its master (Esencial) with the preset's look and starting words,
     // so every master path (refill, chat edits, menus, sections) keeps working on the store.
     const { manifest, preset, sourceId } = resolvePresetTemplate(chosen, id => this.registry.templateManifest(id));
@@ -200,10 +205,27 @@ export class SourceTemplatesService {
     const brandPalette = logo ?? named ?? photosPalette;
     // The whole brand palette on every template now (paper and ink only tinted by the brand's hue, so the page stays calm and readable),
     // and a deep colour from the accent for the dark bands.
-    const colours = Object.keys(brandColours).length ? brandColours
+    let colours: Record<string, string> | undefined = Object.keys(brandColours).length ? brandColours
       : brandPalette ? { paper: brandPalette.paper, ink: brandPalette.ink, accent: brandPalette.accent, muted: brandPalette.surface, ...(deepFromAccent(brandPalette.accent) ? { deep: deepFromAccent(brandPalette.accent)! } : {}) } : undefined;
     // The merchant's confirmed brand colours always win over a plan's accent (final review 2026-10-22).
     if (colours && plan?.accent && !Object.keys(brandColours).length) colours.accent = plan.accent;
+    // Owner 2026-11-13 (ZARA's brown text): text read from the photos stays a near-neutral dark.
+    if (colours && photosPalette && !named && !logo && colours.ink) colours.ink = neutralInk(colours.ink);
+    // Owner 2026-11-13 («backgrounds are too white»): a guessed near-white ground gets the brand's hue (a white the merchant asked for stays).
+    if (colours?.paper && !Object.keys(brandColours).length && this.config.get<boolean>('app.yapiHeroKit') === true) {
+      const ground = richerGround(colours.paper, colours.muted);
+      colours.paper = ground.paper;
+      if (ground.muted) colours.muted = ground.muted;
+    }
+    // Owner 2026-11-13 (ZARA «Fondo blanco, texto negro y un gris muy suave»): colours the merchant gave a job win over every guess;
+    // a black-and-white brand («nada de colores») is white, near-black and one soft grey, the accent the ink.
+    const roles = Object.keys(brandColours).length ? undefined : fill?.namedRoles;
+    if (roles && Object.keys(roles).length) {
+      const base: Record<string, string> = roles.mono ? { paper: '#ffffff', ink: '#111111', muted: '#efefef', accent: '#111111', deep: '#111111' } : { ...(colours ?? {}) };
+      for (const role of ['paper', 'ink', 'accent', 'muted'] as const) if (roles[role]) base[role] = roles[role]!;
+      if (roles.mono && !roles.accent) base.accent = base.ink;
+      colours = base as typeof colours;
+    }
     if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(brandPalette && colours.paper && colours.ink && colours.accent ? { titles: titleColours({ paper: colours.paper, ink: colours.ink, accentInk: accentInk(colours.accent, colours.paper, colours.ink), deep: colours.deep, extras: brandPalette.extras }) } : {}), ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
     const files = [...bundled.files, ...carried.filter(file => !bundled.files.some(own => own.path === file.path))];
     // Starter dice (spec 2026-10-24-starter-dice §1): a starter with dice rolls its own lists, seeded by the store.
@@ -257,7 +279,8 @@ export class SourceTemplatesService {
   /** Spec 2026-10-19 §3.1: a content edit on a master store — data and theme only, as a new revision. */
   /** `options` (YAPI edits everything, spec 2026-11-03): `files` changes the store's files after the refill (the catalogue title);
    *  `refreshData` writes the live store data into config.js, so the preview shows what the edit just wrote to the database. */
-  async refill(merchantId: string, storeId: string, revision: number, change: MasterFill, label: string, options: { files?: <T extends { path: string; content: string }>(files: T[]) => T[]; refreshData?: boolean } = {}) {
+  /** The store's files with a MasterFill applied, its photos bundled: what refill saves and what refillDraft only prepares. */
+  private async refilledFiles(merchantId: string, storeId: string, revision: number, change: MasterFill, options: { files?: <T extends { path: string; content: string }>(files: T[]) => T[]; refreshData?: boolean } = {}) {
     const previous = await this.projects.version(merchantId, storeId, revision);
     const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
     const manifest = snapshot.brief?.templateId ? this.registry.templateManifest(snapshot.brief.templateId) : undefined;
@@ -268,7 +291,51 @@ export class SourceTemplatesService {
     const live = change.menu || options.refreshData ? await this.liveConfigData(merchantId, storeId).catch(() => undefined) : undefined;
     const refilled = refillMasterFiles(live ? withLiveCatalog(snapshot.files, live) : snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
     const files = options.files ? options.files(refilled) : refilled;
+    return { brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] };
+  }
+
+  async refill(merchantId: string, storeId: string, revision: number, change: MasterFill, label: string, options: { files?: <T extends { path: string; content: string }>(files: T[]) => T[]; refreshData?: boolean } = {}) {
+    const { brief, files } = await this.refilledFiles(merchantId, storeId, revision, change, options);
+    return this.projects.save(merchantId, storeId, { revision, label, brief, files });
+  }
+
+  /** Owner 2026-11-12 («the entire stores are only product pages»): a studio store's product page and menu pages get the template's
+   *  sections, photos bundled like a refill's; only those store-data lines and the pages that draw them change (withStudioPages). */
+  async saveStudioPages(merchantId: string, storeId: string, revision: number, change: Pick<MasterFill, 'productLayout' | 'pageLayouts'>, label: string) {
+    const previous = await this.projects.version(merchantId, storeId, revision);
+    const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
+    const bundled = await this.bundleMasterPhotos(merchantId, change);
+    const paged = withStudioPages(snapshot.files, { ...(bundled.change.productLayout ? { productLayout: bundled.change.productLayout } : {}),
+      ...(bundled.change.pageLayouts ? { pageLayouts: bundled.change.pageLayouts } : {}) });
+    // «Nosotros» with sections joins the store menu's bar (the kit's own menu reads store-data for it).
+    const menu = readStoreMenu(paged);
+    const linked = bundled.change.pageLayouts?.about?.length ? withAboutLink(menu) : menu;
+    const files = linked && linked !== menu ? withStoreMenuConfig(paged, paged, linked) : paged;
     return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
+  }
+
+  /** Spec 2026-11-11 store composer: a composed home built for its photographs only — prepared, never saved. */
+  async refillDraft(merchantId: string, storeId: string, revision: number, change: MasterFill) {
+    const { brief, files } = await this.refilledFiles(merchantId, storeId, revision, change);
+    return this.projects.prepare({ revision, label: 'Borrador del compositor', brief, files } as never);
+  }
+
+  /** Spec 2026-11-11 store composer: the homes of the latest stores on the same template (other stores), newest first. Only
+   *  store-data is read, in SQL, from the latest revision of each of the 40 newest stores. */
+  async recentThemeHomes(storeId: string, theme: string, limit = 6): Promise<HomeSummary[]> {
+    try {
+      const rows = await this.prisma.$queryRaw<Array<{ name: string; data: string | null }>>(Prisma.sql`
+        SELECT s.name, (
+          SELECT f->>'content' FROM "StoreSourceVersion" v, jsonb_array_elements(v.snapshot->'files') f
+          WHERE v."storeId" = s.id AND f->>'path' = ${TEMPLATE_STORE_DATA_PATH} ORDER BY v.revision DESC LIMIT 1) AS data
+        FROM "Store" s WHERE s.id <> ${storeId} ORDER BY s."createdAt" DESC LIMIT 40`);
+      return rows.flatMap(row => {
+        if (!row.data) return [];
+        const state = readMasterState([{ path: TEMPLATE_STORE_DATA_PATH, content: row.data }]);
+        const layout = (state.layout ?? []) as Array<{ type: string; look?: string }>;
+        return String((state.variants as Record<string, unknown> | undefined)?.theme ?? '') === theme && layout.length ? [homeSummary(row.name, layout)] : [];
+      }).slice(0, limit);
+    } catch { return []; }
   }
 
   private async liveConfigData(merchantId: string, storeId: string) {
@@ -377,12 +444,16 @@ export class SourceTemplatesService {
     }
     // Section library (spec 2026-10-31): every photo a block shows is bundled too; one that cannot be is left out of its block.
     // The product page's sections (owner 2026-10-31) the same way.
-    const swap = async (value: unknown) => typeof value !== 'string' || !value ? undefined : BUNDLED_PHOTO.test(value) ? value : (await bundle(value))?.asset;
+    // NOA 2026-11-11: a template photo named by its store-data key («slot:pa-hero1», library.tsx `slotted`) is already the store's;
+    // bundling it as an upload failed, so «más secciones» emptied the cover and every template photo on the home.
+    const swap = async (value: unknown) => typeof value !== 'string' || !value ? undefined : BUNDLED_PHOTO.test(value) || /^slot:[\w-]+$/.test(value) ? value : (await bundle(value))?.asset;
     const bundled = async (list: unknown[]) => {
       const blocks: unknown[] = [];
       for (const raw of list as Array<Record<string, unknown> & { items?: Array<Record<string, unknown>> }>) {
         const block: Record<string, unknown> = { ...raw };
         for (const key of ['photo', 'photo2'] as const) { if (key in block) { const asset = await swap(block[key]); if (asset) block[key] = asset; else delete block[key]; } }
+        // Cut-outs (2026-11-10): the list of floating photos names them as the block does, or the page cannot tell them apart.
+        if (Array.isArray(raw.cut)) block.cut = (await Promise.all(raw.cut.map(swap))).filter(Boolean);
         if (Array.isArray(raw.items)) block.items = await Promise.all(raw.items.map(async item => { if (!('photo' in item)) return item; const asset = await swap(item.photo); const { photo: _photo, ...rest } = item; return asset ? { ...rest, photo: asset } : rest; }));
         blocks.push(block);
       }

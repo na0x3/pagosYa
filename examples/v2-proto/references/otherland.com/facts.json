@@ -1,0 +1,1078 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.otherland.com/",
+    "title": "Otherland | The Scented Candles Every Home Needs to Create Any Vibe",
+    "width": 1440,
+    "pageHeight": 4326,
+    "fonts": {
+      "h1": {
+        "family": "Chronicle Deck Semi",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "5px",
+        "text": ""
+      },
+      "h2": {
+        "family": "National",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "The Holidays Have Arrived"
+      },
+      "body": {
+        "family": "National",
+        "size": "16.072px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "2.87px",
+        "text": "New: Holiday BundlesSHOP NOW"
+      },
+      "button": {
+        "family": "National",
+        "size": "14px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "SHOP THE GIFT GUIDE"
+      },
+      "nav": {
+        "family": "Chronicle Deck Semi",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "5px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 129,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search",
+        "Sign in to your account",
+        "Cart: 0 Items",
+        "@media (prefers-reduced-",
+        "Shop Shop submenu",
+        "Shop submenu",
+        "Shop by Scent Shop by Sc",
+        "Shop by Scent submenu",
+        "Gift Finder",
+        "Bestsellers"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 43,
+        "h": 810,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "14px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "The Holidays Have Arrived"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 935,
+        "h": 972,
+        "bg": "rgb(255, 250, 245)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "22px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "Most Loved Scents"
+        },
+        "words": 128,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1937,
+        "h": 479,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Build the Perfect Gift"
+        },
+        "words": 29,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2446,
+        "h": 479,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gift Finder Quiz"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2954,
+        "h": 269,
+        "bg": "rgb(255, 250, 245)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3223,
+        "h": 559,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "33.12px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Perfumer crafted. Art inspired.™"
+        },
+        "words": 55,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 5,
+      "columns": 5,
+      "photoRatio": 0.51,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.otherland.com/",
+    "title": "Otherland | The Scented Candles Every Home Needs to Create Any Vibe",
+    "width": 390,
+    "pageHeight": 5250,
+    "fonts": {
+      "h1": {
+        "family": "Chronicle Deck Semi",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "5px",
+        "text": ""
+      },
+      "h2": {
+        "family": "National",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "The Holidays Have Arrived"
+      },
+      "body": {
+        "family": "National",
+        "size": "13px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.78px",
+        "text": "New: Holiday BundlesSHOP NOW"
+      },
+      "button": {
+        "family": "National",
+        "size": "14px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "SHOP THE GIFT GUIDE"
+      },
+      "nav": {
+        "family": "National",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Open main menu"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 96,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Open main menu",
+        "Search",
+        "Cart: 0 Items"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 44,
+        "h": 764,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "14px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "The Holidays Have Arrived"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 861,
+        "h": 870,
+        "bg": "rgb(255, 250, 245)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "Most Loved Scents"
+        },
+        "words": 128,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1760,
+        "h": 503,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Build the Perfect Gift"
+        },
+        "words": 29,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2294,
+        "h": 479,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gift Finder Quiz"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2803,
+        "h": 771,
+        "bg": "rgb(255, 250, 245)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3575,
+        "h": 854,
+        "bg": "rgb(255, 250, 245)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "39px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Perfumer crafted. Art inspired.™"
+        },
+        "words": 44,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 5,
+      "columns": 5,
+      "photoRatio": 0.6,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.otherland.com/collections/all",
+    "title": "Products – Otherland",
+    "width": 1440,
+    "pageHeight": 2936,
+    "fonts": {
+      "h1": {
+        "family": "YoungSerif",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Products"
+      },
+      "h2": {
+        "family": "National",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2.9px",
+        "text": "Filter:"
+      },
+      "body": {
+        "family": "National",
+        "size": "16.072px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "2.87px",
+        "text": "New: Holiday BundlesSHOP NOW"
+      },
+      "button": {
+        "family": "National",
+        "size": "14px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "Add to Cart"
+      },
+      "nav": {
+        "family": "National",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 129,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search",
+        "Sign in to your account",
+        "Cart: 0 Items",
+        "@media (prefers-reduced-",
+        "Shop Shop submenu",
+        "Shop submenu",
+        "Shop by Scent Shop by Sc",
+        "Shop by Scent submenu",
+        "Gift Finder",
+        "Bestsellers"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 172,
+        "h": 121,
+        "bg": "rgb(255, 250, 245)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Products"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 293,
+        "h": 2019,
+        "bg": "rgb(255, 250, 245)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "14px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "2.9px",
+          "text": "Filter:"
+        },
+        "words": 311,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 12,
+      "columns": 4,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.otherland.com/collections/all?_su_rec=dPDng-kXKhCgKME67vER3qc8QJAS87yX27atAWTYslRKkgeWkZAG0pRj9n4pNTbJrRuVMZDyyeqrlZV8g2XwVvg8xFBoc_AiFo7k6chtrovjiCGefUnMerVC-BogiuievCaJJ-DsNdl46v9QVwGMRtHlEGoxKRO7QDK44do7KD1tZxVahP-fyy7HElgeUSwwOw1Dn-1SYLSe1HO9M-epjsn0wWxrVWrAyc6h2-aJZkFuPDJ1dmFxHu6eOedSLahDpDn6npsJqimVykCxq8VyPkeFz9y60YZ6kKsw2FMTLDBNyJDLJ_TkDlH0pIwUwORzLLgLazDvN5BRm1B2T6FJ2TL_Ko74C2-lojsTsoaj1OveRQ&_su_rec_id=9c0fdec7-371b-485d-8f1a-84f9727e78ae-1794667215",
+    "title": "Products – Otherland",
+    "width": 390,
+    "pageHeight": 4638,
+    "fonts": {
+      "h1": {
+        "family": "YoungSerif",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Products"
+      },
+      "h2": {
+        "family": "National",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2.9px",
+        "text": "Filter:"
+      },
+      "body": {
+        "family": "National",
+        "size": "13px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.78px",
+        "text": "New: Holiday BundlesSHOP NOW"
+      },
+      "button": {
+        "family": "National",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2.9px",
+        "text": "Filter and sort"
+      },
+      "nav": {
+        "family": "National",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Open main menu"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 96,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Open main menu",
+        "Search",
+        "Cart: 0 Items"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 140,
+        "h": 110,
+        "bg": "rgb(255, 250, 245)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Products"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 250,
+        "h": 3546,
+        "bg": "rgb(255, 250, 245)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "14px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "2.9px",
+          "text": "Filter:"
+        },
+        "words": 290,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 12,
+      "columns": 2,
+      "photoRatio": 0.57,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.otherland.com/products/fireside-edit",
+    "title": "Fireside Edit – Otherland",
+    "width": 1440,
+    "pageHeight": 5307,
+    "fonts": {
+      "h1": {
+        "family": "YoungSerif",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Fireside Edit"
+      },
+      "h2": {
+        "family": "YoungSerif",
+        "size": "33.12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Perfumer crafted. Art inspired.™"
+      },
+      "body": {
+        "family": "National",
+        "size": "16.072px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "2.87px",
+        "text": "New: Holiday BundlesSHOP NOW"
+      },
+      "button": {
+        "family": "sans-serif",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Previous"
+      },
+      "nav": {
+        "family": "National",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 129,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search",
+        "Sign in to your account",
+        "Cart: 0 Items",
+        "@media (prefers-reduced-",
+        "Shop Shop submenu",
+        "Shop submenu",
+        "Shop by Scent Shop by Sc",
+        "Shop by Scent submenu",
+        "Gift Finder",
+        "Bestsellers"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 172,
+        "h": 798,
+        "bg": "rgb(255, 250, 245)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Fireside Edit"
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 970,
+        "h": 126,
+        "bg": "rgb(247, 224, 225)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "14px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "up to 55-Hour Burn Time"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1131,
+        "h": 2359,
+        "bg": "rgb(255, 250, 245)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 434,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3502,
+        "h": 572,
+        "bg": "rgb(255, 250, 245)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "33.12px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Perfumer crafted. Art inspired.™"
+        },
+        "words": 44,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4075,
+        "h": 689,
+        "bg": "rgb(255, 250, 245)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 45,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 753,
+      "x": 1055,
+      "width": 186,
+      "bg": "rgb(223, 139, 146)"
+    },
+    "price": {
+      "family": "National",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$60.00"
+    },
+    "galleryImages": 5,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 17
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.otherland.com/products/fireside-edit",
+    "title": "Fireside Edit – Otherland",
+    "width": 390,
+    "pageHeight": 7479,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "YoungSerif",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Fireside Edit"
+      },
+      "body": {
+        "family": "National",
+        "size": "13px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.78px",
+        "text": "New: Holiday BundlesSHOP NOW"
+      },
+      "button": {
+        "family": "sans-serif",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Previous"
+      },
+      "nav": {
+        "family": "National",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Open main menu"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 96,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Open main menu",
+        "Search",
+        "Cart: 0 Items"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 140,
+        "h": 1178,
+        "bg": "rgb(255, 250, 245)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Fireside Edit"
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1318,
+        "h": 156,
+        "bg": "rgb(247, 224, 225)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "14px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "up to 55-Hour Burn Time"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1544,
+        "h": 3812,
+        "bg": "rgb(255, 250, 245)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 408,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 5355,
+        "h": 852,
+        "bg": "rgb(255, 250, 245)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "39px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Perfumer crafted. Art inspired.™"
+        },
+        "words": 44,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6207,
+        "h": 510,
+        "bg": "rgb(255, 250, 245)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 45,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": false,
+      "top": 1102,
+      "x": 174,
+      "width": 179,
+      "bg": "rgb(223, 139, 146)"
+    },
+    "price": {
+      "family": "National",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$60.00"
+    },
+    "galleryImages": 5,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 16
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.otherland.com/?viewcart=true",
+    "title": "Otherland | The Scented Candles Every Home Needs to Create Any Vibe",
+    "width": 1440,
+    "pageHeight": 4326,
+    "fonts": {
+      "h1": {
+        "family": "Chronicle Deck Semi",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "5px",
+        "text": ""
+      },
+      "h2": {
+        "family": "National",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "The Holidays Have Arrived"
+      },
+      "body": {
+        "family": "National",
+        "size": "16.072px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "2.87px",
+        "text": "New: Holiday BundlesSHOP NOW"
+      },
+      "button": {
+        "family": "National",
+        "size": "14px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "SHOP THE GIFT GUIDE"
+      },
+      "nav": {
+        "family": "Chronicle Deck Semi",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "5px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 129,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search",
+        "Sign in to your account",
+        "Cart: 1 Items",
+        "@media (prefers-reduced-",
+        "Shop Shop submenu",
+        "Shop submenu",
+        "Shop by Scent Shop by Sc",
+        "Shop by Scent submenu",
+        "Gift Finder",
+        "Bestsellers"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 43,
+        "h": 810,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "14px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "The Holidays Have Arrived"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 935,
+        "h": 972,
+        "bg": "rgb(255, 250, 245)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "National",
+          "size": "22px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "Most Loved Scents"
+        },
+        "words": 128,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1937,
+        "h": 479,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Build the Perfect Gift"
+        },
+        "words": 29,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2446,
+        "h": 479,
+        "bg": "rgb(255, 250, 245)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gift Finder Quiz"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2954,
+        "h": 269,
+        "bg": "rgb(255, 250, 245)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3223,
+        "h": 559,
+        "bg": "rgb(255, 250, 245)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "YoungSerif",
+          "size": "33.12px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Perfumer crafted. Art inspired.™"
+        },
+        "words": 44,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

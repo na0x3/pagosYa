@@ -1,0 +1,5 @@
+apps/api/src/storefront-source/source-cover-ground.spec.ts
+apps/api/src/storefront-source/source-design-skill.ts
+docs/YAPI_CURRENT_ARCHITECTURE.md
+docs/YAPI_GENERATION_V2.md
+docs/YAPI_MIGRATION_PLAN.md

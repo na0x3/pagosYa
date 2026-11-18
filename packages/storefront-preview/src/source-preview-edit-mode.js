@@ -73,10 +73,12 @@
   }
   function schedule() { if (!frame) frame = requestAnimationFrame(draw); }
 
-  function post(target, text) {
+  function post(target, text, image) {
     var message = { type: 'pagosya:source-select', kind: target.kind, sectionId: target.id, label: target.label };
     if (text) message.text = text;
     if (typeof target.at === 'number') { message.at = target.at; message.page = target.page; }
+    // A clicked photo says which saved image it shows, so the Studio can offer «Cambiar foto» (owner 2026-11-17).
+    if (image) message.image = image;
     parent.postMessage(message, '*');
   }
   // A circle (spec 2026-11-05 point-at): a drag of 12 px or more draws a loop; on release, what it covers is the selection.
@@ -195,7 +197,10 @@
     if (!target) return;
     var own = event.target.children && event.target.children.length === 0 ? (event.target.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200) : '';
     selected = target.kind === 'section' ? target.id : ''; selectedEl = target.kind === 'section' ? target.element : null;
-    post(target, own);
+    // The photo under the pointer, even when a link or an overlay layered on the card took the click.
+    var img = typeof window.__pagosyaPhotoAt === 'function' && event.target instanceof Element ? window.__pagosyaPhotoAt(event.target, event.clientX, event.clientY) : null;
+    var image = img && typeof window.__pagosyaAssetPath === 'function' ? window.__pagosyaAssetPath(img.getAttribute('src') || '') : '';
+    post(target, own, image);
     schedule();
   }
   function onKey(event) {
@@ -281,7 +286,59 @@
   window.addEventListener('resize', onViewing);
   window.addEventListener('load', onViewing);
 
+  /** YAPI tour (spec 2026-11-09): the Studio names the step; the preview scrolls to it and lights it alone (spotlight, 2026-11-10). */
+  function tourTarget(data) {
+    if (data.kind === 'cart') return document.querySelector('[data-cart-open], [data-pagosya-cart-open], [data-pagosya-cart]');
+    if (data.kind === 'product') return document.querySelector('[data-pagosya-catalog], [data-pagosya-product]');
+    if (data.part === 'header') return document.querySelector('header');
+    if (data.part === 'footer') return document.querySelector('footer');
+    if (data.part === 'main') return document.querySelector('main');
+    if (typeof data.at !== 'number') return null;
+    var page = data.page === 'product' ? '[data-lb-product]' : '[data-lb-home]';
+    var box = document.querySelector(page);
+    if (!box) return null;
+    var found = null;
+    Array.prototype.forEach.call(box.children, function (child) {
+      if (found || !child.hasAttribute('data-lb')) return;
+      var address = addressOf(child, box);
+      if (address && address.at === data.at) found = child;
+    });
+    return found;
+  }
+  var tourStyle = null;
+  // Owner 2026-11-10 («focus on that section on screen, like user can only see that section»): the step's section stays lit and the
+  // rest of the page goes dark around it (a spotlight), until the next step, the end of the tour, or a tap outside it.
+  function tourClear() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pagosya-tour-focus]'), function (el) { el.removeAttribute('data-pagosya-tour-focus'); });
+    document.documentElement.removeAttribute('data-pagosya-touring');
+  }
+  function tourFocus(data) {
+    if (data.clear) { tourClear(); return; }
+    var element = tourTarget(data);
+    if (!element) { tourClear(); return; }
+    if (!tourStyle) {
+      tourStyle = document.createElement('style');
+      tourStyle.textContent = '[data-pagosya-tour-focus]{position:relative;z-index:2147483000;box-shadow:0 0 0 100vmax rgba(12,12,14,.84);border-radius:6px;transition:box-shadow .45s ease}'
+        + 'html[data-pagosya-touring] [data-pagosya-tour-focus] *{visibility:visible}'
+        + 'html[data-pagosya-touring] .pagosya-chat-launcher,html[data-pagosya-touring] [data-pagosya-chat-launcher]{visibility:hidden}'
+        + '@media (prefers-reduced-motion: reduce){[data-pagosya-tour-focus]{transition:none}}';
+      document.head.appendChild(tourStyle);
+      document.addEventListener('click', function (event) {
+        var lit = document.querySelector('[data-pagosya-tour-focus]');
+        if (lit && !lit.contains(event.target)) tourClear();
+      }, true);
+    }
+    tourClear();
+    element.setAttribute('data-pagosya-tour-focus', '');
+    document.documentElement.setAttribute('data-pagosya-touring', '');
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // A section taller than the screen starts at its top; a shorter one sits in the middle.
+    var tall = element.getBoundingClientRect().height > window.innerHeight * 0.9;
+    if (element.scrollIntoView) element.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: tall ? 'start' : 'center' });
+  }
+
   window.addEventListener('message', function (event) {
+    if (event.source === parent && event.data && event.data.type === 'pagosya:tour-focus') { tourFocus(event.data); return; }
     // Only the Studio (the parent window) may switch edit mode.
     if (event.source !== parent) return;
     var data = event.data;

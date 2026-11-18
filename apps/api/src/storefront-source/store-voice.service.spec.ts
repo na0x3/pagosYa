@@ -66,12 +66,35 @@ describe('StoreVoiceService (spec 2026-10-14, part 5)', () => {
     expect(result).toEqual({ revision: 4, label: 'Dato quitado', removed: true });
   });
 
-  it('counts the pending facts of each store’s current revision for Mi tienda, read-only', async () => {
+  it('counts the pending facts of each store’s current revision for Mi tienda, reading only stores with a new revision', async () => {
     const { service, prisma } = setup();
-    prisma.$queryRaw.mockResolvedValue([{ storeId: 's1', voice: JSON.stringify(SHEET) }, { storeId: 's2', voice: null }, { storeId: 's3', voice: '{broken' }]);
+    // 2026-11-07 (297 stores, 852 MB read on every panel load, 10–12 s): the saved count is used while its revision is current.
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ storeId: 's1', revision: 4, pendingFacts: null, pendingFactsRevision: null }, { storeId: 's2', revision: 2, pendingFacts: 0, pendingFactsRevision: 1 },
+        { storeId: 's3', revision: 7, pendingFacts: 0, pendingFactsRevision: 6 }, { storeId: 's4', revision: 9, pendingFacts: 2, pendingFactsRevision: 9 }, { storeId: 's5', revision: 3, pendingFacts: 0, pendingFactsRevision: 3 }])
+      .mockResolvedValueOnce([{ storeId: 's1', revision: 4, voice: JSON.stringify(SHEET) }, { storeId: 's2', revision: 2, voice: null }, { storeId: 's3', revision: 7, voice: '{broken' }]);
+    prisma.$executeRaw = jest.fn().mockResolvedValue(1);
+    expect(await service.pendingCounts('m')).toEqual({ counts: { s1: 1, s4: 2 } });
+    const [list, voices] = prisma.$queryRaw.mock.calls.map((call: any[]) => call[0]);
+    expect(list.text).not.toMatch(/snapshot/);
+    expect(list.text).toMatch(/'ACTIVE'/);
+    expect(list.values).toEqual(['m']);
+    expect(voices.text).toMatch(/snapshot/);
+    expect(voices.values).toEqual(expect.arrayContaining(['voice.json', 's1', 's2', 's3']));
+    expect(voices.values).not.toContain('s4');
+    // Each new count is saved for its revision only (a newer save in between keeps its own count to make).
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(3);
+    expect(prisma.$executeRaw.mock.calls[0][0].values).toEqual([1, 4, 's1', 4]);
+  });
+
+  it('reads no snapshot when every saved count is current, and a failed save still answers', async () => {
+    const { service, prisma } = setup();
+    prisma.$queryRaw.mockResolvedValueOnce([{ storeId: 's4', revision: 9, pendingFacts: 2, pendingFactsRevision: 9 }]);
+    expect(await service.pendingCounts('m')).toEqual({ counts: { s4: 2 } });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    prisma.$queryRaw.mockResolvedValueOnce([{ storeId: 's1', revision: 4, pendingFacts: null, pendingFactsRevision: null }])
+      .mockResolvedValueOnce([{ storeId: 's1', revision: 4, voice: JSON.stringify(SHEET) }]);
+    prisma.$executeRaw = jest.fn().mockRejectedValue(new Error('down'));
     expect(await service.pendingCounts('m')).toEqual({ counts: { s1: 1 } });
-    const query = prisma.$queryRaw.mock.calls[0][0];
-    expect(query.text).not.toMatch(/\b(?:INSERT|UPDATE|DELETE)\b/i);
-    expect(query.values).toEqual(expect.arrayContaining(['voice.json', 'm']));
   });
 });

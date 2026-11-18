@@ -21,6 +21,8 @@
 <link rel="stylesheet" href="/src/ui-kit.css">
 <link rel="stylesheet" href="/src/motion.css">
 <link rel="stylesheet" href="/src/premium.css">
+<link rel="stylesheet" href="/src/yapi-welcome.css">
+<link rel="stylesheet" href="/src/clyro.css">
 </head>
 <body>
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
@@ -93,7 +95,11 @@
       <div class="login-card">
         <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-star-yellow.png" alt="" width="56" height="56"></a>
         <h2 id="loginTitle">Bienvenido de vuelta</h2>
-        <p class="login-sub">Entra a tu panel de comercio para continuar.</p>
+        <p class="login-sub" id="loginSub">Entra a tu panel de comercio para continuar.</p>
+        <div class="login-field" data-signup-only hidden>
+          <label for="signupBusiness">Nombre de tu negocio</label>
+          <input id="signupBusiness" type="text" placeholder="Tienda Ejemplo" autocomplete="organization" minlength="2" maxlength="80">
+        </div>
         <div class="login-field">
           <label for="email">Correo</label>
           <input id="email" type="email" placeholder="dueno@tienda-ejemplo.bo" autocomplete="email" required>
@@ -108,8 +114,10 @@
             </button>
           </div>
         </div>
+        <label class="login-terms" data-signup-only hidden id="signupTermsRow"><input id="signupTerms" type="checkbox"> <span>Acepto los <a href="https://pagosya.bo/terminos/comercios" target="_blank" rel="noopener">términos para comercios</a> de pagosYa</span></label>
         <button class="primary login-submit" id="login" type="submit">Continuar</button>
         <button class="login-forgot" id="showForgot" type="button">¿Olvidaste tu contraseña?</button>
+        <p class="login-switch"><span id="loginSwitchText">¿No tienes cuenta?</span> <button type="button" id="loginSwitch">Crea tu cuenta gratis</button></p>
         <div class="merchant-google-auth" id="merchantGoogleAuth" hidden>
           <div class="merchant-login-divider"><span>o</span></div>
           <div class="merchant-google-button" id="merchantGoogleButton" aria-label="Continuar con Google"></div>
@@ -120,7 +128,7 @@
           <input id="apiBase" value="http://localhost:3001/v1">
         </details>
       </div>
-      <p class="login-foot">El acceso se crea desde tu integración con <code>POST /v1/dashboard/signup</code>, nunca desde esta página.</p>
+      <p class="login-foot">Crear tu cuenta es gratis: armas tu tienda con YAPI y eliges un plan cuando quieras publicarla.</p>
     </div>
   </form>
 
@@ -215,11 +223,15 @@
         </section>
     <section class="overview-top" data-dashboard-page="overview" aria-labelledby="overviewGreeting">
       <p class="overview-greeting" id="overviewGreeting">Hola</p>
+      <ul class="mascot-row" id="overviewMascots" aria-label="Tu tienda hoy" hidden></ul>
+      <section class="overview-store" id="overviewStore" aria-label="Tu tienda" hidden></section>
       <dl class="overview-kpis" id="overviewKpis" aria-label="Cifras clave de la tienda"></dl>
     </section>
     <div class="overview-grid" data-dashboard-page="overview">
       <section class="panel overview-setup" id="overviewSetup" aria-labelledby="overviewSetupTitle" hidden></section>
+      <section class="panel overview-selling" id="overviewSelling" aria-labelledby="overviewSellingTitle" hidden></section>
       <section class="panel overview-restock" id="overviewRestock" aria-labelledby="overviewRestockTitle" hidden></section>
+      <section class="panel overview-suggest" id="overviewSuggest" aria-label="YAPI puede hacer"></section>
       <section class="panel overview-account" aria-labelledby="overviewAccountTitle">
         <h2 id="overviewAccountTitle">Tu cuenta</h2>
         <p class="payout-hold-banner" id="payoutHoldBanner" role="status" hidden>Tus pagos están en pausa. Escríbenos a soporte.</p>
@@ -440,6 +452,7 @@
     <section class="subscriptions-view" id="subscriptionsSection" data-dashboard-page="subscriptions" aria-label="Suscripciones" hidden><div id="subscriptionsRoot"></div></section>
     <section class="cobros-view" id="cobrosSection" data-dashboard-page="cobros" aria-label="Cobros" hidden><div id="cobrosRoot"></div></section>
     <section class="growth-view" id="growthSection" data-dashboard-page="growth" aria-label="Crecimiento" hidden><div id="growthRoot"></div></section>
+    <section class="tareas-view" id="tareasSection" data-dashboard-page="tasks" aria-label="Tareas de YAPI" hidden><div id="tareasRoot"></div></section>
     <section class="growth-view abandoned-carts-view" id="abandonedCartsSection" data-dashboard-page="abandoned-carts" aria-label="Carritos abandonados" hidden><div id="abandonedCartsRoot"></div></section>
     <section class="growth-view assistant-view" id="assistantSection" data-dashboard-page="assistant" aria-label="Asistente" hidden><div id="assistantRoot"></div></section>
     <section class="proposals-view" id="proposalsSection" data-dashboard-page="proposals" aria-label="Propuestas" hidden><div id="proposalsRoot"></div></section>
@@ -655,7 +668,7 @@
           </div>
         </section>
         </details>
-        <section class="product-yapi-guide" aria-label="Crear productos con YAPI"><header><div><strong>YAPI · Tu asistente de productos</strong><p>Una pregunta a la vez. Tú eliges cada detalle.</p></div><button type="button" class="primary" id="startProductGuide">Añadir producto con YAPI</button></header><iframe id="productGuideFrame" title="Añadir producto con YAPI" hidden></iframe></section>
+        <section class="product-yapi-guide" aria-label="Crear productos con YAPI"><header><div><strong>YAPI · Tu asistente de productos</strong><p>Una pregunta a la vez. Tú eliges cada detalle.</p></div><div class="product-yapi-guide-actions"><button type="button" class="secondary" id="closeProductGuide" hidden>Cerrar</button><button type="button" class="primary" id="startProductGuide">Añadir producto con YAPI</button></div></header><iframe id="productGuideFrame" title="Añadir producto con YAPI" hidden></iframe></section>
         <div class="payment-link-catalog-tools">
           <div class="payment-link-catalog-copy">
             <h3>Tu catálogo</h3>
@@ -957,6 +970,27 @@
     </form>
   </dialog>
 
+<!-- Owner 2026-11-15: YAPI's welcome when the panel opens (src/yapi-welcome.mjs). -->
+<section class="yapi-welcome" id="yapiWelcome" aria-labelledby="yapiWelcomeGreeting" hidden>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="yapiWelcomeGlass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.007 0.011" numOctaves="2" seed="11" result="noise"/><feGaussianBlur in="noise" stdDeviation="2" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+  <div class="yapi-welcome-stage">
+    <img class="yapi-welcome-star" src="/assets/pagosya-star-yellow.png" alt="" width="68" height="68">
+    <h1 class="yapi-welcome-greeting" id="yapiWelcomeGreeting" data-welcome-greeting>Hola</h1>
+    <div class="yapi-welcome-mascots" data-welcome-mascots aria-live="polite"></div>
+    <form class="yapi-welcome-composer" autocomplete="off">
+      <div class="yapi-welcome-field">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+        <label for="yapiWelcomeDraft" class="sr-only">Tu idea para YAPI</label>
+        <textarea id="yapiWelcomeDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar?"></textarea>
+      </div>
+      <div class="yapi-welcome-bar">
+        <p class="yapi-welcome-note" data-welcome-note role="status"></p>
+        <button type="submit" class="yapi-welcome-send" data-welcome-send aria-label="Abrir con YAPI" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </div>
+    </form>
+    <button type="button" class="yapi-welcome-skip" data-welcome-skip>Ir a mi panel →</button>
+  </div>
+</section>
 <aside class="workspace-yapi" aria-label="YAPI, asistente de tu tienda">
   <div class="workspace-yapi-heading"><img class="workspace-yapi-star" src="/assets/pagosya-star-yellow.png" alt="YAPI" width="28" height="28"><span>Una idea puede ser el próximo paso de tu tienda.</span></div>
   <form id="workspaceYapiForm"><label for="workspaceYapiDraft" class="sr-only">Tu idea para YAPI</label><textarea id="workspaceYapiDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar?" required></textarea><button class="primary" type="submit" aria-label="Abrir con YAPI">Abrir<span class="workspace-yapi-long"> con YAPI</span> ↗</button></form>
@@ -965,5 +999,44 @@
 <link rel="stylesheet" href="/variant-editor.css">
 <script src="/variant-editor.js"></script>
 <script type="module" src="/src/dashboard.js"></script>
+  <!-- Owner 2026-11-12 (Amboras's setup steps): three questions right after sign-up, then the first store's name. -->
+  <dialog class="welcome-dialog setup-dialog" id="welcomeDialog" aria-labelledby="setupTitle1">
+    <div class="setup-head"><span>Tu tienda</span><span class="setup-count" id="setupCount">Paso 1 de 3</span><button type="button" class="setup-back" id="setupBack" hidden>← Atrás</button></div>
+    <div class="setup-bar" aria-hidden="true"><i class="is-on"></i><i></i><i></i></div>
+    <form id="setupForm" novalidate>
+      <section data-setup-step="1">
+        <h2 id="setupTitle1">¿Qué te describe mejor?</h2>
+        <p>Nos ayuda a conocer tu negocio.</p>
+        <div class="setup-options">
+          <label class="setup-option"><input type="radio" name="role" value="owner"><span><strong>Dueño o dueña</strong><small>Es mi negocio</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="marketing"><span><strong>Marketing</strong><small>Ventas, campañas, contenido</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="operations"><span><strong>Operaciones</strong><small>Pedidos, inventario, envíos</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="designer"><span><strong>Diseño</strong><small>Marca y diseño de la tienda</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="developer"><span><strong>Desarrollo</strong><small>Integraciones y sistemas</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="agency"><span><strong>Agencia</strong><small>Trabajo para clientes</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="other"><span><strong>Otro</strong><small>Algo distinto</small></span></label>
+        </div>
+      </section>
+      <section data-setup-step="2" hidden>
+        <h2>¿En qué quieres que te ayude pagosYa?</h2>
+        <p>Elige todas las que quieras.</p>
+        <div class="setup-options">
+          <label class="setup-option"><input type="checkbox" name="goals" value="store"><span><strong>Crear mi tienda con IA</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="products"><span><strong>Agregar mis productos</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="payments"><span><strong>Cobros y envíos</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="domain"><span><strong>Conectar mi dominio</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="emails"><span><strong>Correos de lanzamiento</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="analytics"><span><strong>Ver mis ventas y visitas</strong></span></label>
+        </div>
+      </section>
+      <section data-setup-step="3" hidden>
+        <h2>¿Cuál es tu WhatsApp?</h2>
+        <p>Solo te escribimos si pasa algo urgente con tu tienda.</p>
+        <label class="setup-phone"><span class="setup-phone__code"><select id="setupPhoneCode" aria-label="Código de país"><option value="+591" selected>🇧🇴 +591</option><option value="+51">🇵🇪 +51</option><option value="+56">🇨🇱 +56</option><option value="+54">🇦🇷 +54</option><option value="+595">🇵🇾 +595</option><option value="+55">🇧🇷 +55</option></select></span><input id="setupPhone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="70000000" aria-label="Número de WhatsApp"></label>
+        <p class="welcome-note" id="welcomeNote">Te enviamos un correo para confirmar tu cuenta; confírmalo para volver a entrar la próxima vez.</p>
+      </section>
+      <button class="primary" id="setupNext" type="submit" disabled>Continuar →</button>
+    </form>
+  </dialog>
 </body>
 </html>

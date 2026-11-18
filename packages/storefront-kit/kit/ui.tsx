@@ -10,8 +10,8 @@
  * Styling is self-contained (`ui-` classes + CSS custom properties), never Tailwind, because the
  * Tailwind pass only scans authored components.
  */
-import { Children, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { Children, createContext, useCallback, useContext, useEffect, useId, useRef, useState, type CSSProperties, type JSX, type ReactNode, type RefObject } from 'react';
+import { AnimatePresence, motion, useAnimationFrame, useInView, useMotionTemplate, useMotionValue, useScroll, useSpring, useTransform, useVelocity } from 'motion/react';
 
 /* ------------------------------------------------------------------ tokens */
 
@@ -631,7 +631,26 @@ export function KitSlot({ kind, name, as = 'div', className, children }: { kind:
   const Tag = as as any;
   return <Tag className={className} {...{ [KIT_SLOT_ATTRIBUTE[kind]]: name }}>{children}</Tag>;
 }
-export function AnnouncementBar({ children }: { children: ReactNode }) { return <div className="ui-announcement">{children}</div>; }
+/** Owner 2026-11-15 (Halcy): with two or more real messages the bar turns every 5 s with ← → (paused on hover/focus, still with
+ *  reduced motion); one message or children behave as before. */
+export function AnnouncementBar({ children, messages }: { children?: ReactNode; messages?: string[] }) {
+  const list = (messages ?? []).filter(Boolean);
+  const [at, setAt] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const moving = useUiMotion();
+  useEffect(() => {
+    if (list.length < 2 || paused || !moving) return;
+    const timer = setInterval(() => setAt(value => (value + 1) % list.length), 5000);
+    return () => clearInterval(timer);
+  }, [list.length, paused, moving]);
+  if (list.length < 2) return <div className="ui-announcement">{list[0] ?? children}</div>;
+  const go = (step: number) => setAt(value => (value + step + list.length) % list.length);
+  return <div className="ui-announcement" data-rotating onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+    <button type="button" className="ui-announcement__arrow" aria-label="Anuncio anterior" onClick={() => go(-1)}>←</button>
+    <p aria-live="polite">{list[at % list.length]}</p>
+    <button type="button" className="ui-announcement__arrow" aria-label="Anuncio siguiente" onClick={() => go(1)}>→</button>
+  </div>;
+}
 
 export type NavLink = { label: string; href: string };
 function OverlayMenu({ links, name }: { links: NavLink[]; name: string }) {
@@ -956,10 +975,11 @@ export function Statement({ children, align = 'start', as: Tag = 'p' }: { childr
   </Tag></>;
 }
 export function TextFillStatement(props: { children: string; align?: 'start' | 'center' }) { return <Statement {...props} />; }
-export function Marquee({ items, speed = 38 }: { items: string[]; speed?: number }) {
+// Owner 2026-11-14: like the other motion parts, a Marquee takes a className (V2 designs gave it one and the build failed).
+export function Marquee({ items, speed = 38, className }: { items: string[]; speed?: number; className?: string }) {
   const list = items.filter(Boolean).slice(0, 12);
   const run = (hidden: boolean) => <div className="ui-marquee__item" aria-hidden={hidden || undefined}>{list.map((item, i) => <span key={i}>{item}</span>)}</div>;
-  return <><MotionStyles /><div className="ui-marquee" style={{ '--ui-marquee-duration': `${Math.min(90, Math.max(12, speed))}s` } as CSSProperties}>
+  return <><MotionStyles /><div className={className ? `ui-marquee ${className}` : 'ui-marquee'} style={{ '--ui-marquee-duration': `${Math.min(90, Math.max(12, speed))}s` } as CSSProperties}>
     <div className="ui-marquee__track">{run(false)}{run(true)}</div>
   </div></>;
 }
@@ -1117,9 +1137,1066 @@ export function SiteFooter({ name, blurb, columns = [], note, tone = 'ink' }: { 
   </footer>;
 }
 
+/* ------------------------------------------------------------------ rich section kit */
+
+/* Owner 2026-11-13 («sections are too simple and not modern … build a rich component library … make sure yapi can use them»),
+ * after Amboras's kit v5 (studied from its builder rulebook; its code is unlicensed and is not copied here). Parts marked
+ * «Magic UI» are adapted from https://magicui.design — MIT License, Copyright (c) Magic UI — with plain ui-k- classes instead of
+ * Tailwind (the kit is never scanned by Tailwind), the store's tokens instead of fixed colours, and reduced motion respected.
+ * Every part renders a complete, readable settled state before JavaScript runs and when motion is off. */
+const RICH_CSS = `
+.ui-k-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ui-k-marquee{display:flex;gap:var(--k-gap,24px);overflow:hidden;padding:8px 0}
+.ui-k-marquee--v{flex-direction:column}
+.ui-k-marquee__track{display:flex;flex-shrink:0;align-items:center;justify-content:space-around;gap:var(--k-gap,24px);animation:ui-k-marquee var(--k-dur,40s) linear infinite}
+.ui-k-marquee--v .ui-k-marquee__track{flex-direction:column;animation-name:ui-k-marquee-v}
+.ui-k-marquee__track--rev{animation-direction:reverse}
+.ui-k-marquee--pause:hover .ui-k-marquee__track{animation-play-state:paused}
+@keyframes ui-k-marquee{from{transform:translateX(0)}to{transform:translateX(calc(-100% - var(--k-gap,24px)))}}
+@keyframes ui-k-marquee-v{from{transform:translateY(0)}to{transform:translateY(calc(-100% - var(--k-gap,24px)))}}
+.ui-k-ticker{display:inline-block;font-variant-numeric:tabular-nums}
+.ui-k-rotate{position:relative;display:inline-block;overflow:hidden;vertical-align:bottom}
+.ui-k-rotate__word{display:inline-block}
+.ui-k-shiny{color:color-mix(in srgb,currentColor 62%,transparent);background:linear-gradient(90deg,transparent,currentColor 50%,transparent) 0 0/var(--k-shiny,100px) 100% no-repeat;-webkit-background-clip:text;background-clip:text;animation:ui-k-shiny 8s infinite}
+@keyframes ui-k-shiny{0%,90%,100%{background-position:calc(-100% - var(--k-shiny,100px)) 0}30%,60%{background-position:calc(100% + var(--k-shiny,100px)) 0}}
+.ui-k-aurora{position:relative;display:inline-block}
+.ui-k-aurora__fill{position:relative;display:inline-block;background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:ui-k-aurora 10s ease-in-out infinite}
+@keyframes ui-k-aurora{0%,100%{background-position:0% 50%}25%{background-position:50% 100%}50%{background-position:100% 50%}75%{background-position:50% 0%}}
+.ui-k-progress{position:fixed;inset:0 0 auto 0;z-index:60;height:3px;transform-origin:left;background:var(--es-accent,currentColor)}
+.ui-k-velocity{width:100%;overflow:hidden;white-space:nowrap}
+.ui-k-velocity__track{display:inline-flex;align-items:center;will-change:transform}
+.ui-k-velocity__block{display:inline-flex;flex-shrink:0;align-items:center;gap:var(--k-gap,32px);padding-right:var(--k-gap,32px)}
+.ui-k-spot{--k-card-bg:var(--es-paper,#fff);position:relative;isolation:isolate;overflow:hidden;border:1px solid transparent;border-radius:20px;color:var(--es-ink,#111)}
+.ui-k-spot__glow{position:absolute;inset:1px;z-index:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s}
+.ui-k-spot:hover .ui-k-spot__glow{opacity:1}
+.ui-k-spot__body{position:relative;z-index:1;padding:28px}
+.ui-k-videotext{position:relative;width:100%;min-height:clamp(180px,32vw,420px)}
+.ui-k-videotext__mask{position:absolute;inset:0;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+.ui-k-videotext__mask video,.ui-k-videotext__mask img{width:100%;height:100%;object-fit:cover}
+.ui-k-morph{position:relative;width:100%;height:1.15em;text-align:center;line-height:1;font-family:var(--es-heading,inherit);font-weight:700}
+.ui-k-morph__a,.ui-k-morph__b{position:absolute;inset:0 0 auto 0;margin:auto;display:inline-block;width:100%}
+.ui-k-shimmer{--k-spread:90deg;--k-cut:.06em;--k-speed:3s;position:relative;z-index:0;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border-radius:999px;padding:14px 30px;white-space:nowrap;color:var(--es-paper,#fff);background:var(--es-ink,#111);font-weight:600;text-decoration:none;transition:transform .3s}
+.ui-k-shimmer:active{transform:translateY(1px)}
+.ui-k-shimmer__spark{position:absolute;inset:0;z-index:-3;overflow:visible;filter:blur(2px);container-type:size}
+.ui-k-shimmer__beam{position:absolute;inset:0;aspect-ratio:1;height:100cqh;animation:ui-k-shimmer-slide var(--k-speed) ease-in-out infinite alternate}
+.ui-k-shimmer__beam::before{content:"";position:absolute;inset:-100%;background:conic-gradient(from calc(270deg - (var(--k-spread) * .5)),transparent 0,var(--es-accent,#fff) var(--k-spread),transparent var(--k-spread));animation:ui-k-spin-around calc(var(--k-speed) * 2) infinite linear}
+.ui-k-shimmer__bg{position:absolute;inset:var(--k-cut);z-index:-2;border-radius:inherit;background:var(--es-ink,#111)}
+.ui-k-shimmer__label{position:relative}
+@keyframes ui-k-shimmer-slide{to{transform:translate(calc(100cqw - 100%),0)}}
+@keyframes ui-k-spin-around{0%{transform:rotate(0)}15%,35%{transform:rotate(90deg)}65%,85%{transform:rotate(270deg)}100%{transform:rotate(360deg)}}
+.ui-k-hoverbtn{position:relative;display:inline-flex;overflow:hidden;border:1px solid currentColor;border-radius:999px;padding:12px 26px;font-weight:600;color:var(--es-ink,#111);background:var(--es-paper,#fff);text-decoration:none;white-space:nowrap}
+.ui-k-hoverbtn__rest{display:flex;align-items:center;gap:10px}
+.ui-k-hoverbtn__dot{width:8px;height:8px;border-radius:999px;background:var(--es-accent,#111);transition:transform .35s}
+.ui-k-hoverbtn:hover .ui-k-hoverbtn__dot,.ui-k-hoverbtn:focus-visible .ui-k-hoverbtn__dot{transform:scale(60)}
+.ui-k-hoverbtn__label{transition:transform .3s,opacity .3s}
+.ui-k-hoverbtn:hover .ui-k-hoverbtn__label,.ui-k-hoverbtn:focus-visible .ui-k-hoverbtn__label{transform:translateX(48px);opacity:0}
+.ui-k-hoverbtn__hover{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--es-paper,#fff);transform:translateX(48px);opacity:0;transition:transform .3s,opacity .3s}
+.ui-k-hoverbtn:hover .ui-k-hoverbtn__hover,.ui-k-hoverbtn:focus-visible .ui-k-hoverbtn__hover{transform:translateX(0);opacity:1}
+.ui-k-bento{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:clamp(220px,24vw,340px);gap:16px}
+.ui-k-bento__card{position:relative;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;border-radius:20px;background:color-mix(in srgb,var(--es-ink,#111) 5%,var(--es-paper,#fff));color:var(--es-ink,#111)}
+.ui-k-bento__card--wide{grid-column:span 2}.ui-k-bento__card--tall{grid-row:span 2}.ui-k-bento__card--big{grid-column:span 2;grid-row:span 2}
+.ui-k-bento__card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.ui-k-bento__card:hover img{transform:scale(1.04)}
+.ui-k-bento__card--photo{color:#fff}
+.ui-k-bento__card--photo::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgb(0 0 0 / .62),rgb(0 0 0 / 0) 58%)}
+.ui-k-bento__copy{position:relative;z-index:1;display:grid;gap:6px;padding:24px;transition:transform .3s}
+.ui-k-bento__title{margin:0;font-family:var(--es-heading,inherit);font-size:clamp(20px,2vw,28px);line-height:1.05}
+.ui-k-bento__text{margin:0;max-width:44ch;opacity:.86;line-height:1.45}
+.ui-k-bento__cta{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.ui-k-bento__cta svg,.ui-k-hoverbtn__hover svg{width:18px;height:18px;flex:none}
+.ui-k-kinetic__w{display:inline-block;white-space:pre}
+.ui-k-kinetic.is-in .ui-k-kinetic__w{animation:ui-k-rise .75s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i) * 55ms)}
+.ui-k-kinetic--blur.is-in .ui-k-kinetic__w{animation-name:ui-k-blur-in}
+.ui-k-kinetic--fade.is-in .ui-k-kinetic__w{animation-name:ui-k-fade-in}
+@keyframes ui-k-rise{from{opacity:0;transform:translateY(.45em)}}
+@keyframes ui-k-blur-in{from{opacity:0;filter:blur(10px)}}
+@keyframes ui-k-fade-in{from{opacity:0}}
+.ui-k-carousel{position:relative}
+.ui-k-carousel__track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:20px}
+.ui-k-carousel__track::-webkit-scrollbar{display:none}
+.ui-k-carousel__slide{position:relative;flex:0 0 100%;aspect-ratio:var(--k-aspect,16/9);scroll-snap-align:start;overflow:hidden;color:#fff}
+.ui-k-carousel__slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ui-k-carousel__slide--copy::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgb(0 0 0 / .55),rgb(0 0 0 / 0) 55%)}
+.ui-k-carousel__copy{position:absolute;inset:auto 0 0 0;z-index:1;display:grid;gap:6px;padding:clamp(20px,4vw,48px)}
+.ui-k-carousel__title{margin:0;font-family:var(--es-heading,inherit);font-size:clamp(24px,3.4vw,48px);line-height:1}
+.ui-k-carousel__copy a{color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.ui-k-carousel__arrows{position:absolute;inset:auto 16px 16px auto;z-index:2;display:flex;gap:8px}
+.ui-k-arrow{display:inline-grid;place-items:center;width:44px;height:44px;border:0;border-radius:999px;background:var(--es-paper,#fff);color:var(--es-ink,#111);cursor:pointer;box-shadow:0 6px 18px -8px rgb(0 0 0 / .4)}
+.ui-k-arrow svg{width:18px;height:18px}
+.ui-k-dots{display:flex;justify-content:center;gap:8px;margin-top:14px}
+.ui-k-dot{width:10px;height:10px;padding:0;border:1px solid currentColor;border-radius:999px;background:transparent;cursor:pointer;opacity:.5}
+.ui-k-dot[aria-current="true"]{background:currentColor;opacity:1}
+.ui-k-rail{position:relative}
+.ui-k-rail__track{display:flex;gap:var(--k-gap,16px);overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 clamp(16px,4vw,48px);padding:4px clamp(16px,4vw,48px) 12px;scrollbar-width:thin}
+.ui-k-rail__item{flex:0 0 var(--k-item,min(78%,340px));scroll-snap-align:start}
+.ui-k-rail__arrows{display:flex;justify-content:flex-end;gap:8px;padding:0 clamp(16px,4vw,48px) 12px}
+.ui-k-scene{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:start}
+.ui-k-scene__media{position:sticky;top:calc(var(--kit-nav-h,72px) + 24px);aspect-ratio:4/5;max-height:76vh;overflow:hidden;border-radius:24px}
+.ui-k-scene__media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .6s ease}
+.ui-k-scene__media img[data-on="true"]{opacity:1}
+.ui-k-scene__step{display:flex;flex-direction:column;justify-content:center;gap:12px;min-height:70vh;opacity:.35;transition:opacity .4s}
+.ui-k-scene__step[data-on="true"]{opacity:1}
+.ui-k-scene__step h3{margin:0;font-family:var(--es-heading,inherit);font-size:clamp(26px,3vw,44px);line-height:1.02}
+.ui-k-scene__step p{margin:0;max-width:46ch;line-height:1.55}
+.ui-k-scene__inline{display:none}
+.ui-k-hscroll{position:relative}
+.ui-k-hscroll__pin{position:sticky;top:0;display:flex;align-items:center;height:100vh;overflow:hidden}
+.ui-k-hscroll__track{display:flex;gap:var(--k-gap,24px);padding:0 clamp(16px,4vw,48px);will-change:transform}
+.ui-k-hscroll__track > *{flex:0 0 auto}
+.ui-k-reveal-card{position:relative;display:block;overflow:hidden;border-radius:20px;color:#fff;text-decoration:none;aspect-ratio:var(--k-aspect,4/5)}
+.ui-k-reveal-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+.ui-k-reveal-card:hover img,.ui-k-reveal-card:focus-visible img{transform:scale(1.06)}
+.ui-k-reveal-card__panel{position:absolute;inset:auto 12px 12px 12px;display:grid;gap:4px;padding:16px 18px;border-radius:14px;background:color-mix(in srgb,var(--es-paper,#fff) 92%,transparent);color:var(--es-ink,#111);transform:translateY(calc(100% - 56px));transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.ui-k-reveal-card:hover .ui-k-reveal-card__panel,.ui-k-reveal-card:focus-visible .ui-k-reveal-card__panel{transform:none}
+.ui-k-reveal-card__title{margin:0;font-family:var(--es-heading,inherit);font-size:20px;line-height:1.15}
+.ui-k-reveal-card__caption{margin:0;font-size:14px;line-height:1.45;opacity:.8}
+.ui-k-frame{position:relative;overflow:hidden;aspect-ratio:var(--k-aspect,4/5);max-height:75vh}
+.ui-k-frame img{width:100%;height:100%;object-fit:cover;display:block}
+.ui-k-frame--rounded{border-radius:28px}.ui-k-frame--arch{border-radius:999px 999px 24px 24px}.ui-k-frame--pill{border-radius:999px}
+.ui-k-frame--circle{border-radius:50%;aspect-ratio:1}.ui-k-frame--cut{clip-path:polygon(0 0,82% 0,100% 18%,100% 100%,0 100%)}
+.ui-k-frame--tilt{border-radius:18px;transform:rotate(-2.5deg);box-shadow:0 30px 60px -30px rgb(0 0 0 / .45)}
+.ui-k-tabs__list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.ui-k-tabs__tab{min-height:44px;padding:10px 18px;border:1px solid color-mix(in srgb,currentColor 25%,transparent);border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.ui-k-tabs__tab[aria-selected="true"]{background:var(--es-ink,#111);color:var(--es-paper,#fff);border-color:transparent}
+.ui-k-wipe{overflow:hidden}
+.ui-k-wipe img{display:block;width:100%;height:100%;object-fit:cover}
+.ui-k-wipe.is-armed{clip-path:inset(0 0 100% 0)}.ui-k-wipe.is-armed.ui-k-wipe--left{clip-path:inset(0 100% 0 0)}
+.ui-k-wipe.is-in{clip-path:inset(0 0 0 0);transition:clip-path 1.1s cubic-bezier(.65,0,.35,1)}
+.ui-k-imgtext{display:block;margin:0;background-size:cover;background-position:center;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--es-ink,#111);font-family:var(--es-heading,inherit);font-weight:900;line-height:.86;letter-spacing:-.03em;font-size:clamp(64px,15vw,240px)}
+@media (max-width:767px){
+  .ui-k-bento{grid-template-columns:minmax(0,1fr);grid-auto-rows:clamp(200px,62vw,300px)}
+  .ui-k-bento__card--wide,.ui-k-bento__card--big{grid-column:auto}.ui-k-bento__card--tall,.ui-k-bento__card--big{grid-row:auto}
+  .ui-k-scene{grid-template-columns:minmax(0,1fr)}
+  .ui-k-scene__media{display:none}
+  .ui-k-scene__inline{display:block;aspect-ratio:4/5;max-height:70vh;overflow:hidden;border-radius:20px}
+  .ui-k-scene__inline img{width:100%;height:100%;object-fit:cover}
+  .ui-k-scene__step{min-height:0;opacity:1;padding:20px 0}
+  .ui-k-reveal-card__panel{transform:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .ui-k-marquee__track,.ui-k-shiny,.ui-k-aurora__fill,.ui-k-shimmer__beam,.ui-k-shimmer__beam::before,.ui-k-kinetic.is-in .ui-k-kinetic__w{animation:none}
+  .ui-k-wipe.is-armed{clip-path:none}
+}
+:root[data-ui-motion=off] :is(.ui-k-marquee__track,.ui-k-shiny,.ui-k-aurora__fill,.ui-k-shimmer__beam,.ui-k-shimmer__beam::before,.ui-k-kinetic.is-in .ui-k-kinetic__w){animation:none}
+/* Owner 2026-11-15: the showcase pieces (ProductStage, ProductRail), after Amboras's examples. */
+.ui-k-stage{position:relative;overflow:hidden;isolation:isolate;min-height:clamp(560px,92vh,860px);background:var(--k-stage-bg);color:var(--k-stage-ink);transition:background-color .8s ease,color .8s ease;touch-action:pan-y;user-select:none}
+.ui-k-stage__slide{position:absolute;inset:0;display:grid;place-items:center;padding:72px 24px 120px;opacity:0;pointer-events:none;transition:opacity .5s ease}
+.ui-k-stage__slide[data-on=true]{opacity:1;pointer-events:auto}
+.ui-k-stage__title{position:relative;z-index:1;margin:0;display:flex;flex-direction:column;align-items:center;gap:clamp(120px,19vw,270px);font-family:var(--kit-display,inherit);font-weight:800;font-size:clamp(60px,12.5vw,200px);line-height:.84;letter-spacing:-.025em;text-transform:uppercase;text-align:center;color:inherit;max-width:100%}
+.ui-k-stage__top,.ui-k-stage__bottom{display:block;max-width:100%;overflow-wrap:anywhere;transform:translateY(35%);opacity:0;transition:transform .75s cubic-bezier(.2,.7,.2,1),opacity .5s ease}
+.ui-k-stage__bottom{transition-delay:.08s}
+.ui-k-stage__slide[data-on=true] :is(.ui-k-stage__top,.ui-k-stage__bottom){transform:none;opacity:1}
+.ui-k-stage__product{position:absolute;left:50%;top:47%;z-index:2;width:clamp(220px,32vw,500px);transform:translate(-50%,-44%) rotate(-9deg) scale(.86);opacity:0;transition:transform .85s cubic-bezier(.2,.7,.2,1),opacity .5s ease}
+.ui-k-stage__slide[data-on=true] .ui-k-stage__product{transform:translate(-50%,-50%) rotate(-3deg);opacity:1}
+.ui-k-stage__product img{display:block;width:100%;margin:0 auto;height:auto;max-height:50vh;object-fit:contain;filter:drop-shadow(0 28px 36px rgba(0,0,0,.28))}
+.ui-k-stage__decor{position:absolute;z-index:3;width:clamp(34px,4.6vw,70px);height:auto;object-fit:contain;opacity:0;transition:opacity .6s ease .25s;filter:drop-shadow(0 10px 14px rgba(0,0,0,.2));animation:ui-k-bob 5.5s ease-in-out infinite}
+.ui-k-stage__slide[data-on=true] .ui-k-stage__decor{opacity:1}
+.ui-k-stage__decor[data-spot="0"]{left:9%;top:24%}
+.ui-k-stage__decor[data-spot="1"]{right:11%;top:19%;animation-delay:-1.4s;width:clamp(28px,3.4vw,52px)}
+.ui-k-stage__decor[data-spot="2"]{left:20%;bottom:27%;animation-delay:-2.6s}
+.ui-k-stage__decor[data-spot="3"]{right:21%;bottom:31%;animation-delay:-.8s;width:clamp(40px,5.4vw,84px)}
+.ui-k-stage__decor[data-spot="4"]{left:36%;top:13%;animation-delay:-3.3s;width:clamp(24px,2.8vw,42px)}
+.ui-k-stage__decor[data-spot="5"]{right:5%;top:52%;animation-delay:-2s}
+@keyframes ui-k-bob{0%,100%{translate:0 0;rotate:0deg}50%{translate:0 -12px;rotate:6deg}}
+.ui-k-stage__bar{position:absolute;left:0;right:0;bottom:0;z-index:4;display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:16px;padding:clamp(16px,2.6vw,32px)}
+.ui-k-stage__count{display:grid;gap:10px;font-family:var(--kit-display,inherit);line-height:1}
+.ui-k-stage__count strong{font-size:clamp(26px,2.6vw,38px);font-weight:800}
+.ui-k-stage__count small{font-size:13px;font-weight:700;opacity:.7}
+.ui-k-stage__steps{display:flex;gap:6px}
+.ui-k-stage__steps button{position:relative;width:40px;height:18px;padding:0;border:0;background:none;color:inherit;cursor:pointer}
+.ui-k-stage__steps button::before,.ui-k-stage__steps i{content:"";position:absolute;left:0;top:8px;height:2px;border-radius:2px}
+.ui-k-stage__steps button::before{right:0;background:currentColor;opacity:.25}
+.ui-k-stage__steps i{width:0;background:currentColor}
+.ui-k-stage__steps button[data-done=true] i,.ui-k-stage__steps button[aria-current=true] i{width:100%}
+.ui-k-stage[data-playing=true] .ui-k-stage__steps button[aria-current=true] i{animation:ui-k-step var(--k-stage-ms,6500ms) linear}
+@keyframes ui-k-step{from{width:0}to{width:100%}}
+.ui-k-stage__facts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:0;padding:0;list-style:none}
+.ui-k-stage__facts li{padding:7px 13px;border:1px solid color-mix(in srgb,currentColor 42%,transparent);border-radius:999px;font-size:11px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;line-height:1.1}
+.ui-k-stage__buy{justify-self:end;display:inline-flex;align-items:center;gap:14px;min-height:50px;padding:6px 6px 6px 22px;border:0;border-radius:999px;background:var(--k-stage-ink);color:var(--k-stage-bg);font:inherit;font-size:13px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:transform .2s ease}
+.ui-k-stage__buy:hover{transform:translateY(-2px)}
+.ui-k-stage__buy>span:last-child{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--k-stage-bg);color:var(--k-stage-ink)}
+.ui-k-stage__buy svg{width:18px;height:18px}
+.ui-k-stage__arrows{position:absolute;inset:50% clamp(12px,2vw,28px) auto;z-index:4;display:flex;justify-content:space-between;pointer-events:none;transform:translateY(-50%)}
+.ui-k-stage__arrows .ui-k-arrow{pointer-events:auto;color:var(--k-stage-ink);background:color-mix(in srgb,var(--k-stage-bg) 70%,transparent);border-color:color-mix(in srgb,var(--k-stage-ink) 30%,transparent)}
+@media (max-width:720px){
+  .ui-k-stage{min-height:640px}
+  .ui-k-stage__slide{padding:56px 16px 170px}
+  .ui-k-stage__title{gap:clamp(170px,58vw,260px);font-size:clamp(46px,16vw,92px)}
+  .ui-k-stage__product{width:auto;top:44%}
+  .ui-k-stage__product img{width:auto;max-width:min(58vw,260px);max-height:min(32vh,270px);margin:0 auto}
+  .ui-k-stage__bar{grid-template-columns:auto 1fr;row-gap:12px}
+  .ui-k-stage__facts{grid-column:1/-1;order:-1}
+  .ui-k-stage__arrows{display:none}
+  /* live 2026-11-15 (Oh Belly rev 18): five 40-px steps left the button 118 px and «Agregar · Bs 18,00» on four lines */
+  .ui-k-stage__steps button{width:22px}
+  .ui-k-stage__buy{white-space:nowrap;padding-left:16px}
+}
+.ui-k-rail-show{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);align-items:center;gap:clamp(24px,4vw,64px);padding:clamp(48px,7vw,96px) clamp(16px,4vw,56px);overflow:hidden}
+.ui-k-rail-show--dark{background:radial-gradient(120% 90% at 40% 30%,#3a4044 0%,#1d2124 70%);color:#f2f2ef}
+.ui-k-rail-show--light{background:radial-gradient(120% 90% at 40% 30%,#ffffff 0%,#e9e6e0 75%);color:#1b1b1b}
+.ui-k-rail-show__stage{position:relative;padding-top:56px}
+.ui-k-rail-show__bar{position:absolute;left:-56px;right:-24px;top:56px;height:4px;border-radius:4px;background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(150,150,150,.5));box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.ui-k-rail-show__pieces{position:relative;display:flex;align-items:flex-start;justify-content:center}
+.ui-k-rail-show__piece{position:relative;flex:1 1 0;min-width:0;max-width:300px;margin:0 -2.5%;padding:0;border:0;background:none;color:inherit;cursor:pointer;transform-origin:50% 0;transform:scale(.9);opacity:.55;filter:saturate(.8) brightness(.85);transition:transform .5s cubic-bezier(.2,.7,.2,1),opacity .4s ease,filter .4s ease}
+.ui-k-rail-show__piece[data-on=true]{z-index:2;transform:scale(1.06) translateY(6px);opacity:1;filter:none}
+.ui-k-rail-show__piece:focus-visible{outline:2px solid currentColor;outline-offset:6px}
+.ui-k-rail-show__hook{display:block;width:42px;height:32px;margin:-30px auto -4px;color:inherit;opacity:.8}
+.ui-k-rail-show__piece img{display:block;width:100%;margin:0 auto;height:auto;max-height:440px;object-fit:contain;filter:drop-shadow(0 26px 30px rgba(0,0,0,.35))}
+.ui-k-rail-show__panel{display:grid;gap:14px;align-content:center}
+.ui-k-rail-show__kicker{margin:0;font-size:12px;opacity:.7}
+.ui-k-rail-show__head{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.ui-k-rail-show__head h3{margin:0;font-family:var(--kit-display,inherit);font-size:clamp(24px,2.4vw,34px);line-height:1.08;color:inherit}
+.ui-k-rail-show__head span{font-weight:600;white-space:nowrap}
+.ui-k-rail-show__text{margin:0;font-size:14px;line-height:1.55;opacity:.78}
+.ui-k-rail-show__options{display:grid;gap:8px;font-size:12px}
+.ui-k-rail-show__options>span{opacity:.75}
+.ui-k-rail-show__options div{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));border:1px solid color-mix(in srgb,currentColor 30%,transparent)}
+.ui-k-rail-show__options a{display:grid;place-items:center;min-height:44px;color:inherit;text-decoration:none;font-weight:600;border-right:1px solid color-mix(in srgb,currentColor 18%,transparent)}
+.ui-k-rail-show__options a:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
+.ui-k-rail-show__buy{display:inline-flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px;padding:6px 6px 6px 20px;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:999px;background:none;color:inherit;font:inherit;font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.ui-k-rail-show__buy>span:last-child{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:currentColor}
+.ui-k-rail-show__buy svg{width:18px;height:18px;color:#1d2124}
+.ui-k-rail-show--light .ui-k-rail-show__buy svg{color:#fff}
+.ui-k-rail-show--stand .ui-k-rail-show__bar,.ui-k-rail-show--stand .ui-k-rail-show__hook{display:none}
+.ui-k-rail-show--stand .ui-k-rail-show__stage{padding-top:0}
+.ui-k-rail-show--stand .ui-k-rail-show__pieces{align-items:flex-end}
+.ui-k-rail-show--stand .ui-k-rail-show__piece{transform-origin:50% 100%}
+.ui-k-rail-show--stand .ui-k-rail-show__piece[data-on=true]{transform:scale(1.06)}
+.ui-k-rail-show--stand .ui-k-rail-show__piece img{max-height:520px}
+.ui-k-rail-show--stand .ui-k-rail-show__stage::after{content:"";position:absolute;left:4%;right:4%;bottom:-12px;height:28px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.32),transparent)}
+@media (max-width:820px){
+  .ui-k-rail-show{grid-template-columns:1fr}
+  .ui-k-rail-show__pieces{justify-content:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:12px}
+  .ui-k-rail-show__piece{flex:0 0 46%;margin:0;scroll-snap-align:center}
+}
+@media (prefers-reduced-motion:reduce){
+  .ui-k-stage,.ui-k-stage__slide,.ui-k-stage__top,.ui-k-stage__bottom,.ui-k-stage__product,.ui-k-rail-show__piece{transition:opacity .3s ease}
+  .ui-k-stage__top,.ui-k-stage__bottom{transform:none}
+  .ui-k-stage__product,.ui-k-stage__slide[data-on=true] .ui-k-stage__product{transform:translate(-50%,-50%)}
+  .ui-k-stage__decor,.ui-k-stage[data-playing=true] .ui-k-stage__steps button[aria-current=true] i{animation:none}
+}
+:root[data-ui-motion=off] .ui-k-stage__decor{animation:none}
+`;
+function RichStyles() {
+  return <style href="pagosya-ui-rich" precedence="default">{RICH_CSS}</style>;
+}
+const kx = (...names: unknown[]) => names.filter((name): name is string => typeof name === 'string' && name.length > 0).join(' ');
+const arrowIcon = (direction: 'left' | 'right') => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{direction === 'right' ? <path d="M5 12h14M13 6l6 6-6 6" /> : <path d="M19 12H5M11 6l-6 6 6 6" />}</svg>;
+
+/** Magic UI Marquee: any row (photos, products, words) that runs on its own; repeat copies fill the width. Pauses on hover. */
+export function MarqueeRow({ children, reverse = false, pauseOnHover = true, vertical = false, repeat = 4, speed = 40, gap = 24, className }: {
+  children: ReactNode; reverse?: boolean; pauseOnHover?: boolean; vertical?: boolean; repeat?: number; speed?: number; gap?: number; className?: string;
+}) {
+  return <div className={kx('ui-k-marquee', vertical && 'ui-k-marquee--v', pauseOnHover && 'ui-k-marquee--pause', className)} style={{ '--k-dur': `${clamp(speed, 8, 160, 40)}s`, '--k-gap': `${clamp(gap, 0, 120, 24)}px` } as CSSProperties}>
+    <RichStyles />
+    {Array.from({ length: clamp(repeat, 2, 8, 4) }, (_, index) => <div key={index} className={kx('ui-k-marquee__track', reverse && 'ui-k-marquee__track--rev')} aria-hidden={index > 0 || undefined}>{children}</div>)}
+  </div>;
+}
+
+/** Magic UI NumberTicker: a number that counts up when it comes into view. Only numbers from the store's data, never invented. */
+export function NumberTicker({ value, decimals = 0, prefix = '', suffix = '', className }: { value: number; decimals?: number; prefix?: string; suffix?: string; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const moving = useUiMotion();
+  const target = useMotionValue(0);
+  const spring = useSpring(target, { damping: 60, stiffness: 100 });
+  const inView = useInView(ref, { once: true });
+  const places = clamp(decimals, 0, 4, 0);
+  const text = (n: number) => `${prefix}${new Intl.NumberFormat('es-BO', { minimumFractionDigits: places, maximumFractionDigits: places }).format(n)}${suffix}`;
+  useEffect(() => { if (moving && inView) target.set(value); }, [moving, inView, value, target]);
+  useEffect(() => {
+    if (!moving) return;
+    if (ref.current) ref.current.textContent = text(0);
+    return spring.on('change', latest => { if (ref.current) ref.current.textContent = text(Number(latest.toFixed(places))); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moving, spring, places, prefix, suffix]);
+  return <span ref={ref} className={kx('ui-k-ticker', className)}><RichStyles />{text(value)}</span>;
+}
+
+/** Magic UI WordRotate: one word of a headline that changes every few seconds (Frescas · Crujientes · Tuyas). */
+export function WordRotate({ words, interval = 2500, className }: { words: string[]; interval?: number; className?: string }) {
+  const list = words.filter(Boolean).slice(0, 8);
+  const [index, setIndex] = useState(0);
+  const moving = useUiMotion();
+  useEffect(() => {
+    if (!moving || list.length < 2) return;
+    const timer = setInterval(() => setIndex(current => (current + 1) % list.length), clamp(interval, 1200, 8000, 2500));
+    return () => clearInterval(timer);
+  }, [moving, list.length, interval]);
+  return <span className={kx('ui-k-rotate', className)}>
+    <RichStyles /><span className="ui-k-sr">{list.join(', ')}</span>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.span key={index} aria-hidden="true" className="ui-k-rotate__word" initial={{ opacity: 0, y: '-0.6em' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '0.6em' }} transition={{ duration: 0.25, ease: 'easeOut' }}>{list[index] ?? ''}</motion.span>
+    </AnimatePresence>
+  </span>;
+}
+
+/** Magic UI BlurFade: an entrance from a soft blur as the block comes into view. Below the first screen only. */
+export function BlurFade({ children, delay = 0, direction = 'up', className }: { children: ReactNode; delay?: number; direction?: 'up' | 'down' | 'left' | 'right'; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const moving = useUiMotion();
+  const inView = useInView(ref, { once: true, margin: '-50px' });
+  const offset = direction === 'down' || direction === 'right' ? -12 : 12;
+  const hidden = direction === 'left' || direction === 'right' ? { opacity: 0, x: offset, filter: 'blur(6px)' } : { opacity: 0, y: offset, filter: 'blur(6px)' };
+  const shown = { opacity: 1, x: 0, y: 0, filter: 'blur(0px)' };
+  return <motion.div ref={ref} className={className} initial={false} animate={moving && !inView ? hidden : shown} transition={{ delay: 0.04 + clamp(delay, 0, 2, 0), duration: 0.45, ease: 'easeOut' }}>{children}</motion.div>;
+}
+
+/** Magic UI AnimatedShinyText: a light that sweeps across a short label now and then. */
+export function ShinyText({ children, width = 100, className }: { children: ReactNode; width?: number; className?: string }) {
+  return <span className={kx('ui-k-shiny', className)} style={{ '--k-shiny': `${clamp(width, 40, 320, 100)}px` } as CSSProperties}><RichStyles />{children}</span>;
+}
+
+/** Magic UI AuroraText: one word filled with a slow-moving gradient of the brand's colours. One per page. */
+export function AuroraText({ children, colors, speed = 1, className }: { children: ReactNode; colors?: string[]; speed?: number; className?: string }) {
+  const list = colors?.length ? colors.slice(0, 5) : ['var(--es-accent, #e66540)', 'var(--es-deep, #542a62)', 'var(--es-ink, #222)'];
+  return <span className={kx('ui-k-aurora', className)}>
+    <RichStyles /><span className="ui-k-sr">{children}</span>
+    <span aria-hidden="true" className="ui-k-aurora__fill" style={{ backgroundImage: `linear-gradient(135deg, ${list.join(', ')}, ${list[0]})`, animationDuration: `${10 / clamp(speed, 0.2, 4, 1)}s` }}>{children}</span>
+  </span>;
+}
+
+/** Magic UI ScrollProgress: a thin bar in the accent colour across the top that fills as the page is read. */
+export function ScrollProgress({ className }: { className?: string }) {
+  const { scrollYProgress } = useScroll();
+  return <><RichStyles /><motion.div aria-hidden="true" className={kx('ui-k-progress', className)} style={{ scaleX: scrollYProgress }} /></>;
+}
+
+const wrapNumber = (min: number, max: number, value: number) => { const range = max - min; return ((((value - min) % range) + range) % range) + min; };
+/** Magic UI ScrollVelocity: a row (words or photos) that runs on its own and speeds up, or turns, with the visitor's scroll. */
+export function VelocityRow({ children, speed = 5, direction = 1, gap = 32, className }: { children: ReactNode; speed?: number; direction?: 1 | -1; gap?: number; className?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const blockRef = useRef<HTMLDivElement>(null);
+  const [copies, setCopies] = useState(3);
+  const moving = useUiMotion();
+  const baseX = useMotionValue(0);
+  const unit = useMotionValue(0);
+  const { scrollY } = useScroll();
+  const velocity = useVelocity(scrollY);
+  const smooth = useSpring(velocity, { damping: 50, stiffness: 400 });
+  const factor = useTransform(smooth, (value: number) => (value < 0 ? -1 : 1) * Math.min(5, (Math.abs(value) / 1000) * 5));
+  const heading = useRef(direction >= 0 ? 1 : -1);
+  const visible = useRef(true);
+  useEffect(() => {
+    const container = containerRef.current, block = blockRef.current;
+    if (!container || !block) return;
+    const update = () => {
+      const width = block.scrollWidth || 0;
+      unit.set(width);
+      const next = width > 0 ? Math.max(3, Math.ceil((container.offsetWidth || 0) / width) + 2) : 3;
+      setCopies(current => current === next ? current : next);
+    };
+    update();
+    const resize = new ResizeObserver(update);
+    resize.observe(container); resize.observe(block);
+    const seen = new IntersectionObserver(entries => { visible.current = entries.some(entry => entry.isIntersecting); });
+    seen.observe(container);
+    return () => { resize.disconnect(); seen.disconnect(); };
+  }, [children, unit]);
+  const x = useTransform([baseX, unit], (latest: number[]) => `${-wrapNumber(0, Number(latest[1]) || 1, Number(latest[0]) || 0)}px`);
+  useAnimationFrame((_, delta) => {
+    if (!moving || !visible.current || document.visibilityState !== 'visible') return;
+    const width = unit.get();
+    if (width <= 0) return;
+    const push = factor.get();
+    if (Math.abs(push) > 0.1) heading.current = (direction >= 0 ? 1 : -1) * (push >= 0 ? 1 : -1);
+    baseX.set(baseX.get() + heading.current * ((width * clamp(speed, 1, 20, 5)) / 100) * (1 + Math.min(5, Math.abs(push))) * (delta / 1000));
+  });
+  return <div ref={containerRef} className={kx('ui-k-velocity', className)} style={{ '--k-gap': `${clamp(gap, 0, 120, 32)}px` } as CSSProperties}>
+    <RichStyles />
+    <motion.div className="ui-k-velocity__track" style={{ x }}>
+      {Array.from({ length: copies }, (_, index) => <div key={index} ref={index === 0 ? blockRef : undefined} aria-hidden={index > 0 || undefined} className="ui-k-velocity__block">{children}</div>)}
+    </motion.div>
+  </div>;
+}
+
+/** Magic UI MagicCard: a card whose border and surface light up in the accent colour where the pointer is. */
+export function SpotlightCard({ children, size = 220, className }: { children: ReactNode; size?: number; className?: string }) {
+  const reach = clamp(size, 80, 600, 220);
+  const mouseX = useMotionValue(-reach), mouseY = useMotionValue(-reach);
+  const surface = useMotionTemplate`linear-gradient(var(--k-card-bg) 0 0) padding-box, radial-gradient(${reach}px circle at ${mouseX}px ${mouseY}px, var(--es-accent, #e66540), color-mix(in srgb, currentColor 14%, transparent) 100%) border-box`;
+  const glow = useMotionTemplate`radial-gradient(${reach}px circle at ${mouseX}px ${mouseY}px, color-mix(in srgb, var(--es-accent, #e66540) 18%, transparent), transparent 100%)`;
+  return <motion.div className={kx('ui-k-spot', className)} style={{ background: surface }}
+    onPointerMove={event => { const rect = event.currentTarget.getBoundingClientRect(); mouseX.set(event.clientX - rect.left); mouseY.set(event.clientY - rect.top); }}
+    onPointerLeave={() => { mouseX.set(-reach); mouseY.set(-reach); }}>
+    <RichStyles /><motion.div aria-hidden="true" className="ui-k-spot__glow" style={{ background: glow }} /><div className="ui-k-spot__body">{children}</div>
+  </motion.div>;
+}
+
+const svgText = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char] ?? char);
+/** Magic UI VideoText: one or two huge words cut out of the store's video (or a photo). The words stay readable for screen readers. */
+export function VideoText({ text, src, image, fontSize = '18vw', className }: { text: string; src?: string; image?: Img; fontSize?: string; className?: string }) {
+  const mask = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'><text x='50%' y='50%' font-size='${svgText(fontSize)}' font-weight='900' text-anchor='middle' dominant-baseline='middle' font-family='Arial Black, Helvetica, sans-serif'>${svgText(text)}</text></svg>`)}")`;
+  return <div className={kx('ui-k-videotext', className)}>
+    <RichStyles />
+    <div className="ui-k-videotext__mask" style={{ maskImage: mask, WebkitMaskImage: mask }} aria-hidden="true">
+      {src ? <video src={src} autoPlay muted loop playsInline preload="metadata" /> : image?.src ? <img src={image.src} alt="" /> : null}
+    </div>
+    <span className="ui-k-sr">{text}</span>
+  </div>;
+}
+
+/** Magic UI MorphingText: a few short words that melt into one another, one at a time. With motion off, the first word stays. */
+export function MorphingText({ texts, className }: { texts: string[]; className?: string }) {
+  const list = texts.filter(Boolean).slice(0, 6);
+  const first = useRef<HTMLSpanElement>(null), second = useRef<HTMLSpanElement>(null);
+  const filterId = `ui-k-th-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const moving = useUiMotion();
+  useEffect(() => {
+    if (!moving || list.length < 2) return;
+    let frame = 0, index = 0, morph = 0, cooldown = 0.5, last = performance.now();
+    const paint = (fraction: number) => {
+      const a = first.current, b = second.current;
+      if (!a || !b) return;
+      b.style.filter = `blur(${Math.min(8 / fraction - 8, 100)}px)`; b.style.opacity = `${Math.pow(fraction, 0.4) * 100}%`;
+      const rest = 1 - fraction;
+      a.style.filter = `blur(${Math.min(8 / rest - 8, 100)}px)`; a.style.opacity = `${Math.pow(rest, 0.4) * 100}%`;
+      a.textContent = list[index % list.length] ?? ''; b.textContent = list[(index + 1) % list.length] ?? '';
+    };
+    const tick = (now: number) => {
+      frame = requestAnimationFrame(tick);
+      const dt = (now - last) / 1000; last = now;
+      cooldown -= dt;
+      if (cooldown <= 0) {
+        morph -= cooldown; cooldown = 0;
+        let fraction = morph / 1.5;
+        if (fraction > 1) { cooldown = 0.5; fraction = 1; }
+        paint(fraction);
+        if (fraction === 1) index++;
+      } else {
+        morph = 0;
+        const a = first.current, b = second.current;
+        if (a && b) { b.style.filter = 'none'; b.style.opacity = '100%'; a.style.filter = 'none'; a.style.opacity = '0%'; }
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moving, list.join('|')]);
+  return <div className={kx('ui-k-morph', className)} style={moving ? { filter: `url(#${filterId}) blur(0.6px)` } : undefined}>
+    <RichStyles /><span className="ui-k-sr">{list.join(', ')}</span>
+    <span ref={first} className="ui-k-morph__a" aria-hidden="true">{list[0] ?? ''}</span>
+    <span ref={second} className="ui-k-morph__b" aria-hidden="true" />
+    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><defs><filter id={filterId}><feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 255 -140" /></filter></defs></svg>
+  </div>;
+}
+
+/** Magic UI ShimmerButton, as a link: the main call to action with a light that travels round its edge. One per screen. */
+export function ShimmerLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
+  return <a href={href} className={kx('ui-k-shimmer', className)}>
+    <RichStyles /><span className="ui-k-shimmer__spark" aria-hidden="true"><span className="ui-k-shimmer__beam" /></span>
+    <span className="ui-k-shimmer__label">{children}</span><span className="ui-k-shimmer__bg" aria-hidden="true" />
+  </a>;
+}
+
+/** Magic UI InteractiveHoverButton, as a link: on hover the accent fills the button and an arrow slides in. */
+export function HoverButton({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
+  return <a href={href} className={kx('ui-k-hoverbtn', className)}>
+    <RichStyles />
+    <span className="ui-k-hoverbtn__rest"><span className="ui-k-hoverbtn__dot" aria-hidden="true" /><span className="ui-k-hoverbtn__label">{children}</span></span>
+    <span className="ui-k-hoverbtn__hover" aria-hidden="true"><span>{children}</span>{arrowIcon('right')}</span>
+  </a>;
+}
+
+/** Magic UI BentoGrid: a grid of cards of different sizes (normal, wide, tall, big), each with an optional photo and link. */
+export function BentoGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={kx('ui-k-bento', className)}><RichStyles />{children}</div>;
+}
+export function BentoCard({ title, text, image, href, cta = 'Ver más', size = 'normal', className }: {
+  title: ReactNode; text?: ReactNode; image?: Img; href?: string; cta?: string; size?: 'normal' | 'wide' | 'tall' | 'big'; className?: string;
+}) {
+  return <article className={kx('ui-k-bento__card', `ui-k-bento__card--${size}`, image?.src && 'ui-k-bento__card--photo', className)}>
+    <Picture image={image} />
+    <div className="ui-k-bento__copy"><h3 className="ui-k-bento__title">{title}</h3>{text ? <p className="ui-k-bento__text">{text}</p> : null}{href ? <a className="ui-k-bento__cta" href={href}>{cta}{arrowIcon('right')}</a> : null}</div>
+  </article>;
+}
+
+/** A headline whose words (or letters) rise, fade or come out of a blur one after another when it comes into view. */
+export function KineticHeadline({ text, as: Tag = 'h2', by = 'word', effect = 'rise', className }: {
+  text: string; as?: 'h1' | 'h2' | 'h3' | 'p'; by?: 'word' | 'char'; effect?: 'rise' | 'blur' | 'fade'; className?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const moving = useUiMotion();
+  const inView = useInView(ref, { once: true });
+  const pieces = by === 'char' ? Array.from(text) : text.split(/(\s+)/).filter(Boolean);
+  return <Tag aria-label={text} className={kx('ui-k-kinetic', effect !== 'rise' && `ui-k-kinetic--${effect}`, moving && inView && 'is-in', className)}>
+    <RichStyles />
+    {/* A space stays plain text (owner 2026-11-13): a boxed space starting a wrapped line indented it (« HABLEN POR TI»). */}
+    <span ref={ref}>{pieces.map((piece, index) => /^\s+$/.test(piece) ? ' ' : <span key={index} aria-hidden="true" className="ui-k-kinetic__w" style={{ '--i': index } as CSSProperties}>{piece}</span>)}</span>
+  </Tag>;
+}
+
+/** Full-width slides of the store's photos (or products) with arrows and dots; plays every few seconds, pauses on hover and focus. */
+export function Carousel({ slides, autoplay = 6000, aspect = '16/9', label = 'Galería', className }: {
+  slides: Array<{ image: Img; title?: ReactNode; text?: ReactNode; href?: string; cta?: string }>; autoplay?: number | false; aspect?: string; label?: string; className?: string;
+}) {
+  const list = slides.filter(slide => slide.image?.src).slice(0, 8);
+  const track = useRef<HTMLDivElement>(null);
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const moving = useUiMotion();
+  const go = useCallback((index: number) => {
+    const node = track.current; if (!node || !list.length) return;
+    const next = (index + list.length) % list.length;
+    node.scrollTo({ left: node.clientWidth * next, behavior: moving ? 'smooth' : 'auto' });
+  }, [list.length, moving]);
+  useEffect(() => {
+    const node = track.current; if (!node) return;
+    const onScroll = () => setCurrent(Math.round(node.scrollLeft / Math.max(1, node.clientWidth)));
+    node.addEventListener('scroll', onScroll, { passive: true });
+    return () => node.removeEventListener('scroll', onScroll);
+  }, []);
+  useEffect(() => {
+    if (!moving || paused || autoplay === false || list.length < 2) return;
+    const timer = setInterval(() => go(current + 1), clamp(autoplay, 3000, 12000, 6000));
+    return () => clearInterval(timer);
+  }, [moving, paused, autoplay, current, go, list.length]);
+  return <div className={kx('ui-k-carousel', className)} role="region" aria-roledescription="carrusel" aria-label={label} style={{ '--k-aspect': aspect } as CSSProperties}
+    onPointerEnter={() => setPaused(true)} onPointerLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+    <RichStyles />
+    <div ref={track} className="ui-k-carousel__track">
+      {list.map((slide, index) => <div key={index} className={kx('ui-k-carousel__slide', (slide.title || slide.text) && 'ui-k-carousel__slide--copy')} role="group" aria-roledescription="diapositiva" aria-label={`${index + 1} de ${list.length}`}>
+        <Picture image={slide.image} eager={index === 0} />
+        {slide.title || slide.text ? <div className="ui-k-carousel__copy">{slide.title ? <p className="ui-k-carousel__title">{slide.title}</p> : null}{slide.text ? <p>{slide.text}</p> : null}{slide.href ? <a href={slide.href}>{slide.cta ?? 'Ver más'}</a> : null}</div> : null}
+      </div>)}
+    </div>
+    {list.length > 1 ? <>
+      <div className="ui-k-carousel__arrows"><button type="button" className="ui-k-arrow" aria-label="Anterior" onClick={() => go(current - 1)}>{arrowIcon('left')}</button><button type="button" className="ui-k-arrow" aria-label="Siguiente" onClick={() => go(current + 1)}>{arrowIcon('right')}</button></div>
+      <div className="ui-k-dots">{list.map((_, index) => <button key={index} type="button" className="ui-k-dot" aria-label={`Ir a ${index + 1}`} aria-current={index === current} onClick={() => go(index)} />)}</div>
+    </> : null}
+  </div>;
+}
+
+/** A horizontal row of peeking cards on native scroll-snap, with arrows on a computer. Each child is one card. */
+export function SnapRail({ children, label = 'Más', itemWidth, gap = 16, className }: { children: ReactNode; label?: string; itemWidth?: string; gap?: number; className?: string }) {
+  const track = useRef<HTMLDivElement>(null);
+  const step = (direction: 1 | -1) => { const node = track.current; if (node) node.scrollBy({ left: direction * node.clientWidth * 0.8, behavior: 'smooth' }); };
+  return <div className={kx('ui-k-rail', className)} style={{ '--k-gap': `${clamp(gap, 0, 64, 16)}px`, ...(itemWidth ? { '--k-item': itemWidth } : {}) } as CSSProperties}>
+    <RichStyles />
+    <div className="ui-k-rail__arrows"><button type="button" className="ui-k-arrow" aria-label="Anterior" onClick={() => step(-1)}>{arrowIcon('left')}</button><button type="button" className="ui-k-arrow" aria-label="Siguiente" onClick={() => step(1)}>{arrowIcon('right')}</button></div>
+    <div ref={track} className="ui-k-rail__track" role="region" aria-label={label} tabIndex={0}>{Children.map(children, child => <div className="ui-k-rail__item">{child}</div>)}</div>
+  </div>;
+}
+
+/** A pinned story: on a computer the photo stays fixed on one side and changes as each step scrolls by on the other; on a phone
+ *  every step shows its own photo. 2 to 5 steps (how it is made, why, how to use it). */
+export function StickyScene({ steps, label, className }: { steps: Array<{ title: ReactNode; text?: ReactNode; image?: Img }>; label?: string; className?: string }) {
+  const list = steps.slice(0, 5);
+  const [active, setActive] = useState(0);
+  const refs = useRef<Array<HTMLDivElement | null>>([]);
+  useEffect(() => {
+    const seen = new IntersectionObserver(entries => {
+      for (const entry of entries) if (entry.isIntersecting) setActive(Number((entry.target as HTMLElement).dataset.step) || 0);
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    refs.current.forEach(node => { if (node) seen.observe(node); });
+    return () => seen.disconnect();
+  }, [list.length]);
+  return <div className={kx('ui-k-scene', className)} aria-label={label}>
+    <RichStyles />
+    <div className="ui-k-scene__media" aria-hidden="true">{list.map((step, index) => step.image?.src ? <img key={index} src={step.image.src} alt="" loading="lazy" data-on={index === active} /> : null)}</div>
+    <div>{list.map((step, index) => <div key={index} ref={node => { refs.current[index] = node; }} data-step={index} data-on={index === active} className="ui-k-scene__step">
+      {step.image?.src ? <div className="ui-k-scene__inline"><Picture image={step.image} /></div> : null}
+      <h3>{step.title}</h3>{step.text ? <p>{step.text}</p> : null}
+    </div>)}</div>
+  </div>;
+}
+
+/** A section that turns the visitor's vertical scroll into a sideways ride through its children (photos, cards, products).
+ *  With motion off, or on a phone, it is an ordinary sideways scroll row. */
+export function HorizontalScroll({ children, label = 'Recorrido', gap = 24, className }: { children: ReactNode; label?: string; gap?: number; className?: string }) {
+  const section = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  const moving = useUiMotion();
+  const [distance, setDistance] = useState(0);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const measure = () => { const node = track.current; setWide(window.innerWidth >= 900); setDistance(node ? Math.max(0, node.scrollWidth - window.innerWidth) : 0); };
+    measure(); window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [children]);
+  const pinned = moving && wide && distance > 0;
+  const { scrollYProgress } = useScroll({ target: section, offset: ['start start', 'end end'] });
+  const x = useTransform(scrollYProgress, [0, 1], [0, -distance]);
+  return <section ref={section} className={kx('ui-k-hscroll', className)} aria-label={label} style={{ '--k-gap': `${clamp(gap, 0, 96, 24)}px`, ...(pinned ? { height: `calc(100vh + ${distance}px)` } : {}) } as CSSProperties}>
+    <RichStyles />
+    {pinned
+      ? <div className="ui-k-hscroll__pin"><motion.div ref={track} className="ui-k-hscroll__track" style={{ x }}>{children}</motion.div></div>
+      : <div ref={track} className="ui-k-hscroll__track" style={{ overflowX: 'auto', paddingBottom: 12 }}>{children}</div>}
+  </section>;
+}
+
+/** A photo card whose title panel slides up to show a caption on hover or focus (always open on a phone). */
+export function HoverReveal({ image, title, caption, href, aspect = '4/5', className }: { image: Img; title: ReactNode; caption?: ReactNode; href?: string; aspect?: string; className?: string }) {
+  const body = <><RichStyles /><Picture image={image} /><span className="ui-k-reveal-card__panel"><span className="ui-k-reveal-card__title">{title}</span>{caption ? <span className="ui-k-reveal-card__caption">{caption}</span> : null}</span></>;
+  const style = { '--k-aspect': aspect } as CSSProperties;
+  return href ? <a href={href} className={kx('ui-k-reveal-card', className)} style={style}>{body}</a> : <div className={kx('ui-k-reveal-card', className)} style={style} tabIndex={0}>{body}</div>;
+}
+
+/** A photo in a shaped frame: rounded, arch, pill, circle, cut corner or tilted. Medium by default (at most 75% of the screen tall). */
+export function MediaFrame({ image, shape = 'rounded', aspect = '4/5', className }: { image: Img; shape?: 'rounded' | 'arch' | 'pill' | 'circle' | 'cut' | 'tilt'; aspect?: string; className?: string }) {
+  if (!image?.src) return null;
+  return <figure className={kx('ui-k-frame', `ui-k-frame--${shape}`, className)} style={{ '--k-aspect': aspect, margin: 0 } as CSSProperties}><RichStyles /><Picture image={image} /></figure>;
+}
+
+/** Tabs: a few short labels that switch the content below (by use, by size, by moment of the day). Keyboard friendly. */
+export function Tabs({ tabs, label = 'Opciones', className }: { tabs: Array<{ label: string; content: ReactNode }>; label?: string; className?: string }) {
+  const list = tabs.slice(0, 6);
+  const [current, setCurrent] = useState(0);
+  const base = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const move = (index: number) => { const next = (index + list.length) % list.length; setCurrent(next); document.getElementById(`${base}-tab-${next}`)?.focus(); };
+  return <div className={kx('ui-k-tabs', className)}>
+    <RichStyles />
+    <div className="ui-k-tabs__list" role="tablist" aria-label={label}>{list.map((tab, index) => <button key={index} id={`${base}-tab-${index}`} type="button" role="tab" className="ui-k-tabs__tab" aria-selected={index === current} aria-controls={`${base}-panel-${index}`} tabIndex={index === current ? 0 : -1}
+      onClick={() => setCurrent(index)} onKeyDown={event => { if (event.key === 'ArrowRight') move(current + 1); else if (event.key === 'ArrowLeft') move(current - 1); }}>{tab.label}</button>)}</div>
+    {list.map((tab, index) => <div key={index} id={`${base}-panel-${index}`} role="tabpanel" aria-labelledby={`${base}-tab-${index}`} hidden={index !== current}>{tab.content}</div>)}
+  </div>;
+}
+
+/** A photo that is uncovered like a curtain (from below or from the side) when it comes into view. */
+export function RevealImage({ image, direction = 'up', aspect = '4/5', className }: { image: Img; direction?: 'up' | 'left'; aspect?: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const moving = useUiMotion();
+  const inView = useInView(ref, { once: true, margin: '-15% 0px' });
+  if (!image?.src) return null;
+  return <div ref={ref} className={kx('ui-k-wipe', direction === 'left' && 'ui-k-wipe--left', moving && (inView ? 'is-in' : 'is-armed'), className)} style={{ aspectRatio: aspect, maxHeight: '75vh' }}><RichStyles /><Picture image={image} /></div>;
+}
+
+/** One or two huge words filled with a photo of the store (a still version of VideoText). */
+export function ImageText({ text, image, as: Tag = 'p', className }: { text: string; image: Img; as?: 'h1' | 'h2' | 'p'; className?: string }) {
+  return <Tag className={kx('ui-k-imgtext', className)} style={image?.src ? { backgroundImage: `url("${image.src}")` } : undefined}><RichStyles />{text}</Tag>;
+}
+
+/* ------------------------------------------------------------------ store header */
+
+/* Owner 2026-11-12 («one of them did not even have a menu»), after Amboras's NavShell: a store's header is built on this skeleton.
+ * The kit owns the structure, the phone menu (focus, Escape, scroll lock), the search/account/cart controls with their count, the
+ * merchant's store menu mounts (commerce-src/header/store-menu.js) and words that never break; the store owns brand, links and
+ * looks (className props, Tailwind). Look defaults sit in :where() so any class the store passes wins. */
+const NAV_CSS = `
+:where(.ui-nav){position:sticky;top:0;z-index:50;background:var(--es-paper,#fff);color:var(--es-ink,#111)}
+.ui-nav__bar{display:grid;align-items:center;gap:8px 24px;min-height:64px;padding:8px clamp(16px,4vw,48px)}
+.ui-nav[data-structure=bar] .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto}
+.ui-nav[data-structure=split] .ui-nav__bar{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+.ui-nav[data-structure=centered] .ui-nav__bar{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:". brand actions" "links links links"}
+.ui-nav[data-structure=centered] .ui-nav__brand{grid-area:brand}.ui-nav[data-structure=centered] .ui-nav__actions{grid-area:actions}
+.ui-nav[data-structure=centered] .ui-nav__links{grid-area:links;justify-content:center}
+.ui-nav[data-structure=drawer] .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto}
+.ui-nav__brand{display:inline-flex;align-items:center;min-width:0;min-height:44px;color:inherit;text-decoration:none;white-space:nowrap}
+.ui-nav[data-structure=split] .ui-nav__brand{justify-self:center}
+.ui-nav__links{display:flex;align-items:center;gap:0 24px;min-width:0;overflow:hidden}
+.ui-nav__own{display:contents}
+.ui-nav__links a,.ui-nav__links button{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap;color:inherit}
+.ui-nav__right{display:flex;align-items:center;justify-content:flex-end;gap:0 24px;min-width:0}
+.ui-nav__actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex:none}
+.ui-nav__action{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;padding:0 8px;border:0;background:none;color:inherit;font:inherit;white-space:nowrap;cursor:pointer;text-decoration:none}
+.ui-nav__action svg{display:block;width:20px;height:20px;flex:none}
+:where(.ui-nav__badge){min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--es-accent,#111);color:var(--es-paper,#fff);font-size:11px;font-weight:700;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}
+.ui-nav[data-actions=icons] .ui-nav__badge{position:absolute;top:2px;right:0}
+.ui-nav[data-actions=icons] .ui-nav__word,.ui-nav[data-actions=labels] .ui-nav__icon{display:none}
+:where(.ui-nav[data-actions=pill] [data-nav-action=bag]){padding:0 16px;border-radius:999px;background:var(--es-accent,#111);color:var(--es-paper,#fff)}
+.ui-nav[data-actions=pill] [data-nav-action=search] .ui-nav__word,.ui-nav[data-actions=pill] [data-nav-action=account] .ui-nav__word{display:none}
+.ui-nav__toggles{display:none;align-items:center}
+.ui-nav[data-structure=drawer] .ui-nav__toggles{display:inline-flex}
+.ui-nav[data-own-menu] .ui-nav__toggles{display:inline-flex}
+/* Owner 2026-11-17 («B»: headers all alike): a free header is the design's own bar; the kit only keeps its pieces working. */
+.ui-nav[data-structure=free] .ui-nav__toggles{display:inline-flex}
+.ui-nav__fallback{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px clamp(16px,4vw,48px)}
+/* Owner 2026-11-17 (BOXY: the menu opened empty): a header with a blur, filter or transform traps its fixed panel in the header's
+   own box; while the panel is open the header drops them, so the panel covers the screen. */
+.ui-nav:has(> .ui-nav__panel-wrap:not([hidden])){-webkit-backdrop-filter:none!important;backdrop-filter:none!important;filter:none!important;transform:none!important;contain:none!important}
+/* Owner 2026-11-16 (Taller Lienzo: «why the header looks weird»): on a wide screen the own menu's button takes a column of its own, so the
+   icons never fall to a second row (bar: button · brand · links · icons; split: button · links · brand · links + icons). */
+@media (min-width:768px){
+  .ui-nav[data-own-menu][data-structure=bar] .ui-nav__bar{grid-template-columns:auto auto minmax(0,1fr) auto}
+  .ui-nav[data-own-menu][data-structure=split] .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr)}
+}
+.ui-nav__toggle{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;background:none;color:inherit;cursor:pointer}
+.ui-nav__bars,.ui-nav__bars::before,.ui-nav__bars::after{display:block;width:20px;height:2px;background:currentColor;content:""}
+.ui-nav__bars{position:relative}.ui-nav__bars::before{position:absolute;top:-6px}.ui-nav__bars::after{position:absolute;top:6px}
+.ui-nav__sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ui-nav__panel-wrap{position:fixed;inset:0;z-index:1000;display:flex;background:rgb(0 0 0 / .35)}
+.ui-nav__panel-wrap[hidden]{display:none}
+:where(.ui-nav__panel){display:flex;flex-direction:column;gap:4px;width:min(380px,88vw);height:100%;overflow:auto;padding:16px 24px 32px;background:var(--es-paper,#fff);color:var(--es-ink,#111)}
+.ui-nav__close{align-self:flex-end;width:44px;height:44px;border:0;background:none;color:inherit;font-size:26px;line-height:1;cursor:pointer}
+.ui-nav__panel a{display:flex;align-items:center;min-height:48px;color:inherit;text-decoration:none}
+:where(.ui-nav__panel-links a){font-family:var(--es-heading,inherit);font-size:24px}
+:where(.ui-nav__panel-tools){margin-top:16px;padding-top:12px;border-top:1px solid color-mix(in srgb,currentColor 15%,transparent)}
+/* Owner 2026-11-16: a menu the design wrote is laid out wide (its columns, photos, big words); the design's own width still wins. */
+:where(.ui-nav__panel-wrap[data-own-menu] .ui-nav__panel){width:min(1100px,100vw);padding:20px clamp(24px,4vw,56px) 40px}
+@media (max-width:767px){
+  .ui-nav:not([data-structure=free]) .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:none}
+  .ui-nav .ui-nav__links{display:none!important}
+  .ui-nav .ui-nav__toggles{display:inline-flex}
+  .ui-nav:not([data-structure=free]) .ui-nav__brand{justify-self:start;grid-area:auto}
+  .ui-nav .ui-nav__actions{grid-area:auto}
+  .ui-nav [data-nav-action=account]{display:none}
+  .ui-nav .ui-nav__word{display:none}.ui-nav .ui-nav__icon{display:block}
+  .ui-nav .ui-nav__badge{position:absolute;top:2px;right:0}
+  .ui-nav[data-actions=pill] [data-nav-action=bag]{padding:0 8px;background:none;color:inherit}
+}
+.ui-announcement[data-rotating]{display:flex;align-items:center;justify-content:center;gap:16px}
+.ui-announcement[data-rotating] p{margin:0}
+.ui-announcement__arrow{display:inline-grid;place-items:center;min-width:32px;min-height:32px;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+/* Floating header (owner 2026-11-15, Zippa/Halcy): over the first section, transparent, solid once scrolled. */
+.ui-nav[data-over]{margin-bottom:calc(-1 * var(--ui-nav-h,72px));background:transparent;transition:background-color .25s,color .25s,box-shadow .25s}
+.ui-nav[data-over][data-tone=light]{color:#fff}
+.ui-nav[data-over][data-scrolled]{background:var(--es-paper,#fff);color:var(--es-ink,#111);box-shadow:0 1px 0 color-mix(in srgb,currentColor 12%,transparent)}
+/* Owner 2026-11-16 (rg store catalogue: the title and search ran under the header): over the hero only on the home; the platform pages
+   (catalogue, collection, checkout) and the product page get a solid header that takes its own room. */
+body:has(main.es-page) .ui-nav[data-over],body:has([data-pagosya-product-page]) .ui-nav[data-over]{margin-bottom:0;background:var(--kit-paper,var(--es-paper,#fff));color:var(--kit-ink,var(--es-ink,#111))}
+/* Pill links (Halcy): each link its own rounded pill; the highlighted one in the accent. */
+.ui-nav[data-links=pills] .ui-nav__links{gap:6px}
+.ui-nav[data-links=pills] .ui-nav__links a{min-height:40px;padding:0 16px;border-radius:999px;background:var(--es-paper,#fff);color:var(--es-ink,#111);box-shadow:0 1px 2px #0002}
+.ui-nav[data-links=pills] .ui-nav__links a[data-highlight]{background:var(--es-accent,#111);color:var(--es-paper,#fff)}
+@media (prefers-reduced-motion:reduce){.ui-nav[data-over]{transition:none}}
+/* The merchant's store menu (store-menu.js) replaces the store's own links and toggle where it is on. */
+.ui-nav__store-toggle:empty,.ui-nav__store-links:empty{display:none}
+.ui-nav[data-store-menu=panel] .ui-nav__toggles{display:inline-flex}
+/* The store menu's button is one more item in the row (live 2026-11-14, a split header: the icons wrapped onto a second line under the
+   logo). On a computer the bar and split rows get a column for it; phones keep their own three-column row. */
+@media (min-width:768px){
+  .ui-nav[data-store-menu=panel][data-structure=bar] .ui-nav__bar{grid-template-columns:auto auto minmax(0,1fr) auto}
+  .ui-nav[data-store-menu=panel][data-structure=split] .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr)}
+}
+`;
+function NavStyles() {
+  return <style href="pagosya-ui-nav" precedence="default">{NAV_CSS}</style>;
+}
+const navIcon = (path: ReactNode) => <svg className="ui-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{path}</svg>;
+const NAV_ICONS = {
+  search: navIcon(<><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></>),
+  account: navIcon(<><circle cx="12" cy="8" r="3.5" /><path d="M5 20.5c.6-3.8 3.2-5.8 7-5.8s6.4 2 7 5.8" /></>),
+  bag: navIcon(<><path d="M5 8h14l-1 12H6L5 8Z" /><path d="M9 8V6.5a3 3 0 0 1 6 0V8" /></>),
+};
+/** The cart drawn as what the store sells (owner 2026-11-06 «si es una joyería que el carrito sea un anillo»; 2026-11-14 «the icons
+ *  are the same up top, like little shirt, search button and create profile»): the same glyphs as the Esencial header's GOODS_ICONS. */
+const NAV_GOODS: Record<string, ReactNode> = {
+  gem: navIcon(<><path d="M10.5 3 8 9l4 13 4-13-2.5-6" /><path d="M17 3a2 2 0 0 1 1.6.8l3 4a2 2 0 0 1 .013 2.382l-7.99 10.986a2 2 0 0 1-3.247 0l-7.99-10.986A2 2 0 0 1 2.4 7.8l2.998-3.997A2 2 0 0 1 7 3z" /><path d="M2 9h20" /></>),
+  watch: navIcon(<><path d="M12 10v2.2l1.6 1" /><path d="m16.13 7.66-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05" /><path d="m7.88 16.36.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05" /><circle cx="12" cy="12" r="6" /></>),
+  sofa: navIcon(<><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" /><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" /><path d="M4 18v2" /><path d="M20 18v2" /><path d="M12 4v9" /></>),
+  lamp: navIcon(<><path d="M12 12v6" /><path d="M4.077 10.615A1 1 0 0 0 5 12h14a1 1 0 0 0 .923-1.385l-3.077-7.384A2 2 0 0 0 15 2H9a2 2 0 0 0-1.846 1.23Z" /><path d="M8 20a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z" /></>),
+  coffee: navIcon(<><path d="M10 2v2" /><path d="M14 2v2" /><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" /><path d="M6 2v2" /></>),
+  croissant: navIcon(<><path d="M10.2 18H4.774a1.5 1.5 0 0 1-1.352-.97 11 11 0 0 1 .132-6.487" /><path d="M18 10.2V4.774a1.5 1.5 0 0 0-.97-1.352 11 11 0 0 0-6.486.132" /><path d="M18 5a4 3 0 0 1 4 3 2 2 0 0 1-2 2 10 10 0 0 0-5.139 1.42" /><path d="M5 18a3 4 0 0 0 3 4 2 2 0 0 0 2-2 10 10 0 0 1 1.42-5.14" /><path d="M8.709 2.554a10 10 0 0 0-6.155 6.155 1.5 1.5 0 0 0 .676 1.626l9.807 5.42a2 2 0 0 0 2.718-2.718l-5.42-9.807a1.5 1.5 0 0 0-1.626-.676" /></>),
+  cake: navIcon(<><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" /><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1" /><path d="M2 21h20" /><path d="M7 8v3" /><path d="M12 8v3" /><path d="M17 8v3" /><path d="M7 4h.01" /><path d="M12 4h.01" /><path d="M17 4h.01" /></>),
+  cookie: navIcon(<><path d="M11 17h.01" /><path d="M11.496 2c.324-.016.558.292.529.615a4 4 0 004.235 4.368.713.713 0 01.758.757 4 4 0 004.366 4.237c.323-.03.63.204.614.527a10 10 0 01-2.915 6.566A1 1 0 114.93 4.918 10 10 0 0111.496 2" /><path d="M12 12h.01" /><path d="M16 16h.01" /><path d="M16 3h.01" /><path d="M21 4h.01" /><path d="M21 8h.01" /><path d="M7 14h.01" /><path d="M9 8h.01" /></>),
+  beef: navIcon(<><path d="M16.4 13.7A6.5 6.5 0 1 0 6.28 6.6c-1.1 3.13-.78 3.9-3.18 6.08A3 3 0 0 0 5 18c4 0 8.4-1.8 11.4-4.3" /><path d="m18.5 6 1.754 3.5a6.48 6.48 0 0 1-1.854 8.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5" /><circle cx="12.5" cy="8.5" r="2.5" /></>),
+  icecream: navIcon(<><path d="m7 11 4.08 10.35a1 1 0 0 0 1.84 0L17 11" /><path d="M17 7A5 5 0 0 0 7 7" /><path d="M17 7a2 2 0 0 1 0 4H7a2 2 0 0 1 0-4" /></>),
+  wine: navIcon(<><path d="M8 22h8" /><path d="M7 10h10" /><path d="M12 15v7" /><path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z" /></>),
+  utensils: navIcon(<><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></>),
+  shirt: navIcon(<><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" /></>),
+  sparkles: navIcon(<><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><path d="M20 2v4" /><path d="M22 4h-4" /><circle cx="4" cy="20" r="2" /></>),
+  flask: navIcon(<><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" /><path d="M6.453 15h11.094" /><path d="M8.5 2h7" /></>),
+  flame: navIcon(<><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4" /></>),
+  paw: navIcon(<><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /></>),
+  book: navIcon(<><path d="M12 5v16" /><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /></>),
+  flower: navIcon(<><path d="M12 5a3 3 0 1 1 3 3m-3-3a3 3 0 1 0-3 3m3-3v1M9 8a3 3 0 1 0 3 3M9 8h1m5 0a3 3 0 1 1-3 3m3-3h-1m-2 3v-1" /><circle cx="12" cy="8" r="2" /><path d="M12 10v12" /><path d="M12 22c4.2 0 7-1.667 7-5-4.2 0-7 1.667-7 5Z" /><path d="M12 22c-4.2 0-7-1.667-7-5 4.2 0 7 1.667 7 5Z" /></>),
+  sprout: navIcon(<><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3" /><path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4" /><path d="M5 21h14" /></>),
+  dumbbell: navIcon(<><path d="M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z" /><path d="m2.5 21.5 1.4-1.4" /><path d="m20.1 3.9 1.4-1.4" /><path d="M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z" /><path d="m9.6 14.4 4.8-4.8" /></>),
+  droplet: navIcon(<><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></>),
+  baby: navIcon(<><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5" /><path d="M15 12h.01" /><path d="M19.38 6.813A9 9 0 0 1 20.8 10.2a2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1" /><path d="M9 12h.01" /></>),
+  gift: navIcon(<><path d="M12 7v14" /><path d="M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8" /><path d="M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5" /><rect x="3" y="7" width="18" height="4" rx="1" /></>),
+  apple: navIcon(<><path d="M12 6.528V3a1 1 0 0 1 1-1h0" /><path d="M18.237 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.472A6 6 0 0 0 2 11a15.1 15.1 0 0 0 3.763 10 3 3 0 0 0 3.648.648 5.5 5.5 0 0 1 5.178 0A3 3 0 0 0 18.237 21" /></>),
+  soda: navIcon(<><path d="m6 8 1.75 12.28a2 2 0 0 0 2 1.72h4.54a2 2 0 0 0 2-1.72L18 8" /><path d="M5 8h14" /><path d="M7 15a6.47 6.47 0 0 1 5 0 6.47 6.47 0 0 0 5 0" /><path d="m12 8 1-6h2" /></>),
+  palette: navIcon(<><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" /><circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /></>),
+};
+export type NavShellLink = { label: ReactNode; href: string };
+/** What a NavShell shares with the pieces inside it (owner 2026-11-17 «B»: a free header places them where its own bar wants). */
+type NavShellParts = {
+  brand: ReactNode; links: NavShellLink[]; cart?: string; highlight?: string; words: { search: string; account: string; bag: string };
+  open: boolean; setOpen: (open: boolean) => void; toggleRef: RefObject<HTMLButtonElement | null>; panelId: string;
+  brandClassName?: string; linksClassName?: string; actionsClassName?: string; badgeClassName?: string; toggleClassName?: string;
+};
+const NavShellContext = createContext<NavShellParts | null>(null);
+const joinClasses = (...names: Array<string | undefined>) => names.filter(Boolean).join(' ');
+function useNavShell(piece: string): NavShellParts {
+  const parts = useContext(NavShellContext);
+  if (!parts) throw new Error(`${piece} va dentro de <NavShell>.`);
+  return parts;
+}
+/** The store's logo or name, linked to the home (free header piece; children replace NavShell's brand). */
+export function NavLogo({ children, className }: { children?: ReactNode; className?: string }) {
+  const nav = useNavShell('NavLogo');
+  return <a href="index.html" className={joinClasses('ui-nav__brand', nav.brandClassName, className)} data-nav-logo>{children ?? nav.brand}</a>;
+}
+/** A row of links (NavShell's links unless given) with the merchant's store-menu links after them; hidden on the phone, where the
+ *  links live in the menu. */
+export function NavLinks({ links, className, side }: { links?: NavShellLink[]; className?: string; side?: 'left' | 'right' }) {
+  const nav = useNavShell('NavLinks');
+  const items = links ?? nav.links;
+  return <nav className={joinClasses('ui-nav__links', nav.linksClassName, className)} data-nav-links data-side={side} aria-label={side === 'right' ? 'Más secciones' : 'Principal'}>
+    <span className="ui-nav__own" data-store-menu-replaces>{items.map(link => <a key={link.href} href={link.href} data-highlight={nav.highlight && link.href === nav.highlight ? '' : undefined}>{link.label}</a>)}</span>
+    {side === 'right' ? null : <span className="ui-nav__store-links" data-pagosya-store-menu="links" />}
+  </nav>;
+}
+/** The button that opens the menu (and the merchant's store-menu button where that is on). */
+export function NavMenuButton({ className }: { className?: string }) {
+  const nav = useNavShell('NavMenuButton');
+  return <span className="ui-nav__toggles">
+    <span className="ui-nav__store-toggle" data-pagosya-store-menu="toggle" />
+    <button ref={nav.toggleRef} type="button" className={joinClasses('ui-nav__toggle', nav.toggleClassName, className)} data-nav-toggle data-store-menu-replaces aria-expanded={nav.open} aria-controls={nav.panelId} onClick={() => nav.setOpen(true)}><span className="ui-nav__bars" aria-hidden="true" /><span className="ui-nav__sr">Menú</span></button>
+  </span>;
+}
+/** The cart button with its count, drawn as what the store sells. */
+export function NavCart({ className }: { className?: string }) {
+  const nav = useNavShell('NavCart');
+  return <button type="button" className={joinClasses('ui-nav__action', className)} data-nav-action="bag" data-cart-open aria-label={`Abrir ${nav.words.bag.toLowerCase()}`}>{(nav.cart && NAV_GOODS[nav.cart]) || NAV_ICONS.bag}<span className="ui-nav__word">{nav.words.bag}</span><span className={joinClasses('ui-nav__badge', nav.badgeClassName)} data-cart-count>0</span></button>;
+}
+/** The platform's three icons: search, account and the cart. */
+export function NavActions({ className }: { className?: string }) {
+  const nav = useNavShell('NavActions');
+  return <div className={joinClasses('ui-nav__actions', nav.actionsClassName, className)} data-nav-actions>
+    <a href="buscar.html" className="ui-nav__action" data-nav-action="search" aria-label={nav.words.search}>{NAV_ICONS.search}<span className="ui-nav__word">{nav.words.search}</span></a>
+    <a href="acceso-ingresar.html" className="ui-nav__action" data-nav-action="account" data-pagosya-account="login" aria-label={nav.words.account}>{NAV_ICONS.account}<span className="ui-nav__word">{nav.words.account}</span></a>
+    <NavCart />
+  </div>;
+}
+/** A free header's missing pieces, added after its bar so the menu, the cart and the way home never go missing. */
+function NavFreeFallback({ header }: { header: RefObject<HTMLElement | null> }) {
+  const [missing, setMissing] = useState({ toggle: false, cart: false, logo: false });
+  useEffect(() => {
+    const root = header.current;
+    if (!root) return;
+    const has = (selector: string) => Array.from(root.querySelectorAll(selector)).some(node => !node.closest('.ui-nav__fallback, .ui-nav__panel-wrap'));
+    setMissing({ toggle: !has('[data-nav-toggle]'), cart: !has('[data-cart-open]'), logo: !has('[data-nav-logo]') });
+  }, [header]);
+  if (!missing.toggle && !missing.cart && !missing.logo) return null;
+  return <div className="ui-nav__fallback" data-nav-fallback>{missing.toggle ? <NavMenuButton /> : <span />}{missing.logo ? <NavLogo /> : null}{missing.cart ? <NavCart /> : <span />}</div>;
+}
+/** The store header. structure: bar (logo · links · actions), centered (logo centred, links in a row below), split (links ·
+ *  centred logo · actions), drawer (logo, menu button and actions only; every link lives in the menu, on a computer too), free (the
+ *  design's own bar as children, placing NavLogo, NavLinks, NavMenuButton and NavActions or NavCart where it wants; any of the menu
+ *  button, cart or logo it leaves out is added after it).
+ *  actions: icons (icons with the cart count on the bag), labels (Buscar · Mi cuenta · Bolsa 2), pill (icons and a filled bag pill).
+ *  cart: what the store sells, so the bag is drawn as a shirt, a ring, a cup… (NAV_GOODS).
+ *  Below 768 px every fixed structure is menu button · logo · search and bag; a free bar lays out its own phone row (its NavLinks hide
+ *  there). Pass looks with className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName
+ *  and toggleClassName. */
+export function NavShell({ brand, links = [], structure = 'bar', actions = 'icons', cart, labels, over = false, tone = 'dark', linkStyle = 'plain', highlight, className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName, toggleClassName, menu, children }: {
+  brand: ReactNode; links?: NavShellLink[]; structure?: 'bar' | 'centered' | 'split' | 'drawer' | 'free'; actions?: 'icons' | 'labels' | 'pill';
+  /** What the store sells (gem, shirt, coffee, paw…): the bag is drawn as it; unknown or empty keeps the bag. */
+  cart?: string;
+  labels?: { search?: string; account?: string; bag?: string };
+  /** Owner 2026-11-15 (Zippa, Halcy): the header floats over the first section, transparent, and turns solid once the page scrolls. */
+  over?: boolean;
+  /** Text and icon colour while it floats: light on a dark photo, dark on a light one. */
+  tone?: 'light' | 'dark';
+  /** Links as plain words or as rounded pills (Halcy); `highlight` is the href of the one link drawn as the accent pill. */
+  linkStyle?: 'plain' | 'pills'; highlight?: string;
+  /** Owner 2026-11-16 («the menu i would also to be created by the model»): the store's own menu — groups, links, photos, words —
+   *  written by the design. NavShell opens and closes it (button on every width, Escape, focus, scroll lock); the design styles it
+   *  with panelClassName and its own classes. Without it the panel lists the links. */
+  menu?: ReactNode;
+  /** structure="free": the design's own bar. */
+  children?: ReactNode;
+  className?: string; barClassName?: string; brandClassName?: string;
+  linksClassName?: string; actionsClassName?: string; badgeClassName?: string; panelClassName?: string; toggleClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const before = root.style.overflow;
+    root.style.overflow = 'hidden';
+    panelRef.current?.querySelector<HTMLElement>('a[href],button')?.focus({ preventScroll: true });
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); setOpen(false); toggleRef.current?.focus({ preventScroll: true }); return; }
+      if (event.key !== 'Tab' || !panelRef.current) return;
+      const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>('a[href],button'));
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { root.style.overflow = before; document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const words = { search: labels?.search || 'Buscar', account: labels?.account || 'Mi cuenta', bag: labels?.bag || 'Bolsa' };
+  const parts: NavShellParts = { brand, links, cart, highlight, words, open, setOpen, toggleRef, panelId, brandClassName, linksClassName, actionsClassName, badgeClassName, toggleClassName };
+  const half = Math.ceil(links.length / 2);
+  // A floating header measures itself (the page starts under it) and turns solid once the page scrolls or the menu opens.
+  const headerRef = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (!over) return;
+    const header = headerRef.current;
+    // On :root too, so the first section can keep its words below the floating header (live 2026-11-16, DooBoo on the phone).
+    const measure = () => { if (!header) return; header.style.setProperty('--ui-nav-h', `${header.offsetHeight}px`); document.documentElement.style.setProperty('--ui-nav-h', `${header.offsetHeight}px`); };
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    measure(); onScroll();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    if (header && observer) observer.observe(header);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { observer?.disconnect(); window.removeEventListener('scroll', onScroll); };
+  }, [over]);
+  return <NavShellContext.Provider value={parts}>
+    <header ref={headerRef} className={joinClasses('ui-nav', className)} data-nav-shell data-structure={structure} data-actions={actions}
+      data-own-menu={menu ? '' : undefined} data-over={over ? '' : undefined} data-tone={over ? tone : undefined} data-scrolled={over && (scrolled || open) ? '' : undefined} data-links={linkStyle === 'pills' ? 'pills' : undefined}>
+      <NavStyles />
+      {structure === 'free' ? <>{children}<NavFreeFallback header={headerRef} /></> : <div className={joinClasses('ui-nav__bar', barClassName)}>
+        <NavMenuButton />
+        {structure === 'split' ? <><NavLinks links={links.slice(0, half)} side="left" /><NavLogo /><div className="ui-nav__right"><NavLinks links={links.slice(half)} side="right" /><NavActions /></div></>
+          : structure === 'drawer' ? <><NavLogo /><NavActions /></>
+          : structure === 'centered' ? <><NavLogo /><NavActions /><NavLinks /></>
+          : <><NavLogo /><NavLinks /><NavActions /></>}
+      </div>}
+      <div id={panelId} className="ui-nav__panel-wrap" data-own-menu={menu ? '' : undefined} hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
+        <div ref={panelRef} className={joinClasses('ui-nav__panel', panelClassName)} role="dialog" aria-modal="true" aria-label="Menú" onClick={event => { if ((event.target as HTMLElement).closest('a[href],[data-cart-open]')) setOpen(false); }}>
+          <button type="button" className="ui-nav__close" aria-label="Cerrar menú" onClick={() => { setOpen(false); toggleRef.current?.focus({ preventScroll: true }); }}>×</button>
+          {menu ?? <>
+          <nav className="ui-nav__panel-links" aria-label="Menú">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
+          <div className="ui-nav__panel-tools"><a href="buscar.html">{words.search}</a><a href="acceso-ingresar.html" data-pagosya-account="login">{words.account}</a></div>
+          </>}
+        </div>
+      </div>
+    </header>
+  </NavShellContext.Provider>;
+}
+
 /* ------------------------------------------------------------------ page shells */
 
 /** Product page body: the shared product renderer (gallery, options, stock, add to cart). */
 export function ProductDetail() { return <main id="contenido" className="ui-product-page" data-pagosya-product-page />; }
 /** Checkout body: the shared, platform-owned checkout. */
 export function CheckoutDetail() { return <main id="contenido" className="ui-checkout-page" data-pagosya-checkout-page />; }
+
+/* Owner 2026-11-15 («lets go for it», after Amboras's showcase examples): two showcase pieces a written store can place — the
+ * product stage (LIFT protein bars: one product per slide, its own colour world, a poster headline split around the cut-out, floating
+ * pieces, counter, facts and the add button) and the hanging rail (ATELIER: products hanging on a rail, the chosen one comes forward with its
+ * panel). The mechanics are the platform's (slides, swipe, cart, sizes, reduced motion); the store's design fills them. */
+
+type KitItem = { id: string; name: string; amount: number; currency?: string; description?: string | null; discountPercent?: number | null; discountStartsAt?: string | null; discountEndsAt?: string | null;
+  variants?: Array<{ id: string; name: string; amount?: number; options?: Array<{ value: string }> }>; extras?: unknown[] };
+
+/** The store's products as config.js carries them (read after mount: the page is prerendered). */
+function useKitItems(): KitItem[] {
+  const [items, setItems] = useState<KitItem[]>([]);
+  useEffect(() => {
+    const read = () => { const list = (window as unknown as { PAGOSYA_CONFIG?: { data?: { items?: unknown } } }).PAGOSYA_CONFIG?.data?.items; if (Array.isArray(list)) setItems(list as KitItem[]); };
+    read();
+    window.addEventListener('load', read);
+    return () => window.removeEventListener('load', read);
+  }, []);
+  return items;
+}
+const kitPrice = (item: KitItem) => {
+  const now = Date.now();
+  const on = item.discountPercent && (!item.discountStartsAt || Date.parse(item.discountStartsAt) <= now) && (!item.discountEndsAt || Date.parse(item.discountEndsAt) > now);
+  const amount = on ? Math.round(item.amount * (100 - Number(item.discountPercent)) / 100) : item.amount;
+  try { return new Intl.NumberFormat('es-BO', { style: 'currency', currency: item.currency || 'BOB' }).format(amount / 100); } catch { return `Bs ${(amount / 100).toFixed(2)}`; }
+};
+const kitSimple = (item: KitItem) => !item.variants?.length && !item.extras?.length;
+const kitHref = (id: string) => `product.html?id=${encodeURIComponent(id)}`;
+/** Light ink on a dark ground and dark ink on a light one, when the design did not choose. */
+const inkFor = (hex: string) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return '#ffffff';
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255).map(c => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#141414' : '#ffffff';
+};
+const pad2 = (n: number) => String(n).padStart(2, '0');
+/** A cut-out is never shown larger than it is (live 2026-11-15, Oh Belly: a small can blown up looked soft). */
+const atMostNatural = (event: { currentTarget: HTMLImageElement }) => { const img = event.currentTarget; if (img.naturalWidth) img.style.maxWidth = `min(100%, ${img.naturalWidth}px)`; };
+
+/** The buy pill: «Agregar · Bs 25,00» adds a simple product to the cart (the runtime's data-add); a product with options opens its
+ *  page («Elegir»). Before the catalogue is read it links to the product. */
+function StageBuy({ id, item, className, label = 'Agregar' }: { id?: string; item?: KitItem; className: string; label?: string }) {
+  if (!id) return null;
+  const arrow = <span aria-hidden="true">{arrowIcon('right')}</span>;
+  if (item && kitSimple(item)) return <button type="button" className={className} data-add={item.id} data-quantity="1"><span>{label} · {kitPrice(item)}</span>{arrow}</button>;
+  return <a className={className} href={kitHref(id)}><span>{item ? `Elegir · ${kitPrice(item)}` : 'Ver producto'}</span>{arrow}</a>;
+}
+
+export type StageSlide = { product?: string; top: string; bottom?: string; image: Img; bg: string; ink?: string; decor?: Img[]; facts?: string[] };
+
+/** A full-screen product stage: one product (or flavour) per slide, each with its own background colour, a two-line poster headline
+ *  split around the product's cut-out photo, up to six small floating pieces (ingredients, details), a counter with progress, short
+ *  facts and the add button. Plays every few seconds while on screen, pauses on hover or focus, swipes on a phone, and stands still
+ *  for visitors who ask for less motion. 2 to 6 slides. */
+export function ProductStage({ slides, autoplay = 6500, label = 'Productos', buyLabel = 'Agregar', className }: { slides: StageSlide[]; autoplay?: number | false; label?: string; buyLabel?: string; className?: string }) {
+  const list = slides.filter(slide => slide?.image?.src && slide.top).slice(0, 6);
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const moving = useUiMotion();
+  const items = useKitItems();
+  const root = useRef<HTMLElement>(null);
+  const start = useRef<number | null>(null);
+  const count = list.length;
+  const go = useCallback((index: number) => setCurrent(count ? (index + count) % count : 0), [count]);
+  useEffect(() => {
+    const node = root.current; if (!node) return;
+    const seen = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.35 });
+    seen.observe(node);
+    return () => seen.disconnect();
+  }, []);
+  const playing = moving && !paused && visible && autoplay !== false && count > 1;
+  const ms = clamp(typeof autoplay === 'number' ? autoplay : undefined, 3500, 12000, 6500);
+  useEffect(() => {
+    if (!playing) return;
+    const timer = setTimeout(() => go(current + 1), ms);
+    return () => clearTimeout(timer);
+  }, [playing, current, ms, go]);
+  if (!count) return null;
+  const slide = list[current];
+  const item = items.find(entry => entry.id === slide.product);
+  const ink = slide.ink || inkFor(slide.bg);
+  return <section ref={root} className={kx('ui-k-stage', className)} role="region" aria-roledescription="carrusel" aria-label={label} data-playing={playing}
+    style={{ '--k-stage-bg': slide.bg, '--k-stage-ink': ink, '--k-stage-ms': `${ms}ms` } as CSSProperties}
+    onPointerEnter={event => { if (event.pointerType === 'mouse') setPaused(true); }} onPointerLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}
+    onKeyDown={event => { if (event.key === 'ArrowRight') go(current + 1); if (event.key === 'ArrowLeft') go(current - 1); }}
+    onPointerDown={event => { start.current = event.clientX; }}
+    onPointerUp={event => { if (start.current === null) return; const dx = event.clientX - start.current; start.current = null; if (Math.abs(dx) > 48) go(current + (dx < 0 ? 1 : -1)); }}>
+    <RichStyles />
+    {list.map((entry, index) => <div key={index} className="ui-k-stage__slide" data-on={index === current} aria-hidden={index !== current} role="group" aria-roledescription="diapositiva" aria-label={`${index + 1} de ${count}`}>
+      <h2 className="ui-k-stage__title"><span className="ui-k-stage__top">{entry.top}</span>{entry.bottom ? <span className="ui-k-stage__bottom">{entry.bottom}</span> : null}</h2>
+      <div className="ui-k-stage__product"><img src={entry.image.src} alt={entry.image.alt} loading={index === 0 ? 'eager' : 'lazy'} draggable={false} onLoad={atMostNatural} /></div>
+      {(entry.decor ?? []).filter(piece => piece?.src).slice(0, 6).map((piece, spot) => <img key={spot} className="ui-k-stage__decor" data-spot={spot} src={piece.src} alt="" aria-hidden="true" loading="lazy" draggable={false} />)}
+    </div>)}
+    <div className="ui-k-stage__bar">
+      <div className="ui-k-stage__count"><span><strong>{pad2(current + 1)}</strong><small> / {pad2(count)}</small></span>
+        {count > 1 ? <span className="ui-k-stage__steps">{list.map((_, index) => <button key={index} type="button" aria-label={`Ir a ${index + 1}`} aria-current={index === current} data-done={index < current} onClick={() => go(index)}><i /></button>)}</span> : null}
+      </div>
+      {slide.facts?.length ? <ul className="ui-k-stage__facts">{slide.facts.slice(0, 4).map((fact, index) => <li key={index}>{fact}</li>)}</ul> : <span />}
+      <StageBuy id={slide.product} item={item} className="ui-k-stage__buy" label={buyLabel} />
+    </div>
+    {count > 1 ? <div className="ui-k-stage__arrows"><button type="button" className="ui-k-arrow" aria-label="Anterior" onClick={() => go(current - 1)}>{arrowIcon('left')}</button><button type="button" className="ui-k-arrow" aria-label="Siguiente" onClick={() => go(current + 1)}>{arrowIcon('right')}</button></div> : null}
+  </section>;
+}
+
+export type HangingPiece = { product: string; image: Img; note?: string };
+
+/** Products hanging on a rail (clothing, bags, anything that hangs or stands): the chosen one comes forward, the others step back,
+ *  and a panel beside it shows its name, price, short description, its real sizes or options and the button. Hover chooses on a
+ *  computer; on a phone the pieces scroll sideways and a tap chooses. 2 to 6 pieces, cut-out photos. mount="stand": photos of people
+ *  wearing the clothes stand in a lineup on a floor instead of hanging. */
+export function HangingRail({ items, label = 'Colección', kicker, buyLabel = 'Agregar', tone = 'dark', mount = 'hang', className }: { items: HangingPiece[]; label?: string; kicker?: string; buyLabel?: string; tone?: 'dark' | 'light'; mount?: 'hang' | 'stand'; className?: string }) {
+  const list = items.filter(piece => piece?.product && piece.image?.src).slice(0, 6);
+  const [chosen, setChosen] = useState(Math.min(1, Math.max(0, list.length - 1)));
+  const catalogue = useKitItems();
+  if (!list.length) return null;
+  const piece = list[Math.min(chosen, list.length - 1)];
+  const item = catalogue.find(entry => entry.id === piece.product);
+  const options = [...new Set((item?.variants ?? []).flatMap(variant => variant.options?.length ? [variant.options[0].value] : [variant.name]).filter(Boolean))].slice(0, 8);
+  const text = (piece.note || item?.description || '').trim();
+  return <section className={kx('ui-k-rail-show', `ui-k-rail-show--${tone}`, mount === 'stand' && 'ui-k-rail-show--stand', className)} aria-label={label}>
+    <RichStyles />
+    <div className="ui-k-rail-show__stage">
+      <span className="ui-k-rail-show__bar" aria-hidden="true" />
+      <div className="ui-k-rail-show__pieces" role="list">
+        {list.map((entry, index) => <button key={index} type="button" role="listitem" className="ui-k-rail-show__piece" data-on={index === chosen} aria-pressed={index === chosen}
+          aria-label={catalogue.find(found => found.id === entry.product)?.name ?? entry.image.alt} onPointerEnter={event => { if (event.pointerType === 'mouse') setChosen(index); }} onFocus={() => setChosen(index)} onClick={() => setChosen(index)}>
+          <svg className="ui-k-rail-show__hook" viewBox="0 0 40 30" aria-hidden="true"><path d="M20 2a5 5 0 1 1 5 5c-2 0-5 1-5 4v3L3 27h34L20 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <img src={entry.image.src} alt="" loading="lazy" draggable={false} onLoad={atMostNatural} />
+        </button>)}
+      </div>
+    </div>
+    <div className="ui-k-rail-show__panel" aria-live="polite">
+      {kicker ? <p className="ui-k-rail-show__kicker">{kicker}</p> : null}
+      <div className="ui-k-rail-show__head"><h3>{item?.name ?? piece.image.alt}</h3>{item ? <span>{kitPrice(item)}</span> : null}</div>
+      {text ? <p className="ui-k-rail-show__text">{text.length > 160 ? `${text.slice(0, 157).trimEnd()}…` : text}</p> : null}
+      {options.length ? <div className="ui-k-rail-show__options"><span>Elige</span><div>{options.map(option => <a key={option} href={kitHref(piece.product)}>{option}</a>)}</div></div> : null}
+      <StageBuy id={piece.product} item={item} className="ui-k-rail-show__buy" label={buyLabel} />
+    </div>
+  </section>;
+}

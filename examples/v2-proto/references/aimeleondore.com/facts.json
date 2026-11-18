@@ -1,0 +1,649 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.aimeleondore.com/",
+    "title": "Aimé Leon Dore",
+    "width": 1440,
+    "pageHeight": 1173,
+    "fonts": {
+      "h1": {
+        "family": "Sohne",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Aimé Leon Dore"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "By providing your email address, you agree to our Privacy Po"
+      },
+      "button": {
+        "family": "DIN W01 Regular",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.1px",
+        "text": "Save"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 61,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Men",
+        "All Products",
+        "NEW ARRIVALS",
+        "Tees & Polos",
+        "Sweatshirts",
+        "Shirting",
+        "Sweaters",
+        "Pants",
+        "Sweatpants",
+        "Shorts",
+        "Outerwear",
+        "Suiting",
+        "Footwear",
+        "Headwear",
+        "Jewelry",
+        "Bags & Leather Goods"
+      ],
+      "logo": "right",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 0,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.aimeleondore.com/",
+    "title": "Aimé Leon Dore",
+    "width": 390,
+    "pageHeight": 1191,
+    "fonts": {
+      "h1": {
+        "family": "Sohne",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": "Aimé Leon Dore"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "By providing your email address, you agree to our Privacy Po"
+      },
+      "button": {
+        "family": "DIN W01 Regular",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.2px",
+        "text": "Save"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 44,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Men",
+        "All Products",
+        "NEW ARRIVALS",
+        "Tees & Polos",
+        "Sweatshirts",
+        "Shirting",
+        "Sweaters",
+        "Pants",
+        "Sweatpants",
+        "Shorts",
+        "Outerwear",
+        "Suiting",
+        "Footwear",
+        "Headwear",
+        "Jewelry",
+        "Bags & Leather Goods"
+      ],
+      "logo": "right",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.aimeleondore.com/collections/all",
+    "title": "Products | Aimé Leon Dore",
+    "width": 1440,
+    "pageHeight": 7945,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "By providing your email address, you agree to our Privacy Po"
+      },
+      "button": {
+        "family": "DIN W01 Regular",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.1px",
+        "text": "Save"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 61,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Men",
+        "All Products",
+        "NEW ARRIVALS",
+        "Tees & Polos",
+        "Sweatshirts",
+        "Shirting",
+        "Sweaters",
+        "Pants",
+        "Sweatpants",
+        "Shorts",
+        "Outerwear",
+        "Suiting",
+        "Footwear",
+        "Headwear",
+        "Jewelry",
+        "Bags & Leather Goods"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 122,
+        "h": 7551,
+        "bg": "rgb(255, 255, 255)",
+        "images": 210,
+        "video": false,
+        "heading": {
+          "family": "Sohne",
+          "size": "10px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.5px",
+          "text": "14Kt Gold Pendant"
+        },
+        "words": 313,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 56,
+      "columns": 4,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.aimeleondore.com/collections/all?_su_rec=rgJvjpUMWYw1UNAni5EG71Apf1bUg57OUrzLXkUtn1RXBRuVP0aNFNO5FJ7Aq8YqYk2bw69Fs7TN6D4eNzDObbbr0B9YQ3bi6nDIJwYHIsifsxSkKsBs-fOtgVdaMqUXZUMJXHfv28HfGxQXt6alPEbwX8gHWRl4KyDEd2blYGl3WP7kOYOgP08XCO9GUskpu0Xa2la69Z5pwiJeGRKLRAa-5Eb_Df88bQbcSRyQli7ypbgJWacO6vfAP4FpmyEowwbXWbweEqBhWsAdPk5w9FKkutAu2q3O5pxOZGnL6wRqyx5H0bcYB2r134Tl75JZQPX9_w6Eb2Xs8MWPJwB8Ms4Ar84HmpwG3W4U2Rewo3o&_su_rec_id=de18acaf-9eb6-45d8-97c6-56e3fb350226-1794667432",
+    "title": "Products | Aimé Leon Dore",
+    "width": 390,
+    "pageHeight": 10455,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "By providing your email address, you agree to our Privacy Po"
+      },
+      "button": {
+        "family": "DIN W01 Regular",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.2px",
+        "text": "Save"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 44,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Men",
+        "All Products",
+        "NEW ARRIVALS",
+        "Tees & Polos",
+        "Sweatshirts",
+        "Shirting",
+        "Sweaters",
+        "Pants",
+        "Sweatpants",
+        "Shorts",
+        "Outerwear",
+        "Suiting",
+        "Footwear",
+        "Headwear",
+        "Jewelry",
+        "Bags & Leather Goods"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 105,
+        "h": 10004,
+        "bg": "rgb(255, 255, 255)",
+        "images": 210,
+        "video": false,
+        "heading": {
+          "family": "Sohne",
+          "size": "11px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.55px",
+          "text": "14Kt Gold Pendant"
+        },
+        "words": 313,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 56,
+      "columns": 2,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.aimeleondore.com/",
+    "title": "Aimé Leon Dore",
+    "width": 1440,
+    "pageHeight": 1173,
+    "fonts": {
+      "h1": {
+        "family": "Sohne",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Aimé Leon Dore"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "By providing your email address, you agree to our Privacy Po"
+      },
+      "button": {
+        "family": "DIN W01 Regular",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.1px",
+        "text": "Save"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 61,
+      "position": "fixed",
+      "bg": "rgba(255, 255, 255, 0)",
+      "links": [
+        "Men",
+        "All Products",
+        "NEW ARRIVALS",
+        "Tees & Polos",
+        "Sweatshirts",
+        "Shirting",
+        "Sweaters",
+        "Pants",
+        "Sweatpants",
+        "Shorts",
+        "Outerwear",
+        "Suiting",
+        "Footwear",
+        "Headwear",
+        "Jewelry",
+        "Bags & Leather Goods"
+      ],
+      "logo": "right",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 0,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 0,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 4
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.aimeleondore.com/",
+    "title": "Aimé Leon Dore",
+    "width": 390,
+    "pageHeight": 1191,
+    "fonts": {
+      "h1": {
+        "family": "Sohne",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": "Aimé Leon Dore"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sohne",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "By providing your email address, you agree to our Privacy Po"
+      },
+      "button": {
+        "family": "DIN W01 Regular",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.2px",
+        "text": "Save"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 44,
+      "position": "fixed",
+      "bg": "rgba(255, 255, 255, 0.02)",
+      "links": [
+        "Men",
+        "All Products",
+        "NEW ARRIVALS",
+        "Tees & Polos",
+        "Sweatshirts",
+        "Shirting",
+        "Sweaters",
+        "Pants",
+        "Sweatpants",
+        "Shorts",
+        "Outerwear",
+        "Suiting",
+        "Footwear",
+        "Headwear",
+        "Jewelry",
+        "Bags & Leather Goods"
+      ],
+      "logo": "right",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 1,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 4
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.aimeleondore.com/cart",
+    "title": "Your Shopping Cart – Aimé Leon Dore",
+    "width": 1440,
+    "pageHeight": 900,
+    "fonts": {
+      "h1": {
+        "family": "Sohne",
+        "size": "10px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Cart"
+      },
+      "h2": {
+        "family": "Sohne",
+        "size": "8px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.2px",
+        "text": "Draw Items"
+      },
+      "body": {
+        "family": "Sohne",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.5px",
+        "text": "Proceed to the next step to finalize your entry. Your paymen"
+      },
+      "button": {
+        "family": "DIN W01 Regular",
+        "size": "11px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.1px",
+        "text": "Save"
+      },
+      "nav": {
+        "family": "Sohne",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 61,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Men",
+        "All Products",
+        "NEW ARRIVALS",
+        "Tees & Polos",
+        "Sweatshirts",
+        "Shirting",
+        "Sweaters",
+        "Pants",
+        "Sweatpants",
+        "Shorts",
+        "Outerwear",
+        "Suiting",
+        "Footwear",
+        "Headwear",
+        "Jewelry",
+        "Bags & Leather Goods"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 497,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sohne",
+          "size": "10px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.5px",
+          "text": "Cart"
+        },
+        "words": 62,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

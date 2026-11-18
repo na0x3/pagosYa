@@ -3,7 +3,7 @@ import * as ts from 'typescript';
 import { templateManifest, type TemplateManifest } from '@pagosya/store-templates';
 import { compileNextPreview } from './source-next';
 import { nextStoreFiles } from './fixtures/next-store';
-import { fillTemplatePhotos, templateDemoAssets, templateStoreDataFile, withStoreLogo } from './source-templates';
+import { fillTemplatePhotos, templateDemoAssets, templateStoreDataFile, withHeroShop, withStoreLogo } from './source-templates';
 
 // These compile real React stores with esbuild; next to the browser contract suite that takes longer than 5 s.
 jest.setTimeout(60_000);
@@ -97,5 +97,13 @@ describe('withStoreLogo', () => {
     const before = files('https://api.test/v1/uploads/old.png');
     expect(withStoreLogo(before, 'https://api.test/v1/uploads/new.png')).toEqual(before);
     expect(withStoreLogo(files(''), '')).toEqual(files(''));
+  });
+});
+
+// Hero kit (owner 2026-11-13): the hero shop's CSS ships only with a cover that carries products (BOXY's sheet passed 180 000).
+describe('withHeroShop', () => {
+  it('adds the heroshop block only for a cover with products', () => {
+    expect([...withHeroShop(new Set(['cover-full']), [{ type: 'cover-full', products: ['Brownie'] }])]).toEqual(['cover-full', 'heroshop']);
+    expect([...withHeroShop(new Set(['cover-full']), [{ type: 'cover-full' }, { type: 'products-rows', products: ['Brownie'] }])]).toEqual(['cover-full']);
   });
 });

@@ -94,7 +94,7 @@ describe('discount codes', () => {
   it('never invents a discount, and refuses a code it cannot save', () => {
     const { change, refused } = applyCatalogOps(state(), [op('code-add', { name: 'GRATIS', value: '' }), op('code-add', { name: 'MITAD', value: '120 %' }), op('code-add', { name: 'año10', value: '10 %' })]);
     expect(change.codes.create).toEqual([]);
-    expect(refused).toEqual(['No creé el código GRATIS: dime el descuento, por ejemplo «20 %» o «Bs 30».', 'No creé el código MITAD: dime el descuento, por ejemplo «20 %» o «Bs 30».',
+    expect(refused).toEqual(['No creé el código GRATIS: dime el descuento, por ejemplo «20 %» o «Bs 30».', 'No creé el código MITAD: el descuento de un código va de 1 % a 99 % (con 120 % el pedido saldría gratis).',
       'No creé el código «año10»: usa de 3 a 32 letras, números, guion o guion bajo.']);
   });
 

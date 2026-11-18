@@ -1,0 +1,879 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.glossier.com/en-bo",
+    "title": "Glossier",
+    "width": 1440,
+    "pageHeight": 4765,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Apercu",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Buy 3+ Balms & Save"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 3 Balms & Save! Today only. Perfect for sharing, keeping"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.02625px",
+        "text": "Shop now"
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Fragrance",
+        "Makeup",
+        "Skincare",
+        "Balms",
+        "Body",
+        "Glossier Goods",
+        "Save with Sets",
+        "Shop All",
+        "BO",
+        "Stores",
+        "Log in",
+        "Bag (0) Toggle Bag"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 72,
+        "h": 800,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Buy 3+ Balms & Save"
+        },
+        "words": 20,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 902,
+        "h": 665,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "SHOP ALL BALMS"
+        },
+        "words": 118,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1597,
+        "h": 570,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": ""
+        },
+        "words": 5,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2207,
+        "h": 612,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "FEELING CHEERFUL?"
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2859,
+        "h": 429,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 3304,
+        "h": 629,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "GET FESTIVE"
+        },
+        "words": 2,
+        "perRow": 5,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.glossier.com/en-bo",
+    "title": "Glossier",
+    "width": 390,
+    "pageHeight": 4287,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Apercu",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Buy 3+ Balms & Save"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 3 Balms & Save! Today only. Perfect for sharing, keeping"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.02625px",
+        "text": "Shop now"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Menu",
+        "Bag (0) Toggle Bag"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 97,
+        "h": 707,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "18px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Buy 3+ Balms & Save"
+        },
+        "words": 20,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 834,
+        "h": 548,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "SHOP ALL BALMS"
+        },
+        "words": 121,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1412,
+        "h": 609,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": ""
+        },
+        "words": 5,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2061,
+        "h": 732,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "FEELING CHEERFUL?"
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2793,
+        "h": 245,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 3038,
+        "h": 457,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "GET FESTIVE"
+        },
+        "words": 2,
+        "perRow": 5,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.glossier.com/en-bo/collections/all",
+    "title": "Shop All – Glossier",
+    "width": 1440,
+    "pageHeight": 4348,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 3 Balms & Save! Today only. Perfect for sharing, keeping"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.03px",
+        "text": "0"
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "32px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Glossier You look good."
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Glossier You look good.",
+        "Fragrance",
+        "Makeup",
+        "Skincare",
+        "Balms",
+        "Body",
+        "Glossier Goods",
+        "Save with Sets",
+        "Shop All",
+        "BO",
+        "Stores",
+        "Log in",
+        "Bag (0) Toggle Bag"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 96,
+        "h": 3721,
+        "bg": "rgb(255, 255, 255)",
+        "images": 17,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Mini Glossier You Wardrobe Kit"
+        },
+        "words": 326,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.glossier.com/en-bo/collections/all?_su_rec=uyN0mdolIaItAu1xDTMymOXvS1DZXryrBH2-Dnhcgkjkd_7xl2_4HLJdXVLWz4C5KZAqzHrJZHkP6_WkCfi_njN8HCJPQLrfIgn0MdOf5aA4gFKJi_aMHMkdk-xYXz-ASnIJkYIp684agECjQBtmS8VXEa_TJXb8RwvAL4kc3_OiXRbVv6WCU3QxWNszqh6uwWi6fK3a-t9Oep2JssUNRFdVyx4A1XNCBxSH4N0CRGC0j7DUn0O4sO9voTT0lQTawecLlk1zO4bZyT2dcjzVWyU1-L-mKGhFZVDjUQOJXyjhIuFEw3P1mGiEgIliEdbigaa9sAchEjs1Z8STsZA2TiKP51k3yrvZ6-J7OmzY&_su_rec_id=1972c8b2-480b-4b77-acf8-9e18104145e4-1794666520",
+    "title": "Shop All – Glossier",
+    "width": 390,
+    "pageHeight": 5636,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 3 Balms & Save! Today only. Perfect for sharing, keeping"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.03px",
+        "text": "0"
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "28px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Glossier You look good."
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Glossier You look good.",
+        "Menu",
+        "Bag (0) Toggle Bag"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 129,
+        "h": 4775,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Mini Glossier You Wardrobe Kit"
+        },
+        "words": 332,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.glossier.com/en-bo/products/balm-dotcom-trio",
+    "title": "Balm Dotcom Trio – Glossier",
+    "width": 1440,
+    "pageHeight": 5199,
+    "fonts": {
+      "h1": {
+        "family": "Apercu",
+        "size": "32px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Balm Dotcom Trio"
+      },
+      "h2": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.04px",
+        "text": "Add On"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 3 Balms & Save! Today only. Perfect for sharing, keeping"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.02625px",
+        "text": "Add to bag , Discounted price: Bs412 , Original price: Bs658"
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "32px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Glossier You look good."
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Glossier You look good.",
+        "Fragrance",
+        "Makeup",
+        "Skincare",
+        "Balms",
+        "Body",
+        "Glossier Goods",
+        "Save with Sets",
+        "Shop All",
+        "BO",
+        "Stores",
+        "Log in",
+        "Bag (0) Toggle Bag"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 96,
+        "h": 1846,
+        "bg": "rgb(255, 255, 255)",
+        "images": 21,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "32px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Balm Dotcom Trio"
+        },
+        "words": 192,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2022,
+        "h": 772,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "GET THE LOOK"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2875,
+        "h": 988,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "0.04px",
+          "text": "Reviews"
+        },
+        "words": 293,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3943,
+        "h": 645,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "YOU MAY ALSO LIKE"
+        },
+        "words": 409,
+        "perRow": 26,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag\n\n\n    \n      \n        , Disco",
+      "aboveFold": true,
+      "top": 823,
+      "x": 16,
+      "width": 201,
+      "bg": "rgb(232, 232, 232)"
+    },
+    "price": {
+      "family": "Apercu",
+      "size": "14px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.02625px",
+      "text": ", Discounted price: Bs412 , Original price: Bs658"
+    },
+    "galleryImages": 9,
+    "swatches": 135,
+    "selects": 8,
+    "accordions": 11
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.glossier.com/en-bo/products/balm-dotcom-trio",
+    "title": "Balm Dotcom Trio – Glossier",
+    "width": 390,
+    "pageHeight": 6067,
+    "fonts": {
+      "h1": {
+        "family": "Apercu",
+        "size": "28px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.28px",
+        "text": "Balm Dotcom Trio"
+      },
+      "h2": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.04px",
+        "text": "Add On"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 3 Balms & Save! Today only. Perfect for sharing, keeping"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.02625px",
+        "text": "Add to bag , Discounted price: Bs412 , Original price: Bs658"
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "28px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Glossier You look good."
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Glossier You look good.",
+        "Menu",
+        "Bag (0) Toggle Bag"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 121,
+        "h": 2283,
+        "bg": "rgb(255, 255, 255)",
+        "images": 18,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "Balm Dotcom Trio"
+        },
+        "words": 124,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2464,
+        "h": 530,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "GET THE LOOK"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3054,
+        "h": 1642,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "0.04px",
+          "text": "Reviews"
+        },
+        "words": 261,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4756,
+        "h": 520,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Apercu",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.04px",
+          "text": "YOU MAY ALSO LIKE"
+        },
+        "words": 409,
+        "perRow": 26,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag\n\n\n    \n      \n        , Disco",
+      "aboveFold": false,
+      "top": 1426,
+      "x": 12,
+      "width": 366,
+      "bg": "rgb(232, 232, 232)"
+    },
+    "price": {
+      "family": "Apercu",
+      "size": "14px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.02625px",
+      "text": ", Discounted price: Bs412 , Original price: Bs658"
+    },
+    "galleryImages": 3,
+    "swatches": 135,
+    "selects": 8,
+    "accordions": 11
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.glossier.com/en-bo/cart",
+    "title": "Your Shopping Cart – Glossier",
+    "width": 1440,
+    "pageHeight": 1603,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 3 Balms & Save! Today only. Perfect for sharing, keeping"
+      },
+      "button": null,
+      "nav": {
+        "family": "Apercu",
+        "size": "32px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Glossier You look good."
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Glossier You look good.",
+        "Fragrance",
+        "Makeup",
+        "Skincare",
+        "Balms",
+        "Body",
+        "Glossier Goods",
+        "Save with Sets",
+        "Shop All",
+        "BO",
+        "Stores",
+        "Log in",
+        "Bag (1) Toggle Bag"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": []
+  }
+}

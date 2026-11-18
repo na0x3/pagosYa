@@ -4,7 +4,12 @@ This file records SIAT certification progress without storing
 credentials or reusable authorization material. Do not add the delegated token,
 CUIS, CUFD, system code, authorization codes, packaged XML, or portal password.
 
-## Current status — 2026-09-08
+## Current status — 2026-11-11
+
+The operator reports that every SIAT pilot certification test is resolved.
+The 2026-09-08 entry below is kept as the record of how Stage XII was cleared.
+
+## Status — 2026-09-08
 
 All 25 Stage XII purchase test operations succeeded on the original authorization
 process using `tmp/siat/pilot-state.json`: 10 receptions, 10 validations, and 5

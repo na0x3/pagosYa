@@ -79,13 +79,15 @@
         el.hidden = !set.length;
         el.innerHTML = set.map(productCard).join('');
         structureCatalog(el);
-        markCardDesign(el);
+        markCardDesign(el); markFavourite(el); markCardVideos(el);
         return;
       }
       const priorities = (el.getAttribute('data-design-product-ids') || '').split(',').filter(Boolean);
       const priority = new Map(priorities.map((id, index) => [id, index]));
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
       if (priorities.length) selected.sort((a, b) => (priority.get(a.id) ?? priorities.length) - (priority.get(b.id) ?? priorities.length));
+      // Spec 2026-11-10 rasca y elige: the shopper's favourite first.
+      selected.splice(0, selected.length, ...favouriteFirst(selected));
       const layout = el.hasAttribute('data-catalog-full') ? 'all' : catalogLayout();
       el.dataset.catalogLayout = layout;
       if (collectionPage) {
@@ -140,7 +142,7 @@
         el.innerHTML = shown.length ? shown.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
-      markCardDesign(el);
+      markCardDesign(el); markFavourite(el); markCardVideos(el);
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     renderSpotlights();

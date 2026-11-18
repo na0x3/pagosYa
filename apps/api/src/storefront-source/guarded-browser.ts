@@ -19,7 +19,7 @@ export function guardedRequestKind(method: string, type: string, url: string, in
   return sourceReferenceRequestKind(method, type, url, initialUrl, mainFrame);
 }
 
-export type GuardedPageOptions = { width: number; height: number; timeMs: number; requests?: number; bytes?: number };
+export type GuardedPageOptions = { width: number; height: number; timeMs: number; requests?: number; bytes?: number; deviceScaleFactor?: number };
 export type GuardedPage = { page: Page; initialUrl: string; status: number; refused: boolean };
 
 /** Opens the page, runs `work` on it and always closes the browser. Null when the browser could not start or the page never
@@ -55,7 +55,7 @@ export async function withGuardedPage<T>(raw: string, options: GuardedPageOption
       args: ['--js-flags=--max-old-space-size=192', '--proxy-bypass-list=<-loopback>', '--host-resolver-rules=MAP * ~NOTFOUND', '--force-webrtc-ip-handling-policy=disable_non_proxied_udp'],
       env: { PATH: process.env.PATH || '/usr/bin:/bin', ...(process.env.TMPDIR ? { TMPDIR: process.env.TMPDIR } : {}) },
     });
-    const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: false, permissions: [], offline: true, reducedMotion: 'reduce', userAgent: GUARDED_USER_AGENT, locale: 'es-ES', viewport: { width: options.width, height: options.height } });
+    const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: false, permissions: [], offline: true, reducedMotion: 'reduce', userAgent: GUARDED_USER_AGENT, locale: 'es-ES', viewport: { width: options.width, height: options.height }, ...(options.deviceScaleFactor ? { deviceScaleFactor: options.deviceScaleFactor } : {}) });
     await context.routeWebSocket('**/*', socket => socket.close());
     let refused = false;
     await context.route('**/*', async route => {

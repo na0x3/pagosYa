@@ -8,14 +8,16 @@ const attr = (source: string, name: string) => [...source.matchAll(new RegExp(`\
 
 export function productPlacementFindings(files: Array<Pick<SourceProjectFileDto, 'path' | 'content'>>, data: PlacementCatalog): string[] {
   const ids = new Set(data.items.map(item => item.id));
-  const categories = new Set((data.categories ?? []).map(c => c.id)), collections = new Set((data.collections ?? []).map(c => c.slug));
+  // A category by id, or by its name as the kit reads it (store text check 2026-11-07; live 2026-11-16 the rg store lost two V2 rounds
+  // to data-category="Novias", a real category the check did not know by name).
+  const categories = new Set((data.categories ?? []).flatMap(c => [c.id, ...(c.name ? [fold(c.name.trim())] : [])])), collections = new Set((data.collections ?? []).map(c => c.slug));
   const findings: string[] = [];
   for (const file of files) {
     if (!/\.(html|tsx|jsx)$/.test(file.path)) continue;
     const named = [...attr(file.content, 'data-products').flatMap(list => list.split(',').map(id => id.trim()).filter(Boolean)), ...attr(file.content, 'data-pagosya-spotlight').filter(Boolean)];
     const unknown = [...new Set(named.filter(id => !ids.has(id)))];
     if (unknown.length) findings.push(`${file.path}: estos productos no existen en la tienda: ${unknown.join(', ')}. Usa find_products para obtener el id real.`);
-    const badCategory = [...new Set(attr(file.content, 'data-category').filter(id => id && !categories.has(id)))];
+    const badCategory = [...new Set(attr(file.content, 'data-category').filter(id => id && !categories.has(id) && !categories.has(fold(id))))];
     if (badCategory.length) findings.push(`${file.path}: categoría desconocida: ${badCategory.join(', ')}.`);
     const badCollection = [...new Set(attr(file.content, 'data-collection').filter(slug => slug && !collections.has(slug)))];
     if (badCollection.length) findings.push(`${file.path}: colección desconocida: ${badCollection.join(', ')}.`);

@@ -8,7 +8,10 @@ export const SOURCE_MODELS = {
   'gpt-5.6-sol': { label: 'GPT-5.6 Sol', input: 4, cached: 0.4, output: 20 },
   // Claude (Anthropic) per-million-token list prices — VERIFY against anthropic.com/pricing before production.
   // Cache reads bill at 0.1× input; cache writes at 1.25× (sourceUsage adds the .25).
-  'claude-opus-5-5': { label: 'Claude Opus 5.5', input: 5, cached: 0.5, output: 25 },
+  // Checked 2026-11-16 (claude-api skill price table): Opus 5.5 $4/$20, cache reads $0.20; Sonnet 5.5 $2/$10, cache reads $0.20.
+  'claude-opus-5-5': { label: 'Claude Opus 5.5', input: 4, cached: 0.2, output: 20 },
+  'claude-sonnet-5-5': { label: 'Claude Sonnet 5.5', input: 2, cached: 0.2, output: 10 },
+  'claude-haiku-5-5': { label: 'Claude Haiku 5.5', input: 0.1, cached: 0.01, output: 0.5 },
   'claude-sonnet-5': { label: 'Claude Sonnet 5', input: 3, cached: 0.3, output: 15 },
   'claude-haiku-4-5-20251001': { label: 'Claude Haiku 4.5', input: 1, cached: 0.1, output: 5 },
 } as const;
@@ -115,6 +118,8 @@ const CONVERSATION_MODEL_CAP: Record<SourceModel, SourceModel> = {
   // The chat's conversation step is built for OpenAI's format; Claude choices keep it on the economical OpenAI model.
   'claude-opus-5-5': 'gpt-5.6-luna',
   'claude-sonnet-5': 'gpt-5.6-luna',
+  'claude-sonnet-5-5': 'gpt-5.6-luna',
+  'claude-haiku-5-5': 'gpt-5.6-luna',
   'claude-haiku-4-5-20251001': 'gpt-5.6-luna',
 };
 export function sourceConversationModel(choice: SourceModelChoice | undefined, configured: string | undefined) {

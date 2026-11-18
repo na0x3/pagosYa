@@ -1,0 +1,1392 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://levainbakery.com/",
+    "title": "Levain Bakery™️ | New York City's Most Famous Cookies",
+    "width": 1440,
+    "pageHeight": 5577,
+    "fonts": {
+      "h1": {
+        "family": "Platform",
+        "size": "58px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Platform",
+        "size": "58px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Meet Chocolate Cherry Almond"
+      },
+      "body": {
+        "family": "PitchWeb-Semibold",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "1px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      },
+      "button": {
+        "family": "Platform",
+        "size": "15px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Platform",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.25px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      }
+    },
+    "page": "rgb(247, 237, 223)",
+    "header": {
+      "height": 38,
+      "position": "static",
+      "bg": "rgb(247, 237, 223)",
+      "links": [
+        "New This Season: Chocola",
+        "Baked Daily, Shipped Nat",
+        "The Holiday Gift Guide i"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 132,
+        "h": 706,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Meet Chocolate Cherry Almond"
+        },
+        "words": 33,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 905,
+        "h": 575,
+        "bg": "rgb(247, 237, 223)",
+        "images": 5,
+        "video": true,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Fan Favorites"
+        },
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1480,
+        "h": 611,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Big Cookies Baked in the Big Apple"
+        },
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2091,
+        "h": 516,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Deliciously Thoughtful Gifts"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2607,
+        "h": 697,
+        "bg": "rgb(247, 237, 223)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Corporate Gifts"
+        },
+        "words": 73,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3304,
+        "h": 899,
+        "bg": "rgb(247, 237, 223)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "“Among local cookie mavens, they’re considered as much a New"
+        },
+        "words": 103,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4202,
+        "h": 731,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Cookie That Became a New York Institution"
+        },
+        "words": 83,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://levainbakery.com/?_abr=1&_su_rec=G1R3utT0v4LyvlPiMUhwdrht3fn64Y0LvM712b1MR3UAlM6OJOG9paF5W7DZeUw18Xt44Ntx1FfOqK8WwIKlkKFOeGM6EDrvzyrhDTfPoul_jjtRFmq72t_n2FKEzl2wFcSgfKJDEWSZlF5Wu4gLs2AEPC-C_j4INli5tvcUA8fL0PA-EhVElWecDoCL2tVp-lYtaah_RScXyX69ehaqgoagLozlpFmojeoYfOwYNnLUTX0-TRwjxgiXikZNTqnfWwEihlpZMdI_eEziL73-GCj_D9DqWBcps3PJk3V3oe3Ff_TWD7zazeUY3MOc8v8T7TTQsvgKskqHebwEo6UYdk1-BBxTa2J2OaGjc5wlyX0&_su_rec_id=d25050d2-54e2-4d3d-ac79-2c7b74afcb15-1794666956",
+    "title": "Levain Bakery™️ | New York City's Most Famous Cookies",
+    "width": 390,
+    "pageHeight": 6565,
+    "fonts": {
+      "h1": {
+        "family": "Platform",
+        "size": "34px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Platform",
+        "size": "34px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Meet Chocolate Cherry Almond"
+      },
+      "body": {
+        "family": "PitchWeb-Semibold",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "1px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      },
+      "button": {
+        "family": "Platform",
+        "size": "15px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Platform",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.25px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      }
+    },
+    "page": "rgb(247, 237, 223)",
+    "header": {
+      "height": 62,
+      "position": "static",
+      "bg": "rgb(247, 237, 223)",
+      "links": [
+        "New This Season: Chocola",
+        "The Holiday Gift Guide i",
+        "*Up to $20 shipping disc"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 696,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "34px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Meet Chocolate Cherry Almond"
+        },
+        "words": 31,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 899,
+        "h": 608,
+        "bg": "rgb(247, 237, 223)",
+        "images": 5,
+        "video": true,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Fan Favorites"
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1507,
+        "h": 571,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Big Cookies Baked in the Big Apple"
+        },
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2078,
+        "h": 530,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Deliciously Thoughtful Gifts"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2607,
+        "h": 1539,
+        "bg": "rgb(247, 237, 223)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Corporate Gifts"
+        },
+        "words": 73,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4146,
+        "h": 662,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "“Among local cookie mavens, they’re considered as much a New"
+        },
+        "words": 103,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4809,
+        "h": 844,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Cookie That Became a New York Institution"
+        },
+        "words": 83,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://levainbakery.com/collections/all",
+    "title": "Products – Levain Bakery",
+    "width": 1440,
+    "pageHeight": 5300,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Platform",
+        "size": "58px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Original Crunchy, Chewy, Soft, Gooey, 6 Oz. Cookie"
+      },
+      "body": {
+        "family": "PitchWeb-Semibold",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "1px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      },
+      "button": {
+        "family": "Platform",
+        "size": "15px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Platform",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.25px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      }
+    },
+    "page": "rgb(247, 237, 223)",
+    "header": {
+      "height": 38,
+      "position": "static",
+      "bg": "rgb(247, 237, 223)",
+      "links": [
+        "New This Season: Chocola",
+        "Baked Daily, Shipped Nat",
+        "The Holiday Gift Guide i"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 132,
+        "h": 340,
+        "bg": "rgb(247, 237, 223)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Original Crunchy, Chewy, Soft, Gooey, 6 Oz. Cookie"
+        },
+        "words": 47,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 538,
+        "h": 535,
+        "bg": "rgb(247, 237, 223)",
+        "images": 5,
+        "video": true,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Favorites"
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1073,
+        "h": 858,
+        "bg": "rgb(247, 237, 223)",
+        "images": 10,
+        "video": true,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Assortments"
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1931,
+        "h": 152,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 29,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2083,
+        "h": 858,
+        "bg": "rgb(247, 237, 223)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts"
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2941,
+        "h": 1226,
+        "bg": "rgb(247, 237, 223)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cookies"
+        },
+        "words": 47,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4167,
+        "h": 490,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cookie Subscriptions"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://levainbakery.com/collections/all",
+    "title": "Products – Levain Bakery",
+    "width": 390,
+    "pageHeight": 11930,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Platform",
+        "size": "34px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Original Crunchy, Chewy, Soft, Gooey, 6 Oz. Cookie"
+      },
+      "body": {
+        "family": "PitchWeb-Semibold",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "1px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      },
+      "button": {
+        "family": "Platform",
+        "size": "15px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Platform",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.25px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      }
+    },
+    "page": "rgb(247, 237, 223)",
+    "header": {
+      "height": 62,
+      "position": "static",
+      "bg": "rgb(247, 237, 223)",
+      "links": [
+        "New This Season: Chocola",
+        "The Holiday Gift Guide i",
+        "*Up to $20 shipping disc"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 344,
+        "bg": "rgb(247, 237, 223)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "34px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Original Crunchy, Chewy, Soft, Gooey, 6 Oz. Cookie"
+        },
+        "words": 47,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 559,
+        "h": 1508,
+        "bg": "rgb(247, 237, 223)",
+        "images": 5,
+        "video": true,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Favorites"
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2068,
+        "h": 2471,
+        "bg": "rgb(247, 237, 223)",
+        "images": 10,
+        "video": true,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Assortments"
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4539,
+        "h": 314,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 29,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4853,
+        "h": 1799,
+        "bg": "rgb(247, 237, 223)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts"
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6652,
+        "h": 3551,
+        "bg": "rgb(247, 237, 223)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cookies"
+        },
+        "words": 47,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 10203,
+        "h": 815,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cookie Subscriptions"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://levainbakery.com/products/holiday-assortment",
+    "title": "Holiday Cookie Assortment – Levain Bakery",
+    "width": 1440,
+    "pageHeight": 7408,
+    "fonts": {
+      "h1": {
+        "family": "Platform",
+        "size": "36px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Cookie Assortment"
+      },
+      "h2": {
+        "family": "Platform",
+        "size": "58px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Perfectly Baked, Perfectly Wrapped"
+      },
+      "body": {
+        "family": "PitchWeb-Semibold",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "1px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      },
+      "button": {
+        "family": "Platform",
+        "size": "15px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Platform",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.25px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      }
+    },
+    "page": "rgb(247, 237, 223)",
+    "header": {
+      "height": 38,
+      "position": "static",
+      "bg": "rgb(247, 237, 223)",
+      "links": [
+        "New This Season: Chocola",
+        "Baked Daily, Shipped Nat",
+        "The Holiday Gift Guide i"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 132,
+        "h": 968,
+        "bg": "rgb(247, 237, 223)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Holiday Cookie Assortment"
+        },
+        "words": 290,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1100,
+        "h": 499,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Perfectly Baked, Perfectly Wrapped"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1599,
+        "h": 352,
+        "bg": "rgb(247, 237, 223)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "86px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Big Cookies Baked With Love In The Big Apple"
+        },
+        "words": 61,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1951,
+        "h": 1643,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3594,
+        "h": 416,
+        "bg": "rgb(247, 237, 223)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "86px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cookies Are Our Love Language — Yours Too?"
+        },
+        "words": 62,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4010,
+        "h": 643,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4853,
+        "h": 1338,
+        "bg": "rgb(247, 237, 223)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "60px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "30 Years of Sweet Reviews"
+        },
+        "words": 107,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6190,
+        "h": 574,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Try Our Other Recipes"
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Bag",
+      "aboveFold": true,
+      "top": 706,
+      "x": 870,
+      "width": 425,
+      "bg": "rgb(0, 0, 150)"
+    },
+    "price": {
+      "family": "PitchWeb-Semibold",
+      "size": "14px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "-0.25px",
+      "text": "$52"
+    },
+    "galleryImages": 11,
+    "swatches": 12,
+    "selects": 1,
+    "accordions": 9
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://levainbakery.com/products/holiday-assortment",
+    "title": "Holiday Cookie Assortment – Levain Bakery",
+    "width": 390,
+    "pageHeight": 7377,
+    "fonts": {
+      "h1": {
+        "family": "Platform",
+        "size": "28px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Cookie Assortment"
+      },
+      "h2": {
+        "family": "Platform",
+        "size": "28px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Perfectly Baked, Perfectly Wrapped"
+      },
+      "body": {
+        "family": "PitchWeb-Semibold",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "1px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      },
+      "button": {
+        "family": "Platform",
+        "size": "15px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Platform",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.25px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      }
+    },
+    "page": "rgb(247, 237, 223)",
+    "header": {
+      "height": 62,
+      "position": "static",
+      "bg": "rgb(247, 237, 223)",
+      "links": [
+        "New This Season: Chocola",
+        "The Holiday Gift Guide i",
+        "*Up to $20 shipping disc"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 1266,
+        "bg": "rgb(247, 237, 223)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Holiday Cookie Assortment"
+        },
+        "words": 290,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1402,
+        "h": 552,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Perfectly Baked, Perfectly Wrapped"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1954,
+        "h": 251,
+        "bg": "rgb(247, 237, 223)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Big Cookies Baked With Love In The Big Apple"
+        },
+        "words": 61,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2205,
+        "h": 900,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3104,
+        "h": 323,
+        "bg": "rgb(247, 237, 223)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cookies Are Our Love Language — Yours Too?"
+        },
+        "words": 62,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3427,
+        "h": 371,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3997,
+        "h": 1896,
+        "bg": "rgb(247, 237, 223)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "38px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "30 Years of Sweet Reviews"
+        },
+        "words": 107,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5893,
+        "h": 572,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Try Our Other Recipes"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Bag",
+      "aboveFold": false,
+      "top": 1022,
+      "x": 15,
+      "width": 360,
+      "bg": "rgb(0, 0, 150)"
+    },
+    "price": {
+      "family": "PitchWeb-Semibold",
+      "size": "14px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "-0.25px",
+      "text": "$52"
+    },
+    "galleryImages": 12,
+    "swatches": 12,
+    "selects": 1,
+    "accordions": 13
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://levainbakery.com/",
+    "title": "Levain Bakery™️ | New York City's Most Famous Cookies",
+    "width": 1440,
+    "pageHeight": 5577,
+    "fonts": {
+      "h1": {
+        "family": "Platform",
+        "size": "58px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Platform",
+        "size": "58px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Meet Chocolate Cherry Almond"
+      },
+      "body": {
+        "family": "PitchWeb-Semibold",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "1px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      },
+      "button": {
+        "family": "Platform",
+        "size": "15px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Platform",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.25px",
+        "text": "New This Season: Chocolate Cherry Almond for a Limited Time."
+      }
+    },
+    "page": "rgb(247, 237, 223)",
+    "header": {
+      "height": 38,
+      "position": "static",
+      "bg": "rgb(247, 237, 223)",
+      "links": [
+        "New This Season: Chocola",
+        "Baked Daily, Shipped Nat",
+        "The Holiday Gift Guide i"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 132,
+        "h": 706,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Meet Chocolate Cherry Almond"
+        },
+        "words": 33,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 905,
+        "h": 575,
+        "bg": "rgb(247, 237, 223)",
+        "images": 5,
+        "video": true,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Fan Favorites"
+        },
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1480,
+        "h": 611,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Big Cookies Baked in the Big Apple"
+        },
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2091,
+        "h": 516,
+        "bg": "rgb(247, 237, 223)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Deliciously Thoughtful Gifts"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2607,
+        "h": 697,
+        "bg": "rgb(247, 237, 223)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Corporate Gifts"
+        },
+        "words": 73,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3304,
+        "h": 899,
+        "bg": "rgb(247, 237, 223)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "58px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "“Among local cookie mavens, they’re considered as much a New"
+        },
+        "words": 103,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4202,
+        "h": 731,
+        "bg": "rgb(247, 237, 223)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Platform",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Cookie That Became a New York Institution"
+        },
+        "words": 83,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

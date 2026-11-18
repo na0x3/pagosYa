@@ -1,0 +1,73 @@
+{
+  "host": "nothing.tech",
+  "name": "Nothing",
+  "at": "2026-11-14T15:45:22.570Z",
+  "mood": "Tecnología editorial, monocroma y modular; la personalidad recae en la tipografía de puntos y en una cadencia de grandes bloques visuales.",
+  "idea": "Construir una tienda como una revista de producto: módulos fotográficos de gran escala, titulares tipográficos muy breves y una retícula comercial estricta sobre gris claro.",
+  "header": "Las capturas están bloqueadas por el aviso de cookies, así que no permiten comprobar el logotipo, los enlaces ni las acciones de compra. Las mediciones sí registran una cabecera fija de 80 px, sin barra de anuncio, sobre #F4F4F4. En el fondo del bloqueo se distingue una franja superior centrada con “STORE LOCATOR” y una × a la izquierda, pero no debe confundirse con la navegación principal. En teléfono se conserva la cabecera fija de 80 px; la composición real de menú, logo y carrito no es verificable.",
+  "hero": "El aviso de cookies impide ver la composición exacta. Los datos describen un primer módulo full-bleed de 1.440 × 900 px en escritorio y 390 × 693 px en teléfono, con dos recursos de imagen y el titular “The tech you want. The prices you’ve waited for.” El titular usa NType82 Regular a 48 px en escritorio y 32 px en teléfono. No pueden verificarse su posición, el recorte de las fotos, el texto secundario ni el botón.",
+  "catalog": "Página “Black Friday” sobre #F4F4F4. Cabecera de colección con H1 Ndot en mayúsculas: 40 px en escritorio y 30 px en teléfono. La retícula contiene 23 productos: 3 columnas en 1.440 px y una sola columna en 390 px. En escritorio las filas empiezan aproximadamente en y=306 y cada tarjeta ocupa unos 539 px de alto; en teléfono empiezan en y=177 y cada tarjeta ocupa unos 511 px. Las imágenes se registran con proporción 1:1. Existe un control “Filter & Sort” en NType82 de 16 px, aunque las mediciones no detectan filtros laterales ni permiten confirmar su posición. El aviso de cookies tapa por completo las capturas y no deja comprobar orden, contador o comportamiento del panel.",
+  "card": "Tarjeta vertical basada en una imagen cuadrada 1:1 y un bloque textual inferior; el nombre usa Ndot Bold en mayúsculas, 20 px en escritorio y 18 px en teléfono. Los productos aparecen como “HEADPHONE ( 1 ) PRO”, “PHONE ( 4A ) PRO” o “EAR ( 3 )”. Las mediciones indican entre 2 y 8 imágenes asociadas a muchas referencias, lo que sugiere variantes o estados de galería, pero no demuestra un cambio de foto al pasar. Precio, precio rebajado, muestras de color, etiquetas promocionales y botón de compra rápida quedan ocultos por el bloqueo y no deben inventarse.",
+  "product": "No puede estudiarse la página de producto: tanto las capturas de escritorio como la de teléfono están totalmente cubiertas por el aviso de cookies y no se aportan mediciones específicas legibles de esta página. No es posible confirmar galería, reparto de columnas, caja de compra, contenido sobre el pliegue, variantes, CTA, acordeones ni módulos inferiores.",
+  "cart": "Sin captura. No puede determinarse si Nothing usa cajón o página de carrito, ni la estructura de filas, totales, promociones o ventas adicionales.",
+  "type": "Sistema de dos voces. NType82 Regular funciona como sans editorial para grandes titulares de portada: 48 px en escritorio, 32 px en teléfono, peso 400, caja normal y tracking normal; los titulares editoriales secundarios bajan de 32 a 24 px. Los botones usan NType82 Regular a 16 px. Ndot aporta la firma digital de puntos en catálogo: H1 de 40/30 px y nombres de producto de 20/18 px, en mayúsculas. El cuerpo medido dentro del aviso es Arial, 15 px en escritorio y 12 px en teléfono; al pertenecer al gestor de consentimiento, no demuestra necesariamente la tipografía del contenido comercial.",
+  "colour": "Base de página y cabecera #F4F4F4. Tinta principal negra y controles secundarios en grises muy claros. Los dos módulos finales de portada cambian a una banda gris translúcida equivalente a rgba(216,217,217,.5), separando servicio y comunidad del contenido editorial. El aviso usa tarjeta blanca, botones secundarios gris claro y CTA principal negro; esos colores pertenecen al bloqueo de cookies, no necesariamente al sistema comercial. No hay un acento cromático de interfaz verificable.",
+  "photos": "Las imágenes están ocultas por el aviso, por lo que no pueden juzgarse iluminación, fondo, encuadre o presencia de personas. Sí se conoce la escala estructural: la portada alterna módulos full-bleed de 693–900 px de alto, bloques editoriales sin imagen y conjuntos de 3, 4, 6 u 8 recursos. El catálogo normaliza la presentación a marcos cuadrados 1:1. La repetición de varias imágenes por producto sugiere vistas, colores o estados alternativos, pero no permite afirmar su tratamiento visual.",
+  "motion": "No se detectan vídeos ni marquesinas en las mediciones. Las capturas no muestran el sitio por el bloqueo, así que no puede confirmarse animación de entrada, carruseles, parallax o estados hover. La multiplicidad de imágenes en las fichas de catálogo hace posible un cambio de vista, pero no hay evidencia suficiente para describirlo como interacción real.",
+  "phone": "La jerarquía tipográfica se reduce de 48 a 32 px en los grandes titulares y de 32 a 24 px en piezas editoriales; la cabecera fija mantiene 80 px. Los grandes módulos de portada pasan de 900 a 693 px de alto. “Shop by category” conserva cuatro elementos por fila según la medición, mientras “Going pink?” registra tres por fila. El catálogo cambia de tres columnas a una, mantiene imagen cuadrada y tarjetas de unos 511 px. El aviso de cookies se transforma de una caja horizontal centrada con tres botones en línea a una tarjeta casi a todo el ancho con los tres botones apilados; este último comportamiento pertenece al CMP, no a la tienda.",
+  "signature": "La alternancia entre una sans convencional de gran escala y Ndot —un alfabeto construido con puntos— convierte la tipografía en una extensión directa del lenguaje de píxeles y componentes electrónicos.",
+  "home": [
+    {
+      "role": "Presentar la campaña comercial principal y fijar el tono de producto.",
+      "composition": "Módulo full-bleed de 900 px de alto en escritorio y 693 px en teléfono, con dos imágenes y H1 de 48/32 px. La ubicación exacta de imagen, texto y CTA queda oculta por el aviso."
+    },
+    {
+      "role": "Dar accesos rápidos por familia de producto.",
+      "composition": "Sección “Shop by category” a y=1044, de 412 px de alto en escritorio; en teléfono empieza en y=789 y mide 358 px. Usa ocho imágenes y una retícula registrada de cuatro elementos por fila, con título de 48/32 px."
+    },
+    {
+      "role": "Destacar el producto de audio de mayor nivel.",
+      "composition": "Bloque full-bleed de 900 px en escritorio y 693 px en teléfono, con titular “Studio-level precision for our most advanced headphone ever.” a 48/32 px. Se registra una imagen en escritorio y dos recursos en teléfono; el recorte no es visible."
+    },
+    {
+      "role": "Introducir contenido cultural entre campañas de producto.",
+      "composition": "Interludio sin imagen de 181 px en escritorio y 282 px en teléfono. Titular “A conversation in New York City with Kelela + Sage Elsesser” a 32/24 px, acompañado por unas 28 palabras."
+    },
+    {
+      "role": "Construir notoriedad mediante embajador de marca.",
+      "composition": "Módulo full-bleed de 810 px en escritorio y 693 px en teléfono, con una imagen en escritorio y dos recursos en móvil. Titular principal de 48/32 px sobre la campaña de V para Headphone (1)."
+    },
+    {
+      "role": "Presentar una variante cromática como microcampaña.",
+      "composition": "Bloque “Going pink?” de 867 px en escritorio y 449 px en teléfono, con seis imágenes. La medición registra una por fila en escritorio y tres por fila en móvil, dato atípico que conviene validar antes de reproducir. Titular de 48/32 px."
+    },
+    {
+      "role": "Agrupar productos portátiles alrededor de una situación de uso.",
+      "composition": "Sección “Pack your sound” de 761 px en escritorio y 953 px en teléfono; contiene cuatro imágenes en escritorio y tres en móvil, titular de 48/32 px y un bloque comparativamente largo de unas 45 palabras."
+    },
+    {
+      "role": "Crear una pausa puramente visual.",
+      "composition": "Módulo full-bleed sin texto detectado: 810 px de alto y dos imágenes en escritorio; 693 px y una imagen en teléfono."
+    },
+    {
+      "role": "Añadir relato de prueba de producto con una figura cultural.",
+      "composition": "Interludio textual sin imagen de 176 px en escritorio y 251 px en teléfono. Titular sobre Charli xcx a 32/24 px y aproximadamente 30 palabras."
+    },
+    {
+      "role": "Resolver objeciones antes del cierre de compra.",
+      "composition": "Banda “Why buy on nothing.tech” sobre gris rgba(216,217,217,.5), de 477 px en escritorio y 305 px en teléfono. Titular de 48/32 px y unas 14 palabras; no hay imágenes registradas."
+    },
+    {
+      "role": "Convertir la audiencia en comunidad o suscripción.",
+      "composition": "Cierre “Join the community” sobre la misma banda gris, de 575 px en escritorio y 273 px en teléfono. Titular de 48 px en escritorio y 24 px en teléfono, sin imágenes y con unas 23 palabras."
+    }
+  ],
+  "lessons": [
+    "Separar la voz editorial de la voz de producto: una sans legible para mensajes y una tipografía distintiva para nombres, categorías y momentos de marca.",
+    "Mantener una cadencia deliberada en páginas largas: campaña visual grande, interludio textual corto, nueva campaña y cierre de servicio. La variación de alturas evita que 8.000 px parezcan una retícula repetitiva.",
+    "Normalizar el catálogo con fotografía 1:1 y alturas de tarjeta constantes; así conviven teléfonos, auriculares, altavoces y ropa sin romper las filas.",
+    "Reducir columnas de 3 a 1 en móvil en lugar de comprimir tarjetas complejas; conservar la imagen grande permite entender productos técnicos sin hacer zoom.",
+    "Usar un único cambio de fondo cerca del final para señalar que termina la inspiración y empiezan las razones de compra, garantías o comunidad.",
+    "No extraer decisiones visuales de una captura bloqueada: documentar por separado lo medido, lo visible y lo inferido evita convertir suposiciones en especificaciones."
+  ]
+}

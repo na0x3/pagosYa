@@ -1,0 +1,48 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwjxre3p00011vgjwtzkkv39",
+  "slug": "4467fhny",
+  "photos": {
+    "2cbf2782594080a5f120da0f087dd71d.jpg": "/v1/uploads/9dc7c69c-8ae0-44d7-ac07-ecc64d57922c.jpg",
+    "555d6f24c3eb269149d501f274787c24.jpg": "/v1/uploads/71862da8-2118-438e-bbd8-d951aaa75a89.jpg",
+    "5b297b20bbcdc217cc5098d1213669b1.jpg": "/v1/uploads/9801d9fc-ccb0-4682-b447-4cadc639362c.jpg",
+    "5ed5e8b3d5dd2fb458881877364480f1.jpg": "/v1/uploads/3dd84a11-050b-4502-871d-c3711f9a15e3.jpg",
+    "639363033b6de53a617b9aaa68e172bd.jpg": "/v1/uploads/35a1a873-9125-4724-a741-bffd32fb7a6e.jpg",
+    "665fd50300baa0f77c7ef8039423a5a0.jpg": "/v1/uploads/d17bbf85-27ff-46ec-8716-c05ef64af432.jpg",
+    "7fddb31790ebda77f1f2be78a2a182cc.jpg": "/v1/uploads/cb5eaff0-691e-4f92-be5c-33d8bbfebecc.jpg",
+    "9df00367c5ff8e2a6e5a000f303e5688.jpg": "/v1/uploads/bdfb3036-dbcf-4610-81ab-0563675bcb01.jpg",
+    "spirals.webp": "/v1/uploads/97736550-9c4a-48b7-9f55-8e8b4d4ba3e6.webp",
+    "/Users/saramia/pagosYa/examples/remolino/guia-blender-portada.png": "/v1/uploads/29b103b1-8c28-405b-b984-20253e6ccc73.png"
+  },
+  "categories": {
+    "Licuadoras": "cmwjxre4z000n1vgjboj5mjwf",
+    "Batidos": "cmwjxre52000p1vgjlhgebire",
+    "Club y guías": "cmwjxre53000r1vgjh6qxir7t"
+  },
+  "products": {
+    "Licuadora Remolino Pro": "cmwjxre5l000t1vgjhu7c20vt",
+    "Licuadora Torbellino": "cmwjxre6g000v1vgjjpacig5s",
+    "Licuadora Rosa Compacta": "cmwjxre6l000x1vgj5gu7xsim",
+    "Licuadora Personal Nube": "cmwjxre6p000z1vgjv1hs7zy8",
+    "Pack Batido Semanal": "cmwjxre6u00111vgjg8gogd04",
+    "Caja de frutas a elegir": "cmwjxre6y00131vgjz8aej856",
+    "Club Remolino": "cmwjxre7900161vgj9oi0z2ow",
+    "Guía Blender (PDF)": "cmwjxre7p001e1vgj5dqe78rw"
+  },
+  "done": {
+    "settings": true,
+    "pack-without-extras": true,
+    "recommendations": true,
+    "download": true,
+    "subscriptions": true,
+    "bundles": true,
+    "articles": true,
+    "promo-codes": true,
+    "gift-card": true,
+    "newsletter": true,
+    "assistant": true,
+    "shipping": true
+  },
+  "welcomeCodeId": "cmwjxre9t00201vgjrod1j1xu",
+  "giftCardCode": "F99801B9-C94397C7-37036AFD-5F32618F"
+}

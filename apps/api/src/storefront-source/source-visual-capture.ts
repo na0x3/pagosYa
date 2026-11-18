@@ -14,7 +14,10 @@ export async function withVisualSandbox<T>(snapshot: SourceProjectSnapshot, quer
   const browser = await chromium.launch({ headless: true, chromiumSandbox: true, timeout: 15000 });
   const cancel = () => { void browser.close(); };
   signal?.addEventListener('abort', cancel, { once: true });
-  const deadline = setTimeout(() => { void browser.close(); }, 45000);
+  // Copy a store (2026-11-17): Graza's home (81 products, a 9 MB snapshot) needed more than 45 s to load and scroll, and the closed
+  // browser threw a finished V2 design away. A bigger snapshot gets more time, up to two minutes.
+  const megabytes = snapshot.files.reduce((total, file) => total + file.content.length, 0) / 1_000_000;
+  const deadline = setTimeout(() => { void browser.close(); }, Math.min(120_000, 45_000 + Math.max(0, megabytes - 4) * 6_000));
   try {
     signal?.throwIfAborted();
     const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: false, reducedMotion });

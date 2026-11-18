@@ -1,3 +1,9 @@
+import { SourceV2PrototypeController } from './v2/v2-prototype.controller';
+import { SourceV2PrototypeService } from './v2/v2-prototype.service';
+import { SourceTourController } from './source-tour.controller';
+import { SourceTourService } from './source-tour.service';
+import { SourceAbController } from './source-ab.controller';
+import { SourceAbService } from './source-ab.service';
 import { SourceChatJobsService } from './source-chat-jobs.service';
 import { AssumedFactCountsController, StoreVoiceController } from './store-voice.controller';
 import { StoreVoiceService } from './store-voice.service';
@@ -7,6 +13,7 @@ import { SourceChatJobsController } from './source-chat-jobs.controller';
 import { SourceStartersController } from './source-starters.controller';
 import { SourceStartersService } from './source-starters.service';
 import { SourceFontsController } from './source-fonts.controller';
+import { VisualAiService } from '../visual-studio/visual-ai.service';
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DashboardModule } from "../dashboard/dashboard.module";
@@ -14,6 +21,7 @@ import { RewardsModule } from "../rewards/rewards.module";
 import { UploadsModule } from "../uploads/uploads.module";
 import { AiUsageModule } from "../ai-usage/ai-usage.module";
 import { StoreEmailModule } from "../store-emails/store-email.module";
+import { StorePopupModule } from "../store-popups/store-popup.module";
 import { BrandModule } from "../brand/brand.module";
 import { StoresModule } from "../stores/stores.module";
 import { SourceDesignJobsController } from "./source-design-jobs.controller";
@@ -23,7 +31,7 @@ import { SourceDesignEvaluator } from "./source-design-evaluator";
 import { SourceDesignPlanner } from "./source-design-planner";
 import { SourceAssetsController } from "./source-assets.controller";
 import { SourceVisualReviewService } from "./source-visual-review.service";
-import { SourcePublishingController, SourceSiteController } from "./source-publishing.controller";
+import { SourceDraftAssetsController, SourcePublishingController, SourceSiteController } from "./source-publishing.controller";
 import { SourcePublishingService } from "./source-publishing.service";
 import { SourceProjectsController } from "./source-projects.controller";
 import { SourceThumbnailsService } from "./source-thumbnails.service";
@@ -51,9 +59,9 @@ const storePlanParts = new StorePlanParts(
  * visual review, and publishing. See docs/ARCHITECTURE.md for the pipeline. */
 import { ProductPageModule } from '../product-content/product-page.module';
 @Module({
-  imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, ProductPageModule],
-  controllers: [SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
-  providers: [SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceThumbnailsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, { provide: StorePlanParts, useValue: storePlanParts }],
+  imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, StorePopupModule, ProductPageModule],
+  controllers: [SourceV2PrototypeController, SourceTourController, SourceAbController,SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceDraftAssetsController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
+  providers: [SourceV2PrototypeService, SourceTourService, SourceAbService,SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceThumbnailsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, VisualAiService, { provide: StorePlanParts, useValue: storePlanParts }],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],
 })
 export class StorefrontSourceModule {}

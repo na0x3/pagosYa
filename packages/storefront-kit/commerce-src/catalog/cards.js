@@ -30,6 +30,9 @@
   }
   // The second photo is fetched only when the shopper reaches the card (pointer, focus or touch): see loadCardAlt.
   const CARD_SIZES = '(max-width: 820px) 50vw, 25vw';
+  // Copy a store (owner 2026-11-18): a product without a photo (Graza's and Fishwife's wholesale items) keeps the card's photo space,
+  // a quiet tile with its initial, so the grid row stays even. Its own class: zoom, videos and swatches look for the real photo.
+  const noPhotoMarkup = p => `<div class="menu-item__noimage" aria-hidden="true"><span>${escape((String(p.name || '').trim().match(/\p{L}|\p{N}/u) || ['·'])[0].toUpperCase())}</span></div>`;
   const cardAltMarkup = url => `<img class="menu-item__image-alt" data-src="${escape(url)}"${responsiveSrcset(url) ? ` data-srcset="${escape(responsiveSrcset(url))}" data-sizes="${CARD_SIZES}"` : ''} alt="" aria-hidden="true" decoding="async">`;
   // Swatch thumbnails are 22px: the smallest rendition is enough. A browse strip always shows the colour's photo, 56px.
   const cardSwatchMarkup = (p, swatches, more = 0, strip = false) => `<div class="menu-item__swatches${strip ? ' menu-item__swatches--strip' : ''}" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => { const dot = s.color && !strip; return `<button type="button" data-card-swatch="${escape(s.url)}"${s.value ? ` data-card-colour="${escape(s.value)}"` : ''} aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${dot ? ` style="--swatch:${escape(s.color)}"` : ''}>${dot ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, strip ? '56px' : '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`; }).join('')}${more > 0 ? `<span class="menu-item__swatches-more">+${more}</span>` : ''}</div>`;
@@ -68,7 +71,7 @@
     const parts = cardInsides(p);
     const set = (name, html, empty) => { const node = field(name); if (!node) return; node.innerHTML = html; node.hidden = empty; };
     set('eyebrow', escape(parts.eyebrow), !parts.eyebrow);
-    set('points', parts.points.map(t => `<li>${escape(t)}</li>`).join(''), !parts.points.length);
+    set('points', parts.points.map(cardPointMarkup).join(''), !parts.points.length);
     set('chips', chipsHtml(parts), !parts.chips.length);
     set('deal', escape(parts.deal), !parts.deal);
     set('save', escape(parts.save), !parts.save);
@@ -189,10 +192,41 @@
   function labelDecoratedAddButtons() {
     document.querySelectorAll('.menu-add[data-add]').forEach(button => {
       if ((button.textContent || '').trim() || !button.querySelector('svg')) return;
+      // Owner 2026-11-16 («que adentro del product card tenga iconos como antes»): a V2 card asks for a word with a hidden «+» marker;
+      // it gets the bag and «Agregar», the atelier card's button, instead of the bare word.
+      const marker = getComputedStyle(button, '::before');
+      if (marker.display === 'none' && /^["']\+["']$/.test(marker.content)) { button.innerHTML = `${BAG_ICON}<span>Agregar</span>`; return; }
       if (['::before', '::after'].some(pseudo => /^["'].*\S.*["']$/.test(getComputedStyle(button, pseudo).content))) button.textContent = 'Añadir';
     });
   }
-  function fitCards() { labelDecoratedAddButtons(); fitCardPhotos(); alignCardPrices(); }
+  // Owner 2026-11-17 («animated buttons inside product cards like when hovered it fills up slowly»): every card's add button gets a
+  // fill layer that sweeps across on hover (dialog-style.js). A clear button fills with its own text colour and its text turns the
+  // colour behind it; a filled button fills with a deeper shade of itself. An icon-only «+» turns a quarter on hover.
+  const clearColour = colour => /^(transparent|rgba\([^)]*[,/]\s*0(\.0+)?\)|color\([^)]*\/\s*0(\.0+)?\))$/.test(String(colour).trim());
+  function backdropColour(node) {
+    for (let el = node; el; el = el.parentElement) { const colour = getComputedStyle(el).backgroundColor; if (!clearColour(colour)) return colour; }
+    return 'rgb(255, 255, 255)';
+  }
+  function fillAddButtons() {
+    document.querySelectorAll('.menu-item .menu-add').forEach(button => {
+      if (button.querySelector(':scope > .menu-add__fill')) return;
+      const style = getComputedStyle(button), clear = clearColour(style.backgroundColor) && style.backgroundImage === 'none';
+      if (style.position === 'static') button.style.position = 'relative';
+      button.style.isolation = 'isolate';
+      if (clear) { button.style.setProperty('--pya-fill', style.color); button.style.setProperty('--pya-ink', backdropColour(button.parentElement)); button.setAttribute('data-pya-ink', ''); }
+      button.toggleAttribute('data-pya-plus', !(button.textContent || '').trim() && Boolean(button.querySelector('svg')));
+      button.insertAdjacentHTML('afterbegin', '<span class="menu-add__fill" aria-hidden="true"></span>');
+    });
+  }
+  const CARD_CHECK_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  /** A card's add button shows a check for a moment after its product goes into the cart (drawer.js addedFeedback). */
+  function markCardAdded(button) {
+    if (!button.querySelector(':scope > .menu-add__done')) button.insertAdjacentHTML('beforeend', `<span class="menu-add__done" aria-hidden="true">${CARD_CHECK_ICON}</span>`);
+    button.setAttribute('data-pya-added', '');
+    clearTimeout(button.pyaAddedTimer);
+    button.pyaAddedTimer = setTimeout(() => button.removeAttribute('data-pya-added'), 1400);
+  }
+  function fitCards() { labelDecoratedAddButtons(); fillAddButtons(); fitCardPhotos(); alignCardPrices(); }
   if (typeof addEventListener === 'function') addEventListener('resize', () => fitCards(), { passive: true });
   const BAG_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg>';
   // ---- Fashion card (spec 2026-10-21 fashion look, the John Smedley card) ----
@@ -258,7 +292,7 @@
     // Showcase commerce: richer insides; showcase and split cards say «Agregar» across the card.
     const inside = cardInsidesMarkup(p), wide = ['showcase', 'split'].includes(config.showcase?.cards);
     const addFace = atelier || wide ? `${BAG_ICON}<span>Agregar</span>` : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
-    return `<article class="menu-item" data-product-id="${escape(p.id)}"${atelier ? ' data-anatomy="atelier"' : ''}>${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />${badgeMarkup(p, 'menu-item__badge')}` : ""}${cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches, cardExtras.more, true) : ''}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy">${inside.eyebrow}<h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${inside.points}${cardExtras.swatches ? '' : inside.chips}${inside.deal}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${cardOriginalMarkup(p)}</strong>${inside.save}${cardExtras.swatches && !cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${isMembership(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Hacerme miembro de ${escape(p.name)}">Hacerme miembro</button>` : soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}>${addFace}</button>`}</article>`;
+    return `<article class="menu-item" data-product-id="${escape(p.id)}"${atelier ? ' data-anatomy="atelier"' : ''}>${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />${badgeMarkup(p, 'menu-item__badge')}` : noPhotoMarkup(p)}${cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches, cardExtras.more, true) : ''}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy">${inside.eyebrow}<h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${inside.points}${cardExtras.swatches ? '' : inside.chips}${inside.deal}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${cardOriginalMarkup(p)}</strong>${inside.save}${cardExtras.swatches && !cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${isMembership(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Hacerme miembro de ${escape(p.name)}">Hacerme miembro</button>` : soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}>${addFace}</button>`}</article>`;
   }
   // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
   function structureCatalog(el) {
@@ -271,4 +305,44 @@
     decorateZoomButtons(el);
     // Contrast correction must reach every card, including ones nested inside `sections` groups.
     readableText(el);
+  }
+  /* Owner 2026-11-17 («add videos … inside a product card»): a product with a video plays it over its card photo — on hover with a
+   * mouse, while the card is in view on a touch screen — muted and looping, never with reduced motion. The video takes the photo's
+   * own box, whichever card drew it (platform, fashion or the store's own template), and loads only when it first plays. */
+  let cardVideoObserver = null;
+  function markCardVideos(root) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const hover = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!document.querySelector('style[data-pagosya-card-video]')) {
+      const style = document.createElement('style');
+      style.setAttribute('data-pagosya-card-video', '');
+      style.textContent = '.menu-item__video{position:absolute;z-index:1;object-fit:cover;opacity:0;transition:opacity .35s ease;pointer-events:none}.menu-item__video[data-playing]{opacity:1}';
+      document.head.append(style);
+    }
+    root.querySelectorAll('[data-product-id]').forEach(card => {
+      if (card.querySelector('[data-card-video]')) return;
+      const p = products().find(item => item.id === card.getAttribute('data-product-id'));
+      const url = p ? productVideos(p)[0] : '';
+      const photo = url ? card.querySelector('img') : null;
+      const host = photo?.parentElement;
+      if (!host) return;
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      const video = document.createElement('video');
+      video.className = 'menu-item__video';
+      video.muted = true; video.loop = true; video.playsInline = true; video.preload = 'none';
+      ['playsinline', 'muted', 'data-card-video'].forEach(name => video.setAttribute(name, ''));
+      video.setAttribute('aria-hidden', 'true');
+      video.src = url;
+      photo.after(video);
+      const show = () => {
+        Object.assign(video.style, { top: `${photo.offsetTop}px`, left: `${photo.offsetLeft}px`, width: `${photo.offsetWidth}px`, height: `${photo.offsetHeight}px`, borderRadius: getComputedStyle(photo).borderRadius });
+        video.play().then(() => video.setAttribute('data-playing', '')).catch(() => {});
+      };
+      const hide = () => { video.removeAttribute('data-playing'); video.pause(); };
+      if (hover) { card.addEventListener('pointerenter', show); card.addEventListener('pointerleave', hide); return; }
+      if (typeof IntersectionObserver !== 'function') return;
+      cardVideoObserver ||= new IntersectionObserver(entries => entries.forEach(entry => entry.target.dispatchEvent(new Event(entry.isIntersecting ? 'pagosya:card-video-show' : 'pagosya:card-video-hide'))), { threshold: 0.6 });
+      card.addEventListener('pagosya:card-video-show', show); card.addEventListener('pagosya:card-video-hide', hide);
+      cardVideoObserver.observe(card);
+    });
   }

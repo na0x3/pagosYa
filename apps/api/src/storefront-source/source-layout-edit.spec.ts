@@ -1,4 +1,4 @@
-import { MENU_PAGES, addableSections, applyLayoutOps, layoutAdds, menuPagesFor, layoutDigest, layoutEditReply, layoutEditSchema, pageImproveAdds, readLayoutEdit, withPageImprove, LAYOUT_EDIT_PROMPT } from './source-layout-edit';
+import { MENU_PAGES, addableSections, applyLayoutOps, bandUnderMenu, layoutAdds, menuPagesFor, layoutDigest, layoutEditReply, layoutEditSchema, pageImproveAdds, readLayoutEdit, withPageImprove, LAYOUT_EDIT_PROMPT } from './source-layout-edit';
 import { STORE_EDIT_PROMPT } from './source-store-edit';
 import type { LayoutBlock } from './source-section-library';
 
@@ -131,6 +131,24 @@ describe('adding a section (fix 3, 2026-11-02)', () => {
     // Its place follows the section it was asked before, after a removal.
     const moved = applyLayoutOps(home, [op({ op: 'remove', at: 2 })], [{ to: 3, block: steps }]);
     expect(moved.layout.map(block => block.type)).toEqual(['bar-note', 'cover-split', 'steps-howto', 'products-grid', 'faq-split', 'closing-photo']);
+  });
+
+  it('puts moving words asked for «después del header» right above the cover (Meat House 2026-11-07)', () => {
+    const strip = { type: 'strip-marquee', items: [{ title: 'Pedidos con 24 hrs de anticipación' }] };
+    expect(applyLayoutOps(home, [], [{ to: 0, block: strip }]).layout.map(block => block.type).slice(0, 3)).toEqual(['bar-note', 'strip-marquee', 'cover-split']);
+    expect(applyLayoutOps(home, [], [{ to: 1, block: strip }]).layout.map(block => block.type).slice(0, 3)).toEqual(['bar-note', 'strip-marquee', 'cover-split']);
+    expect(applyLayoutOps(home, [], [{ to: 2, block: strip }]).layout.map(block => block.type).slice(0, 3)).toEqual(['bar-note', 'cover-split', 'strip-marquee']);
+    // A band already on the page moves there too; any other section still stays under the cover.
+    const withStrip = [home[0], home[1], strip, ...home.slice(2)];
+    expect(applyLayoutOps(withStrip, [op({ op: 'move', at: 2, to: 0 })]).layout.map(block => block.type).slice(0, 3)).toEqual(['bar-note', 'strip-marquee', 'cover-split']);
+    expect(applyLayoutOps(withStrip, [op({ op: 'move', at: 3, to: 0 })]).layout.map(block => block.type).slice(0, 3)).toEqual(['bar-note', 'cover-split', withStrip[3].type]);
+  });
+
+  it('reads «después del header» as a band under the menu, and only for a band', () => {
+    expect(bandUnderMenu('strip-marquee', 'despues del header pon texto moviendose que diga pedidos con 24 hrs de anticipacion')).toBe(true);
+    expect(bandUnderMenu('strip-marquee', 'una franja debajo del menú')).toBe(true);
+    expect(bandUnderMenu('strip-marquee', 'pon una franja que diga envío gratis')).toBe(false);
+    expect(bandUnderMenu('faq-split', 'después del header pon preguntas')).toBe(false);
   });
 });
 

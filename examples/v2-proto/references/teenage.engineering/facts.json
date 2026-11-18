@@ -1,0 +1,415 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://teenage.engineering/",
+    "title": "teenage engineering",
+    "width": 1440,
+    "pageHeight": 5856,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "te-20",
+        "size": "19.102px",
+        "weight": "100",
+        "case": "none",
+        "tracking": "normal",
+        "text": "newsletter"
+      },
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(0, 0, 0)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 5760,
+        "bg": "rgb(0, 0, 0)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 0,
+        "h": 3884,
+        "bg": "rgb(0, 0, 0)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://teenage.engineering/",
+    "title": "teenage engineering",
+    "width": 390,
+    "pageHeight": 3201,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "te-20",
+        "size": "10.3469px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "copyright ©2026"
+      },
+      "button": null,
+      "nav": {
+        "family": "te-20",
+        "size": "16px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "checkout0"
+      }
+    },
+    "page": "rgb(0, 0, 0)",
+    "header": {
+      "height": 75,
+      "position": "static",
+      "bg": "rgb(0, 0, 0)",
+      "links": [
+        "checkout0",
+        "menu"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 2340,
+        "bg": "rgb(0, 0, 0)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 0,
+        "h": 1747,
+        "bg": "rgb(0, 0, 0)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://teenage.engineering/products/audio-and-synthesizers",
+    "title": "audio & synthesizers - teenage engineering",
+    "width": 1440,
+    "pageHeight": 15788,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "te-20",
+        "size": "19.102px",
+        "weight": "100",
+        "case": "none",
+        "tracking": "normal",
+        "text": "newsletter"
+      },
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(245, 245, 245)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 1690,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 13592,
+        "h": 999,
+        "bg": "rgb(245, 245, 245)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 15,
+    "swatches": 0,
+    "selects": 2,
+    "accordions": 0
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://teenage.engineering/products/audio-and-synthesizers",
+    "title": "audio & synthesizers - teenage engineering",
+    "width": 390,
+    "pageHeight": 7196,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "te-20",
+        "size": "10.3469px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "copyright ©2026"
+      },
+      "button": null,
+      "nav": {
+        "family": "te-20",
+        "size": "16px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "checkout0"
+      }
+    },
+    "page": "rgb(245, 245, 245)",
+    "header": {
+      "height": 75,
+      "position": "static",
+      "bg": "rgb(245, 245, 245)",
+      "links": [
+        "checkout0",
+        "menu"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 84,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 446,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 808,
+        "h": 354,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1170,
+        "h": 716,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1886,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2248,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2610,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2973,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3335,
+        "h": 716,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4051,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4413,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4775,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5137,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5500,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5862,
+        "h": 362,
+        "bg": "rgb(245, 245, 245)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 15,
+    "swatches": 0,
+    "selects": 2,
+    "accordions": 0
+  }
+}

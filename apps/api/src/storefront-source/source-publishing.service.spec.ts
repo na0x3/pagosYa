@@ -419,3 +419,168 @@ describe('a listing price waiting for the merchant blocks publishing (spec 2026-
     expect(priceToConfirmMessage(['A', 'B'])).toBe('Antes de publicar, confirma los precios de «A», «B»: YAPI los tomó de los anuncios. Edítalos en Productos.');
   });
 });
+
+// Spec 2026-11-09 YAPI A/B tests: popup tests, the merchant's chosen winner, signups in the numbers.
+describe('popup A/B tests', () => {
+  function popupPublishing(over: { running?: any; percent?: number } = {}) {
+    const store: any = { id: 's', merchantId: 'm', slug: 'remo', status: 'ACTIVE', publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: 4, checkoutMode: 'payment', merchant: { status: 'ACTIVE' }, contactFormEnabled: false, sourcePublicationVersion: 0 };
+    const experiments: any[] = over.running ? [over.running] : [];
+    const codes: any[] = [{ id: 'codeA', storeId: 's', code: 'BIENVENIDA10', discountType: 'PERCENT', discountValue: over.percent ?? 10, isActive: true }];
+    const retention: any = { storeId: 's', revision: 1, settings: { signupEnabled: true, popupPromoCodeId: 'codeA', popupLook: 'postal', signupTitle: 'Únete', signupBody: 'Recetas y un 10 % de bienvenida.' } };
+    const prisma: any = {
+      store: { findFirst: jest.fn(async () => store), findUniqueOrThrow: jest.fn(async () => store), updateMany: jest.fn(async () => ({ count: 1 })), update: jest.fn(async ({ data }) => Object.assign(store, data)) },
+      storeSourceExperiment: {
+        findUnique: jest.fn(async ({ where }) => experiments.find(e => e.activeStoreId === where.activeStoreId) ?? null),
+        findFirst: jest.fn(async ({ where }) => experiments.find(e => !where.status || e.status === where.status) ?? null),
+        create: jest.fn(async ({ data }) => { const row = { id: `e${experiments.length}`, status: 'RUNNING', startedAt: new Date(), ...data }; experiments.push(row); return row; }),
+        updateMany: jest.fn(async ({ where, data }) => { const hit = experiments.filter(e => e.id === (where.id ?? e.id) && e.status === (where.status ?? e.status)); hit.forEach(e => Object.assign(e, data)); return { count: hit.length }; }),
+      },
+      storeSourceVisit: { groupBy: jest.fn(async () => []) },
+      storeOrder: { findMany: jest.fn(async () => []) },
+      storeNewsletterSubscriber: { findMany: jest.fn(async () => []) },
+      storeRetention: { findUnique: jest.fn(async () => retention), update: jest.fn(async ({ data }) => { retention.settings = data.settings; return retention; }) },
+      promoCode: {
+        findFirst: jest.fn(async ({ where }) => codes.find(c => c.id === where.id) ?? null),
+        create: jest.fn(async ({ data }) => { const row = { id: `code${codes.length}`, ...data }; codes.push(row); return row; }),
+        updateMany: jest.fn(async ({ where, data }) => { const hit = codes.filter(c => c.id === where.id); hit.forEach(c => Object.assign(c, data)); return { count: hit.length }; }),
+      },
+    };
+    prisma.$transaction = jest.fn(async (work: any) => work(prisma));
+    const service = new SourcePublishingService(prisma, { assertCanPublish: jest.fn() } as any);
+    return { service, prisma, store, experiments, codes, retention };
+  }
+
+  it('a popup test runs on the published design and makes B its own hidden code only when the percent differs', async () => {
+    const { service, experiments, codes } = popupPublishing();
+    await service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    expect(experiments[0]).toMatchObject({ kind: 'popup', controlRevision: 4, variantRevision: 4, request: '15% vs 10%', variantSettings: { discount: 15 }, variantPromoCodeId: 'code1' });
+    expect(codes[1]).toMatchObject({ discountType: 'PERCENT', discountValue: 15, showInEmails: false, isActive: true });
+    expect(codes[1].code).toMatch(/^BIENVENIDA15-[A-Z2-9]{4}$/);
+    const look = popupPublishing();
+    await look.service.startPopupTest('m', 's', { look: 'revista' }, 'estilo revista', 0);
+    expect(look.codes).toHaveLength(1);
+    expect(look.experiments[0].variantPromoCodeId).toBeUndefined();
+  });
+
+  it('a second test is refused while one runs, naming it', async () => {
+    const { service } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'popup', request: '15% vs 10%', startedAt: new Date() } });
+    await expect(service.startPopupTest('m', 's', { discount: 20 }, '20%', 0)).rejects.toThrow('Ya tienes una prueba de «15% vs 10%» corriendo. ¿La termino para empezar esta?');
+  });
+
+  it('keeping B without evidence applies it: the look, the code and the words with its percent', async () => {
+    const { service, experiments, retention, codes } = popupPublishing();
+    await service.startPopupTest('m', 's', { discount: 15, look: 'revista' }, '15% vs 10%', 0);
+    await service.finishWith('m', 's', 1, experiments[0].id, 'B');
+    expect(experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'B', activeStoreId: null });
+    expect(retention.settings).toMatchObject({ popupLook: 'revista', popupLookPrevious: 'postal', popupPromoCodeId: codes[1].id, signupBody: 'Recetas y un 15 % de bienvenida.' });
+    expect(codes[0].isActive).toBe(true);
+  });
+
+  it('keeping A turns B code off and leaves the popup alone', async () => {
+    const { service, experiments, retention, codes } = popupPublishing();
+    await service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    await service.finishWith('m', 's', 1, experiments[0].id, 'A');
+    expect(experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'A' });
+    expect(codes[1].isActive).toBe(false);
+    expect(retention.settings.popupPromoCodeId).toBe('codeA');
+  });
+
+  it('final review I1: ending a selling test never touches the published design (the merchant may have published since)', async () => {
+    const { service, store, experiments } = popupPublishing({ running: { id: 'sell1', activeStoreId: 's', status: 'RUNNING', kind: 'selling', controlRevision: 12, variantRevision: 12, startedAt: new Date() } });
+    store.publishedSourceRevision = 14;
+    await service.finishWith('m', 's', 0, 'sell1', 'B');
+    expect(store.publishedSourceRevision).toBe(14);
+    expect(experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'B' });
+  });
+
+  it('a design test kept as B publishes B', async () => {
+    const { service, store, experiments } = popupPublishing({ running: { id: 'd1', activeStoreId: 's', status: 'RUNNING', kind: 'design', controlRevision: 4, variantRevision: 6, startedAt: new Date() } });
+    await service.finishWith('m', 's', 0, 'd1', 'B');
+    expect(store.publishedSourceRevision).toBe(6);
+    expect(experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'B' });
+  });
+
+  it('the A/B page buttons follow the popup rules: stop turns B code off, apply B sets the popup (final review 2026-11-09)', async () => {
+    const stop = popupPublishing();
+    await stop.service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    await stop.service.finish('m', 's', 1, stop.experiments[0].id, false);
+    expect(stop.experiments[0]).toMatchObject({ status: 'STOPPED', winner: null });
+    expect(stop.codes[1].isActive).toBe(false);
+    const apply = popupPublishing();
+    await apply.service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    Object.assign(apply.experiments[0], { startedAt: new Date(Date.now() - 9 * 86400000) });
+    apply.prisma.storeSourceVisit.groupBy.mockResolvedValue([{ variant: 'A', _count: 300 }, { variant: 'B', _count: 300 }]);
+    apply.prisma.storeNewsletterSubscriber.findMany.mockResolvedValue([...Array(20).fill({ sourceVisit: { variant: 'A' } }), ...Array(60).fill({ sourceVisit: { variant: 'B' } })]);
+    await apply.service.finish('m', 's', 1, apply.experiments[0].id, true);
+    expect(apply.experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'B' });
+    expect(apply.retention.settings).toMatchObject({ popupPromoCodeId: apply.codes[1].id, signupBody: 'Recetas y un 15 % de bienvenida.' });
+  });
+
+  it('unpublishing turns B code off', async () => {
+    const { service, experiments, codes } = popupPublishing();
+    await service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    await service.visibility('m', 's', false, 1);
+    expect(experiments[0].status).toBe('STOPPED');
+    expect(codes[1].isActive).toBe(false);
+  });
+
+  it('the numbers count signups per version, judge a popup test on them, and say when it is stale', async () => {
+    const started = new Date(Date.now() - 30 * 86400000);
+    const { prisma } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'popup', request: '15% vs 10%', controlRevision: 4, variantRevision: 4, startedAt: started, extendedUntil: null } });
+    prisma.storeSourceVisit.groupBy.mockResolvedValue([{ variant: 'A', _count: 300 }, { variant: 'B', _count: 300 }]);
+    prisma.storeNewsletterSubscriber.findMany.mockResolvedValue([...Array(20).fill({ sourceVisit: { variant: 'A' } }), ...Array(60).fill({ sourceVisit: { variant: 'B' } })]);
+    const { publicationState } = await import('./source-publishing.service');
+    const shown: any = await publicationState(prisma, 's');
+    expect(shown.experiment).toMatchObject({ kind: 'popup', request: '15% vs 10%', days: 30 });
+    expect(shown.experiment.variants.map((v: any) => v.signups)).toEqual([20, 60]);
+    expect(shown.experiment.evidence.winner).toBe('B');
+    expect(shown.experiment.stale).toBe(false);
+  });
+
+  it('a popup test counts the WhatsApp signups too (review I4, rasca y elige 2026-11-10)', async () => {
+    const { prisma } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'popup', request: 'x', controlRevision: 4, variantRevision: 4, startedAt: new Date(), extendedUntil: null } });
+    prisma.storeSourceVisit.groupBy.mockResolvedValue([{ variant: 'A', _count: 100 }, { variant: 'B', _count: 100 }]);
+    prisma.storeNewsletterSubscriber.findMany.mockResolvedValue([{ sourceVisit: { variant: 'A' } }]);
+    prisma.$queryRaw = jest.fn(async () => [{ variant: 'B', n: 7 }, { variant: 'A', n: 2 }]);
+    const { publicationState } = await import('./source-publishing.service');
+    const shown: any = await publicationState(prisma, 's');
+    expect(shown.experiment.variants.map((v: any) => v.signups)).toEqual([3, 7]);
+  });
+
+  it('a test with no answer after 28 days is stale until «Seguir 2 semanas más»', async () => {
+    const started = new Date(Date.now() - 29 * 86400000);
+    const { service, prisma, experiments } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'design', controlRevision: 4, variantRevision: 6, startedAt: started, extendedUntil: null } });
+    const { publicationState } = await import('./source-publishing.service');
+    expect(((await publicationState(prisma, 's')) as any).experiment.stale).toBe(true);
+    await service.extend('m', 's', 'e0');
+    expect(experiments[0].extendedUntil.getTime()).toBeGreaterThan(Date.now() + 13 * 86400000);
+    expect(((await publicationState(prisma, 's')) as any).experiment.stale).toBe(false);
+  });
+});
+
+describe('la tienda que vende sola (spec 2026-11-16)', () => {
+  const files = [{ path: 'index.html', content: '<main></main>', encoding: 'utf8' }, { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {};', encoding: 'utf8' }];
+  function serviceWith(visitVariant: 'A' | 'B') {
+    const prisma: any = {
+      store: { findFirst: jest.fn().mockResolvedValue({ id: 's1', publishedSourceRevision: 9, publishedRuntimeDigest: null }) },
+      storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue({ id: 'e1', kind: 'selling', controlRevision: 7, variantRevision: 7, variantSettings: { buyWord: 'Lo quiero' } }) },
+      storeSourceVisit: { upsert: jest.fn().mockResolvedValue({ variant: visitVariant, token: 'tok' }) },
+      storeSellingChange: { findMany: jest.fn().mockResolvedValue([{ kind: 'stickyBuy', status: 'KEPT', settings: { stickyBuy: true }, endedAt: new Date() }]) },
+      storeSourceVersion: { findUnique: jest.fn() },
+    };
+    const service = new SourcePublishingService(prisma);
+    const snapshot = jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files } as any);
+    jest.spyOn(service as any, 'assetVersion').mockResolvedValue('9-aaaaaaaaaaaa');
+    return { service, snapshot };
+  }
+  it('serves the published design to both sides of a selling test and gives side B its switches over the kept ones', async () => {
+    const b = serviceWith('B');
+    const siteB: any = await b.service.publicSite('demo', 'visitor-1');
+    expect(siteB.revision).toBe(9);
+    expect(siteB.selling).toEqual({ stickyBuy: true, buyWord: 'Lo quiero' });
+    const a = serviceWith('A');
+    const siteA: any = await a.service.publicSite('demo', 'visitor-2');
+    expect(siteA.revision).toBe(9);
+    expect(siteA.selling).toEqual({ stickyBuy: true });
+  });
+});

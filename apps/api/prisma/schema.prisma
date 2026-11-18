@@ -422,6 +422,11 @@ model Merchant {
   storeImports                StoreImport[]
   complaints                  Complaint[]
   payoutAccounts              PayoutAccount[]
+  // Plans 2026-11-07: the monthly YAPI credits and whether stores may be published (FREE may not). Ops sets it by hand.
+  plan                        MerchantPlan                @default(FREE)
+  creditGrants                MerchantCreditGrant[]
+  /// Owner 2026-11-12 (Amboras's setup steps): role, what pagosYa should help with, WhatsApp; null until answered.
+  onboarding                  Json?
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -1067,6 +1072,8 @@ model Store {
   // URL. The latter two never create a PaymentIntent and do not require NIT.
   checkoutMode                 String                           @default("payment")
   leadCaptureUrl               String?
+  /// The floating WhatsApp button (owner 2026-11-08): on for any store with a number, beside the assistant when both are on.
+  whatsappButton               Boolean                          @default(true)
   // Merchant-controlled cross-sell shelf inside the cart review. Recommendations
   // are explicitly selected by the merchant and always exclude cart items.
   cartRecommendationsEnabled   Boolean                          @default(true)
@@ -1111,6 +1118,9 @@ model Store {
   sourcePublicationVersion     Int                              @default(0)
   sourcePublishedAt            DateTime?
   sourceExperiments            StoreSourceExperiment[]
+  /// «La tienda que vende sola» (spec 2026-11-16): small selling changes tried one at a time and kept only when they sell more.
+  autoImprove                  Boolean                      @default(true)
+  sellingChanges               StoreSellingChange[]
   sourceProject                StoreSourceProject?
   sourceGenerations            StoreSourceGeneration[]
   sourceDesignJobs             StoreSourceDesignJob[]
@@ -1126,6 +1136,8 @@ model Store {
   emailDeliveries              StoreEmailDelivery[]
   inboxThreads                 StoreInboxThread[]
   newsletterSubscribers        StoreNewsletterSubscriber[]
+  /// Spec 2026-11-10 rasca y elige: popup signups by WhatsApp.
+  whatsappSubscribers          StoreWhatsappSubscriber[]
   debtCollectionLinks          DebtCollectionLink[]
   consumerAffiliations         ConsumerInstitutionAffiliation[]
   promoCodes                   PromoCode[]
@@ -1356,11 +1368,35 @@ model StoreNewsletterSubscriber {
   name             String?
   phone            String?
   interests        String[] @default([])
+  /// Spec 2026-11-10 rasca y elige: the product (or «product:option value») the shopper chose as favourite.
+  favourite        String?
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  /// Spec 2026-11-09 A/B tests: the test visit a new popup signup came from.
+  sourceVisitId    String?
+  sourceVisit      StoreSourceVisit? @relation(fields: [sourceVisitId], references: [id], onDelete: SetNull)
 
   @@unique([storeId, email])
+  @@index([storeId, createdAt])
+  @@index([sourceVisitId])
+}
+
+/// Spec 2026-11-10 rasca y elige: a popup signup by WhatsApp (pagosYa sends no WhatsApp; the merchant writes to the list).
+model StoreWhatsappSubscriber {
+  id            String   @id @default(cuid())
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// Digits with the country code: 59171234567.
+  phone         String
+  interests     String[] @default([])
+  favourite     String?
+  isActive      Boolean  @default(true)
+  sourceVisitId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([storeId, phone])
   @@index([storeId, createdAt])
 }
 
@@ -1546,6 +1582,9 @@ model StoreSourceProject {
   storeId   String               @id
   store     Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
   revision  Int                  @default(0)
+  /// Mi tienda (2026-11-07): facts YAPI assumed still waiting on the revision in pendingFactsRevision; recounted when revision moves on.
+  pendingFacts         Int?
+  pendingFactsRevision Int?
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
   versions  StoreSourceVersion[]
@@ -1692,6 +1731,8 @@ model PromoCode {
   showInEmails    Boolean           @default(false)
   /// Only codes the merchant marked for the store assistant can be offered in its chat.
   showInAssistant Boolean           @default(false)
+  /// Spec 2026-11-09 popup games: a winner's own code is usable once (paid orders counted); null = unlimited.
+  maxUses         Int?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -2549,6 +2590,13 @@ model StoreSourceExperiment {
   startedAt       DateTime           @default(now())
   endedAt         DateTime?
   visits          StoreSourceVisit[]
+  /// Spec 2026-11-09 A/B tests: 'design' (two revisions) or 'popup' (one revision, B's popup in variantSettings).
+  kind               String    @default("design")
+  variantSettings    Json?
+  variantPromoCodeId String?
+  request            String?
+  lastNoteAt         DateTime?
+  extendedUntil      DateTime?
 
   @@index([storeId, startedAt])
 }
@@ -2562,6 +2610,7 @@ model StoreSourceVisit {
   variant      String
   createdAt    DateTime              @default(now())
   orders       StoreOrder[]
+  subscribers  StoreNewsletterSubscriber[]
 
   @@unique([experimentId, visitorHash])
   @@index([experimentId, variant])
@@ -3166,6 +3215,26 @@ model BoardState {
 }
 
 // Negative side of the AI reward-credit balance: credits applied to a finished YAPI generation.
+enum MerchantPlan {
+  FREE
+  EMPRENDEDOR
+  PRO
+}
+
+// Extra YAPI credits ops gives a merchant for one America/La_Paz month ("2026-11"), on top of the plan's.
+model MerchantCreditGrant {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  month      String
+  credits    Int
+  reason     String
+  actorLabel String
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId, month])
+}
+
 model AiCreditRedemption {
   id           String   @id @default(cuid())
   merchantId   String
@@ -3342,10 +3411,14 @@ model StoreAnalyticsEvent {
   device       String
   /// Host name only, on page_view.
   referrerHost String?
+  /// The A/B test this visitor was in when the event happened, and their side (A | B); spec 2026-11-16.
+  experimentId String?
+  variant      String?
   createdAt    DateTime @default(now())
 
   @@index([storeId, createdAt])
   @@index([createdAt])
+  @@index([experimentId, type])
 }
 
 /// G1 analytics: per Bolivia day (UTC−4) rollup of StoreAnalyticsEvent. No personal data; kept.
@@ -3712,4 +3785,26 @@ model AssistantUnanswered {
 
   @@unique([storeId, question])
   @@index([storeId, status])
+}
+
+/// «La tienda que vende sola» (spec 2026-11-16): one selling change — section order, best seller first, button word or sticky buy
+/// bar — while it is tried (TRYING, with its experiment), once kept (KEPT) or undone (UNDONE, by the rules or the merchant).
+model StoreSellingChange {
+  id           String    @id @default(cuid())
+  storeId      String
+  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// order | best | buyWord | stickyBuy
+  kind         String
+  /// The switches this change sets, e.g. {"buyWord":"Lo quiero"}.
+  settings     Json
+  status       String    @default("TRYING")
+  experimentId String?
+  /// One Spanish line for the merchant, e.g. «Botón «Lo quiero» — agregados +12%».
+  summary      String?
+  evidence     Json?
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  @@index([storeId, status])
+  @@index([storeId, endedAt])
 }

@@ -1,0 +1,847 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.johannaortiz.com/",
+    "title": "Johanna Ortiz Official Website",
+    "width": 1440,
+    "pageHeight": 3836,
+    "fonts": {
+      "h1": {
+        "family": "Amiri",
+        "size": "26px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.52px",
+        "text": "Johanna Ortiz"
+      },
+      "h2": {
+        "family": "Amiri",
+        "size": "50px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "FALL-WINTER ’26"
+      },
+      "body": {
+        "family": "Amiri",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.28px",
+        "text": "DISCOVER"
+      },
+      "button": {
+        "family": "Amiri",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Discover More"
+      },
+      "nav": {
+        "family": "Amiri",
+        "size": "22px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.52px",
+        "text": "Johanna Ortiz"
+      }
+    },
+    "page": "rgb(245, 241, 236)",
+    "header": {
+      "height": 100,
+      "position": "relative",
+      "bg": "rgba(245, 241, 236, 0.1)",
+      "links": [
+        "Johanna Ortiz",
+        "New",
+        "New Arrivals",
+        "Collections",
+        "Casa Loro WS ’27",
+        "Alma FW ’26",
+        "Celeste PF ’26",
+        "Playa Grande SV ’26",
+        "Johanna Ortiz x Omar Hur",
+        "Featured",
+        "The JO Gift Guide",
+        "Johanna's Favorites",
+        "The Holiday Packing List",
+        "The Texas Edit",
+        "Office to Dinner",
+        "Double Layering"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 720,
+        "bg": "rgb(245, 241, 236)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "50px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1px",
+          "text": "FALL-WINTER ’26"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 720,
+        "h": 1078,
+        "bg": "rgb(245, 241, 236)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "50px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "1px",
+          "text": "THE GOLDEN CAPSULE"
+        },
+        "words": 38,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1818,
+        "h": 544,
+        "bg": "rgb(245, 241, 236)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 59,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 2362,
+        "h": 530,
+        "bg": "rgb(245, 241, 236)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2892,
+        "h": 181,
+        "bg": "rgb(245, 241, 236)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.28px",
+          "text": "JOIN THE JO WORLD"
+        },
+        "words": 15,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.johannaortiz.com/",
+    "title": "Johanna Ortiz Official Website",
+    "width": 390,
+    "pageHeight": 3069,
+    "fonts": {
+      "h1": {
+        "family": "Amiri",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.44px",
+        "text": "Johanna Ortiz"
+      },
+      "h2": {
+        "family": "Amiri",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "FALL-WINTER ’26"
+      },
+      "body": {
+        "family": "Amiri",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "DISCOVER"
+      },
+      "button": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Discover More"
+      },
+      "nav": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": ""
+      }
+    },
+    "page": "rgb(245, 241, 236)",
+    "header": {
+      "height": 80,
+      "position": "relative",
+      "bg": "rgba(245, 241, 236, 0.1)",
+      "links": [
+        "Johanna Ortiz",
+        "0",
+        "New",
+        "Ready-to-Wear",
+        "Swim & Resort",
+        "Edits",
+        "Dresses",
+        "Home",
+        "JO World"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": -20,
+        "h": 520,
+        "bg": "rgb(245, 241, 236)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "FALL-WINTER ’26"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 500,
+        "h": 856,
+        "bg": "rgb(245, 241, 236)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "30px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "THE GOLDEN CAPSULE"
+        },
+        "words": 38,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1376,
+        "h": 486,
+        "bg": "rgb(245, 241, 236)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 29,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 1862,
+        "h": 277,
+        "bg": "rgb(245, 241, 236)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 2139,
+        "h": 178,
+        "bg": "rgb(245, 241, 236)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.32px",
+          "text": "JOIN THE JO WORLD"
+        },
+        "words": 15,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.johannaortiz.com/collections/all",
+    "title": "Products– Johanna Ortiz",
+    "width": 1440,
+    "pageHeight": 8253,
+    "fonts": {
+      "h1": {
+        "family": "Amiri",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.36px",
+        "text": "Products"
+      },
+      "h2": null,
+      "body": {
+        "family": "Amiri",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Ship to: Select Your Region: Bolivia / EN"
+      },
+      "button": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "View All"
+      },
+      "nav": {
+        "family": "Amiri",
+        "size": "22px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.16px",
+        "text": "Johanna Ortiz"
+      }
+    },
+    "page": "rgb(245, 241, 236)",
+    "header": {
+      "height": 100,
+      "position": "relative",
+      "bg": "rgb(245, 241, 236)",
+      "links": [
+        "Johanna Ortiz",
+        "New",
+        "New Arrivals",
+        "Collections",
+        "Casa Loro WS ’27",
+        "Alma FW ’26",
+        "Celeste PF ’26",
+        "Playa Grande SV ’26",
+        "Johanna Ortiz x Omar Hur",
+        "Featured",
+        "The JO Gift Guide",
+        "Johanna's Favorites",
+        "The Holiday Packing List",
+        "The Texas Edit",
+        "Office to Dinner",
+        "Double Layering"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 100,
+        "h": 105,
+        "bg": "rgb(245, 241, 236)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "18px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.36px",
+          "text": "Products"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 235,
+        "h": 7196,
+        "bg": "rgb(245, 241, 236)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 100,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.johannaortiz.com/collections/all?_su_rec=TtsHT4GX6JY29ugVC4q1WYz5DltpvvTx-duDVjzNHAWNL7jokkCkXSrFNDARZNIeEAkziJry3t_W4zAHzD-Wa3G0a-hGbZ_Eg9cEKXjm3ko0Kf0n9eN5Zk0efSe9uN9Q8EIHv0qDJXp_kReFNgYniNgc5reFVd3Xf4sTNJROP_8JpJUdQYOCej4gAiuuy2bjwkXu8AUzGDYLvFGas90WIDtvUyzYdcwHwAwiHbF71qdGZzZPVzwQ4CuugNY4ghI_f-zd_anTVQLOJTjVhUo1KK6LoaulrJcjzdszgqX8lh-edPzqVnboW4JdNIFipK5Yw6aUlQKFPjRZ6rtwF5DtAHEStw7C-Fo-0wvzq71PSB-FkQ&_su_rec_id=f60b7c15-9840-438d-9af8-4ef8bbb9a86d-1794667376",
+    "title": "Products– Johanna Ortiz",
+    "width": 390,
+    "pageHeight": 32281,
+    "fonts": {
+      "h1": {
+        "family": "Amiri",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.36px",
+        "text": "Products"
+      },
+      "h2": null,
+      "body": {
+        "family": "Amiri",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Ship to: Select Your Region: Bolivia / EN"
+      },
+      "button": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "View All"
+      },
+      "nav": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": ""
+      }
+    },
+    "page": "rgb(245, 241, 236)",
+    "header": {
+      "height": 80,
+      "position": "relative",
+      "bg": "rgb(245, 241, 236)",
+      "links": [
+        "Johanna Ortiz",
+        "0",
+        "New",
+        "Ready-to-Wear",
+        "Swim & Resort",
+        "Edits",
+        "Dresses",
+        "Home",
+        "JO World"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 165,
+        "h": 31344,
+        "bg": "rgb(245, 241, 236)",
+        "images": 32,
+        "video": false,
+        "heading": null,
+        "words": 340,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.johannaortiz.com/products/reveries-of-eden-earrings-in-orange",
+    "title": "Reveries of Eden Earrings - Resort '27 | Johanna Ortiz",
+    "width": 1440,
+    "pageHeight": 2245,
+    "fonts": {
+      "h1": {
+        "family": "Amiri",
+        "size": "18px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.36px",
+        "text": "Reveries of Eden Earrings"
+      },
+      "h2": null,
+      "body": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Regular price Bs6.312,00 Bs6.312,00"
+      },
+      "button": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Preorder"
+      },
+      "nav": {
+        "family": "Amiri",
+        "size": "22px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.16px",
+        "text": "Johanna Ortiz"
+      }
+    },
+    "page": "rgb(245, 241, 236)",
+    "header": {
+      "height": 100,
+      "position": "relative",
+      "bg": "rgb(245, 241, 236)",
+      "links": [
+        "Johanna Ortiz",
+        "New",
+        "New Arrivals",
+        "Collections",
+        "Casa Loro WS ’27",
+        "Alma FW ’26",
+        "Celeste PF ’26",
+        "Playa Grande SV ’26",
+        "Johanna Ortiz x Omar Hur",
+        "Featured",
+        "The JO Gift Guide",
+        "Johanna's Favorites",
+        "The Holiday Packing List",
+        "The Texas Edit",
+        "Office to Dinner",
+        "Double Layering"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 100,
+        "h": 808,
+        "bg": "rgb(245, 241, 236)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "18px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "0.36px",
+          "text": "Reveries of Eden Earrings"
+        },
+        "words": 119,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 908,
+        "h": 477,
+        "bg": "rgb(245, 241, 236)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "17px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.34px",
+          "text": "You Might Also Like"
+        },
+        "words": 28,
+        "perRow": 6,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Amiri",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.16px",
+      "text": "Regular price Bs6.312,00 Bs6.312,00 /"
+    },
+    "galleryImages": 1,
+    "swatches": 14,
+    "selects": 2,
+    "accordions": 0
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.johannaortiz.com/products/reveries-of-eden-earrings-in-orange",
+    "title": "Reveries of Eden Earrings - Resort '27 | Johanna Ortiz",
+    "width": 390,
+    "pageHeight": 2745,
+    "fonts": {
+      "h1": {
+        "family": "Amiri",
+        "size": "18px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.36px",
+        "text": "Reveries of Eden Earrings"
+      },
+      "h2": null,
+      "body": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "Regular price Bs6.312,00 Bs6.312,00"
+      },
+      "button": {
+        "family": "Amiri",
+        "size": "0px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Previous"
+      },
+      "nav": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": ""
+      }
+    },
+    "page": "rgb(245, 241, 236)",
+    "header": {
+      "height": 80,
+      "position": "relative",
+      "bg": "rgb(245, 241, 236)",
+      "links": [
+        "Johanna Ortiz",
+        "0",
+        "New",
+        "Ready-to-Wear",
+        "Swim & Resort",
+        "Edits",
+        "Dresses",
+        "Home",
+        "JO World"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 80,
+        "h": 1122,
+        "bg": "rgb(245, 241, 236)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "18px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "0.36px",
+          "text": "Reveries of Eden Earrings"
+        },
+        "words": 124,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1202,
+        "h": 731,
+        "bg": "rgb(245, 241, 236)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.32px",
+          "text": "You Might Also Like"
+        },
+        "words": 28,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Amiri",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.32px",
+      "text": "Regular price Bs6.312,00 Bs6.312,00 /"
+    },
+    "galleryImages": 1,
+    "swatches": 14,
+    "selects": 2,
+    "accordions": 0
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.johannaortiz.com/cart",
+    "title": "Your Shopping Cart– Johanna Ortiz",
+    "width": 1440,
+    "pageHeight": 1294,
+    "fonts": {
+      "h1": {
+        "family": "Amiri",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Your Cart"
+      },
+      "h2": null,
+      "body": {
+        "family": "Amiri",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Ship to: Select Your Region: Bolivia / EN"
+      },
+      "button": {
+        "family": "Amiri",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Amiri",
+        "size": "22px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.16px",
+        "text": "Johanna Ortiz"
+      }
+    },
+    "page": "rgb(245, 241, 236)",
+    "header": {
+      "height": 100,
+      "position": "relative",
+      "bg": "rgb(245, 241, 236)",
+      "links": [
+        "Johanna Ortiz",
+        "New",
+        "New Arrivals",
+        "Collections",
+        "Casa Loro WS ’27",
+        "Alma FW ’26",
+        "Celeste PF ’26",
+        "Playa Grande SV ’26",
+        "Johanna Ortiz x Omar Hur",
+        "Featured",
+        "The JO Gift Guide",
+        "Johanna's Favorites",
+        "The Holiday Packing List",
+        "The Texas Edit",
+        "Office to Dinner",
+        "Double Layering"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 343,
+        "bg": "rgb(245, 241, 236)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Amiri",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.4px",
+          "text": "Your Cart"
+        },
+        "words": 21,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

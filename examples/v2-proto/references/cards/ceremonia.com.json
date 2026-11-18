@@ -1,0 +1,73 @@
+{
+  "host": "ceremonia.com",
+  "name": "Ceremonia",
+  "at": "2026-11-14T14:55:31.140Z",
+  "mood": "Directo, gráfico y festivo: tipografía negra extendida, bordes duros, crema cálido y bloques de rosa, coral y amarillo.",
+  "idea": "Convertir el cuidado capilar en un sistema de rituales fácil de recorrer, mezclando producto aislado, demostración social y bloques editoriales con apariencia de cartel.",
+  "header": "Dos franjas apiladas y no fijas. En escritorio, una barra de anuncio rosa de 43 px con mensaje centrado y flechas en los extremos; debajo, navegación crema de unos 78 px, para un total de 121 px. La segunda fila coloca tres enlaces a la izquierda —Shop, Bundle & Save, Holiday Gifts—, el logotipo tipográfico Ceremonia centrado y, a la derecha, botón negro Hair Quiz, selector USD/EN, búsqueda, notificaciones o fidelidad, cuenta y bolsa. En teléfono, la barra rosa mide 56 px y admite dos líneas; debajo hay una fila crema de unos 61 px: menú y búsqueda a la izquierda, logotipo centrado y notificaciones, cuenta y bolsa a la derecha. Los enlaces, la moneda y Hair Quiz desaparecen dentro del menú. Todo se delimita con líneas negras finas.",
+  "hero": "Carrusel audiovisual a sangre completa inmediatamente bajo la navegación: 1440 × 560 px en escritorio y aproximadamente 390 × 340 px en teléfono. Usa una naturaleza muerta de regalos en iluminación roja oscura; el producto queda como silueta y el texto blanco concentra el contraste. En escritorio, titular centrado de unas 48 px, una línea —“New in: Holiday Gifts”— y botón blanco debajo. En teléfono, el recorte se vuelve vertical, el titular ocupa dos líneas y ronda 40–44 px; el botón blanco crece hasta unos 154 × 43 px. Flechas circulares blancas se anclan a los laterales y dos puntos de paginación aparecen abajo. La imagen no se encierra en márgenes.",
+  "catalog": "Cabecera ilustrada a sangre completa de 450 px en escritorio y 240 px en teléfono, con “Products” en blanco, centrado y en mayúsculas: 72 px en escritorio y 48 px en móvil. Debajo, escritorio presenta una barra de control sobre fondo crema: Availability y Price a la izquierda; contador de 63 productos y Sort a la derecha. La retícula visible es de 3 columnas con calles de unos 16 px y margen exterior cercano a 50 px; cada imagen se encierra con borde negro de 1–2 px y ocupa aproximadamente 435 × 435 px antes del texto. En teléfono, los controles se reducen a una sola línea “Filter” y la colección pasa a una columna, con margen de 10 px y tarjeta de unos 370 px de ancho. Las etiquetas como Sold Out son rectángulos negros con texto blanco en la esquina superior izquierda. La página es deliberadamente larga: 6320 px en escritorio y 13 735 px en teléfono.",
+  "card": "Tarjeta de aristas rectas, sin sombra ni radio. La fotografía principal es casi cuadrada, con fondo gris cálido o fotografía de campaña, borde negro fino y producto grande pero con aire alrededor. Debajo aparecen nombre en mayúsculas, una línea descriptiva, estrellas y número de reseñas, y precio; los descuentos muestran precio anterior tachado y nuevo precio. Estados como Sold Out se superponen arriba. Algunas tarjetas incorporan flechas laterales, señal de galería o segunda imagen; la captura no confirma de forma inequívoca un cambio al pasar el cursor. En bloques editoriales de la portada sí aparece “Add to Bag” como acción rápida bajo cada producto; en la retícula de catálogo no se ve un botón rápido persistente.",
+  "product": "En escritorio, la zona principal empieza bajo los 121 px de cabecera y se divide aproximadamente 50/50. A la izquierda hay una columna estrecha de miniaturas de unos 72 px y una imagen principal cuadrada de cerca de 585 × 585 px sobre gris cálido, con flechas circulares. A la derecha: estrellas y 125 reseñas; tres beneficios en rosa; nombre en mayúsculas de 28 px; precio anterior tachado y precio actual de 49 USD; selector de tamaño con dos botones; subtítulo y descripción; selector de cantidad y un botón negro Add to Bag que completa la fila. Sobre el primer pliegue también entran un carrusel “Pairs Well With” de dos productos y el comienzo de “See Real Reviews”. Después aparecen una banda horizontal de beneficios e iconos, pestañas o acordeones de Description, Ingredients, How to Use y Awards, contenido editorial, comparación “As Seen on You” y un bloque extenso de reseñas con nota 4,9/5, distribución, filtros y fotos. La medición detecta 12 acordeones/controles plegables. En teléfono, la galería ocupa todo el ancho y unos 250 px de alto, con puntos de paginación; después se apilan reseñas, beneficios, título de 24 px, precio, variantes, descripción, cantidad y botón. “Pairs Well With” y las reseñas visuales pasan a carruseles horizontales. Una barra de compra fija aparece en la parte inferior durante el desplazamiento.",
+  "cart": "Es una página, no un cajón. En escritorio, tras la cabecera aparece “Cart 1” a 48 px y una composición de dos zonas: a la izquierda, la fila del producto con miniatura, nombre, variante, precio, selector de cantidad y eliminación; a la derecha, un resumen estrecho separado por una línea vertical, con campo de descuento, total estimado y botón negro Checkout. Debajo se apilan pagos acelerados Shop Pay, PayPal y Google Pay como barras de color. La segunda mitad ofrece “You May Also Like” en carrusel de tarjetas. La captura solo muestra un artículo y no presenta venta adicional dentro del resumen. No se proporcionó captura del carrito en teléfono.",
+  "type": "Sistema de dos sans serif. NimbusSansBoldExtended lleva identidad, navegación y titulares: formas anchas, mucho peso y mayúsculas. Los H2 de portada son de 48 px en escritorio y 28 px en teléfono; el H1 de catálogo, 72/48 px; el nombre de producto, 28/24 px. Navegación y anuncio rondan 12 px y 700, aunque en algunas vistas móviles el anuncio baja a peso 400 con tracking de 0,36 px. BasisGrotesque se reserva para botones, precios y texto funcional: botones de 16 px, mayúsculas y tracking de 0,48 px. La combinación funciona porque la fuente extendida crea rótulos y Basis mantiene legibles acciones y datos. Los titulares usan interlínea muy cerrada; los textos corridos se mantienen entre 12 y 16 px.",
+  "colour": "El fondo estructural es crema cálido, rgb(242, 230, 210), empleado en navegación, páginas y aire entre módulos. El negro casi puro, rgb(3–4, 3–4, 2–4), sirve para tinta, bordes, botones y etiquetas de estado. El rosa intenso de la barra de anuncio y del distintivo de descuento funciona como acento recurrente. Amarillo cálido identifica bloques de bundles o contenido comprable; coral marca el Hair Quiz y rosa claro el constructor de ritual. En producto, un rosa suave se reserva para beneficios y mensajes secundarios. La regla es usar color en superficies completas con contorno negro, no como degradado decorativo.",
+  "photos": "Alterna tres registros. Primero, producto aislado y frontal sobre gris o crema, con escala generosa y sombra mínima. Segundo, naturalezas muertas de campaña muy cromáticas, como el hero rojo, donde envases y utilería forman una silueta. Tercero, personas y contenido de clientas en formato vertical, con apariencia de vídeo social y botón de reproducción. Las imágenes de producto conservan etiqueta legible; las de estilo de vida se recortan con el rostro o el cabello como centro. Los bloques editoriales usan recortes rectangulares sin esquinas redondeadas y bordes negros.",
+  "motion": "Hay movimiento explícito: el hero es un carrusel o vídeo con flechas y puntos; la medición registra siete vídeos en portada y ocho en producto. Bestsellers, bundles, prensa, “Shop This Ritual”, reseñas reales y recomendaciones usan carruseles horizontales con flechas o paginación. Las piezas de clientas incluyen icono de reproducción. Es probable que las tarjetas cambien de imagen al pasar el cursor, pero la captura no permite confirmarlo. La barra de beneficios se comporta como marquesina. El distintivo flotante de 15% off permanece superpuesto durante el desplazamiento y llega a tapar parte del contenido; debe tratarse como widget comercial, no como parte de la composición base.",
+  "phone": "La recomposición no miniaturiza el escritorio: elimina enlaces, concentra el header en iconos y convierte casi todos los módulos en una sola columna o carrusel. El hero cambia de 560 a 340 px y usa otro recorte. Los tres accesos rápidos pasan de una fila de tres a tres botones apilados, con margen lateral de unos 16 px y alturas cercanas a 55 px. Bestsellers muestra un producto protagonista por pantalla; las bandas de prensa se vuelven carrusel. “Shop This Ritual” apila vídeo y productos, y catálogo pasa de tres columnas a una. En producto desaparece la columna de miniaturas, sustituida por puntos; variantes, cantidad y compra se apilan, mientras las recomendaciones conservan desplazamiento horizontal. Los títulos bajan de 48 a 28 px, salvo el catálogo, que usa 48 px. Los márgenes habituales son de 10–16 px y los bordes negros se mantienen para no perder la gramática visual.",
+  "signature": "Los tres accesos de compra inmediatamente después del hero —amarillo, coral y rosa, cada uno con icono negro, contorno y texto extendido— convierten la navegación comercial en una fila de carteles físicos.",
+  "home": [
+    {
+      "role": "Presentar la campaña vigente y llevar directamente a la colección estacional.",
+      "composition": "Hero audiovisual a sangre completa de 560 px en escritorio y 340 px en teléfono, con texto y CTA centrados, flechas laterales y puntos inferiores."
+    },
+    {
+      "role": "Ofrecer tres rutas de compra según problema, diagnóstico o ahorro.",
+      "composition": "Banda de 104 px con tres botones iguales en escritorio; en teléfono se apilan en una sección de 228 px. Cada bloque usa fondo distinto, borde negro, icono y rótulo centrado."
+    },
+    {
+      "role": "Dar prioridad comercial a los productos de mayor conversión.",
+      "composition": "Cabecera “Our Bestsellers” de 48/28 px, regla inferior y Shop All alineado a la derecha. Sigue un carrusel de 661 px en escritorio; los productos alternan envase aislado, descripción breve y Add to Bag. En móvil se ve una tarjeta protagonista por pantalla."
+    },
+    {
+      "role": "Aportar validación editorial sin interrumpir la compra.",
+      "composition": "Franja rosa de unos 154 px en escritorio y 115 px en teléfono con rótulo Featured In y una sucesión horizontal de logotipos negros de medios."
+    },
+    {
+      "role": "Vender una rutina completa mediante demostración y cesta conjunta.",
+      "composition": "Módulo de 826 px en escritorio dividido en dos columnas: vídeo vertical sobre panel amarillo a la izquierda y lista de tres productos a la derecha, rematada por Add All to Bag. En teléfono, vídeo y lista se apilan dentro de una sección cercana a 993 px."
+    },
+    {
+      "role": "Cambiar la lógica de navegación de producto a necesidad capilar.",
+      "composition": "Título separado de 48/28 px y bloque de cuatro opciones. En escritorio, lista tipográfica grande a la izquierda y retrato de cabello a la derecha; las palabras cambian el contenido visual. En teléfono se conserva como selector de una columna o carrusel."
+    },
+    {
+      "role": "Elevar el valor medio con conjuntos ya preparados.",
+      "composition": "Gran panel amarillo de 730 px en escritorio y 613 px en móvil, encerrado por borde negro. Cabecera Bundles con Shop All y carrusel de cuatro tarjetas visibles en escritorio; cada tarjeta tiene imagen, nombre y precio."
+    },
+    {
+      "role": "Demostrar resultados con contenido generado por clientas.",
+      "composition": "Banda “See Real Reviews” de unos 610 px con cuatro o más vídeos verticales en escritorio; en móvil se muestran pocas piezas por vez y se desplazan horizontalmente. Los controles de reproducción viven sobre las imágenes."
+    },
+    {
+      "role": "Explicar fórmula, procedencia y criterio de producto.",
+      "composition": "Sección “Our Approach” de 497 px en escritorio: texto centrado o en columna izquierda y naturaleza muerta de toda la gama a la derecha, sobre una banda lavanda grisácea. En teléfono se apila y crece hasta unos 719 px."
+    },
+    {
+      "role": "Cerrar la narrativa con fundadora, herencia y propósito de marca.",
+      "composition": "Módulo de 635 px en escritorio con marco rosa grueso, fotografía y bloque “The Story of Ceremonia” en dos columnas. En teléfono, imagen y texto se apilan en unos 725 px."
+    },
+    {
+      "role": "Resolver navegación secundaria, suscripción y datos corporativos.",
+      "composition": "Cierre de aproximadamente 308 px en escritorio y 287 px en teléfono, sobre crema, con enlaces y mensajes repartidos en columnas que se contraen o pliegan en móvil."
+    }
+  ],
+  "lessons": [
+    "Construye una gramática repetible con fondo crema, borde negro y bloques de color; así cada campaña puede cambiar de fotografía sin perder reconocimiento.",
+    "Después de un hero emocional, ofrece rutas de compra muy concretas: por necesidad, por diagnóstico y por ahorro. Reduce la dependencia del menú principal.",
+    "Alterna módulos de venta con pruebas de confianza —prensa, vídeos de clientas, ingredientes y reseñas— para que la página larga no parezca una sucesión de fichas.",
+    "En móvil, no reduzcas una cuadrícula: convierte productos y testimonios en carruseles de una pieza, conserva tamaños tipográficos firmes y apila los controles.",
+    "Mantén las acciones inequívocas con botones negros o blancos de alto contraste, mayúsculas de 16 px y superficies rectangulares sin efectos decorativos.",
+    "Usa una tipografía extendida para rótulos y otra más neutral para precios y controles; separar voz de marca e interfaz mejora tanto personalidad como lectura."
+  ]
+}

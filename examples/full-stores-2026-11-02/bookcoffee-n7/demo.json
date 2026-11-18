@@ -1,0 +1,46 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw5xtv6k00013ddikudap7ap",
+  "slug": "3yxa141w",
+  "photos": {
+    "ghosts-dolly-alderton.jpg": "/v1/uploads/20902f11-d6c2-4145-b26b-5d8f7797e504.jpg",
+    "intermezzo-sally-rooney.jpg": "/v1/uploads/9de1a7d1-c7df-4a8f-90d4-b806036f7505.jpg",
+    "women-who-think-too-much.jpg": "/v1/uploads/042a5e6a-e95e-4211-b3ac-0b75407b2def.jpg",
+    "tuesdays-with-morrie.jpg": "/v1/uploads/74455fb8-c8fa-4db6-a99d-4563d79624aa.jpg",
+    "better-than-the-movies.jpg": "/v1/uploads/6ef89417-9452-46f4-9248-c5b4efbc5c48.jpg",
+    "pack-libros-contemporaneos.jpg": "/v1/uploads/82602552-e391-4ce6-8ced-9851ea035a06.jpg",
+    "cuaderno-i-think-we-should-kiss.jpg": "/v1/uploads/caa3dac0-6e8c-4805-b9eb-8593e3659be5.jpg",
+    "combo-matcha-cookie-verde.jpg": "/v1/uploads/5585378c-af42-44a4-89b0-a96de14a3a49.jpg",
+    "desayuno-box-latte-ellena.jpg": "/v1/uploads/e23114f4-9062-4d3f-bc0a-f674d890fce0.jpg",
+    "caja-rolls-ellena-auto.jpg": "/v1/uploads/cdcfefe0-b103-47b6-8fc7-db758a43dd54.jpg",
+    "galletas-chocochip-bandeja.jpg": "/v1/uploads/ac9078d8-23bf-469e-b4eb-fd746ef63c4a.jpg"
+  },
+  "categories": {
+    "Libros": "cmw5xtv6n00033ddiy0a3pv5l",
+    "Papelería": "cmw5xtv6o00053ddimpf1736c",
+    "Café y algo dulce": "cmw5xtv6p00073ddibscp9njk"
+  },
+  "products": {
+    "Ghosts - Dolly Alderton": "cmw5xtv6s000b3ddizz616qco",
+    "Intermezzo - Sally Rooney": "cmw5xtv70000f3ddi6iomfbdf",
+    "Women Who Think Too Much - Susan Nolen-Hoeksema": "cmw5xtv75000j3ddiruf28rya",
+    "Tuesdays with Morrie - Mitch Albom": "cmw5xtv78000n3ddiv1ugc1hc",
+    "Better Than the Movies - Lynn Painter": "cmw5xtv7b000r3ddi1gf8e01q",
+    "Pack de libros contemporáneos": "cmw5xtv7f000v3ddiq6kcochy",
+    "Cuaderno I Think We Should Kiss": "cmw5xtv7j000z3ddics4v7dwv",
+    "Matcha latte helado + cookie": "cmw5xtv7m00133ddiddkcs7tc",
+    "Desayuno de lectura con latte helado": "cmw5xtv7p00173ddi30h7gffs",
+    "Caja de 3 rolls rellenos": "cmw5xtv7s001b3ddiffx9x1s8",
+    "Galletas chocochip": "cmw5xtv7u001f3ddim04hpg9q"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw5xtv89001n3ddi93c34tn5"
+}

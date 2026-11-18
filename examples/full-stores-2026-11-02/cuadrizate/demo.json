@@ -1,0 +1,59 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw5bw0b800011od9x692zswn",
+  "slug": "4uzqa48a",
+  "photos": {
+    "b6021c47-eb9c-460c-b828-78d7e9b50dea.jpg": "/v1/uploads/d9d14bfd-fac2-4d0e-b963-d9958ec06db0.jpg",
+    "a09884f1-707e-427c-b902-5ed620f1a058.jpg": "/v1/uploads/48f080e1-e0de-4673-8862-b173acd6afbb.jpg",
+    "f3a3220d-7a77-4b27-9d33-56faf8925850.jpg": "/v1/uploads/878b395b-a9c4-4dd5-9cc5-2ea5fa038b4d.jpg",
+    "1e01ad23-4d11-4969-986f-a86125319d94.jpg": "/v1/uploads/12b18ade-5eb5-461e-8cf5-cb50eb216416.jpg",
+    "e3617162-16fa-431d-a723-75785ea51687.jpg": "/v1/uploads/c97ec6bb-6c65-4851-8aae-af02719423cd.jpg",
+    "6d7e077b-d9a9-4593-9265-01b1b4d9d99f.jpg": "/v1/uploads/f398404b-62ee-451a-88f9-fc855102d9a9.jpg",
+    "28f9edc3-4e81-4dfc-bacf-42b7e0dc6d58.jpg": "/v1/uploads/b70a248c-7605-4926-a6d8-75aac6cce866.jpg",
+    "72fc842c-cde9-4fd6-9025-3f123c2148da.jpg": "/v1/uploads/45b6e9f7-a5f9-4afc-a322-5ab4112a0875.jpg",
+    "26ec1b51-a3ff-4b4e-917a-0ff245ed21db.jpg": "/v1/uploads/ea34f528-1b47-4e7a-a3fe-331af56eafd8.jpg",
+    "4a7fee8d-330d-4979-8532-84abacbe5f8e.jpg": "/v1/uploads/483262e4-4bf2-4318-b30e-d8c52601fc04.jpg",
+    "58595f67-9e1a-4fd0-a55f-125992555c03.jpg": "/v1/uploads/a4280bac-ddcf-4f3d-bce3-ae31cb080558.jpg",
+    "0902b1cf-f001-472c-a4a4-8e9f1b504139.jpg": "/v1/uploads/27454399-aa28-4d3e-8fba-b917411bbe55.jpg",
+    "97dc8b8d-0a57-40c3-8c47-ede1b4f06779.jpg": "/v1/uploads/d3232521-b9c4-486f-a0ed-9b3ffabac952.jpg",
+    "1e9cff62-5fec-4e0e-be77-dc9554cc0215.jpg": "/v1/uploads/c242c7ed-e4f5-4fe7-b0ba-49dc7196fae9.jpg",
+    "0752d165-8d76-416b-85ee-d4a17772eeb4.jpg": "/v1/uploads/1cb0fcc6-637f-4155-b1ac-23e2f1615376.jpg",
+    "902455f2-6761-495e-a193-65a785745bb9.jpg": "/v1/uploads/bf263d68-37a6-4ea4-9016-a8564ab28a07.jpg",
+    "286819ba-e6c6-42f6-b458-17fe15b95338.jpg": "/v1/uploads/1dc0333b-bdc7-4226-a88c-ca46621dd84d.jpg",
+    "53fd55a3-9bd3-4fe0-a904-5b9cfd4f3ea1.jpg": "/v1/uploads/cce4eefb-6e1e-43da-babe-477d51c4842f.jpg",
+    "82f551df-557f-49b9-8380-e359981dc891.jpg": "/v1/uploads/19aa4fb8-bbc3-4a99-924b-35d3887f7550.jpg",
+    "73fa33f1-ac81-4905-8360-109fc2ee67e2.jpg": "/v1/uploads/db88e450-aa63-42e5-ba85-c5902c202a35.jpg",
+    "a9f155f0-804e-46b4-9498-62910217a22c.jpg": "/v1/uploads/67dd0d45-54f2-4907-9131-73a8cdbfc8d5.jpg",
+    "131ac401-3316-45cc-8c86-5305d8b87239.jpg": "/v1/uploads/695db2a0-9168-4c25-8e89-0918173a8d96.jpg",
+    "d1c25f15-16cd-4bd3-b965-d2227713c18e.jpg": "/v1/uploads/92d24944-c75b-4995-92bf-3e1e4403b65e.jpg",
+    "a90eabbd-063e-4e6a-a97e-2e65f5d27584.jpg": "/v1/uploads/b17804d4-211c-4c26-858f-8387c6eee76a.jpg",
+    "c2966a5d-8196-40d6-8e00-a35c08b06547.jpg": "/v1/uploads/112b9cc9-957a-4463-a08b-aab39b10ea18.jpg",
+    "6e7ab759-9d13-4b7a-9c1f-0915af5583e4.jpg": "/v1/uploads/4b4773ae-0eea-4b32-850d-2c8b8193cdc7.jpg",
+    "db84dec9-46e8-46fb-96a9-066a0068a6c7.jpg": "/v1/uploads/ab327de6-03ae-4b4c-aa60-b60cbe985a67.jpg"
+  },
+  "categories": {
+    "Contemporáneos": "cmw5bw0bg00031od9c7ovo3gz",
+    "Clásicos": "cmw5bw0bh00051od9l3wvt6zl"
+  },
+  "products": {
+    "Ventana a Amalfi": "cmw5bw0c7000d1od9m21a0gzc",
+    "Flores en azul": "cmw5bw0cc000l1od9kiplz19y",
+    "Buenas noticias": "cmw5bw0ci000t1od9tfxlwbqs",
+    "Mercado de sábado": "cmw5bw0cm00111od9n8qufwu5",
+    "Sendero de otoño": "cmw5bw0cr00191od9r3qedtdw",
+    "Café sobre azulejos": "cmw5bw0cx001h1od9o0sq1ynl",
+    "Té y novelas": "cmw5bw0d0001p1od96c6c35xe",
+    "La disquería": "cmw5bw0d4001x1od9ha3yj9lz",
+    "Tarde en el parque": "cmw5bw0d800251od91y5lpe4o"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw5bw0dr002d1od9hu2g8fsk"
+}

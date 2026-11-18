@@ -176,7 +176,7 @@ test('hosted storefront subscribes and preserves saved-cart identity across page
   const secureCart = page.getByRole('dialog', { name: 'Guardar tu pedido para después' });
   await secureCart.getByLabel('Tu correo').fill('cliente@example.com'); await secureCart.getByRole('checkbox').check(); await secureCart.getByRole('button', { name: 'Enviar' }).click();
   await expect(recovery.getByRole('status')).toContainText('Carrito guardado');
-  await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   await frame.getByRole('button', { name: 'Pagar con pagosYa' }).click(); await expect(page.getByText('Pago listo')).toBeVisible(); expect(checkout.recoveryToken).toBe('c'.repeat(64));
 });
 

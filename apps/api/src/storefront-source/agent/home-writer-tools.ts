@@ -9,11 +9,26 @@ import { evaluateCalmTitles, evaluateHomeWriterRules, evaluatePlayfulCover, home
 import { AMBIENT_PARTS, HOME_MOTION_BRIEF, ambientPartsUsed, motionPartsUsed } from '../home-directions';
 import { SHELL_PATH } from './agent-workspace';
 import type { HomeReviewer } from './home-writer-review';
+import { evaluateBadges, evaluateBigPhotos, evaluateBuyInView, evaluateNavShell, evaluateNoDrawings, evaluateCardPhotos, evaluateDetails, evaluateHeaderFit, evaluateLopsided, evaluateSharpPhotos, evaluateTitleScale, evaluateWordsOnlyBands, hiddenCardParts, rawColours, unknownKitVars } from '../source-studio-spike';
+import { CHASSIS_BRIEF, CHASSIS_EXTRA_PARTS, CHASSIS_HERO_PARTS, CHASSIS_KIT_BRIEF, CHASSIS_PARTS, CHASSIS_PATHS, PART_PROBLEM_START, partProblemLine, partProblems, partsInShell, shellWithStoreParts, type ChassisPart, type ShellPart } from './chassis-parts';
+import { BRIEF_GUIDE, DESIGN_BRIEF_FIELDS, DESIGN_PLAN_TEXT, briefProblems, type DesignBrief, type DesignPlan } from '../home-directions';
 
 /* Spec 2026-10-29 home page writer: Amboras's recipe on the locked Esencial chassis — one home file and the tokens. */
 export const HOME_PATH = 'components/home.tsx';
 /** Owner 2026-10-30 («the footer always is the same»): YAPI writes each store's footer; the Shell renders it. */
 export const FOOTER_PATH = 'components/footer.tsx';
+/** Owner rules a studio check blocks on (twice per run, then advice): photo size, the phone header, the product page's buy button,
+ *  round badges with words. Owner 2026-11-12 («copy amboras»): the rest of design is advice, like Amboras's check_build.
+ *  Lines as the verdict writes them: «(1280) …» or «(ficha 1280) …». */
+export const OWNER_RULES: readonly RegExp[] = [
+  /^\((?:ficha )?\d+\) Foto demasiado grande/,
+  /^\(\d+\) En el celular(?:,| el encabezado)/,
+  /^\(ficha \d+\) En la ficha el botón de compra/,
+  /^\(\d+\) Insignia redonda con palabras/,
+  /^\(\d+\) (?:En el encabezado no se ve|En la computadora el encabezado no muestra)/,
+  /^\(\d+\) Hay \d+ dibujos o adornos/,
+  /^\(\d+\) La portada no usa su (?:momento|extra) asignado/,
+];
 /** Spec 2026-11-04 writer on templates: the themed template the store wears (its id, name and the sections it filled). */
 export type WriterTemplate = { id: string; name: string; layout: unknown[] };
 /** Spec 2026-11-04 §4 (owner: «i dont care if cheap or costly i want good stores»): the strongest settings. */
@@ -28,15 +43,17 @@ export const HOME_WRITER_TOOLS: readonly AgentToolDefinition[] = [
   strictTool('read_chassis', 'Lee lo que la portada puede usar: partes del kit, datos de la tienda (store-data), fotos, fuentes y la portada actual.', {}),
   strictTool('write_home', 'Escribe components/home.tsx COMPLETO (reemplaza el archivo). Mantén <Shell>. Los textos van como texto JSX literal.', { content: text }),
   strictTool('write_footer', 'Escribe components/footer.tsx COMPLETO: export default function StoreFooter() con el pie de la tienda. Los textos van como texto JSX literal.', { content: text }),
+  strictTool('write_brief', 'Estudio: el brief de diseño de la tienda, ANTES de cualquier código. Cada campo en una o dos frases concretas.', { idea: text, palette: text, type: text, device: text, details: text, moment: text, structure: text, images: text }),
+  strictTool('write_part', 'Store chassis: escribe COMPLETA una pieza de la tienda — header (components/header.tsx), card (components/card.tsx), cart (components/cart.tsx) o product (components/product.tsx). Mantén su cableado (ganchos data-* y <KitSlot>); el diseño es tuyo.', { part: { type: 'string', enum: ['header', 'card', 'cart', 'product'] }, content: text }),
   strictTool('set_tokens', 'Fija los 5 colores de la tienda (hex) y dos fuentes del catálogo (ids de read_chassis).', { paper: hex, ink: hex, muted: hex, accent: hex, deep: hex, heading: text, body: text }),
   strictTool('check', 'Comprueba la portada en escritorio y celular: lo que debes corregir, los consejos y las dos capturas.', {}),
   strictTool('screenshot', 'Otra captura de la portada, solo si check no bastó (máximo 8 en total).', { width: { type: 'integer', enum: [1280, 390] } }),
   strictTool('finish', 'Termina: resumen para el comercio en español, 1–2 frases simples, sin términos técnicos.', { summary: text }),
 ];
 
-/** On a template store the footer is the template's: no write_footer (spec 2026-11-04 §2). */
-export function homeWriterTools(opts: { footer: boolean }): readonly AgentToolDefinition[] {
-  return HOME_WRITER_TOOLS.filter(tool => opts.footer || tool.name !== 'write_footer');
+/** On a template store the footer is the template's: no write_footer (spec 2026-11-04 §2). write_part only for a chassis store. */
+export function homeWriterTools(opts: { footer: boolean; chassis?: boolean; studio?: boolean }): readonly AgentToolDefinition[] {
+  return HOME_WRITER_TOOLS.filter(tool => (opts.footer || tool.name !== 'write_footer') && (opts.chassis === true || tool.name !== 'write_part') && (opts.studio === true || tool.name !== 'write_brief'));
 }
 
 /** The theme block's fonts by role (--es-heading, --es-body, --es-mono → catalog ids), or null when the block names none.
@@ -55,9 +72,12 @@ export function templateFonts(globalsCss: string): { heading: string; body: stri
 
 /** What a template store's home may use besides the kit: the template's tested sections, each with the store's own example.
  *  Library photos resolve «slot:<key>» through store-data photos (library.tsx `slotted`). */
-export function templateBrief(template: WriterTemplate): string {
+export function templateBrief(template: WriterTemplate, studio = false): string {
   const examples = template.layout.slice(0, 14).map(block => `- ${String((block as { type?: unknown }).type ?? '')}: ${JSON.stringify(block)}`).join('\n');
-  return `PLANTILLA ${template.name}: el encabezado, el menú, el pie, las tarjetas de producto y la ficha de producto son de la plantilla; no los cambies ni los imites. Sus fuentes se quedan; tú eliges los colores.
+  // Owner 2026-11-12 («the footer is the same always»): in the studio the footer is the writer's; the brand picks its fonts.
+  const fixed = studio ? 'el encabezado, el menú, las tarjetas de producto y la ficha de producto son de la plantilla; no los cambies ni los imites. El pie lo escribes tú.'
+    : 'el encabezado, el menú, el pie, las tarjetas de producto y la ficha de producto son de la plantilla; no los cambies ni los imites. Sus fuentes se quedan; tú eliges los colores.';
+  return `PLANTILLA ${template.name}: ${fixed}
 Secciones probadas de la plantilla — úsalas tal cual, cambia sus textos, o mézclalas con tus propias secciones:
 import { LibraryHome } from './library' y <LibraryHome layout={[{ type: 'cover-split', … }]} /> con uno o varios bloques seguidos. Cada bloque va con los campos de su ejemplo.
 Toda la portada va dentro de <Shell><main data-lb-home>…</main></Shell>: así una sección inclinada (marquee) no hace que el celular se desplace de lado.
@@ -68,7 +88,7 @@ ${examples}`;
 
 /** What the kit and the template give the home; the writer composes with these instead of inventing commerce parts. */
 const KIT_BRIEF = `PARTES DISPONIBLES (no inventes otras partes de comercio):
-- import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú y carrito son de la plataforma; el pie lo escribes tú con write_footer, salvo en una tienda con plantilla).
+- import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú y carrito son de la plataforma; el pie lo escribes tú con write_footer cuando tienes esa herramienta).
 - import { Parallax, Reveal } from '@pagosya/ui' — <Reveal> anima al entrar; <Parallax> mueve una foto al hacer scroll.
 - Grilla de productos: copia la de la portada actual tal cual — data-pagosya-catalog con data-pagosya-filters data-filters-style="chips" (ordenar, color y talla) y data-es-cards={variant('cards', 'compact')} (import { variant } from './Shell'), para que las tarjetas de moda muestren sus tallas. El kit dibuja tarjetas, precios y el botón de agregar.
 - Un producto destacado: <div data-pagosya-spotlight="ID"></div> con un id real de los productos.
@@ -89,9 +109,11 @@ Usa el logo ({store.logo}) o el nombre; colores con var(--es-…). Nunca negro s
 export function shellWithStoreFooter(shell: string): string | null {
   if (/import StoreFooter from '\.\/footer'/.test(shell)) return shell;
   if ((shell.match(/<Footer\s*\/>/g) ?? []).length !== 1) return null;
+  // Above the first import: after the last one it could land inside an import that spans lines (the kit Shell's icon list, studio
+  // 2026-11-12 — every footer failed to compile and Oh Belly's writer ran out of calls on 19 write_footer).
   const lines = shell.split('\n');
-  const lastImport = lines.reduce((at, line, index) => /^import\s/.test(line) ? index : at, -1);
-  lines.splice(lastImport + 1, 0, "import StoreFooter from './footer';");
+  const firstImport = Math.max(0, lines.findIndex(line => /^import\s/.test(line)));
+  lines.splice(firstImport, 0, "import StoreFooter from './footer';");
   return lines.join('\n').replace(/<Footer\s*\/>/, '<StoreFooter />');
 }
 
@@ -119,12 +141,18 @@ export function shoutedHeadings(code: string): string[] {
 }
 
 /** Class names in the home or footer outside the template (es-), kit (ui-) and platform (pagosya-) names that no stylesheet defines. */
-export function inventedClasses(code: string, css: string): string[] {
+export function inventedClasses(code: string, css: string, compiled = ''): string[] {
   const names = new Set<string>();
   for (const match of code.matchAll(/className=(?:"([^"]*)"|'([^']*)'|\{\s*['"`]([^'"`]*)['"`]\s*\})/g)) for (const name of (match[1] ?? match[2] ?? match[3] ?? '').split(/\s+/)) if (name) names.add(name);
+  // Tailwind (owner 2026-11-12 «why not tailwind like them»): the store build compiles every utility a file uses into styles.css,
+  // escaped (md\:grid-cols-2, bg-\[var\(--es-paper\)\]); a class found there is real.
+  const tailwind = (name: string) => compiled.includes(`.${name.replace(/[^a-zA-Z0-9_-]/g, char => `\\${char}`)}`);
   // The template's own es- names include hooks with no rule of their own (es-reviews), so only names outside it are checked.
-  return [...names].filter(name => !/^(es-|ui-|pagosya-)/.test(name) && !new RegExp(`\\.${name.replace(/[-]/g, '\\-')}(?![\\w-])`).test(css));
+  return [...names].filter(name => !/^(es-|ui-|pagosya-)/.test(name) && !new RegExp(`\\.${name.replace(/[-]/g, '\\-')}(?![\\w-])`).test(css) && !tailwind(name));
 }
+
+/** Owner 2026-11-12 («why not tailwind like them»): Amboras's AI writes Tailwind; ours can too — the store build already runs it. */
+export const TAILWIND_BRIEF = `TAILWIND 3 está disponible en todos los archivos que escribes (la tienda lo compila): úsalo para el diseño — columnas que cambian en celular y computadora (grid md:grid-cols-2 lg:grid-cols-12), espacios (px-6 md:px-16 py-24), tamaños (text-5xl md:text-8xl), estados (hover:opacity-80 transition), alineación (flex items-end justify-between), proporciones (aspect-[4/5] object-cover). Colores y fuentes SIEMPRE con los tokens: bg-[var(--es-paper)] text-[color:var(--es-ink)] border-[color:var(--es-muted)] font-[family-name:var(--es-heading)] — nunca un hex. Las clases es- de la plantilla siguen sirviendo; style={{…}} solo para lo que Tailwind no hace.`;
 
 const rgb = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 /** Near enough to read as the same colour (RGB distance). */
@@ -146,7 +174,29 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
      *  never shouts; the brand's own accent/deep colours (store-data look.colors) stay. */
     footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[];
     /** Spec 2026-11-04: the template the store wears; its footer and fonts stay. */ template?: WriterTemplate;
-    /** Spec 2026-11-04 §5: a look at the captures before saving, at most reviewRounds (2) times. */ reviewer?: HomeReviewer; reviewRounds?: number }) {}
+    /** Spec 2026-11-04 §5: a look at the captures before saving, at most reviewRounds (2) times. */ reviewer?: HomeReviewer; reviewRounds?: number;
+    /** Spike 2026-11-12 (YAPI_STUDIO): Lovable's way — the store's own fonts, the design system first, no colour by hand, no stretched photo. */ studio?: boolean;
+    /** Store chassis (spec 2026-11-12): the store writes its own header, card, cart and product page, following its design plan. */ chassis?: boolean; plan?: DesignPlan;
+    /** Amboras's design brief (2026-11-12): kept with the store's direction once written. */ onBrief?: (brief: DesignBrief) => void }) {}
+  brief: DesignBrief | null = null;
+  /** The template's Shell before any part of YAPI's: every swap is made from it (chassis-parts shellWithStoreParts). */
+  private baseShellText: string | null = null;
+  private readonly written = new Set<ShellPart>();
+  private baseShell() { return this.baseShellText ??= this.workspace.read(SHELL_PATH); }
+  /** The Shell drawing the parts written so far; null when this Shell cannot draw them. */
+  private swapShell(part: ShellPart): boolean {
+    const parts = new Set([...this.written, part]);
+    const next = shellWithStoreParts(this.baseShell(), parts);
+    if (!next) return [...parts].every(each => partsInShell(this.workspace.read(SHELL_PATH)).has(each));
+    this.workspace.setShell(next);
+    this.written.add(part);
+    return true;
+  }
+  /** A chassis part's file as written, or '' before write_part. */
+  private partCode(part: ChassisPart) { try { return this.ctx.workspace.changedPaths().includes(CHASSIS_PATHS[part]) ? this.workspace.read(CHASSIS_PATHS[part]) : ''; } catch { return ''; } }
+  private tokensSet = false;
+  /** How many checks each owner rule has blocked: two, then it is advice (OWNER_RULES). */
+  private ownerBlocks = new Map<string, number>();
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
 
@@ -166,21 +216,43 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           return { output: 'Portada escrita y compilada. Llama check o screenshot.' };
         }
         case 'write_footer': {
-          if (this.ctx.template) return { output: 'Esta tienda usa el pie de su plantilla; no escribas uno.' };
+          if (this.ctx.template && !this.ctx.studio) return { output: 'Esta tienda usa el pie de su plantilla; no escribas uno.' };
           const content = String(args.content ?? '');
-          const shell = shellWithStoreFooter(this.workspace.read(SHELL_PATH));
-          if (!shell) return { output: 'Esta tienda no admite un pie propio; deja el de la plataforma y termina la portada.' };
           const written = this.workspace.write(FOOTER_PATH, content);
           if (!written.ok) return { output: written.message };
-          this.workspace.setShell(shell);
+          if (!this.swapShell('footer')) return { output: 'Esta tienda no admite un pie propio; deja el de la plataforma y termina la portada.' };
           step('write_home', 'Escribiendo el pie de página');
           const missing = footerProblems(content);
           try { await agentPreviewSnapshot(this.ctx.base, this.workspace.files()); }
           catch (error) { return { output: `Pie escrito, pero no compila: ${(error as Error).message.slice(0, 1500)}` }; }
           return { output: missing.length ? `Pie escrito y compilado, pero le falta: ${missing.join('; ')}.` : 'Pie escrito y compilado.' };
         }
+        case 'write_brief': {
+          if (!this.ctx.studio) return { output: 'Esta tienda no usa brief.' };
+          const brief = Object.fromEntries(DESIGN_BRIEF_FIELDS.map(key => [key, String(args[key] ?? '').trim()])) as DesignBrief;
+          this.brief = brief;
+          this.ctx.onBrief?.(brief);
+          step('read_chassis', 'Escribiendo el brief de diseño');
+          const missing = briefProblems(brief);
+          return { output: missing.length ? `Brief guardado, pero le falta: ${missing.join('; ')}. Escríbelo de nuevo completo.` : 'Brief guardado. Ahora set_tokens con su paleta y sus fuentes, y construye todo desde él.' };
+        }
+        case 'write_part': {
+          if (!this.ctx.chassis) return { output: 'Esta tienda usa las piezas de su plantilla.' };
+          const part = String(args.part) as ChassisPart;
+          if (!CHASSIS_PARTS.includes(part)) return { output: 'part debe ser header, card, cart o product.' };
+          const written = this.workspace.write(CHASSIS_PATHS[part], String(args.content ?? ''));
+          if (!written.ok) return { output: written.message };
+          if (part !== 'product' && !this.swapShell(part)) return { output: `Esta tienda no admite ${part} propio; deja el de la plantilla.` };
+          step('write_home', { header: 'Diseñando el encabezado', card: 'Diseñando las tarjetas', cart: 'Diseñando el carrito', product: 'Diseñando la ficha de producto' }[part]);
+          const missing = partProblems(part, String(args.content ?? ''));
+          try { await agentPreviewSnapshot(this.ctx.base, this.workspace.files()); }
+          catch (error) { return { output: `Pieza escrita, pero no compila: ${(error as Error).message.slice(0, 1500)}` }; }
+          return { output: missing.length ? `Pieza escrita y compilada, pero ${partProblemLine(part, missing).replace(/^./, c => c.toLowerCase())}` : 'Pieza escrita y compilada.' };
+        }
         case 'set_tokens': {
-          const kept = this.ctx.template ? templateFonts(this.workspace.read(GLOBALS)) : null;
+          const kept = this.ctx.template && !this.ctx.studio ? templateFonts(this.workspace.read(GLOBALS)) : null;
+          // Studio: the brand picks its fonts; a template's third face (labels) stays.
+          const labels = this.ctx.template && this.ctx.studio ? templateFonts(this.workspace.read(GLOBALS))?.mono : undefined;
           const fonts = kept ? [kept.heading, kept.body] : [String(args.heading), String(args.body)];
           const unknown = kept ? undefined : fonts.find(id => !SOURCE_FONT_CATALOG.some(font => font.id === id));
           if (unknown) return { output: `La fuente ${unknown} no está en el catálogo; usa un id de read_chassis.` };
@@ -190,10 +262,11 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           if (brand.length && ![colours.accent, colours.deep].some(colour => brand.some(own => nearColour(colour, own)))) {
             return { output: `Esta marca tiene sus propios colores (${brand.join(', ')}): usa uno de ellos (o uno muy cercano) como accent o deep. Varía el fondo y la fuente, no el color de la marca.` };
           }
-          const block = masterThemeBlock(colours, fonts[0], fonts[1], kept?.mono);
+          const block = masterThemeBlock(colours, fonts[0], fonts[1], kept?.mono ?? labels);
           const written = this.workspace.write(GLOBALS, withMasterTheme(this.workspace.read(GLOBALS), block));
           if (!written.ok) return { output: written.message };
           step('set_tokens', 'Eligiendo colores y fuentes');
+          this.tokensSet = true;
           const ink = /--es-ink:([^;]+);/.exec(block)?.[1] ?? colours.ink;
           const fixedInk = ink.toLowerCase() !== colours.ink.toLowerCase() ? ` El texto no se leía sobre el fondo; usé ${ink}.` : '';
           return { output: kept ? `Colores guardados. Las fuentes son de la plantilla ${this.ctx.template!.name}; se mantienen.${fixedInk}` : `Colores y fuentes guardados.${fixedInk}` };
@@ -201,7 +274,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
         case 'check': {
           const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files());
           const captures: Array<{ width: number; errors: string[]; image: string; thumbnail?: string }> = [];
-          for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules, ...(this.ctx.calm ? [evaluateCalmTitles] : []), ...(this.ctx.playful ? [evaluatePlayfulCover] : [])]));
+          for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules, ...(this.ctx.calm && !this.ctx.chassis ? [evaluateCalmTitles] : []), ...(this.ctx.playful && !this.ctx.chassis ? [evaluatePlayfulCover] : []), ...(this.ctx.studio ? [evaluateSharpPhotos, evaluateTitleScale, evaluateCardPhotos, evaluateLopsided, evaluateBigPhotos, evaluateBadges] : []), ...(this.ctx.studio && !this.ctx.chassis ? [evaluateWordsOnlyBands, evaluateDetails] : []), ...(this.ctx.chassis ? [evaluateHeaderFit, evaluateNavShell, evaluateNoDrawings] : [])]));
           this.lastImages = captures.map(capture => capture.image);
           const verdict = homeWriterVerdict(captures);
           // Review 2026-10-30: the merchant's progress shows the check's capture, now that screenshot calls are rare.
@@ -209,13 +282,15 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           // Owner 2026-10-29 («things like color picker, sorter»): the home's product grid keeps the kit's sort and filter chips.
           // Spec 2026-10-30: an animated store is reminded, never blocked, when it moves fewer than three parts.
           // Live check 2026-10-30 (Oh Belly): the advice alone was ignored. Fewer than 2 kit motion parts must be fixed; 3+ is the aim.
-          const moving = this.ctx.animated ? motionPartsUsed(this.workspace.read(HOME_PATH)).length : 3;
+          // Owner 2026-11-12 («copy amboras»): a chassis store follows the design skill — one orchestrated moment, no motion quota.
+          const moving = this.ctx.animated && !this.ctx.chassis ? motionPartsUsed(this.workspace.read(HOME_PATH)).length : 3;
           if (moving < 2) verdict.blocking.push('Esta tienda tiene portada animada y usa menos de 2 movimientos del kit: agrega al menos dos de ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase o Hero scrollGrow (importados de \'@pagosya/ui\').');
           else if (moving < 3) verdict.advice.push('La portada animada usa menos de 3 movimientos del kit (ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase, scrollGrow).');
           // Live check 2026-10-30 (Oh Belly ujy3rqxr): the writer cannot write CSS, so a class it invents (oh-grid) does nothing.
-          const invented = inventedClasses(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`, this.workspace.read(GLOBALS));
-          if (invented.length) verdict.blocking.push(`Estas clases no existen en styles/globals.css y no hacen nada: ${invented.slice(0, 6).join(', ')}. Usa clases es- de la plantilla o style={{…}} para el diseño.`);
-          if (this.ctx.playful) {
+          const compiledCss = snapshot.files.find(file => file.path === 'styles.css')?.content ?? '';
+          const invented = inventedClasses(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}${this.ctx.chassis ? CHASSIS_PARTS.map(part => `\n${this.partCode(part)}`).join('') : ''}`, this.workspace.read(GLOBALS), compiledCss);
+          if (invented.length) verdict.blocking.push(`Estas clases no existen en styles/globals.css y no hacen nada: ${invented.slice(0, 6).join(', ')}. Usa Tailwind (la tienda lo compila), clases es- de la plantilla o style={{…}}.`);
+          if (this.ctx.playful && !this.ctx.chassis) {
             const ambient = ambientPartsUsed(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`).length;
             if (ambient < 2) verdict.blocking.push(`Esta tienda es divertida y su portada debe moverse sin esperar al scroll: usa al menos dos de ${AMBIENT_PARTS.join(', ')} (importados de '@pagosya/ui').`);
           }
@@ -224,16 +299,72 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
             if (!footer) verdict.blocking.push('Falta el pie: escríbelo con write_footer.');
             else { const missing = footerProblems(footer); if (missing.length) verdict.blocking.push(`Al pie le falta: ${missing.join('; ')}.`); }
           }
-          if (this.ctx.calm) {
+          if (this.ctx.calm && !this.ctx.chassis) {
             const shouted = shoutedHeadings(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`);
             if (shouted.length) verdict.blocking.push(`Esta marca es tranquila: escribe los títulos con mayúscula inicial, no todo en mayúsculas («${shouted.slice(0, 3).join('», «')}»). Las mayúsculas solo para etiquetas pequeñas.`);
           }
           if (!/data-pagosya-catalog[^>]*data-pagosya-filters|data-pagosya-filters[^>]*data-pagosya-catalog/.test(this.workspace.read(HOME_PATH))) verdict.blocking.push('La grilla de productos perdió ordenar y filtrar por color y talla: deja data-pagosya-filters data-filters-style="chips" en el elemento data-pagosya-catalog, como en la portada de la plantilla.');
+          if (this.ctx.studio) {
+            if (!this.tokensSet) verdict.blocking.push('Empieza por el sistema de diseño: set_tokens con los colores y las fuentes de la marca.');
+            const raw = rawColours(this.workspace.read(HOME_PATH));
+            const unknown = unknownKitVars(this.workspace.read(HOME_PATH), this.workspace.read(GLOBALS));
+            if (unknown.length) verdict.blocking.push(`Estas variables no existen en el sistema de diseño: ${unknown.slice(0, 6).join(', ')}. Las del kit: --es-paper, --es-ink, --es-muted, --es-accent, --es-deep, --es-heading (fuente de títulos), --es-body (fuente de texto).`);
+            if (raw.length) verdict.blocking.push(`La portada tiene colores escritos a mano: ${raw.slice(0, 6).join(', ')}. Usa solo var(--es-paper/ink/muted/accent/deep) o color-mix de ellos.`);
+            const hidden = hiddenCardParts(this.workspace.read(HOME_PATH));
+            if (hidden.length) verdict.blocking.push(`La portada deja las tarjetas de producto sin su foto: ${hidden.slice(0, 4).join(', ')}. Las tarjetas son de la plantilla; quita esa regla.`);
+          }
+          // Amboras 2026-11-12: the brief comes first and the whole store is built from it.
+          if (this.ctx.studio) {
+            if (!this.brief) verdict.blocking.push('Falta el brief de diseño: escríbelo con write_brief antes de seguir (idea, paleta, tipografía, recurso, detalles, momento, estructura, imágenes).');
+            else { const missing = briefProblems(this.brief); if (missing.length) verdict.blocking.push(`El brief necesita: ${missing.join('; ')}.`); }
+          }
+          // Store chassis (spec 2026-11-12): every part is the store's own and keeps its wiring.
+          const extraImages: string[] = [];
+          if (this.ctx.chassis) {
+            for (const part of CHASSIS_PARTS) {
+              const code = this.partCode(part);
+              if (!code) { verdict.blocking.push(`Falta escribir ${part} con write_part (la pieza de la plantilla no se usa en esta tienda).`); continue; }
+              const missing = partProblems(part, code);
+              if (missing.length) verdict.blocking.push(partProblemLine(part, missing));
+            }
+            // Owner 2026-11-12 («sections are just too basic»): the plan's assigned first-screen moment and extra are used, like
+            // Amboras's «a static hero is a failed build».
+            const home = this.workspace.read(HOME_PATH);
+            const heroPart = this.ctx.plan?.hero ? CHASSIS_HERO_PARTS[this.ctx.plan.hero] : undefined;
+            const extraPart = this.ctx.plan?.extra ? CHASSIS_EXTRA_PARTS[this.ctx.plan.extra] : undefined;
+            if (heroPart && !new RegExp(`<${heroPart}[\\s>/]`).test(home)) verdict.blocking.push(`(1280) La portada no usa su momento asignado: <${heroPart} …> en la primera pantalla (PLAN DE DISEÑO).`);
+            if (extraPart && !new RegExp(`<${extraPart}[\\s>/]`).test(home)) verdict.blocking.push(`(1280) La portada no usa su extra asignado: <${extraPart} …> (PLAN DE DISEÑO).`);
+            if (this.partCode('product')) for (const width of [1280, 390] as const) {
+              try {
+                const page = await captureAgentDraft(snapshot, width, this.ctx.signal, 'product.html', [], 'normal', undefined, [evaluateBigPhotos, evaluateBuyInView]);
+                extraImages.push(page.image);
+                // Owner 2026-11-12: the product page's photo size and buy button are owner rules; the rest of its capture is advice.
+                for (const error of page.errors) (/^BLOQUEA: (Foto demasiado grande|En la ficha el botón)/.test(error) ? verdict.blocking : verdict.advice).push(`(ficha ${width}) ${error.replace(/^BLOQUEA: /, '')}`);
+              } catch (error) { verdict.advice.push(`(ficha ${width}) no se pudo capturar: ${(error as Error).message.slice(0, 200)}`); }
+            }
+          }
+          // Amboras 2026-11-12 (their check_build: «ADVISORY (warn-only, never a build failure)»): in the studio only what breaks the shop
+          // blocks — the footer's platform hooks, the product grid and its cards' photos; every design finding is advice to act on.
+          // Oh Belly studio6 looped on a contrast block until the run failed and fell back to the template.
+          if (this.ctx.studio) {
+            // Owner 2026-11-12 (Howl & Honey, Oh Belly chassis builds): the owner's rules were ignored as advice, so they block — each
+            // at most twice per run, then it is advice again, so a run never loops on one.
+            const ownerRule = (line: string) => OWNER_RULES.find(rule => rule.test(line))?.source;
+            const hard = (line: string) => {
+              const rule = ownerRule(line);
+              if (rule) return (this.ownerBlocks.get(rule) ?? 0) < 2;
+              // Owner 2026-11-12: a product card without its photo breaks the shop, like a lost grid (Howl & Honey, Oh Belly).
+              return /^(Falta el pie|Al pie le falta|La grilla de productos perdió|La portada deja las tarjetas|Falta escribir|Falta el brief|El brief necesita|\(\d+\) \d+ tarjetas de producto se ven sin su foto)/.test(line) || PART_PROBLEM_START.test(line);
+            };
+            verdict.advice.unshift(...verdict.blocking.filter(line => !hard(line)));
+            verdict.blocking.splice(0, verdict.blocking.length, ...verdict.blocking.filter(hard));
+            for (const rule of new Set(verdict.blocking.map(ownerRule).filter((rule): rule is string => Boolean(rule)))) this.ownerBlocks.set(rule, (this.ownerBlocks.get(rule) ?? 0) + 1);
+          }
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
-            verdict.advice.length ? `Consejos (opcionales):\n- ${verdict.advice.join('\n- ')}` : '', 'Capturas de escritorio y celular adjuntas.'].filter(Boolean).join('\n'),
+            verdict.advice.length ? `${this.ctx.studio ? 'Avisos de diseño (no bloquean; corrígelos con una sola edición antes de finish)' : 'Consejos (opcionales)'}:\n- ${verdict.advice.join('\n- ')}` : '', 'Capturas de escritorio y celular adjuntas.'].filter(Boolean).join('\n'),
             // Token cut 2026-10-30: the captures check already took, so a run needs no separate screenshot calls.
-            images: captures.map(capture => capture.image) };
+            images: [...captures.map(capture => capture.image), ...extraImages] };
         }
         case 'screenshot': {
           if (this.shots >= HOME_WRITER_LIMITS.screenshots) return { output: 'No quedan capturas. Usa check y termina.' };
@@ -290,8 +421,20 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     const photos = this.ctx.base.files.filter(file => file.path.startsWith('assets/') && /\.(jpe?g|png|webp|mp4)$/i.test(file.path)).map(file => file.path);
     const fonts = SOURCE_FONT_CATALOG.map(font => `${font.id} (${font.family}, ${font.role})`).join(', ');
     const templateFooter = /export function Footer\(\)[\s\S]*?\n\}\n/.exec(this.workspace.read(SHELL_PATH))?.[0];
-    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template)] : []), ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
-      ...(this.ctx.footer && !this.ctx.template ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
+    // Store chassis (spec 2026-11-12): the plan, each part's note and the template's parts as wiring only.
+    const shell = this.baseShell();
+    const fn = (source: string, name: string) => new RegExp(`export function ${name}\\([^)]*\\)[\\s\\S]*?\\n\\}\\n`).exec(source)?.[0] ?? '';
+    let library = ''; try { library = this.workspace.read('components/library.tsx'); } catch { library = ''; }
+    // Owner 2026-11-12 («i would like to keep the sections»): every store carries the whole section library (the sections behind all
+    // the templates); a chassis writer is offered every type, not only the ones its starting template used (one calm base,
+    // YAPI_TEMPLATE_POOL=botica in dev).
+    const sectionTypes = [...new Set([...(/const SECTIONS[^=]*=\s*\{([\s\S]*?)\n\};/.exec(library)?.[1] ?? '').matchAll(/'([a-z0-9-]+)':/g)].map(match => match[1]))];
+    const sectionMenu = sectionTypes.length ? `SECCIONES DE LA BIBLIOTECA (las de todas las plantillas; úsalas con <LibraryHome layout={[{ type: '…', … }]} /> de './library'):\n${sectionTypes.join(', ')}\nCampos de un bloque: type, look, band ('paper'|'muted'|'accent'|'deep'), eyebrow, title, text, cta, link, cta2, link2, photo ('slot:<clave de photos>'), photo2, items ([{ title, text, photo, link, value }]), products (nombres reales), product. Mezcla secciones de la biblioteca con las partes del KIT para que cada sección tenga otra forma.` : '';
+    const chassisBriefs = this.ctx.chassis ? [CHASSIS_BRIEF, CHASSIS_KIT_BRIEF, sectionMenu,
+      this.ctx.plan ? `PLAN DE DISEÑO de esta tienda (distinto de las últimas tiendas; síguelo):\n${(Object.keys(this.ctx.plan) as Array<keyof DesignPlan>).map(key => (DESIGN_PLAN_TEXT[key] as Record<string, string>)[this.ctx.plan![key]]).join('\n')}` : '',
+      `Cableado de la plantilla (solo los ganchos; no copies su forma; el encabezado es <NavShell>, sin ganchos tuyos):\n--- CartParts ---\n${fn(shell, 'CartParts')}\n--- CardTemplate (library.tsx) ---\n${fn(library, 'CardTemplate')}\n--- components/product.tsx ---\n${this.workspace.read(CHASSIS_PATHS.product)}`] : [];
+    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template, Boolean(this.ctx.studio))] : []), ...(this.ctx.studio ? [BRIEF_GUIDE, TAILWIND_BRIEF] : []), ...chassisBriefs, ...(this.ctx.animated && !this.ctx.chassis ? [HOME_MOTION_BRIEF] : []),
+      ...(this.ctx.footer && (!this.ctx.template || this.ctx.studio) ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
       `import { … } from './store-data' — exporta: ${exported.join(', ')}. Productos, precios, fotos y logo salen de ahí; nunca los escribas a mano.`,
       `Archivos de fotos: ${photos.join(', ') || 'ninguno (portada solo tipográfica)'}`,
       `fuentes: ${fonts}`,

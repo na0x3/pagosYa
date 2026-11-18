@@ -1,0 +1,875 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.thesill.com/",
+    "title": "The Sill | Indoor & Outdoor Plants Delivered to Your Door",
+    "width": 1440,
+    "pageHeight": 5696,
+    "fonts": {
+      "h1": {
+        "family": "Domaine Display",
+        "size": "72px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-2.16px",
+        "text": "The Sill"
+      },
+      "h2": {
+        "family": "Domaine Display",
+        "size": "56px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.68px",
+        "text": "Holiday Cheer from $39"
+      },
+      "body": {
+        "family": "Gill Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      },
+      "button": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 39,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Holiday Plants & Gifts f",
+        "Growing Zone: • Zip Code"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 112,
+        "h": 682,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "56px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.68px",
+          "text": "Holiday Cheer from $39"
+        },
+        "words": 46,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 794,
+        "h": 806,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "56px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-1.12px",
+          "text": "Our top trends this season."
+        },
+        "words": 136,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1600,
+        "h": 628,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "56px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-1.12px",
+          "text": "The gift that grows."
+        },
+        "words": 131,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2228,
+        "h": 371,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 137,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2599,
+        "h": 691,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "56px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.84px",
+          "text": "Everything for home and yard."
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3290,
+        "h": 891,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "56px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.84px",
+          "text": "Read & attend."
+        },
+        "words": 125,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4181,
+        "h": 605,
+        "bg": "rgb(255, 255, 255)",
+        "images": 48,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "56px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-1.12px",
+          "text": "Our community, in bloom."
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 2,
+      "columns": 2,
+      "photoRatio": 1.07,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.thesill.com/",
+    "title": "The Sill | Indoor & Outdoor Plants Delivered to Your Door",
+    "width": 394,
+    "pageHeight": 6274,
+    "fonts": {
+      "h1": {
+        "family": "Domaine Display",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "The Sill"
+      },
+      "h2": {
+        "family": "Domaine Display",
+        "size": "36px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.08px",
+        "text": "Holiday Cheer from $39"
+      },
+      "body": {
+        "family": "Gill Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      },
+      "button": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 39,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Holiday Plants & Gifts f"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 888,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.08px",
+          "text": "Holiday Cheer from $39"
+        },
+        "words": 46,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 987,
+        "h": 735,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.72px",
+          "text": "Our top trends this season."
+        },
+        "words": 136,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1722,
+        "h": 698,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.72px",
+          "text": "The gift that grows."
+        },
+        "words": 131,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2420,
+        "h": 375,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 137,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.thesill.com/collections/all",
+    "title": "Products – The Sill",
+    "width": 1440,
+    "pageHeight": 6566,
+    "fonts": {
+      "h1": {
+        "family": "Domaine Display",
+        "size": "56px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "Products"
+      },
+      "h2": null,
+      "body": {
+        "family": "Gill Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      },
+      "button": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 39,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Holiday Plants & Gifts f",
+        "Growing Zone: • Zip Code"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 112,
+        "h": 129,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "56px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.56px",
+          "text": "Products"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 112,
+        "h": 5883,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 241,
+        "h": 5754,
+        "bg": "rgb(255, 255, 255)",
+        "images": 45,
+        "video": false,
+        "heading": null,
+        "words": 331,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.thesill.com/collections/all?_su_rec=Y6T6SxHmw7pYxw-L-zU9WKTFpLlfxnMXB3jdPw9_eEzBaj0CqageAThJmuEsVHrEP9YhWiYxoTtxrz4PCS8ggodIon4VPXX8htHtYwpdA7_Fo-vovZub1_X29YQXqwyxBq3QUYsl7soUn2zDMS-EUAYSPq8VgxEBO39WTlwl3bgyJggOP3zuPyXKvyLXAb0tbLksjvlMASfe9sWDMcyjbueDwJWtIsjGN2bwJHNUoTidoh-Pe6PNE3BQ54uSPlJE1V85V3OxjjqSra1i2sWFzK8UsArZ9_SZ1cGYfp5HPG8HFY8RrSk3cqkjX3v21LElj5dlvgW0jpmtUjFDmIvKhwgUz9FbWoWwA_2iC6WS7af2&_su_rec_id=2f07abff-0ed0-4b7b-b8af-60c7c7a0044b-1794668264",
+    "title": "Products – The Sill",
+    "width": 390,
+    "pageHeight": 5714,
+    "fonts": {
+      "h1": {
+        "family": "Domaine Display",
+        "size": "36px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.36px",
+        "text": "Products"
+      },
+      "h2": null,
+      "body": {
+        "family": "Gill Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      },
+      "button": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 39,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Holiday Plants & Gifts f"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 145,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.36px",
+          "text": "Products"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 99,
+        "h": 4911,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 244,
+        "h": 4766,
+        "bg": "rgb(255, 255, 255)",
+        "images": 45,
+        "video": false,
+        "heading": null,
+        "words": 354,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.thesill.com/products/mixed-greens-holiday-wreath",
+    "title": "Fresh Mixed Greens Holiday Wreath for Front Door | The Sill",
+    "width": 1440,
+    "pageHeight": 4713,
+    "fonts": {
+      "h1": {
+        "family": "Domaine Display",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "Fresh Mixed Evergreen & Juniper Wreath"
+      },
+      "h2": {
+        "family": "Domaine Display",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "Fresh Mixed Evergreen & Juniper Wreath Information"
+      },
+      "body": {
+        "family": "Gill Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      },
+      "button": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 39,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Holiday Plants & Gifts f",
+        "Growing Zone: • Zip Code"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 112,
+        "h": 1071,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "18px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Fresh Mixed Evergreen & Juniper Wreath"
+        },
+        "words": 121,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1183,
+        "h": 1107,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Fresh Mixed Evergreen & Juniper Wreath Information"
+        },
+        "words": 226,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2355,
+        "h": 698,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Customers Also Planted"
+        },
+        "words": 112,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart\n             (1)",
+      "aboveFold": false,
+      "top": 931,
+      "x": 848,
+      "width": 161,
+      "bg": "rgb(0, 171, 132)"
+    },
+    "price": {
+      "family": "Gill Sans",
+      "size": "18px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$99"
+    },
+    "galleryImages": 27,
+    "swatches": 13,
+    "selects": 2,
+    "accordions": 32
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.thesill.com/products/mixed-greens-holiday-wreath",
+    "title": "Fresh Mixed Greens Holiday Wreath for Front Door | The Sill",
+    "width": 390,
+    "pageHeight": 6136,
+    "fonts": {
+      "h1": {
+        "family": "Domaine Display",
+        "size": "44px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.32px",
+        "text": "Fresh Mixed Evergreen & Juniper Wreath"
+      },
+      "h2": {
+        "family": "Domaine Display",
+        "size": "44px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.32px",
+        "text": "Fresh Mixed Evergreen & Juniper Wreath Information"
+      },
+      "body": {
+        "family": "Gill Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      },
+      "button": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 39,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Holiday Plants & Gifts f"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 1675,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "18px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Fresh Mixed Evergreen & Juniper Wreath"
+        },
+        "words": 122,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart\n             (1)",
+      "aboveFold": false,
+      "top": 895,
+      "x": 327,
+      "width": 52,
+      "bg": "rgb(0, 171, 132)"
+    },
+    "price": {
+      "family": "Gill Sans",
+      "size": "18px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$99"
+    },
+    "galleryImages": 9,
+    "swatches": 13,
+    "selects": 2,
+    "accordions": 32
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.thesill.com/cart",
+    "title": "Your Shopping Cart – The Sill",
+    "width": 1440,
+    "pageHeight": 1347,
+    "fonts": {
+      "h1": {
+        "family": "Domaine Display",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "Your Cart Total items in cart: 1 1"
+      },
+      "h2": null,
+      "body": {
+        "family": "Gill Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      },
+      "button": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gill Sans",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday Plants & Gifts from $39 →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 39,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Holiday Plants & Gifts f",
+        "Growing Zone: • Zip Code"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 127,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Domaine Display",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Your Cart Total items in cart: 1 1"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 279,
+        "h": 157,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 25,
+        "perRow": 1,
+        "fullBleed": false
+      },
+      {
+        "y": 136,
+        "h": 301,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ]
+  }
+}

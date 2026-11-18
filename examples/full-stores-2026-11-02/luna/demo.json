@@ -1,0 +1,44 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwjsnogv0001x6jdtiwhfv1i",
+  "slug": "khrljqz6",
+  "photos": {
+    "brand:0f674db78018901501c6852e5e395d08.jpg": "/v1/uploads/5a3eb515-2c35-4d15-ad4b-88c773071845.jpg",
+    "brand:13203a11a2df21ad996e800033df2738.jpg": "/v1/uploads/016bacd4-183b-48a7-a365-e4df2dd15ab2.jpg",
+    "brand:19c604a95754eefb21e694f7780e0257.jpg": "/v1/uploads/991567a2-daad-4a99-a740-12c853ab2216.jpg",
+    "brand:22536e69688c8f745f24438727dfc202.jpg": "/v1/uploads/f0202751-e30b-4243-aabf-a7657a52a8a8.jpg",
+    "brand:2ba1d73199e17b284b0da64d8ae4f242.jpg": "/v1/uploads/d14af454-e31c-4591-9f7a-20d09d61f76f.jpg",
+    "brand:8b63665395c3b17de6d25cfbd25605fa.jpg": "/v1/uploads/41d09457-1112-4c5f-9bd3-d96e4e24535e.jpg",
+    "brand:a1a170def7be81bf5f0bbf94c6252ba8.jpg": "/v1/uploads/bb99385c-8003-44f1-a7eb-687f6685767c.jpg",
+    "brand:c012d7c077dd53629095ae432d217d9d.jpg": "/v1/uploads/36a553d8-a752-49d7-919f-8fd69a383e84.jpg",
+    "brand:cffd045311a9e6cbad313d7b25a04244.jpg": "/v1/uploads/50dfa7f2-a4d6-4908-a768-2e8e657c6e28.jpg",
+    "8b63665395c3b17de6d25cfbd25605fa.jpg": "/v1/uploads/9be51f64-5d46-4f78-8d44-4b43936f72bc.jpg",
+    "19c604a95754eefb21e694f7780e0257.jpg": "/v1/uploads/8381ea71-ffd4-460e-ba09-e80b5d2c324a.jpg",
+    "cffd045311a9e6cbad313d7b25a04244.jpg": "/v1/uploads/a1da30e5-656d-49c2-a53d-c8388e3d87d0.jpg",
+    "c012d7c077dd53629095ae432d217d9d.jpg": "/v1/uploads/57a43176-8b49-4583-a8e1-ac9a69c9ea9d.jpg",
+    "2ba1d73199e17b284b0da64d8ae4f242.jpg": "/v1/uploads/da398ac8-7761-4011-bd9a-b54a5474c5d1.jpg",
+    "a1a170def7be81bf5f0bbf94c6252ba8.jpg": "/v1/uploads/ed3998e6-7b72-4801-a8d7-4755815a7454.jpg"
+  },
+  "categories": {
+    "Latas": "cmwjsnoi2000lx6jd8g6woubf",
+    "Packs": "cmwjsnoi4000nx6jdvojb9an2"
+  },
+  "products": {
+    "Luna Lima 330 ml": "cmwjsnoi7000rx6jdnofedfak",
+    "Toronja Rosada 330 ml": "cmwjsnoie000vx6jdhozxx0z4",
+    "Dúo Toronja y Durazno": "cmwjsnoij000zx6jd4fnu1tjj",
+    "Trío de sabores": "cmwjsnoin0013x6jd68e463wb",
+    "Caja surtida 12 latas": "cmwjsnoit0017x6jdrydorcu9",
+    "Caja Días Libres 6 latas": "cmwjsnoiw001bx6jdr5y5lfzk"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwjsnojx001jx6jd9iwiierd"
+}

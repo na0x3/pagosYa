@@ -1,12 +1,18 @@
-  const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(Boolean);
+  // Owner 2026-11-17 («add videos … inside a product card»): a product's media can hold MP4 videos beside its photos. Every photo
+  // place (gallery, cards, cart, share image) keeps reading photos only; the videos are drawn by productVideos' own places.
+  const VIDEO_URL = /\.(?:mp4|webm|m4v|mov)(?:[?#]|$)/i;
+  const isVideoUrl = url => VIDEO_URL.test(String(url || ''));
+  const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(url => url && !isVideoUrl(url));
   const galleryImages = (p) => {
     const sources = [
       ...(Array.isArray(p?.imageUrls) ? p.imageUrls : []),
       ...(typeof p?.imageUrl === "string" ? [p.imageUrl] : []),
       ...(Array.isArray(p?.variants) ? p.variants.flatMap(variantPhotos) : []),
     ];
-    return [...new Set(sources.map(safeUrl).filter(Boolean))];
+    return [...new Set(sources.map(safeUrl).filter(url => url && !isVideoUrl(url)))];
   };
+  /** The product's videos, in the merchant's order (at most three). */
+  const productVideos = (p) => [...new Set((Array.isArray(p?.imageUrls) ? p.imageUrls : []).map(safeUrl).filter(url => url && isVideoUrl(url)))].slice(0, 3);
   const imagePosition = (p, url) => {
     const index = (Array.isArray(p.imageUrls) ? p.imageUrls : []).findIndex(value => safeUrl(value) === url);
     const value = index >= 0 ? p.imagePositions?.[index] : null;
@@ -24,6 +30,32 @@
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
     [data-cart-slot][hidden],[data-cart-field][hidden],[data-added-field][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
+    /* Owner 2026-11-17 (animated card buttons): the fill cards.js puts in every card's add button sweeps across on hover, an icon
+     * moves with it, and a check shows for a moment after an add. Layered, so a store's own button rules still win. */
+    @layer pagosya-commerce {
+      .menu-add__fill,.menu-add__done{position:absolute;inset:0;border-radius:inherit;pointer-events:none}
+      .menu-add__fill{z-index:-1;background:var(--pya-fill,color-mix(in srgb,currentColor 22%,transparent));transform:scaleX(0);transform-origin:left center;transition:transform .8s cubic-bezier(.65,0,.35,1)}
+      .menu-add:not(:disabled):is(:hover,:focus-visible)>.menu-add__fill,.menu-add[data-pya-added]>.menu-add__fill{transform:scaleX(1)}
+      .menu-add>:not(.menu-add__fill,.menu-add__done){transition:transform .4s cubic-bezier(.22,1,.36,1),opacity .2s ease}
+      .menu-add:not([data-pya-plus],:disabled):hover>svg:not(.menu-add__done svg){transform:translateY(-2px)}
+      .menu-add[data-pya-plus]:not(:disabled):hover>svg{transform:rotate(90deg)}
+      .menu-add__done{display:grid;place-items:center;opacity:0;transform:scale(.6);transition:opacity .2s ease,transform .4s cubic-bezier(.34,1.56,.64,1)}
+      .menu-add[data-pya-added]>.menu-add__done{opacity:1;transform:none}
+      .menu-add[data-pya-added]>:not(.menu-add__fill,.menu-add__done){opacity:0}
+      @media (prefers-reduced-motion:reduce){.menu-add__fill,.menu-add__done,.menu-add>*{transition:none!important}}
+    }
+    /* Owner 2026-11-17 (longer, personal cards): a card's own highlights, each with its icon, under the name. The list's spacing is
+     * layered (a store's card keeps its own); a row with an icon is unlayered, so a template's ✓ marker never sits beside the icon
+     * and the icon never takes a line of its own (Remolino's card, live 2026-11-17). */
+    @layer pagosya-commerce {
+      .menu-item .menu-item__points{list-style:none;margin:8px 0 2px;padding:0;display:grid;gap:6px;font-size:13px;line-height:1.35}
+    }
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon]{display:flex;align-items:flex-start;gap:8px;padding-left:0}
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon]::before{content:none;display:none}
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon] svg{flex:none;width:16px;height:16px;margin-top:1px;color:var(--store-accent,currentColor)}
+    /* Unlayered: a clear button filled with its own text colour must change its text, whatever the store's button colour says. */
+    .menu-item .menu-add[data-pya-ink]{transition:color .3s ease .15s}
+    .menu-item .menu-add[data-pya-ink]:not(:disabled):is(:hover,:focus-visible),.menu-item .menu-add[data-pya-ink][data-pya-added]{color:var(--pya-ink)}
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
       .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
@@ -36,6 +68,8 @@
       @media (min-width:761px){:where(:has(> [data-product-slot=gallery]):has(> [data-product-slot=buy], > * [data-product-slot=buy])){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(32px,4vw,64px);align-items:start}}
       :where([data-product-slot=gallery]) :where(img.product-detail__photo,.product-detail__stage img,.product-detail__stage video){max-height:min(78svh,860px);object-fit:cover}
       .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
+      .menu-item__noimage{display:grid;place-items:center;width:100%;aspect-ratio:4/5;border-radius:var(--kit-photo-round,var(--store-radius,0px));background:color-mix(in srgb,currentColor 6%,transparent);color:color-mix(in srgb,currentColor 35%,transparent);font:inherit;font-size:clamp(2rem,6vw,3.5rem);line-height:1;user-select:none}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__noimage{height:100%;aspect-ratio:auto}
       [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:stretch}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]) .menu-item__copy :is(h3,p){margin:0}
@@ -75,6 +109,9 @@
     [data-pagosya-product][data-style] .product-detail__decor{display:none}
     [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery{position:sticky;top:0}
     [data-pagosya-product][data-style] .product-detail__stage{position:relative;min-width:0}
+    [data-pagosya-product] .product-detail__videos{display:grid;gap:12px;margin-top:12px;min-width:0}
+    [data-pagosya-product] .product-detail__video{display:block;width:100%;max-height:80vh;border-radius:12px;background:#000;object-fit:contain}
+    [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery:has(.product-detail__videos){position:static}
     [data-pagosya-product][data-style] .product-detail__badge{position:absolute;top:14px;left:14px;z-index:2;max-width:calc(100% - 28px);padding:6px 12px;border-radius:999px;background:var(--pd-accent,#111);color:var(--pd-on-accent,#fff);font-size:13px;font-weight:600;line-height:1.2;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
     [data-pagosya-product][data-style] .product-detail__photo{display:block;width:100%;height:min(calc(100dvh - 64px),760px);min-height:420px;max-height:none;margin:0;object-fit:cover;border:0;border-radius:0;background:var(--pd-tint);touch-action:pan-y}
     dialog[data-pagosya-product][data-style] .product-detail__photo{height:min(calc(100dvh - 34px),640px);min-height:360px}
@@ -330,14 +367,14 @@
       [data-pagosya-product][data-style] .product-detail__sticky-space:not([hidden]){display:block;height:72px}
     }
     /* Lively one-product stores (spec 2026-11-03): the buy bar also shows on laptops, a floating pill with the photo and choice. */
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){position:fixed;left:50%;right:auto;bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:12px;width:min(720px,calc(100% - 24px));padding:10px 10px 10px 12px;border:1px solid var(--pd-line);border-radius:20px;background:var(--pd-paper);color:var(--pd-ink);box-shadow:0 18px 40px -18px #0000004d;transform:translateX(-50%)}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky img:not([hidden]){display:block;width:44px;height:44px;border-radius:12px;object-fit:cover;flex:0 0 auto}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky [data-product-sticky-choice]{display:block;color:var(--pd-muted)}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){position:fixed;left:50%;right:auto;bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:12px;width:min(720px,calc(100% - 24px));padding:10px 10px 10px 12px;border:1px solid var(--pd-line);border-radius:20px;background:var(--pd-paper);color:var(--pd-ink);box-shadow:0 18px 40px -18px #0000004d;transform:translateX(-50%)}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky img:not([hidden]){display:block;width:44px;height:44px;border-radius:12px;object-fit:cover;flex:0 0 auto}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky [data-product-sticky-choice]{display:block;color:var(--pd-muted)}
     [data-pagosya-product][data-style] .product-detail__sticky img{display:none}
-    @media (prefers-reduced-motion:no-preference){:root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){animation:pya-bar-in .35s cubic-bezier(.2,.9,.2,1) both}}
+    @media (prefers-reduced-motion:no-preference){:root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){animation:pya-bar-in .35s cubic-bezier(.2,.9,.2,1) both}}
     /* Lively one-product stores (spec 2026-11-03): short facts floating over the product photo, each with a pinging dot. */
     .product-detail__pills{position:absolute;left:14px;top:14px;z-index:2;display:grid;gap:8px;margin:0;padding:0;list-style:none;pointer-events:none}
     .product-detail__pills li{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:7px 12px;border-radius:999px;background:color-mix(in srgb,var(--pd-paper,#fff) 92%,transparent);color:var(--pd-ink,#111);font-size:12.5px;font-weight:600;box-shadow:0 8px 22px -12px #0000004d;backdrop-filter:blur(8px)}

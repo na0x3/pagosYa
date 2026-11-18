@@ -1,0 +1,22 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwapbuuj0001q1gkwgvzrdlb",
+  "slug": "k54syswv",
+  "photos": {
+    "647a2ffb60b4d4a3c9c8f84cc5434481.jpg": "/v1/uploads/0f5853e5-8f80-4f4d-ba7b-c025ae52b5a9.jpg",
+    "38605cb7738cdc7a35885d2ccf1e0da4.jpg": "/v1/uploads/bbdafedf-f751-40ba-8493-0f30e2c3ceff.jpg",
+    "d9b96be096501284d6c4379ac15b1f73.jpg": "/v1/uploads/9ad02bad-abc8-4a80-aa3f-16e298a4fd14.jpg",
+    "c70e292a5af4972283800da8a41f14f8.jpg": "/v1/uploads/3bdbaa5f-3584-4dbc-92ae-a6eb3a06009e.jpg",
+    "183a817839131ffdf80e6f887ae1a0de.jpg": "/v1/uploads/75d1aba6-4e9b-46c3-82df-c38744508746.jpg"
+  },
+  "categories": {},
+  "products": {
+    "Salsa picante Peppa 250 ml": "cmwapbuvd000dq1gknzm34jpw"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "from": "cmwbj4jox0001bod58xeo3r30",
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwf1kndp0001i980mhxsy59t",
+  "slug": "jrl0toak",
+  "categories": {
+    "cmwbj4jq4000hbod56eaam83n": "cmwf1kndt0003i980g3u7kwkw",
+    "cmwbj4jq5000jbod5o3ypk4ly": "cmwf1kndu0005i980xnwmsffv",
+    "cmwbj4jq5000lbod5fdudv1s6": "cmwf1kndv0007i9802aiewd8p",
+    "cmwbj4jq5000nbod5jfpm9n3u": "cmwf1kndv0009i98064gky571"
+  },
+  "products": {
+    "cmwbj4jq9000rbod58z0jl9oc": "cmwf1kne7000di9804q0k2o9u",
+    "cmwbj4jqe000vbod54xfy9t4d": "cmwf1knex000hi9800deaosa5",
+    "cmwbj4jqk000zbod55o9bqi01": "cmwf1knf4000li9809lwwll4r",
+    "cmwbj4jqo0013bod5ljno0hdl": "cmwf1knfa000pi980xompfgda",
+    "cmwbj4jqr0017bod5x7fq762a": "cmwf1knff000ti980jd1v22ba",
+    "cmwbj4jqt001bbod575gyot8q": "cmwf1knfj000xi980xsrhhhio"
+  },
+  "assetUrls": [
+    "/v1/uploads/17046f40-dd57-48be-8501-641922ffc107.jpg",
+    "/v1/uploads/a59ba934-d99f-4b17-be5d-f426bf152dd1.jpg",
+    "/v1/uploads/be5d7cc8-4616-4939-8c2f-5f9b01ba6134.jpg",
+    "/v1/uploads/9efcac2d-76fb-4e59-9f54-7a70aa132c8a.jpg",
+    "/v1/uploads/56f80ac0-c386-494c-970e-98e94aa83de7.jpg",
+    "/v1/uploads/b7b29987-9547-475c-a2de-82ef52949d6f.jpg",
+    "/v1/uploads/666fba03-a30e-4389-bf46-2d50427147fc.jpg",
+    "/v1/uploads/ed13bf9f-a5af-46fe-88be-56c3b4f27129.jpg",
+    "/v1/uploads/a7e4a1f7-18e9-4e25-ae5a-64646325ca38.jpg",
+    "/v1/uploads/9ec3b3b4-4b65-4b78-9efe-365bb90814a9.jpg",
+    "/v1/uploads/8c8693d1-a1f1-4be0-9945-d446d722abdd.jpg",
+    "/v1/uploads/02efe927-8d36-47ef-bdb6-69d59fa006ca.jpg",
+    "/v1/uploads/2b2522eb-42d0-4c08-a3c1-8d13bee7641b.jpg"
+  ]
+}

@@ -48,6 +48,12 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
 /** A message as the chat service runs it. personalTouch (variety spec §5) is set only by the job runner's own follow-up: it is
  *  not on the DTO, so the API rejects it from clients (review fix). A class field here would reach every request body. */
 export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolean;
+  /** YAPI tour (spec 2026-11-09): this request answers «¿Qué le cambio?» for that step; the job asks «¿Así está bien?» after. */
+  tourStepId?: string;
+  /** The merchant's own words of a tour reply (the request itself names the part); the chat shows these. */
+  tourWords?: string;
+  /** Spec 2026-11-09 A/B tests: a design test ask — the edit builds B, and the job posts the test card with the saved revision. */
+  abRequest?: string;
   /** The follow-up carries the merchant's own request (pages, look) rather than a touch of YAPI's: it fails out loud. */
   ownRequest?: boolean;
   /** «sigue» after an unfinished request: what the merchant typed, shown in the chat while the kept request runs. */
@@ -71,6 +77,10 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   homeWriter?: boolean;
   /** Spec 2026-10-31: the home composed from the section library, after the polish of a new master store. */
   sectionLibrary?: boolean;
+  /** Spec 2026-11-17 (V2 in the chat): the new store's first design comes from the V2 engine (YAPI_V2_CHAT=1). */
+  v2Design?: boolean;
+  /** «sigue» after a library call that failed (2026-11-10): the revision whose template sections to fill (the store now shows a bare home). */
+  sectionLibraryFrom?: number;
   /** Owner 2026-10-27: the follow-up is a guarded personal touch (source-guarded-touch.ts). */
   guardedTouch?: boolean;
   /** Spec 2026-11-01 template quick edits: the part of a request the layout edit could not do, run after it as its own edit. */

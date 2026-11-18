@@ -1,0 +1,491 @@
+{
+  "id": "merienda",
+  "name": "Merienda",
+  "category": "comida",
+  "description": "Snacks, dulces y bebidas con mucha personalidad: letra enorme, cada producto en su color, sus nombres que se encienden.",
+  "tags": [
+    "snacks",
+    "dulces",
+    "galletas",
+    "cereales",
+    "bebidas",
+    "helados",
+    "panadería divertida"
+  ],
+  "sitePurpose": "shop",
+  "order": 66,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (después de bakeme.pages.dev)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "me-hero",
+      "role": "hero",
+      "demo": "me-hero.jpg"
+    },
+    {
+      "slot": "me-cacao",
+      "role": "product",
+      "demo": "me-cacao.jpg"
+    },
+    {
+      "slot": "me-naranja",
+      "role": "product",
+      "demo": "me-naranja.jpg"
+    },
+    {
+      "slot": "me-frutilla",
+      "role": "product",
+      "demo": "me-frutilla.jpg"
+    },
+    {
+      "slot": "me-bowl",
+      "role": "product",
+      "demo": "me-bowl.jpg"
+    },
+    {
+      "slot": "me-desayuno",
+      "role": "lifestyle",
+      "demo": "me-desayuno.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "merienda-archivo",
+    "colors": {
+      "paper": "#fff8ee",
+      "ink": "#2b1910",
+      "muted": "#f6e7d4",
+      "accent": "#7b3f1d",
+      "deep": "#2b1910"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "merienda",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "ticker",
+      "button": "chunky",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "slant",
+      "photos": "sticker",
+      "pdp": "split-scroll",
+      "filters": "chips",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 150 · Pedidos hasta las 6 pm"
+    },
+    "layout": [
+      {
+        "type": "cover-mega",
+        "look": "side",
+        "title": "Crujiente *a cualquier hora*",
+        "text": "Cereales y bocaditos horneados en lotes pequeños, para el desayuno o la merienda.",
+        "cta": "Ver los sabores",
+        "link": "#sabores",
+        "photo": "slot:me-hero",
+        "eyebrow": "Recién horneado",
+        "items": [
+          {
+            "title": "Crují"
+          },
+          {
+            "title": "Mezclá"
+          },
+          {
+            "title": "Disfrutá"
+          }
+        ]
+      },
+      {
+        "type": "products-rows",
+        "look": "alternate",
+        "title": "Elige tu *sabor*",
+        "text": "Cuatro sabores, todos horneados la misma semana que te llegan.",
+        "products": [
+          "Bocaditos de Cacao",
+          "Granola Naranja",
+          "Crujientes de Frutilla",
+          "Choco Aros"
+        ],
+        "items": [
+          {
+            "title": "Bocaditos de Cacao",
+            "text": "Cacao intenso y avena tostada, poco dulces.",
+            "value": "#be9ce9"
+          },
+          {
+            "title": "Granola Naranja",
+            "text": "Avena, miel y cáscara de naranja.",
+            "value": "#f46507"
+          },
+          {
+            "title": "Crujientes de Frutilla",
+            "text": "Frutilla deshidratada y arroz inflado.",
+            "value": "#f685a6"
+          },
+          {
+            "title": "Choco Aros",
+            "text": "Los aros de chocolate para la leche fría.",
+            "value": "#e9bc66"
+          }
+        ],
+        "card": "soft"
+      },
+      {
+        "type": "names-list",
+        "look": "light",
+        "eyebrow": "¿Cuál es tu favorito?",
+        "title": "Nuestros sabores",
+        "items": [
+          {
+            "title": "Bocaditos de Cacao",
+            "photo": "slot:me-cacao"
+          },
+          {
+            "title": "Granola Naranja",
+            "photo": "slot:me-naranja"
+          },
+          {
+            "title": "Crujientes de Frutilla",
+            "photo": "slot:me-frutilla"
+          },
+          {
+            "title": "Choco Aros",
+            "photo": "slot:me-bowl"
+          }
+        ]
+      },
+      {
+        "type": "statement-sticker",
+        "look": "left",
+        "title": "Horneado, *no frito*",
+        "text": "Cada lote sale del horno el lunes y llega a tu casa esa misma semana.",
+        "cta": "Ver la tienda",
+        "link": "products",
+        "photo": "slot:me-bowl",
+        "photo2": "slot:me-frutilla"
+      },
+      {
+        "type": "categories-tiles",
+        "title": "Por *formato*",
+        "items": [
+          {
+            "title": "Bolsas",
+            "photo": "slot:me-frutilla",
+            "link": "products"
+          },
+          {
+            "title": "Cajas",
+            "photo": "slot:me-naranja",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "El más pedido",
+        "title": "Choco Aros, *para la leche fría*",
+        "text": "Aros de chocolate amargo, horneados y crujientes hasta el final del plato.",
+        "product": "demo-4",
+        "items": [
+          {
+            "title": "Horneados",
+            "icon": "flame"
+          },
+          {
+            "title": "Poco dulces",
+            "icon": "leaf"
+          }
+        ]
+      },
+      {
+        "type": "steps-howto",
+        "title": "Cómo *se come*",
+        "photo": "slot:me-bowl",
+        "items": [
+          {
+            "title": "Con leche",
+            "text": "Fría o tibia."
+          },
+          {
+            "title": "Con yogur",
+            "text": "Y fruta encima."
+          },
+          {
+            "title": "Solo",
+            "text": "Directo de la bolsa."
+          }
+        ]
+      },
+      {
+        "type": "usecases",
+        "title": "Para *cada momento*",
+        "items": [
+          {
+            "title": "Desayuno",
+            "text": "Con leche fría y fruta.",
+            "photo": "slot:me-desayuno"
+          },
+          {
+            "title": "Merienda",
+            "text": "Directo de la bolsa, a media tarde.",
+            "photo": "slot:me-cacao"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "text": "Cereales y bocaditos hechos a mano en La Paz, horneados en lotes pequeños y *listos para tu merienda*.",
+        "title": "Hechos a mano",
+        "photo": "slot:me-cacao"
+      },
+      {
+        "type": "promo-banner",
+        "title": "Cajas para *regalar*",
+        "text": "Cuatro sabores en una caja con lazo y tarjeta.",
+        "cta": "Ver las cajas",
+        "link": "products",
+        "photo": "slot:me-hero"
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas",
+        "photo": "slot:me-naranja",
+        "items": [
+          {
+            "title": "¿Cuánto duran?",
+            "text": "Cerrados, tres meses; abiertos, dos semanas en un frasco."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí, a toda la ciudad en 24 horas."
+          },
+          {
+            "title": "¿Tienen azúcar?",
+            "text": "Muy poca: endulzamos con miel y fruta."
+          },
+          {
+            "title": "¿Hacen pedidos grandes?",
+            "text": "Sí, escríbenos por WhatsApp."
+          }
+        ]
+      },
+      {
+        "type": "steps-howto",
+        "title": "Así de *fácil*",
+        "items": [
+          {
+            "title": "Elige",
+            "text": "Tus sabores y el tamaño."
+          },
+          {
+            "title": "Paga",
+            "text": "Con QR o tarjeta."
+          },
+          {
+            "title": "Disfruta",
+            "text": "Te llega en 24 horas."
+          }
+        ],
+        "photo": "slot:me-desayuno"
+      },
+      {
+        "type": "closing-wordmark",
+        "title": "Tu merienda, *lista*",
+        "cta": "Pedir ahora",
+        "link": "products",
+        "photo": "slot:me-desayuno"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "title": "Cómo *se come*",
+        "photo": "slot:me-bowl",
+        "items": [
+          {
+            "title": "Con leche",
+            "text": "Fría o tibia."
+          },
+          {
+            "title": "Con yogur",
+            "text": "Y fruta encima."
+          },
+          {
+            "title": "Solo",
+            "text": "Directo de la bolsa."
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Antes de pedir",
+        "items": [
+          {
+            "title": "¿Cuánto dura?",
+            "text": "Tres meses cerrado."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En 24 horas en la ciudad."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "merienda-archivo",
+        "merienda-bowlby",
+        "merienda-titan",
+        "merienda-rubik",
+        "merienda-unbounded"
+      ],
+      "variants": {
+        "photos": [
+          "sticker",
+          "blend",
+          "rounded"
+        ],
+        "titles": [
+          "slant",
+          "upper"
+        ],
+        "button": [
+          "chunky",
+          "pill",
+          "sticker"
+        ],
+        "footer": [
+          "ticker",
+          "band"
+        ]
+      },
+      "looks": {
+        "cover-mega": [
+          "side",
+          "stack",
+          "tilt"
+        ],
+        "products-rows": [
+          "alternate",
+          "cards",
+          "stack"
+        ],
+        "names-list": [
+          "light",
+          "outline"
+        ],
+        "statement-sticker": [
+          "left",
+          "center"
+        ]
+      },
+      "swaps": {
+        "cover-mega": [
+          "cover-mega",
+          "cover-ribbon",
+          "cover-half"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        [
+          0,
+          1,
+          3,
+          2,
+          5,
+          4,
+          7,
+          6,
+          9,
+          8,
+          10,
+          11,
+          12
+        ],
+        [
+          0,
+          2,
+          1,
+          4,
+          3,
+          6,
+          5,
+          8,
+          7,
+          9,
+          11,
+          10,
+          12
+        ]
+      ],
+      "bands": [
+        {},
+        {
+          "4": "muted",
+          "7": "muted"
+        },
+        {
+          "3": "muted",
+          "9": "muted"
+        }
+      ]
+    },
+    "demo": {
+      "storeName": "Merienda",
+      "tagline": "Cereales y bocaditos horneados",
+      "products": [
+        {
+          "name": "Bocaditos de Cacao",
+          "price": 45,
+          "description": "Bolsa de 300 g.",
+          "category": "Bolsas"
+        },
+        {
+          "name": "Granola Naranja",
+          "price": 52,
+          "description": "Caja de 400 g.",
+          "category": "Cajas"
+        },
+        {
+          "name": "Crujientes de Frutilla",
+          "price": 45,
+          "description": "Bolsa de 300 g.",
+          "category": "Bolsas"
+        },
+        {
+          "name": "Choco Aros",
+          "price": 48,
+          "description": "Caja de 350 g.",
+          "category": "Cajas"
+        }
+      ]
+    }
+  }
+}

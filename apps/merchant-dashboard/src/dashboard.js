@@ -26,6 +26,10 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
 import { bankOptionsHtml, mountPayoutAccountPanel } from "/src/payout-account-panel.mjs";
 import { ownerFitsLevel } from "/src/payout-accounts.mjs";
 import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
+import { renderMascotBubbles, renderMascotCards, storeSummary } from "/src/store-mascots.mjs";
+import { renderSellingCard } from "/src/selling-card.mjs";
+import { mountTareas } from "/src/tareas.mjs";
+import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -68,13 +72,16 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
   emailEl.value = sessionStorage.getItem("pagosya_merchant_email") || emailEl.value;
   let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
   let currentProfileName = "";
+  // YAPI's welcome while it is on screen (src/yapi-welcome.mjs); the hash the panel was opened with decides whether it shows.
+  let welcome = null;
+  const entryHash = location.hash;
   let lastProfileSessionsPayload = null;
   // Perfil: the owner's profile menu and devices line (src/profile-sessions.mjs).
   const profilePanel = createProfileSessions({
     api, setButtonBusy, emailEl,
     elements: { loggedInAsEl, profileMenuEl, profileMenuTriggerEl, profileTriggerAvatarEl, profileMenuAvatarEl, accountAvatarEl, profileDisplayNameEl, profileSessionsEl },
     profileName: () => currentProfileName,
-    setProfileName: (name) => { currentProfileName = name; },
+    setProfileName: (name) => { currentProfileName = name; welcome?.greet(greetingFor(new Date(), name)); },
     profileSessionsPayload: () => lastProfileSessionsPayload,
     setProfileSessionsPayload: (payload) => { lastProfileSessionsPayload = payload; },
   });
@@ -103,7 +110,14 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     storeId: () => currentStoreId,
     categories: () => lastCategories,
     paymentLinks: () => lastPaymentLinks,
-    setPaymentLinks: (links) => { lastPaymentLinks = links; showRestock(links); },
+    setPaymentLinks: (links) => {
+      lastPaymentLinks = links; showRestock(links);
+      // A store without products starts in the guide (its catalog would be empty anyway).
+      if (!links.length && document.body.dataset.dashboardView === "products" && !document.querySelector(".product-yapi-guide")?.hasAttribute("data-open")) {
+        document.querySelector(".product-yapi-guide")?.setAttribute("data-open", "");
+        syncStoreResourceViews("products");
+      }
+    },
     renderBulkDiscountProducts: (...args) => renderBulkDiscountProducts(...args),
     refreshFinancesInBackground: (...args) => refreshFinancesInBackground(...args),
   });
@@ -131,6 +145,10 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
   let lastPayments = [];
   let lastPayouts = [];
   let lastFinances = null;
+  // What the store mascots read (renderMascots): low stock from the catalog, the setup steps from Inicio, and their last summary.
+  let lastLowStock = [];
+  let lastSetupSteps = [];
+  let lastMascotItems = [];
   // Documentos → Cobros (D1); the module owns its view, this is only the glue.
   const cobros = mountCobrosPanel({
     api,
@@ -177,8 +195,10 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
   /** Inicio › Por reponer: products about to sell out; «Reponer» opens the product at its stock step. */
   function showRestock(links) {
     const card = document.getElementById("overviewRestock");
-    card.innerHTML = renderRestock(lowStock(links));
+    lastLowStock = lowStock(links);
+    card.innerHTML = renderRestock(lastLowStock);
     card.hidden = !card.innerHTML;
+    renderMascots();
   }
   document.getElementById("overviewRestock").addEventListener("click", event => {
     const button = event.target.closest("[data-restock-id]"); if (!button) return;
@@ -221,6 +241,13 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     },
     composeYapi: (text) => composeInYapi(text, "growth"),
     editProduct: (productId, step) => editProductById(productId, step),
+  });
+  // Tienda › Tareas (spec 2026-11-16): YAPI's jobs as cards; a design or a review runs here, the rest open YAPI with the request written.
+  const tareas = mountTareas({
+    api,
+    storeId: () => currentStoreId,
+    composeYapi: (text) => composeInYapi(text, "tasks"),
+    openView: (view) => { history.pushState(null, "", `#dashboard-${view}`); setDashboardView(view); },
   });
   // Crecer › Carritos abandonados: who left without paying and how to reach them; read-only.
   const abandonedCarts = mountAbandonedCartsPanel({
@@ -470,9 +497,14 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
       const frame = document.getElementById(id);
       if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { unloadFrame(frame); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
       if (view !== kind) continue;
-      frame.hidden = !currentStoreId || !sessionToken || kind === "marketing" && ["emails", "promotions"].includes(document.getElementById("marketingTabs").dataset.tab);
+      // Productos leads with the catalog (dashboard polish 2026-11-16): the guide opens on «Añadir producto con YAPI», on «Editar»,
+      // or by itself when the store has no products yet; it still loads in the background so it is ready.
+      const guide = kind === "products" ? document.querySelector(".product-yapi-guide") : null;
+      const closedGuide = Boolean(guide && !guide.hasAttribute("data-open"));
+      frame.hidden = !currentStoreId || !sessionToken || closedGuide || kind === "marketing" && ["emails", "promotions"].includes(document.getElementById("marketingTabs").dataset.tab);
+      if (guide) document.getElementById("closeProductGuide").hidden = closedGuide;
       const empty = document.querySelector(`[data-resource-empty="${kind}"]`); if (empty) empty.hidden = Boolean(currentStoreId && sessionToken);
-      if (!frame.hidden && !frame.getAttribute("src")) {
+      if ((!frame.hidden || closedGuide && currentStoreId && sessionToken) && !frame.getAttribute("src")) {
         sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
         frame.dataset.storeId = currentStoreId;
         loadFrame(frame, `/studio/?embedded=1&${kind === "products" ? "productGuide=1" : `library=${kind}${kind === "marketing" ? `&tab=${document.getElementById("marketingTabs").dataset.tab}` : ""}`}&store=${encodeURIComponent(currentStoreId)}`);
@@ -481,7 +513,12 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     // Correos is drawn here, not in the frame: shown for the selected store (loaded once per store).
     if (view === "marketing" && sessionToken && document.getElementById("marketingTabs").dataset.tab === "emails") emailStudio?.show();
   }
+  document.getElementById("closeProductGuide").addEventListener("click", () => {
+    document.querySelector(".product-yapi-guide").removeAttribute("data-open");
+    syncStoreResourceViews("products");
+  });
   document.getElementById("startProductGuide").addEventListener("click", () => {
+    document.querySelector(".product-yapi-guide").setAttribute("data-open", "");
     syncStoreResourceViews("products");
     document.getElementById("productGuideFrame").scrollIntoView({ block: "center", behavior: "smooth" });
     document.getElementById("productGuideFrame").contentWindow?.postMessage({type:"pagosya:product-guide-new"}, location.origin);
@@ -547,7 +584,7 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; deliverStudioAction(); return; }
     if (event.data?.type === "pagosya:studio-action-received" && event.data.storeId === currentStoreId) {
       // The dashboard's own YAPI box is emptied once its text is handed over; a Crecimiento suggestion leaves it alone.
-      if (pendingStudioAction?.action === "compose" && !["growth", "ask"].includes(pendingStudioAction.origin)) document.getElementById("workspaceYapiDraft").value = "";
+      if (pendingStudioAction?.action === "compose" && !["growth", "ask", "tasks"].includes(pendingStudioAction.origin)) document.getElementById("workspaceYapiDraft").value = "";
       pendingStudioAction = null; return;
     }
     // YAPI in design mode (spec 2026-10-22 v2 §6): the Studio covers the dashboard while the merchant designs.
@@ -608,6 +645,7 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     if (nextView === "cobros") cobros.show();
     if (nextView === "subscriptions") subscriptionsPanel.show();
     if (nextView === "growth") growth.show();
+    if (nextView === "tasks") tareas.show(); else tareas.hide();
     if (nextView === "abandoned-carts") abandonedCarts.show();
     if (nextView === "assistant") assistantPanel.show();
     if (nextView === "proposals") proposals.show();
@@ -745,8 +783,45 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     onboardingChecked = true;
     const shown = sectionOf(document.body.dataset.dashboardView, document.getElementById("marketingTabs").dataset.tab);
     renderSectionPills(shown.section, shown.tab);
+    // Owner 2026-11-07: an account just created here gets a short welcome, then names its first store.
+    if (sessionStorage.getItem("pagosya_welcome") === "1") { sessionStorage.removeItem("pagosya_welcome"); document.getElementById("welcomeDialog").showModal(); return; }
     if (!lastStores.length) openCreateStoreDialog();
   }
+  // Owner 2026-11-12 (Amboras's setup steps): role → what pagosYa should help with → WhatsApp, one screen each; Continuar stays off
+  // until the step is answered. The answers are kept on the merchant, then the first store gets its name. A failed save never
+  // stops the merchant: the store comes first.
+  const setupForm = document.getElementById("setupForm");
+  let setupStep = 1;
+  const setupAnswered = () => setupStep === 1 ? Boolean(setupForm.querySelector('input[name="role"]:checked'))
+    : setupStep === 2 ? Boolean(setupForm.querySelector('input[name="goals"]:checked'))
+    : document.getElementById("setupPhone").value.replace(/\D/g, "").length >= 7;
+  function showSetupStep(step) {
+    setupStep = step;
+    setupForm.querySelectorAll("[data-setup-step]").forEach((section) => { section.hidden = Number(section.dataset.setupStep) !== step; });
+    document.querySelectorAll("#welcomeDialog .setup-bar i").forEach((bar, index) => bar.classList.toggle("is-on", index < step));
+    document.getElementById("setupCount").textContent = `Paso ${step} de 3`;
+    document.getElementById("setupBack").hidden = step === 1;
+    document.getElementById("setupNext").disabled = !setupAnswered();
+  }
+  setupForm.addEventListener("input", () => { document.getElementById("setupNext").disabled = !setupAnswered(); });
+  document.getElementById("setupBack").addEventListener("click", () => showSetupStep(Math.max(1, setupStep - 1)));
+  setupForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!setupAnswered()) return;
+    if (setupStep < 3) { showSetupStep(setupStep + 1); return; }
+    const next = document.getElementById("setupNext");
+    setButtonBusy(next, true, "Guardando…");
+    const answers = {
+      role: setupForm.querySelector('input[name="role"]:checked')?.value,
+      goals: [...setupForm.querySelectorAll('input[name="goals"]:checked')].map((input) => input.value),
+      phone: document.getElementById("setupPhoneCode").value + document.getElementById("setupPhone").value.replace(/\D/g, ""),
+    };
+    try { await api("/dashboard/onboarding", { method: "POST", body: JSON.stringify(answers) }); } catch { /* the store comes first */ }
+    setButtonBusy(next, false, "Continuar →");
+    document.getElementById("welcomeDialog").close();
+    openCreateStoreDialog();
+  });
+  showSetupStep(1);
 
   function openCreateStore() {
     openCreateStoreDialog();
@@ -916,22 +991,88 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     return (store.publishedSourceRevision ? !store.sourcePublicationPaused : store.websitePublishedRevision > 0) ? "published" : "draft";
   }
 
+  // Inicio › the store's mascots (spec 2026-11-16-store-mascots-design.md): YAPI's star family tells the store's news in real numbers.
+  function renderMascots() {
+    lastMascotItems = storeSummary({ finances: lastFinances, money, lowStock: lastLowStock, steps: lastSetupSteps });
+    const row = document.getElementById("overviewMascots");
+    row.innerHTML = renderMascotCards(lastMascotItems);
+    row.hidden = !lastMascotItems.length;
+    welcome?.summary(renderMascotBubbles(lastMascotItems));
+  }
+
   // Greeting, key figures and the setup checklist; re-run whenever the finances or the money visibility change.
   function renderOverview() {
     if (!lastFinances) return;
     document.getElementById("overviewGreeting").textContent = greetingFor(new Date(), currentProfileName);
+    welcome?.greet(greetingFor(new Date(), currentProfileName));
     document.getElementById("overviewKpis").innerHTML = renderOverviewKpis(overviewKpis({ finances: lastFinances, money }));
     const store = lastStores.find((entry) => entry.id === currentStoreId);
     const setup = document.getElementById("overviewSetup");
-    setup.innerHTML = renderSetupSteps(setupSteps({
+    lastSetupSteps = setupSteps({
       kycStatus: lastKyc?.status,
       invoicingConfigured: Boolean(lastInvoicingProfile?.cuis),
       storePublished: store ? storePublicationState(store) === "published" : false,
       paymentCount: lastTotalFinances?.paymentCount ?? lastFinances.paymentCount,
       paymentStore: (store?.checkoutMode || "payment") === "payment",
-    }));
+    });
+    setup.innerHTML = renderSetupSteps(lastSetupSteps);
     setup.hidden = !setup.innerHTML;
+    renderMascots();
+    void loadSelling();
+    // Inicio › the store at a glance and three things YAPI can do (calm dashboard polish 2026-11-16).
+    const storeCard = document.getElementById("overviewStore");
+    if (storeCard) {
+      const state = store ? storePublicationState(store) : "";
+      storeCard.innerHTML = renderStoreCard({ store, state, url: store?.slug ? publicStoreUrl(store) : "" });
+      storeCard.hidden = !storeCard.innerHTML;
+      const shot = storeCard.querySelector("img[data-thumbnail-revision]");
+      if (shot) {
+        const key = `${shot.dataset.thumbnailStore}:${shot.dataset.thumbnailRevision}`;
+        if (overviewShots.has(key)) shot.src = overviewShots.get(key);
+        else api(`/stores/${encodeURIComponent(shot.dataset.thumbnailStore)}/source-project/thumbnail/${Number(shot.dataset.thumbnailRevision)}`, { raw: true })
+          .then((blob) => { const url = URL.createObjectURL(blob); overviewShots.set(key, url); if (shot.isConnected) shot.src = url; })
+          .catch(() => shot.closest(".overview-store-media")?.classList.add("failed"));
+      }
+    }
+    const suggest = document.getElementById("overviewSuggest");
+    if (suggest && !suggest.innerHTML) suggest.innerHTML = renderSuggestions();
   }
+
+  const overviewShots = new Map();
+  document.querySelector('[data-dashboard-page="overview"]')?.parentElement?.addEventListener("click", (event) => {
+    const open = event.target.closest("[data-overview-open]");
+    if (!open) return;
+    history.pushState(null, "", `#dashboard-${open.dataset.overviewOpen}`);
+    setDashboardView(open.dataset.overviewOpen);
+  });
+  /* Inicio › «Tu tienda esta semana» (spec 2026-11-16, la tienda que vende sola): only for a published store. */
+  let sellingRequest = 0;
+  async function loadSelling() {
+    const card = document.getElementById("overviewSelling");
+    const store = lastStores.find((entry) => entry.id === currentStoreId);
+    if (!card || !store || !store.publishedSourceRevision) { if (card) card.hidden = true; return; }
+    const request = ++sellingRequest;
+    try {
+      const summary = await api(`/stores/${encodeURIComponent(store.id)}/selling`);
+      if (request !== sellingRequest) return;
+      card.innerHTML = renderSellingCard(summary);
+      card.hidden = !card.innerHTML;
+    } catch { if (request === sellingRequest) card.hidden = true; }
+  }
+  document.getElementById("overviewSelling")?.addEventListener("click", async (event) => {
+    const card = event.currentTarget;
+    const undo = event.target.closest("[data-selling-undo]");
+    const auto = event.target.closest("[data-selling-auto]");
+    if (!undo && !auto || !currentStoreId) return;
+    const base = `/stores/${encodeURIComponent(currentStoreId)}/selling`;
+    (undo || auto).disabled = true;
+    try {
+      const summary = undo
+        ? await api(`${base}/${encodeURIComponent(undo.dataset.sellingUndo)}/undo`, { method: "POST" })
+        : await api(base, { method: "PATCH", body: JSON.stringify({ autoImprove: auto.getAttribute("aria-checked") !== "true" }) });
+      card.innerHTML = renderSellingCard(summary);
+    } catch { (undo || auto).disabled = false; }
+  });
 
 
   function setPasswordVisible(visible) {
@@ -1120,18 +1261,10 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     return url;
   }
 
-  // The login's mesh gradient runs only while the login is on screen.
+  // The login wears the site's cream wash (spec 2026-11-16, Clyro): nothing to mount any more. The koi (ascii-animals.mjs) and
+  // the mesh shader (login-shader.mjs) stay on disk; these two keep their callers.
   let disposeLoginShader = null;
-  function startLoginShader() {
-    if (disposeLoginShader) return;
-    disposeLoginShader = () => {};
-    const host = document.querySelector("[data-login-shader]");
-    if (!host) return;
-    import("/src/login-shader.mjs").then(async ({ mountLoginShader }) => {
-      const dispose = await mountLoginShader(host);
-      if (document.body.classList.contains("is-logged-out")) disposeLoginShader = dispose; else dispose();
-    });
-  }
+  function startLoginShader() {}
   function stopLoginShader() { disposeLoginShader?.(); disposeLoginShader = null; }
 
   function showLoggedOut() {
@@ -1150,7 +1283,30 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     startLoginShader();
   }
 
+  // Owner 2026-11-15 (the «ASCII animals» browser): opening the panel lands on YAPI's welcome, once per visit.
+  let welcomeChecked = false;
+  function maybeWelcome() {
+    if (welcomeChecked) return;
+    welcomeChecked = true;
+    import("/src/yapi-welcome.mjs").then(({ shouldWelcome, showYapiWelcome, welcomeSeen, markWelcomeSeen }) => {
+      if (!sessionToken || !shouldWelcome(entryHash, welcomeSeen())) return;
+      markWelcomeSeen();
+      welcome = showYapiWelcome({
+        root: document.getElementById("yapiWelcome"),
+        greeting: greetingFor(new Date(), currentProfileName),
+        onAsk: (text, from) => {
+          if (!currentStoreId) { welcome?.note("Crea tu tienda en «Tienda» para conversar con YAPI."); return false; }
+          composeInYapi(text, undefined, from);
+        },
+        onClose: () => { welcome = null; },
+      });
+      // The mascots' short version, when the finances are already in (renderMascots fills it when they arrive later).
+      welcome.summary(renderMascotBubbles(lastMascotItems));
+    });
+  }
+
   function showLoggedIn() {
+    maybeWelcome();
     document.body.classList.remove("is-logged-out");
     document.body.classList.add("is-logged-in");
     loginFormEl.style.display = "none";
@@ -1216,6 +1372,8 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
           }
         },
       });
+      // Shown before drawing, so the button can measure the card it sits in.
+      document.getElementById("merchantGoogleAuth").hidden = false;
       window.google.accounts.id.renderButton(document.getElementById("merchantGoogleButton"), {
         theme: "filled_black",
         size: "large",
@@ -1223,11 +1381,12 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
         text: "continue_with",
         locale: "es",
         logo_alignment: "left",
-        width: 320,
+        // Never wider than the login card (a phone leaves ~300px inside it).
+        width: Math.min(320, document.getElementById("merchantGoogleButton").clientWidth || 320),
       });
-      document.getElementById("merchantGoogleAuth").hidden = false;
     } catch {
       // El acceso por contraseña sigue disponible si Google está sin configurar o bloqueado.
+      document.getElementById("merchantGoogleAuth").hidden = true;
     }
   }
 
@@ -1355,6 +1514,34 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     }
   }
 
+  // Owner 2026-11-07 («que se pueda crear cuenta desde el website y entras directamente al dashboard»): the same card signs up
+  // (business, email, password; the terms when pagosYa has published them). The website's «Crear cuenta» opens it with #crear-cuenta.
+  let signupMode = false;
+  let signupTermsVersion = null;
+  function setSignupMode(on) {
+    signupMode = on;
+    document.getElementById("loginTitle").textContent = on ? "Crea tu cuenta gratis" : "Bienvenido de vuelta";
+    document.getElementById("loginSub").textContent = on ? "Arma tu tienda con YAPI hoy; elige un plan cuando quieras publicarla." : "Entra a tu panel de comercio para continuar.";
+    document.querySelectorAll("[data-signup-only]").forEach((el) => { el.hidden = !on || (el.id === "signupTermsRow" && !signupTermsVersion); });
+    document.getElementById("signupBusiness").required = on;
+    document.getElementById("signupTerms").required = on && Boolean(signupTermsVersion);
+    passwordEl.autocomplete = on ? "new-password" : "current-password";
+    passwordEl.minLength = on ? 8 : 0;
+    document.getElementById("login").textContent = on ? "Crear mi cuenta" : "Continuar";
+    document.getElementById("showForgot").hidden = on;
+    document.getElementById("merchantGoogleAuth")?.classList.toggle("is-signup", on);
+    document.getElementById("loginSwitchText").textContent = on ? "¿Ya tienes cuenta?" : "¿No tienes cuenta?";
+    document.getElementById("loginSwitch").textContent = on ? "Inicia sesión" : "Crea tu cuenta gratis";
+    errorEl.textContent = "";
+    if (on && signupTermsVersion === null) void loadSignupTerms();
+  }
+  async function loadSignupTerms() {
+    try { signupTermsVersion = (await api("/legal/merchant-terms"))?.version || ""; } catch { signupTermsVersion = ""; }
+    if (signupMode) setSignupMode(true);
+  }
+  document.getElementById("loginSwitch").addEventListener("click", () => setSignupMode(!signupMode));
+  if (location.hash === "#crear-cuenta") setSignupMode(true);
+
   loginFormEl.addEventListener("submit", async (event) => {
     event.preventDefault();
     const loginButton = document.getElementById("login");
@@ -1362,17 +1549,26 @@ import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
     errorEl.textContent = "";
     infoEl.textContent = "";
     sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
-    setButtonBusy(loginButton, true, "Ingresando…");
+    setButtonBusy(loginButton, true, signupMode ? "Creando tu cuenta…" : "Ingresando…");
     try {
-      const result = await api("/dashboard/login", {
-        method: "POST",
-        body: JSON.stringify({ email: emailEl.value, password: passwordEl.value }),
-      });
+      const termsEl = document.getElementById("signupTerms");
+      const result = signupMode
+        ? await api("/merchants/register", {
+          method: "POST",
+          body: JSON.stringify({ name: document.getElementById("signupBusiness").value.trim(), email: emailEl.value.trim(), password: passwordEl.value,
+            ...(signupTermsVersion && termsEl.checked ? { termsVersion: signupTermsVersion } : {}) }),
+        })
+        : await api("/dashboard/login", {
+          method: "POST",
+          body: JSON.stringify({ email: emailEl.value, password: passwordEl.value }),
+        });
+      // A brand-new account opens with the short welcome before its first store (owner 2026-11-07).
+      if (signupMode) { sessionStorage.setItem("pagosya_welcome", "1"); history.replaceState(null, "", location.pathname + location.search); setSignupMode(false); }
       await completeMerchantLogin(result);
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
     } finally {
-      setButtonBusy(loginButton, false, "Iniciar sesión");
+      setButtonBusy(loginButton, false, signupMode ? "Crear mi cuenta" : "Continuar");
     }
   });
 

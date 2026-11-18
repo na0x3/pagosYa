@@ -5,6 +5,8 @@
 export const ANALYTICS_EVENT_TYPES = [
   'page_view', 'cta_click', 'product_card_impression', 'product_card_click', 'product_view', 'add_to_cart',
   'cart_open', 'checkout_step', 'pay_click', 'whatsapp_click', 'contact_submit', 'search',
+  // «La tienda que vende sola» (spec 2026-11-16): a home section seen for a second, and a click inside it; target = s<number>.
+  'section_view', 'section_click',
 ] as const;
 export type AnalyticsEventType = typeof ANALYTICS_EVENT_TYPES[number];
 

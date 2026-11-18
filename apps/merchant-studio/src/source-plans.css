@@ -1,0 +1,26 @@
+/* Plans 2026-11-07: the plans window opened by Publicar on Gratis, or when the month's YAPI credits run out. */
+.plans-dialog { width: min(980px, calc(100vw - 32px)); }
+.plans-dialog__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.plans-dialog__head h2 { margin: 0 0 6px; font-size: 26px; color: var(--dialog-ink); }
+.plans-dialog__reason { margin: 0 0 6px; color: var(--dialog-ink); font-weight: 600; }
+.plans-dialog__credits, .plans-dialog__foot { margin: 0; color: var(--dialog-muted); font-size: 13px; }
+.plans-dialog__foot { margin-top: 16px; }
+.plans-dialog__note { margin: 12px 0 0; color: #a3341f; }
+.plans-dialog__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.plan-card { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid var(--dialog-line); border-radius: 16px; background: #fff; }
+.plan-card.is-featured { border-color: var(--dialog-accent); box-shadow: 0 10px 30px rgb(85 65 110 / 12%); }
+.plan-card.is-current { background: var(--dialog-soft); }
+.plan-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.plan-card h3 { margin: 0; font-size: 20px; color: var(--dialog-ink); }
+.plan-card__badge { padding: 3px 10px; border-radius: 99px; background: var(--dialog-accent); color: #fff; font-size: 12px; font-weight: 600; }
+.plan-card.is-current .plan-card__badge { background: var(--dialog-ink); }
+.plan-card__price { margin: 0; padding-bottom: 12px; border-bottom: 1px solid var(--dialog-line); color: var(--dialog-muted); font-size: 14px; }
+.plan-card__price strong { color: var(--dialog-ink); font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.plan-card__price small { display: block; margin-top: 4px; font-size: 12.5px; }
+.plan-card ul { flex: 1; margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; color: var(--dialog-ink); font-size: 14px; }
+.plan-card li { padding-left: 22px; position: relative; }
+.plan-card li::before { content: "✓"; position: absolute; left: 0; color: var(--dialog-accent); font-weight: 700; }
+.plan-card li.is-missing { color: var(--dialog-muted); }
+.plan-card li.is-missing::before { content: "–"; color: var(--dialog-muted); }
+.plan-card__sent { margin: 0; color: #2f6b3a; font-weight: 600; font-size: 14px; }
+@media (max-width: 760px) { .plans-dialog__grid { grid-template-columns: 1fr; } .plans-dialog__head { flex-direction: column; } }

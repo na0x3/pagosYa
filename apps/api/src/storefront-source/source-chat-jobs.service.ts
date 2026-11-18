@@ -1,5 +1,10 @@
+import { SourceTourService } from './source-tour.service';
+import { tourFocus, TOUR_REQUEST } from './source-tour';
+import { AB_END, AB_REQUEST, AB_STATUS, abKind } from './source-ab';
+import { SourceAbService } from './source-ab.service';
+import { PlansService } from '../plans/plans.service';
 import { sourceMerchantRequest } from './source-merchant-request';
-import { BadRequestException, ConflictException, HttpException, Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { createHash, randomUUID } from 'node:crypto';
 import { Prisma, StoreSourceChatJob } from '@prisma/client';
@@ -9,6 +14,8 @@ import { SendSourceMessageDto, type SourceMessageInput } from './dto/send-source
 import { sourceRequestContext } from './source-request-context';
 import { MODEL_LIMIT, MODEL_LIMIT_MERCHANT_FAILURE, merchantFacingSourceFailure } from './source-validation-error';
 import { SourceProviderQuotaException } from './source-provider-error';
+import { isFirstBuildStep, PopupLookService } from '../store-popups/popup-look.service';
+import { SourceV2PrototypeService } from './v2/v2-prototype.service';
 /** Spec 2026-10-28 §1: a new store's first design waits out a spent ChatGPT plan — 12 tries, 10 minutes apart — instead of failing. */
 export const FIRST_DESIGN_MAX_ATTEMPTS = 12;
 export const QUOTA_PAUSE_MS = 10 * 60_000;
@@ -51,7 +58,7 @@ export class SourceChatJobsService implements OnModuleDestroy {
   private pausedUntil = 0;
   private controller?: AbortController;
   private readonly logger = new Logger(SourceChatJobsService.name);
-  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService) {}
+  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService, @Optional() private readonly plans?: PlansService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService, @Optional() private readonly v2?: SourceV2PrototypeService) {}
   /** The API is shutting down (a deploy, a dev restart): a running first design goes back to the queue instead of ending. */
   private stopping = false;
   onModuleDestroy() { this.stopping = true; this.controller?.abort(); }
@@ -68,6 +75,8 @@ export class SourceChatJobsService implements OnModuleDestroy {
       if (existing.inputDigest !== inputDigest) throw new ConflictException('Este requestId ya corresponde a otro pedido.');
       return chatJobView(existing);
     }
+    // Plans 2026-11-07: a merchant whose month of YAPI credits is used up is told so now, before anything is queued.
+    if (!input.personalTouch) await this.plans?.assertCredits(storeId, merchantId);
     await this.expire();
     // Variety spec §5: the merchant's own request wins — a queued or running personal touch on the store is cancelled.
     if (!input.personalTouch) {
@@ -79,7 +88,17 @@ export class SourceChatJobsService implements OnModuleDestroy {
     // Owner 2026-10-22: «sigue» after a request that did not finish runs that request again, as it was kept.
     // A new store (revision 0) resumes too: a failed first plan keeps its request and its setup action (final review 2026-10-22).
     const pending = !input.personalTouch && continuesRequest(input.instruction) ? pendingRequestIn(history) : undefined;
-    if (pending) input = { ...input, instruction: pending.instruction, resumeWords: input.instruction.trim(), ...(pending.setupAction ? { setupAction: pending.setupAction as SourceMessageInput['setupAction'] } : {}), ...(pending.direct ? { personalTouch: true, ownRequest: true } : {}) };
+    if (pending) input = { ...input, instruction: pending.instruction, resumeWords: input.instruction.trim(), ...(pending.setupAction ? { setupAction: pending.setupAction as SourceMessageInput['setupAction'] } : {}), ...(pending.direct ? { personalTouch: true, ownRequest: true } : {}),
+      // A home whose sections could not be composed (2026-11-10) is composed again, from the template's own sections.
+      ...(pending.sectionLibraryFrom ? { sectionLibrary: true, sectionLibraryFrom: pending.sectionLibraryFrom, firstDesign: true } : {}),
+      // Live 2026-11-17 (NOA vyerqe9q: «sigue» after a failed V2 design became a quick edit): the V2 first design runs again.
+      ...(typeof pending.v2DesignFrom === 'number' ? { v2Design: true, revision: pending.v2DesignFrom, firstDesign: true } : {}) };
+    // Spec 2026-11-09 A/B tests: a design test ask builds B by the usual edit; the words travel so the saved B gets its test card.
+    const abAsk = !input.personalTouch && !input.resumeWords && !input.tourStepId && AB_REQUEST.test(input.instruction);
+    if (abAsk && abKind(input.instruction) === 'design') input = { ...input, abRequest: input.instruction.trim().slice(0, 200) };
+    // YAPI tour (spec 2026-11-09): a reply to «¿Qué le cambio?», or a change typed straight after a step question, edits that step only.
+    const tourStep = !abAsk && !AB_STATUS.test(input.instruction) && !AB_END.test(input.instruction) && !input.personalTouch && !input.selection && !input.tourStepId && !input.resumeWords && !TOUR_REQUEST.test(input.instruction) ? await this.tour?.stepForReply(storeId).catch(() => null) : null;
+    if (tourStep) input = tourFocus(input, tourStep) as SourceMessageInput;
     const contextAnchor = history.find(message => !(message.metadata as any)?.failed && !(message.metadata as any)?.adaptationFailed)?.id;
     try {
       return chatJobView(await this.prisma.storeSourceChatJob.create({ data: { merchantId, storeId, requestId, inputDigest, input: json({ ...input, merchantRequest: sourceMerchantRequest(input, contextAnchor) }), activeStoreId: storeId } }));
@@ -183,7 +202,11 @@ export class SourceChatJobsService implements OnModuleDestroy {
       void this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { leaseUntil: new Date(Date.now() + LEASE_MS) } }).then(result => { if (!result.count) controller.abort(); }).catch(() => controller.abort());
     }, 5000);
     try {
-      const result = await sourceRequestContext.run({ request: (job.input as any).merchantRequest || sourceMerchantRequest(job.input as unknown as SendSourceMessageDto), jobId: job.id, signal: controller.signal, progress: async progress => {
+      // A request queued before the month ran out stops here with the same message (a background touch too).
+      await this.plans?.assertCredits(job.storeId);
+      // Spec 2026-11-17: a new store's first design on the V2 engine (YAPI_V2_CHAT=1), awaited here like any job.
+      const v2Job = (job.input as { v2Design?: boolean; revision?: number } | null);
+      const result = v2Job?.v2Design && this.v2 ? await this.v2.designForChat(job.merchantId, job.storeId, Number(v2Job.revision)) : await sourceRequestContext.run({ request: (job.input as any).merchantRequest || sourceMerchantRequest(job.input as unknown as SendSourceMessageDto), jobId: job.id, signal: controller.signal, progress: async progress => {
         const updated = await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { progress: json(progress), sequence: { increment: 1 } } });
         if (!updated.count) controller.abort();
       }, assertLease: async (tx, revision, targetStoreId) => {
@@ -203,7 +226,16 @@ export class SourceChatJobsService implements OnModuleDestroy {
       if (restOf?.layoutRest || restOf?.shippingRest) await this.prisma.storeAgentMessage.deleteMany({ where: { role: 'USER', metadata: { path: ['requestId'], equals: job.requestId } } }).catch(() => undefined);
       const followUp = !failed && 'followUp' in result ? result.followUp as SourceMessageInput | undefined : undefined;
       if (followUp) await this.create(job.merchantId, job.storeId, followUp).catch(error => this.logger.warn(`follow-up not queued for ${job.storeId}: ${String(error).slice(0, 200)}`));
+      // Spec 2026-11-09: the last step of a new store's first build gives its popup a look (instant; never delays the chat).
+      // Spec 2026-11-09 tour: then YAPI offers to walk the new store (after the popup line, so the offer is the last message).
+      if (!failed && !followUp && isFirstBuildStep(job.input)) void Promise.resolve(this.popupLooks?.designAfterBuild(job.storeId)).catch(() => undefined)
+        .then(() => this.tour?.offer(job.storeId)).catch(error => this.logger.warn(`tour offer failed for ${job.storeId}: ${String(error).slice(0, 200)}`));
+      if (restOf?.tourStepId) void this.tour?.afterEdit(job.storeId, Boolean(failed)).catch(() => undefined);
+      // Spec 2026-11-09 A/B tests: the saved revision is B — YAPI asks to launch the test (nothing when the edit saved nothing).
+      const savedB = !failed && restOf?.abRequest && 'revision' in result ? (result as { revision?: { revision?: number } }).revision?.revision : undefined;
+      if (savedB && restOf?.abRequest) void this.ab?.proposeDesign(job.storeId, savedB, restOf.abRequest).catch(error => this.logger.warn(`A/B card failed for ${job.storeId}: ${String(error).slice(0, 200)}`));
     } catch (error) {
+      if ((job.input as unknown as SourceMessageInput | null)?.tourStepId) void this.tour?.afterEdit(job.storeId, true).catch(() => undefined);
       const generation = await this.prisma.storeSourceGeneration.findFirst({ where: { requestJobId: job.id }, orderBy: { createdAt: 'desc' }, select: { status: true } }).catch(() => null);
       const outcome = generation && ['PARTIAL', 'BLOCKED'].includes(generation.status) ? generation.status : 'FAILED';
       const message = merchantJobError(error);

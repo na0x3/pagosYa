@@ -99,6 +99,301 @@
       catch { status.textContent = 'No se pudo solicitar el envío. Intenta de nuevo.'; button.disabled = false; }
     });
   };
+  // Spec 2026-11-09 popup looks: six built looks; a store keeps only the id (the API picks one for every store). Colours come from the
+  // signup host (--signup-paper/-ink/-accent, from the store's own tokens); text never sits on the photo and never under 12px.
+  const K = '[data-popup-kit] ';
+  const LOOK_TYPE = `${K}pya-title{font:400 clamp(34px,4vw,46px)/1.05 var(--signup-heading);letter-spacing:-.02em;margin:12px 0 10px}${K}pya-text{font-size:16px;line-height:1.55;margin:0 0 22px}${K}.kick{display:block;font:600 12px/1.4 var(--signup-body);letter-spacing:.18em;text-transform:uppercase;color:var(--signup-ink)}${K}pya-code{font-size:13px;margin-top:12px}`;
+  const LOOK_WORDS = '<span class="kick">{name}</span><pya-title></pya-title><pya-text></pya-text><pya-form></pya-form><pya-code></pya-code>';
+  const POPUP_LOOKS = {
+    clasica: { html: `<div class="lk lk-clasica"><pya-photo></pya-photo><div class="p">${LOOK_WORDS}</div></div>`,
+      css: `${K}.lk-clasica{display:grid;grid-template-columns:1fr 1fr;min-height:540px}${K}.lk-clasica .p{padding:56px 48px 44px;background:var(--signup-paper)}@media(max-width:700px){${K}.lk-clasica{grid-template-columns:1fr;min-height:0}${K}.lk-clasica pya-photo{height:190px}${K}.lk-clasica .p{padding:24px}}` },
+    portada: { html: `<div class="lk lk-portada"><pya-photo></pya-photo><div class="p">${LOOK_WORDS}</div></div>`,
+      css: `${K}.lk-portada pya-photo{height:300px}${K}.lk-portada .p{padding:40px 72px 44px;text-align:center;background:var(--signup-paper)}${K}.lk-portada pya-title{font-family:var(--signup-body);font-weight:800;text-transform:uppercase;letter-spacing:-.03em}${K}.lk-portada pya-text{max-width:520px;margin-left:auto;margin-right:auto}${K}.lk-portada pya-form{max-width:560px;margin:0 auto;text-align:left}@media(max-width:700px){${K}.lk-portada pya-photo{height:200px}${K}.lk-portada .p{padding:24px}}` },
+    cartel: { html: `<div class="lk lk-cartel"><pya-photo></pya-photo><div class="card">${LOOK_WORDS}</div></div>`,
+      css: `${K}.lk-cartel{position:relative;min-height:600px;display:flex;align-items:center;justify-content:flex-end;padding:40px}${K}.lk-cartel>pya-photo{position:absolute;inset:0}${K}.lk-cartel .card{position:relative;width:440px;max-width:100%;background:var(--signup-paper);padding:36px;box-shadow:0 20px 60px #0004}@media(max-width:700px){${K}.lk-cartel{display:block;padding:0;min-height:0}${K}.lk-cartel>pya-photo{position:relative;height:200px}${K}.lk-cartel .card{width:auto;box-shadow:none;padding:24px}}` },
+    postal: { html: `<div class="lk lk-postal"><div class="frame"><div class="ph"><pya-photo></pya-photo><span class="stamp" aria-hidden="true">{initial}</span></div><div class="p"><span class="kick">Carta de {name}</span><pya-title></pya-title><pya-text></pya-text><pya-form></pya-form><pya-code></pya-code></div></div></div>`,
+      css: `${K}.lk-postal{padding:16px;background:var(--signup-paper)}${K}.lk-postal .frame{border:2px solid var(--signup-accent);display:grid;grid-template-columns:1fr 1.15fr;min-height:520px}${K}.lk-postal .ph{position:relative;padding:16px;border-right:1px dashed var(--signup-accent)}${K}.lk-postal .ph pya-photo{height:100%;min-height:300px}${K}.lk-postal .stamp{position:absolute;top:28px;right:28px;width:64px;height:64px;border:3px double var(--signup-accent);background:var(--signup-paper);display:grid;place-items:center;font:700 28px/1 var(--signup-heading);color:var(--signup-ink)}${K}.lk-postal .p{padding:40px 40px 32px}${K}.lk-postal pya-title{font-style:italic}@media(max-width:700px){${K}.lk-postal{padding:10px}${K}.lk-postal .frame{grid-template-columns:1fr;min-height:0}${K}.lk-postal .ph{border-right:0;border-bottom:1px dashed var(--signup-accent)}${K}.lk-postal .ph pya-photo{min-height:170px;height:170px}${K}.lk-postal .p{padding:22px}}` },
+    revista: { html: `<div class="lk lk-revista"><div class="top"><div><span class="kick">{name}</span><pya-title></pya-title></div><pya-photo></pya-photo></div><div class="p"><pya-text></pya-text><pya-form></pya-form><pya-code></pya-code></div></div>`,
+      css: `${K}.lk-revista .top{display:grid;grid-template-columns:1.3fr 1fr;gap:32px;align-items:end;padding:48px 56px 0;background:var(--signup-ink);color:var(--signup-paper)}${K}.lk-revista .top .kick{color:inherit}${K}.lk-revista .top pya-title{font-size:clamp(40px,5.5vw,64px);margin:12px 0 40px;color:inherit}${K}.lk-revista .top pya-photo{height:300px;border-radius:200px 200px 0 0}${K}.lk-revista .p{padding:32px 56px 40px;background:var(--signup-paper)}@media(max-width:700px){${K}.lk-revista .top{grid-template-columns:1fr;padding:28px 22px 0;gap:0}${K}.lk-revista .top pya-title{margin:10px 0 18px}${K}.lk-revista .top pya-photo{height:180px}${K}.lk-revista .p{padding:22px}}` },
+    etiqueta: { html: `<div class="lk lk-etiqueta"><pya-photo></pya-photo>${LOOK_WORDS}</div>`,
+      css: `${K}.lk-etiqueta{padding:52px 80px 44px;text-align:center;background:var(--signup-paper)}${K}.lk-etiqueta>pya-photo{width:220px;height:220px;min-height:0;border-radius:50%;margin:0 auto 22px;box-shadow:0 0 0 6px var(--signup-paper),0 0 0 8px var(--signup-accent)}${K}.lk-etiqueta pya-text{max-width:520px;margin-left:auto;margin-right:auto}${K}.lk-etiqueta pya-form{max-width:540px;margin:0 auto;text-align:left}@media(max-width:700px){${K}.lk-etiqueta{padding:28px 22px}${K}.lk-etiqueta>pya-photo{width:160px;height:160px}}` },
+  };
+  // Spec 2026-11-09 popup games: rasca y gana and ruleta in the popup's form slot. Everyone wins; the server draws and signs the
+  // prize (demo stores and the Studio preview draw locally and never send); the code only comes with the claim.
+  const GAMES = ['scratch', 'wheel'];
+  const shortPrize = label => String(label).split(' de ')[0];
+  function wheelSvg(slices) {
+    const n = slices.length; const step = 360 / n;
+    const point = deg => { const r = (deg - 90) * Math.PI / 180; return `${(Math.cos(r) * 96).toFixed(2)} ${(Math.sin(r) * 96).toFixed(2)}`; };
+    return `<svg viewBox="-100 -100 200 200" aria-hidden="true">${slices.map((label, i) => {
+      const a = i * step; const dark = i % 2 === 0;
+      return `<path d="M0 0 L${point(a)} A96 96 0 ${step > 180 ? 1 : 0} 1 ${point(a + step)} Z" style="fill:${dark ? 'var(--signup-ink)' : 'var(--signup-paper)'};stroke:var(--signup-accent);stroke-width:2"/>`
+        + `<text transform="rotate(${a + step / 2}) translate(0 -60)" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="700" style="fill:${dark ? 'var(--signup-paper)' : 'var(--signup-ink)'}">${escape(shortPrize(label))}</text>`;
+    }).join('')}<circle r="14" style="fill:var(--signup-accent);stroke:var(--signup-ink);stroke-width:2"/></svg>`;
+  }
+  // Spec 2026-11-10 rasca y elige (owner: the bakeme.pages.dev flow for every store): the card has the business's shape, painted in the
+  // store's colours; scratching strokes from the last point, so a quick swipe clears a whole stripe.
+  const SHAPES = ['cookie', 'can', 'bottle', 'cup', 'flower', 'garment', 'box', 'bag'];
+  const SHAPE_RATIO = { cookie: 1.35, can: 1.05, bottle: 1.05, cup: 1.25, flower: 1.15, garment: 1.1, box: 1.3, bag: 1.15, card: 1.6 };
+  const seeded = n => { let state = n; return () => (state = (state * 9301 + 49297) % 233280) / 233280; };
+  function shapePath(ctx, shape, w, h) {
+    const u = w / 100, v = h / 100;
+    ctx.beginPath();
+    if (shape === 'cookie') {
+      const rnd = seeded(7);
+      for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 2, k = 1 + (rnd() - 0.5) * 0.05; const x = w / 2 + Math.cos(a) * w * .47 * k, y = h / 2 + Math.sin(a) * h * .45 * k; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+    } else if (shape === 'can' || shape === 'card') {
+      const x = shape === 'can' ? 27 * u : 2 * u, y = shape === 'can' ? 4 * v : 3 * v, cw = shape === 'can' ? 46 * u : 96 * u, ch = shape === 'can' ? 92 * v : 94 * v, r = Math.min(cw, ch) * .16;
+      ctx.moveTo(x + r, y); ctx.arcTo(x + cw, y, x + cw, y + ch, r); ctx.arcTo(x + cw, y + ch, x, y + ch, r); ctx.arcTo(x, y + ch, x, y, r); ctx.arcTo(x, y, x + cw, y, r);
+    } else if (shape === 'bottle') {
+      ctx.moveTo(43 * u, 3 * v); ctx.lineTo(57 * u, 3 * v); ctx.lineTo(57 * u, 22 * v); ctx.quadraticCurveTo(70 * u, 28 * v, 70 * u, 40 * v); ctx.lineTo(70 * u, 90 * v);
+      ctx.quadraticCurveTo(70 * u, 97 * v, 63 * u, 97 * v); ctx.lineTo(37 * u, 97 * v); ctx.quadraticCurveTo(30 * u, 97 * v, 30 * u, 90 * v); ctx.lineTo(30 * u, 40 * v); ctx.quadraticCurveTo(30 * u, 28 * v, 43 * u, 22 * v);
+    } else if (shape === 'cup') {
+      ctx.moveTo(14 * u, 12 * v); ctx.lineTo(74 * u, 12 * v); ctx.lineTo(66 * u, 92 * v); ctx.quadraticCurveTo(65 * u, 96 * v, 60 * u, 96 * v); ctx.lineTo(28 * u, 96 * v); ctx.quadraticCurveTo(23 * u, 96 * v, 22 * u, 92 * v);
+      ctx.moveTo(72 * u, 30 * v); ctx.arc(76 * u, 46 * v, 16 * Math.min(u, v), -Math.PI / 2, Math.PI / 2);
+    } else if (shape === 'flower') {
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, r = Math.min(w, h) * .2; const x = w / 2 + Math.cos(a) * r * 1.15, y = h / 2 + Math.sin(a) * r * 1.15; ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, Math.PI * 2); }
+    } else if (shape === 'garment') {
+      ctx.moveTo(38 * u, 8 * v); ctx.quadraticCurveTo(50 * u, 0, 62 * u, 8 * v); ctx.lineTo(66 * u, 16 * v); ctx.lineTo(84 * u, 22 * v); ctx.lineTo(96 * u, 70 * v); ctx.lineTo(84 * u, 74 * v); ctx.lineTo(76 * u, 44 * v);
+      ctx.lineTo(76 * u, 96 * v); ctx.lineTo(24 * u, 96 * v); ctx.lineTo(24 * u, 44 * v); ctx.lineTo(16 * u, 74 * v); ctx.lineTo(4 * u, 70 * v); ctx.lineTo(16 * u, 22 * v); ctx.lineTo(34 * u, 16 * v);
+    } else if (shape === 'box') {
+      ctx.rect(10 * u, 30 * v, 80 * u, 64 * v); ctx.rect(5 * u, 14 * v, 90 * u, 18 * v);
+    } else {
+      ctx.moveTo(14 * u, 30 * v); ctx.lineTo(86 * u, 30 * v); ctx.lineTo(90 * u, 96 * v); ctx.lineTo(10 * u, 96 * v);
+    }
+    ctx.closePath();
+  }
+  // CSS colour and font values (var(), color-mix) resolved on the page, so the canvas paints what the popup shows.
+  function popupPaint(el) {
+    const probe = document.createElement('span'); probe.style.display = 'none'; el.append(probe);
+    const read = (property, value) => { probe.style[property] = value; return getComputedStyle(probe)[property]; };
+    const paint = { ink: read('color', 'var(--signup-ink,#222)'), paper: read('color', 'var(--signup-paper,#fff)'), accent: read('color', 'var(--signup-accent,#c58b3c)'), head: read('fontFamily', 'var(--signup-heading,system-ui)') || 'system-ui, sans-serif' };
+    probe.remove(); return paint;
+  }
+  function paintShape(canvas, shape, paint, label) {
+    const ctx = canvas.getContext && canvas.getContext('2d'); if (!ctx) return;
+    const w = canvas.width, h = canvas.height;
+    ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, w, h); ctx.save(); shapePath(ctx, shape, w, h);
+    if (shape === 'cookie') {
+      const g = ctx.createRadialGradient(w * .45, h * .4, w * .05, w / 2, h / 2, w * .55); g.addColorStop(0, '#f0c48f'); g.addColorStop(1, '#d99a5b'); ctx.fillStyle = g; ctx.fill(); ctx.clip();
+      const rnd = seeded(13); ctx.fillStyle = paint.ink;
+      for (let i = 0; i < 26; i++) { ctx.beginPath(); ctx.ellipse(rnd() * w, rnd() * h, w * (.012 + rnd() * .016), w * (.009 + rnd() * .011), rnd() * 3, 0, Math.PI * 2); ctx.fill(); }
+    } else if (shape === 'can') {
+      const g = ctx.createLinearGradient(w * .27, 0, w * .73, 0); g.addColorStop(0, '#d9d9d9'); g.addColorStop(.35, '#ffffff'); g.addColorStop(1, '#bdbdbd'); ctx.fillStyle = g; ctx.fill(); ctx.clip();
+      ctx.fillStyle = paint.accent; ctx.fillRect(0, h * .3, w, h * .4);
+    } else if (shape === 'garment') {
+      ctx.fillStyle = paint.ink; ctx.fill(); ctx.clip(); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = Math.max(2, w * .006);
+      ctx.beginPath(); ctx.moveTo(w * .46, h * .2); ctx.lineTo(w * .45, h * .34); ctx.moveTo(w * .54, h * .2); ctx.lineTo(w * .55, h * .34); ctx.rect(w * .34, h * .62, w * .32, h * .18); ctx.stroke();
+    } else if (shape === 'box') {
+      ctx.fillStyle = paint.accent; ctx.fill(); ctx.clip(); ctx.fillStyle = paint.ink; ctx.fillRect(w * .46, 0, w * .08, h); ctx.fillRect(0, h * .5, w, h * .06);
+    } else if (shape === 'cup' || shape === 'bottle') {
+      ctx.fillStyle = paint.accent; ctx.fill(); ctx.clip(); ctx.fillStyle = paint.paper; ctx.fillRect(0, h * .42, w, h * .22);
+    } else if (shape === 'flower') {
+      ctx.fillStyle = paint.accent; ctx.fill(); ctx.beginPath(); ctx.arc(w / 2, h / 2, Math.min(w, h) * .16, 0, Math.PI * 2); ctx.fillStyle = paint.ink; ctx.fill();
+    } else {
+      ctx.fillStyle = paint.accent; ctx.fill();
+      if (shape === 'bag') { ctx.lineWidth = w * .03; ctx.strokeStyle = paint.ink; ctx.beginPath(); ctx.arc(w * .35, h * .3, w * .1, Math.PI, 0); ctx.moveTo(w * .75, h * .3); ctx.arc(w * .65, h * .3, w * .1, 0, Math.PI, true); ctx.stroke(); }
+    }
+    ctx.restore();
+    if (!label) return;
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `900 ${Math.round(w * (shape === 'can' || shape === 'bottle' ? .075 : .09))}px ${paint.head}`;
+    ctx.lineJoin = 'round'; ctx.lineWidth = w * .016; ctx.strokeStyle = shape === 'cookie' || shape === 'can' ? paint.paper : paint.ink; ctx.fillStyle = shape === 'cookie' || shape === 'can' ? paint.ink : paint.paper;
+    const lines = shape === 'can' || shape === 'bottle' || shape === 'cup' ? label.split(' ') : [label];
+    lines.forEach((line, at) => { const y = h / 2 + (at - (lines.length - 1) / 2) * w * .09; ctx.strokeText(line, w / 2, y); ctx.fillText(line, w / 2, y); });
+    ctx.restore();
+  }
+  function popupInterests(settings) {
+    const saved = settings.popupInterests;
+    if (saved && Array.isArray(saved.answers) && saved.answers.length >= 2) return { text: String(saved.text || '¿Qué te interesa?'), answers: saved.answers.map(a => ({ label: String(a && a.label != null ? a.label : a), icon: String((a && a.icon) || '') })).slice(0, 6) };
+    if (saved === null) return null;
+    const old = settings.popupQuestion;
+    return old && Array.isArray(old.answers) && old.answers.length >= 2 ? { text: String(old.text || ''), answers: old.answers.map(label => ({ label: String(label), icon: '' })) } : null;
+  }
+  // The favourite tiles: the store's products with a photo (not sold out, never a membership); with fewer than three, the photographed
+  // option values of a product (a one-soda store chooses its flavour); fewer than three in all → no step.
+  function favouriteTiles(items, photoUrl, byOption) {
+    const list = Array.isArray(items) ? items.filter(p => p && p.id && p.name) : [];
+    const firstPhoto = value => photoUrl((Array.isArray(value.imageUrls) && value.imageUrls[0]) || value.imageUrl || '');
+    const products = list.filter(p => p.fulfillmentType !== 'MEMBERSHIP' && !(typeof p.stock === 'number' && p.stock <= 0) && firstPhoto(p));
+    // Live Oh Belly 2026-11-10: asked for the favourite flavour, the shopper sees the flavours, not the packs and the poster.
+    const options = () => { for (const p of list) {
+      const seen = new Set();
+      const values = (Array.isArray(p.variants) ? p.variants : []).filter(v => v && !(typeof v.stock === 'number' && v.stock <= 0) && firstPhoto(v)).map(v => ({ value: String((v.options && v.options[0] && v.options[0].value) || v.name || ''), photo: firstPhoto(v) }))
+        .filter(v => v.value && !seen.has(v.value) && seen.add(v.value));
+      if (values.length >= 3) return values.slice(0, 6).map(v => ({ id: `${p.id}:${v.value}`, label: v.value, photo: v.photo }));
+    } return []; };
+    if (byOption) { const values = options(); if (values.length) return values; }
+    if (products.length >= 3) return products.slice(0, 6).map(p => ({ id: String(p.id), label: String(p.name), photo: firstPhoto(p) }));
+    return options();
+  }
+  function mountGame(dialog, { game, settings, formHtml, api, demo, remember, slug, items, photoUrl }) {
+    const box = dialog.querySelector('.pagosya-game');
+    const slices = settings.popupGameSlices.slice(0, 6).map(String);
+    const shape = game === 'scratch' ? (SHAPES.includes(settings.popupShape) ? settings.popupShape : 'card') : '';
+    const interests = popupInterests(settings);
+    const favouriteText = settings.popupFavourite && typeof settings.popupFavourite.text === 'string' ? settings.popupFavourite.text : '¿Cuál es tu favorito?';
+    // A merchant who removed the favourite question (popupFavourite null) gets no favourite step (final review M5).
+    const tiles = settings.popupFavourite === null ? [] : favouriteTiles(items, photoUrl || (value => value), /sabor/i.test(favouriteText.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+    const contact = settings.popupContact === 'email' ? 'email' : 'whatsapp';
+    const hostedPage = window.PAGOSYA_HOSTED === true;
+    const get = key => { try { return localStorage.getItem(key); } catch { return null; } };
+    const set = (key, value) => { try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch {} };
+    const gameKey = `pagosya:game:${slug}`, tabKey = `pagosya:game-tab:${slug}`, offKey = `pagosya:game-tab-off:${slug}`, doneKey = `pagosya:game-done:${slug}`;
+    // One play per device: a drawn prize is kept 30 minutes and shown again, never drawn anew.
+    let saved = null; try { saved = JSON.parse(get(gameKey) || 'null'); } catch {}
+    if (!saved || !(saved.exp > Date.now()) || !saved.prize) saved = null;
+    let revealed = false, chosen = [], favourite = null;
+    const draw = async () => {
+      if (saved) return saved;
+      const local = () => { const at = Math.floor(Math.random() * slices.length); return { prize: { label: slices[at] }, gameToken: '', at }; };
+      const result = demo || !api ? local() : await api('play', {});
+      saved = { prize: result.prize, gameToken: result.gameToken || '', exp: Date.now() + 1_800_000 };
+      set(gameKey, JSON.stringify(saved));
+      return saved;
+    };
+    const say = text => { const status = box.querySelector('[role=status]'); if (status) status.textContent = text; };
+    const reveal = () => { if (revealed) return; revealed = true; render('reveal'); };
+    const claimed = () => { set(doneKey, '1'); set(tabKey, null); document.querySelector('.pagosya-game-tab')?.remove(); };
+    const steps = at => `<div class="game-steps" aria-hidden="true">${[1, 2, 3].map(i => `<i${i <= at ? ' class="on"' : ''}></i>`).join('')}</div>`;
+    const afterClaim = () => render(interests ? 'interests' : tiles.length >= 3 ? 'favourite' : 'contact');
+    const afterInterests = () => render(tiles.length >= 3 ? 'favourite' : 'contact');
+    // The favourite: remembered on this device (the parent page keeps it on a published store), and the store page takes the shopper to it.
+    const goFavourite = () => {
+      if (!favourite) { dialog.close(); return; }
+      set(`pagosya:fav:${slug}`, favourite.id);
+      if (hostedPage) { try { parent.postMessage({ type: 'pagosya:favourite', id: favourite.id }, '*'); } catch {} }
+      document.dispatchEvent(new CustomEvent('pagosya:favourite', { detail: { id: favourite.id, go: true } }));
+      dialog.close();
+    };
+    const paintScratch = () => {
+      const canvas = box.querySelector('canvas'); const ctx = canvas.getContext && canvas.getContext('2d');
+      if (!ctx) return;
+      paintShape(canvas, shape, popupPaint(dialog), 'RASCA AQUÍ');
+      const w = canvas.width, h = canvas.height;
+      const opaque = () => { const data = ctx.getImageData(0, 0, w, h).data; let n = 0; for (let i = 3; i < data.length; i += 32) if (data[i] > 40) n++; return n; };
+      const start = opaque() || 1;
+      let moves = 0, last = null, started = false;
+      const at = event => { const r = canvas.getBoundingClientRect(); return [(event.clientX - r.left) * w / r.width, (event.clientY - r.top) * h / r.height]; };
+      const check = () => { if (saved && !revealed && 1 - opaque() / start >= 0.45) reveal(); };
+      const scratch = async event => {
+        if (revealed) return;
+        if (!started) { started = true; try { await draw(); box.querySelector('.game-prize').textContent = saved.prize.label; } catch (error) { say(error.message); } }
+        const [x, y] = at(event);
+        ctx.globalCompositeOperation = 'destination-out'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = w * (shape === 'can' || shape === 'bottle' ? .17 : .12);
+        ctx.beginPath(); ctx.moveTo(...(last || [x + .1, y])); ctx.lineTo(x, y); ctx.stroke(); last = [x, y];
+        if (++moves % 3 === 0) check();
+      };
+      canvas.addEventListener('pointerdown', event => { canvas.setPointerCapture?.(event.pointerId); last = null; scratch(event); });
+      // Owner 2026-11-09 («scratching does nothing»): a mouse scratches just by moving over the card; touch and pen while pressed.
+      canvas.addEventListener('pointermove', event => { if (event.pointerType === 'mouse' || event.buttons || event.pointerType === 'touch') scratch(event); });
+      canvas.addEventListener('pointerup', () => { last = null; check(); });
+      canvas.addEventListener('pointerleave', () => { last = null; });
+    };
+    const spin = () => {
+      const wheel = box.querySelector('.game-wheel svg');
+      const at = Math.max(0, slices.indexOf(saved.prize.label));
+      const turn = 1800 + 360 - (at + 0.5) * (360 / slices.length);
+      if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) { reveal(); return; }
+      wheel.style.transition = 'transform 4s cubic-bezier(.17,.67,.2,1)';
+      wheel.addEventListener('transitionend', reveal, { once: true });
+      setTimeout(reveal, 4600);
+      requestAnimationFrame(() => { wheel.style.transform = `rotate(${turn}deg)`; });
+    };
+    const contactForm = () => {
+      const button = favourite ? `Suscribirme y ver ${escape(favourite.label)}` : escape(settings.signupButton || 'Recibir mi código');
+      if (contact === 'email') return formHtml.replace(/(<button type="submit" class="signup-submit">)[^<]*/, `$1${button}`);
+      return `<form><div class="signup-row"><label class="signup-field">Tu WhatsApp<input type="tel" name="phone" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="7xx xxxxx" required></label><button type="submit" class="signup-submit">${button}</button></div>
+              <label class="signup-consent"><input type="checkbox" name="consent" required>Quiero recibir novedades y promociones de esta tienda por WhatsApp. Puedo pedir que dejen de escribirme cuando quiera.</label>
+            </form><p role="status" aria-live="polite"></p>`;
+    };
+    const submit = async event => {
+      event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('[type=submit]');
+      if (button.disabled || !form.reportValidity()) return;
+      const data = new FormData(form); button.disabled = true; say('Un momento…');
+      const done = code => {
+        remember(); claimed(); form.hidden = true;
+        say(code ? '¡Listo! Este es tu código de descuento:' : 'Prueba completada: en tu tienda aquí llega tu código.');
+        const status = box.querySelector('[role=status]');
+        if (code) status.insertAdjacentHTML('afterend', `<p class="signup-code"><strong>${escape(code)}</strong> <button type="button" data-copy>Copiar</button></p>`);
+        if (favourite) (box.querySelector('.signup-code') || status).insertAdjacentHTML('afterend', `<button type="button" class="signup-submit" data-game-action="go">Ver ${escape(favourite.label)}</button>`);
+        box.querySelector('.game-skip[data-game-action=nothanks]')?.remove();
+        const copy = box.querySelector('.signup-code [data-copy]');
+        copy?.addEventListener('click', async () => { try { await navigator.clipboard?.writeText(code); copy.textContent = 'Copiado'; } catch {} });
+      };
+      if (demo) { done(''); return; }
+      try {
+        const contactValue = contact === 'email' ? { email: String(data.get('email') ?? '').trim() || undefined } : { phone: String(data.get('phone') ?? '').trim() || undefined };
+        const result = await api('subscribe', { ...contactValue, consent: true, source: 'popup', ...(saved?.gameToken ? { gameToken: saved.gameToken } : {}),
+          ...(chosen.length ? { answers: chosen } : {}), ...(favourite ? { favourite: favourite.id } : {}), ...(hostedPage ? { contact } : {}) });
+        if (result?.code) done(result.code);
+        else { remember(); claimed(); form.hidden = true; say(result?.message || '¡Ya formas parte de nuestra comunidad!'); if (favourite) box.querySelector('[role=status]').insertAdjacentHTML('afterend', `<button type="button" class="signup-submit" data-game-action="go">Ver ${escape(favourite.label)}</button>`); }
+      } catch (error) { say(error.message); button.disabled = false; }
+    };
+    function render(step) {
+      box.setAttribute('data-game-step', step);
+      if (step === 'play') {
+        const ratio = SHAPE_RATIO[shape] || 1.6;
+        box.innerHTML = (game === 'scratch'
+          ? `<div class="game-scratch" data-game-play data-shape="${shape}" style="--ratio:${ratio}"><p class="game-prize"></p><canvas width="560" height="${Math.round(560 / ratio)}" aria-hidden="true"></canvas></div><button type="button" class="game-skip" data-game-action="play">Revelar sin rascar</button>`
+          : `<div class="game-wheel" data-game-play>${wheelSvg(slices)}<span class="game-pointer" aria-hidden="true"></span></div><button type="button" class="signup-submit" data-game-action="play">Girar</button>`)
+          + '<p class="game-status" role="status" aria-live="polite"></p>';
+        if (game === 'scratch') paintScratch();
+      } else if (step === 'reveal') {
+        box.innerHTML = `<p class="game-won" role="status">¡Ganaste <strong>${escape(saved.prize.label)}</strong>!</p><button type="button" class="signup-submit" data-game-action="claim">Reclamar</button>`;
+      } else if (step === 'interests') {
+        box.innerHTML = `${steps(1)}<p class="game-question">${escape(interests.text)}</p><p class="game-hint">Puedes elegir varias.</p>
+          <div class="game-answers">${interests.answers.map((answer, at) => `<button type="button" class="game-answer game-interest" aria-pressed="false" data-game-interest="${at}">${answer.icon ? `<span aria-hidden="true">${escape(answer.icon)}</span> ` : ''}${escape(answer.label)}</button>`).join('')}</div>
+          <button type="button" class="signup-submit" data-game-action="next" disabled>Siguiente</button><button type="button" class="game-skip" data-game-action="skip">Saltar</button>`;
+      } else if (step === 'favourite') {
+        box.innerHTML = `${steps(2)}${chosen.length ? `<p class="game-chip">${escape(chosen.join(' · '))}</p>` : ''}<p class="game-question">${escape(favouriteText)}</p>
+          <div class="game-tiles">${tiles.map((tile, at) => `<button type="button" class="game-tile" data-game-tile="${at}"><img src="${escape(tile.photo)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span>${escape(tile.label)}</span></button>`).join('')}</div>
+          <button type="button" class="game-skip" data-game-action="skipfav">Saltar</button>`;
+      } else {
+        box.innerHTML = `${interests || tiles.length >= 3 ? steps(3) : ''}${favourite ? `<p class="game-chip">Tu favorito: ${escape(favourite.label)}</p>` : ''}<p class="game-won">Tu premio: <strong>${escape(saved.prize.label)}</strong></p>${contactForm()}
+          ${favourite ? `<button type="button" class="game-skip" data-game-action="nothanks">No, gracias: solo ver ${escape(favourite.label)}</button>` : ''}`;
+        secureFields(box.querySelector('form'));
+        box.querySelector('form').addEventListener('submit', submit);
+      }
+    }
+    box.addEventListener('click', async event => {
+      const interest = event.target.closest('[data-game-interest]');
+      if (interest) {
+        interest.setAttribute('aria-pressed', String(interest.getAttribute('aria-pressed') !== 'true'));
+        chosen = [...box.querySelectorAll('[data-game-interest][aria-pressed="true"]')].map(b => interests.answers[Number(b.dataset.gameInterest)].label);
+        box.querySelector('[data-game-action=next]').disabled = !chosen.length;
+        return;
+      }
+      const tile = event.target.closest('[data-game-tile]');
+      if (tile) { favourite = tiles[Number(tile.dataset.gameTile)]; render('contact'); return; }
+      const target = event.target.closest('[data-game-action]');
+      if (!target) return;
+      const action = target.getAttribute('data-game-action');
+      if (action === 'play') {
+        target.disabled = true;
+        try { await draw(); } catch (error) { target.disabled = false; say(error.message); return; }
+        if (game === 'scratch') reveal(); else spin();
+      } else if (action === 'claim') afterClaim();
+      else if (action === 'next') afterInterests();
+      else if (action === 'skip') { chosen = []; afterInterests(); }
+      else if (action === 'skipfav') { favourite = null; render('contact'); }
+      else if (action === 'nothanks' || action === 'go') goFavourite();
+    });
+    // The corner tab: closed without claiming, «Rasca y gana» (with the card's shape) stays on later pages (hidden 30 days by ×).
+    const showTab = () => {
+      const off = Number(get(offKey));
+      if (get(doneKey) || (off && Date.now() - off < 30 * 86_400_000) || document.querySelector('.pagosya-game-tab') || document.querySelector('[data-pagosya-checkout-page], .pya-checkout:not([hidden])')) return;
+      const tab = document.createElement('div'); tab.className = 'pagosya-game-tab';
+      tab.innerHTML = `<button type="button" data-game-tab>${shape && shape !== 'card' ? '<canvas class="game-tab-shape" width="80" height="80" aria-hidden="true"></canvas>Rasca y gana' : 'Prueba tu suerte'}</button><button type="button" data-game-tab-off aria-label="Ocultar">×</button>`;
+      tab.querySelector('[data-game-tab]').addEventListener('click', () => { tab.remove(); if (!dialog.open && !document.querySelector('dialog[open]')) dialog.showModal(); });
+      tab.querySelector('[data-game-tab-off]').addEventListener('click', () => { set(offKey, String(Date.now())); tab.remove(); });
+      document.body.append(tab);
+      const icon = tab.querySelector('canvas'); if (icon) paintShape(icon, shape, popupPaint(dialog), '');
+    };
+    dialog.addEventListener('close', () => { if (!get(doneKey)) { set(tabKey, '1'); showTab(); } });
+    if (get(tabKey)) showTab();
+    render(saved ? 'reveal' : 'play');
+    if (saved) revealed = true;
+  }
   function mountSignup(host, settings, config, state, api, preview, query, demo = false) {
     host.className = 'pagosya-signup-host';
     if (!document.getElementById('pagosya-signup-style')) {
@@ -117,10 +412,10 @@
         .signup-interests label{display:flex;align-items:center;gap:8px;font:14px/1.5 var(--signup-body);cursor:pointer}.pagosya-signup-copy input[type=checkbox]{width:18px;height:18px;margin:0;accent-color:var(--signup-ink);flex:0 0 18px}
         .pagosya-signup-copy .signup-field{display:grid;gap:2px;font:13px/1.5 var(--signup-body)}.pagosya-signup-copy .signup-field{gap:6px}.pagosya-signup-copy .signup-field input{border:1.5px solid color-mix(in srgb,var(--signup-ink),transparent 45%);border-radius:min(var(--store-radius,3px),14px);background:color-mix(in srgb,var(--signup-paper),#fff 45%);color:inherit;font:16px/1.5 var(--signup-body);min-height:46px;padding:10px 14px;width:100%;min-width:0;box-shadow:none}
         .pagosya-signup-copy .signup-consent{display:flex;align-items:flex-start;gap:10px;font:12px/1.6 var(--signup-body);cursor:pointer}.signup-consent input{margin-top:2px!important}
-        .pagosya-signup-copy .signup-submit{justify-self:start;padding:0 28px;margin:0;min-height:48px;border:0;border-radius:var(--store-radius,3px);background:var(--signup-accent);color:var(--signup-accent-ink);font:700 15px/1.5 var(--signup-body);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.signup-submit:hover{filter:brightness(.92)}.signup-submit:disabled{opacity:.55;cursor:wait}
-        .pagosya-signup-dialog .signup-close{position:absolute;top:20px;right:20px;z-index:1;width:44px;height:44px;padding:0;display:grid;place-items:center;border:0;border-radius:50%;background:color-mix(in srgb,var(--signup-paper),var(--signup-ink) 10%);color:var(--signup-ink);font:26px/1 system-ui,sans-serif;cursor:pointer}
+        .pagosya-signup-copy .signup-submit{justify-self:start;padding:0 28px;margin:0;min-height:48px;border:0;border-radius:var(--store-radius,3px);background:var(--signup-accent);color:var(--signup-accent-ink);font:700 15px/1.5 var(--signup-body);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.signup-submit:hover{filter:brightness(.92)}.pagosya-signup-copy .signup-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.pagosya-signup-copy .signup-row .signup-submit{justify-self:stretch}.signup-row .pagosya-secure-note{grid-column:1/-1}.pagosya-game{display:grid;gap:14px;justify-items:center;text-align:center}.pagosya-game .signup-submit{justify-self:center}.game-scratch,.game-wheel{position:relative;width:min(320px,100%);min-height:180px}.game-scratch canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:12px;touch-action:none;cursor:pointer}.game-prize{display:grid;place-items:center;height:180px;margin:0;font:700 22px/1.2 var(--signup-heading)}.game-wheel svg{display:block;width:100%;height:auto;aspect-ratio:1}.game-pointer{position:absolute;top:-4px;left:50%;translate:-50% 0;border:12px solid transparent;border-top:20px solid var(--signup-ink)}.pagosya-signup-copy .pagosya-game .game-won{margin:0;font:400 28px/1.25 var(--signup-heading)}.pagosya-game .game-won strong{font-weight:700}.game-question{margin:0;font:600 18px/1.3 var(--signup-body)}.game-answers{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.game-answer{min-height:44px;padding:0 16px;border:1.5px solid var(--signup-ink);border-radius:999px;background:transparent;color:inherit;font:600 14px var(--signup-body);cursor:pointer}.game-skip{background:none;border:0;color:inherit;text-decoration:underline;font:13px var(--signup-body);cursor:pointer}.game-status:empty{display:none}.game-scratch{width:min(300px,100%);aspect-ratio:var(--ratio,1.6);min-height:170px}.game-scratch .game-prize{position:absolute;inset:10%;height:auto;display:grid;place-items:center;border-radius:16px;background:var(--signup-accent);color:var(--signup-paper);text-align:center;padding:8px}.game-scratch[data-shape=cookie] .game-prize,.game-scratch[data-shape=flower] .game-prize{border-radius:50%}.game-scratch[data-shape=can] .game-prize{inset:8% 29%}.game-scratch[data-shape=bottle] .game-prize{inset:30% 32% 6%}.game-scratch[data-shape=cup] .game-prize{inset:16% 30% 8% 18%}.game-scratch[data-shape=garment] .game-prize{inset:22% 27% 6%}.game-scratch[data-shape=flower] .game-prize{inset:22%}.game-scratch[data-shape=bag] .game-prize{inset:34% 18% 6%}.game-scratch[data-shape=box] .game-prize{inset:34% 13% 8%}.game-steps{display:flex;gap:6px;justify-content:center}.game-steps i{width:22px;height:5px;border-radius:9px;background:color-mix(in srgb,var(--signup-ink) 18%,transparent)}.game-steps i.on{background:var(--signup-ink)}.game-hint{margin:-6px 0 0;font:13px var(--signup-body);opacity:.75}.game-interest[aria-pressed=true]{background:var(--signup-ink);color:var(--signup-paper)}.game-chip{margin:0;padding:6px 12px;border-radius:999px;background:color-mix(in srgb,var(--signup-accent) 18%,var(--signup-paper));font:700 13px/1.2 var(--signup-body);text-transform:uppercase;letter-spacing:.06em}.game-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}.game-tile{display:grid;gap:6px;padding:6px 6px 8px;border:2px solid transparent;border-radius:14px;background:color-mix(in srgb,var(--signup-accent) 14%,var(--signup-paper));color:inherit;font:700 13px/1.2 var(--signup-body);cursor:pointer}.game-tile:hover,.game-tile:focus-visible{border-color:var(--signup-ink)}.game-tile img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block}.pagosya-game-tab [data-game-tab]{display:inline-flex;align-items:center;gap:8px}.game-tab-shape{width:32px;height:32px}@media(max-width:480px){.game-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}.pagosya-game-tab{position:fixed;left:16px;bottom:16px;z-index:40;display:flex;align-items:stretch;background:var(--store-foreground,#111);color:var(--store-background,#fff);border-radius:4px;box-shadow:0 8px 24px #0003}.pagosya-game-tab button{background:none;border:0;color:inherit;font:700 13px/1 var(--store-body-font,system-ui,sans-serif);letter-spacing:.08em;text-transform:uppercase;padding:0 14px;min-height:44px;cursor:pointer}@media(max-width:480px){.pagosya-signup-copy .signup-row{grid-template-columns:1fr}}.signup-submit:disabled{opacity:.55;cursor:wait}
+        .pagosya-signup-dialog .signup-close{position:absolute;top:20px;right:20px;z-index:20;width:44px;height:44px;padding:0;display:grid;place-items:center;border:0;border-radius:50%;background:color-mix(in srgb,var(--signup-paper),var(--signup-ink) 10%);color:var(--signup-ink);font:26px/1 system-ui,sans-serif;cursor:pointer}
         .pagosya-signup-host :focus-visible{outline:2px solid currentColor;outline-offset:5px}.pagosya-signup-copy [role=status]{font:14px/1.6 var(--signup-body);margin:16px 0 0}.pagosya-signup-copy [role=status]:empty{display:none}
-        @media(max-width:700px){.pagosya-signup-dialog{inset:auto 0 0 0;width:100%;max-height:85dvh;margin:0;border-radius:20px 20px 0 0}.pagosya-signup-layout{grid-template-columns:1fr;min-height:0}.pagosya-signup-photo{display:none}}
+        @media(max-width:700px){.pagosya-signup-dialog{inset:auto 0 0 0;width:100%;max-height:85dvh;margin:0;border-radius:20px 20px 0 0}.pagosya-signup-layout{grid-template-columns:1fr;min-height:0}}
         @media(max-width:700px) and (prefers-reduced-motion:no-preference){.pagosya-signup-dialog[open]{animation:pagosya-sheet-up .28s cubic-bezier(.32,.72,0,1)}}@keyframes pagosya-sheet-up{from{transform:translateY(100%)}to{transform:none}}
         .signup-code{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0}.signup-code strong{padding:4px 10px;border:1px dashed currentColor;border-radius:6px;letter-spacing:.08em}.signup-code button{min-height:36px;padding:0 12px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
         @media(max-width:700px){.pagosya-signup-dialog{width:calc(100% - 24px);max-height:calc(100dvh - 24px)}.pagosya-signup-layout{grid-template-columns:1fr;min-height:0}.pagosya-signup-photo{min-height:150px;height:150px}.pagosya-signup-photo .signup-monogram{min-height:150px;font-size:80px}.pagosya-signup-copy{padding:26px 24px 28px}.pagosya-signup-copy .signup-eyebrow{margin-bottom:12px}.pagosya-signup-copy h2{font-size:30px;margin-bottom:16px}.pagosya-signup-copy .signup-description{font-size:14px;margin-bottom:20px}.pagosya-signup-copy form{gap:16px}.pagosya-signup-dialog .signup-close{top:12px;right:12px}}
@@ -137,23 +432,51 @@
     // A demo's paths sit beside its scripts; the page URL may drop its trailing slash, so it is no base for them.
     const demoBase = document.querySelector('script[src*="commerce.js"],script[src*="retention.js"]')?.src || location.href;
     const image = safeImage(visual.imageUrl) || safeImage(itemImage, demo ? demoBase : undefined);
-    const interests = Array.isArray(visual.interests) ? visual.interests.slice(0, 8) : [];
+    // Spec 2026-11-09 popup looks: the store's look (an id the API sends for every store) drawn around the platform slots; an unknown
+    // id or no photo draws the built-in layout below.
+    const lookId = typeof settings.popupLook === 'string' && Object.hasOwn(POPUP_LOOKS, settings.popupLook) ? settings.popupLook : '';
+    // The chosen photo is an upload path on the API (the Studio proxies the API under its own base); else the built-in photo.
+    const uploadPhoto = value => /^\/v1\/uploads\//.test(String(value || '')) && config.apiBaseUrl ? `${String(config.apiBaseUrl).replace(/\/v1\/?$/, '')}${value}` : value;
+    const lookImage = lookId ? safeImage(uploadPhoto(settings.popupPhoto), location.href) || image : '';
+    const monogram = `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`;
+    // The short form (spec 2026-11-09): email + button on one row, consent under it.
+    const formHtml = `<form><div class="signup-row"><label class="signup-field">Tu correo<input type="email" name="email" autocomplete="email" maxlength="254" required></label><button type="submit" class="signup-submit">${escape(settings.signupButton)}</button></div>
+              <label class="signup-consent"><input type="checkbox" name="consent" required>Quiero recibir novedades y promociones de esta tienda por correo. Puedo darme de baja cuando quiera.</label>
+            </form><p role="status" aria-live="polite"></p>`;
+    // Spec 2026-11-09 popup games: a game takes the form's place (its own steps draw the short form at the end).
+    const game = GAMES.includes(settings.popupGame) && Array.isArray(settings.popupGameSlices) && settings.popupGameSlices.length >= 2 ? settings.popupGame : '';
+    const slotForm = game ? '<div class="pagosya-game" data-game-step="play"></div>' : formHtml;
+    const kitLayout = (() => {
+      if (!lookId || !lookImage) return '';
+      const template = document.createElement('template');
+      template.innerHTML = POPUP_LOOKS[lookId].html.replaceAll('{name}', escape(name)).replaceAll('{initial}', escape(name.slice(0, 1).toUpperCase()));
+      const fill = { photo: `<img src="${escape(lookImage)}" alt="${escape(name)}" referrerpolicy="no-referrer">`, title: `<h2 tabindex="-1">${escape(settings.signupTitle)}</h2>`,
+        text: `<p class="signup-description">${escape(settings.signupBody)}</p>`, form: `<div class="pagosya-signup-copy pagosya-signup-copy--kit">${slotForm}</div>`,
+        code: settings.popupHasCode ? '<p class="signup-code-note">Al suscribirte te llega tu código de bienvenida.</p>' : '' };
+      for (const [slot, inner] of Object.entries(fill)) template.content.querySelectorAll(`pya-${slot}`).forEach(el => { el.innerHTML = inner; });
+      const box = document.createElement('div'); box.className = 'pagosya-signup-kit'; box.setAttribute('data-popup-kit', ''); box.setAttribute('data-popup-look', lookId); box.append(template.content);
+      return box.outerHTML;
+    })();
+    let kitStyle = document.getElementById('pagosya-popup-kit-style');
+    if (kitLayout) {
+      if (!kitStyle) { kitStyle = document.createElement('style'); kitStyle.id = 'pagosya-popup-kit-style'; document.head.append(kitStyle); }
+      kitStyle.textContent = `[data-popup-kit]{display:block;min-width:0;color:var(--signup-ink);font:16px/1.6 var(--signup-body)}[data-popup-kit] :is(pya-photo,pya-title,pya-text,pya-form,pya-code){display:block;min-width:0}
+[data-popup-kit] pya-photo{position:relative;overflow:hidden;min-height:160px;background:color-mix(in srgb,var(--signup-paper),var(--signup-accent) 22%)}[data-popup-kit] pya-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+[data-popup-kit] pya-photo .signup-monogram{display:grid;place-items:center;height:100%;min-height:160px;font:80px/1 var(--signup-heading);color:var(--signup-accent)}
+[data-popup-kit] h2{margin:0;font:inherit;color:inherit}[data-popup-kit] h2:focus{outline:none}[data-popup-kit] .signup-description{margin:0}.pagosya-signup-copy--kit{padding:0}
+${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
+[data-popup-kit]>*{width:auto!important;max-width:none!important;margin-left:0!important;margin-right:0!important}
+@media (prefers-reduced-motion:reduce){[data-popup-kit],[data-popup-kit] *{animation:none!important;transition:none!important}}`;
+    } else kitStyle?.remove();
     // Only the popup: the in-page Comunidad block is gone (owner 2026-10-24); a design may still draw its own opener.
     host.innerHTML = `${preview && !demo ? '' : `<dialog class="pagosya-signup-dialog" aria-label="${escape(settings.signupTitle)}">
         <button type="button" class="signup-close" aria-label="Cerrar suscripción">×</button>
-        <div class="pagosya-signup-layout">
-          <figure class="pagosya-signup-photo">${image ? `<img src="${escape(image)}" alt="Selección de ${escape(name)}" referrerpolicy="no-referrer">` : `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`}</figure>
+        ${kitLayout || `<div class="pagosya-signup-layout">
+          <figure class="pagosya-signup-photo">${image ? `<img src="${escape(image)}" alt="Selección de ${escape(name)}" referrerpolicy="no-referrer">` : monogram}</figure>
           <section class="pagosya-signup-copy"><p class="signup-eyebrow">${escape(name)}</p><h2 tabindex="-1">${escape(settings.signupTitle)}</h2><p class="signup-description">${escape(settings.signupBody)}</p>
-            <form>
-              ${interests.length ? `<fieldset><legend>¿Qué te interesa? <span>(opcional)</span></legend><div class="signup-interests">${interests.map(interest => `<label><input type="checkbox" name="interests" value="${escape(interest)}">${escape(interest)}</label>`).join('')}</div></fieldset>` : ''}
-              <label class="signup-field">Nombre (opcional)<input name="name" autocomplete="given-name" maxlength="100"></label>
-              <label class="signup-field">Tu correo<input type="email" name="email" autocomplete="email" maxlength="254" required></label>
-              <label class="signup-field">WhatsApp / Teléfono (opcional)<input type="tel" name="phone" autocomplete="tel" maxlength="40"></label>
-              <label class="signup-consent"><input type="checkbox" name="consent" required>Quiero recibir novedades y promociones de esta tienda por correo. Puedo darme de baja cuando quiera.</label>
-              <button type="submit" class="signup-submit">${escape(settings.signupButton)}</button>
-            </form><p role="status" aria-live="polite"></p>
+            ${slotForm}
           </section>
-        </div>
+        </div>`}
       </dialog>`}`;
     // The page's own store tokens win; the API's brand colours and font style fill in for a page without them.
     for (const [property, token, value] of [['--signup-paper', '--store-background', brand.background], ['--signup-ink', '--store-foreground', brand.foreground]]) if (/^#[a-f\d]{6}$/i.test(value || '')) host.style.setProperty(property, `var(${token},${value})`);
@@ -167,10 +490,11 @@
     dialog.addEventListener('close', remember);
     dialog.querySelector('.signup-close').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => { if (event.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); });
-    const photo = host.querySelector('.pagosya-signup-photo img');
-    photo?.addEventListener('error', () => { photo.parentElement.innerHTML = `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`; }, { once: true });
-    secureFields(dialog.querySelector('form'));
-    dialog.querySelector('form').addEventListener('submit', async event => {
+    const photo = host.querySelector('.pagosya-signup-photo img, pya-photo img');
+    photo?.addEventListener('error', () => { photo.parentElement.innerHTML = monogram; }, { once: true });
+    if (game) mountGame(dialog, { game, settings, formHtml, api, demo, remember, slug: config.slug, items: config.data && config.data.items, photoUrl: value => safeImage(uploadPhoto(value), location.href) });
+    else secureFields(dialog.querySelector('form'));
+    dialog.querySelector('form')?.addEventListener('submit', async event => {
       event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('[type=submit]'); const status = dialog.querySelector('[role=status]');
       if (button.disabled || !form.reportValidity()) return;
       const data = new FormData(form); button.disabled = true; status.textContent = 'Un momento…';
@@ -373,7 +697,11 @@
       document.querySelectorAll('[data-pagosya-cart], [data-retention-cart-host]').forEach(panel => {
         if (panel.querySelector('[data-retention-recovery]') || !getCart().length) return;
         // In the calm checkout the reminder belongs in the order column, under the pay button, not after the whole shell.
-        const el = document.createElement('section'); el.className = 'pagosya-retention'; el.setAttribute('data-retention-recovery', ''); (panel.querySelector(':scope > .pya-co__main') || panel).append(el);
+        const el = document.createElement('section'); el.className = 'pagosya-retention'; el.setAttribute('data-retention-recovery', '');
+        // Owner 2026-11-09 (Remolino): in the cart it follows the guarantee line under «Pagar», inside the store's cart template —
+        // at the panel's end it sat outside the template's padding, flush against the edge.
+        const guarantee = panel.querySelector('.cart-guarantee');
+        if (guarantee) guarantee.after(el); else (panel.querySelector(':scope > .pya-co__main') || panel).append(el);
         form(el, `<h3>¿Prefieres terminar después?</h3><form><label class="retention-email"><span class="retention-label">Tu correo</span><input type="email" name="email" autocomplete="email" maxlength="254" required placeholder="tu@gmail.com" value="${escape(state.email)}"></label><label class="retention-consent"><input type="checkbox" name="consent" required ${state.consent ? 'checked' : ''}>Acepto recibir un recordatorio de este carrito si no termino la compra.</label><button type="submit">Guardar y recordármelo</button></form>`, async data => {
           state.email = String(data.get('email') ?? state.email ?? '').trim(); state.consent = true;
           const result = await api('carts', { email: state.email || undefined, consent: true, items: getCart(), ...(state.token ? { token: state.token } : {}) }); saveToken(result.token);
@@ -388,6 +716,19 @@
     }
     window.PAGOSYA_RETENTION_REFRESH = renderRecovery;
     renderRecovery();
+  };
+  // «Ver ventana de suscripción» (spec 2026-11-08): the Studio opens the popup at once, drawn as on the store, faked like a demo store
+  // (never sends). It opens over the Studio's own dialogs, so it never waits for the store's timing rules.
+  window.PAGOSYA_POPUP_PREVIEW = function previewPopup(settings, config) {
+    document.querySelector('[data-pagosya-popup-preview]')?.remove();
+    const host = document.createElement('section'); host.setAttribute('data-pagosya-popup-preview', ''); document.body.append(host);
+    const previewConfig = { ...config, slug: `studio-preview-${config?.slug || 'tienda'}` };
+    mountSignup(host, settings || {}, previewConfig, { signupDismissed: false }, async () => { throw new Error('Vista previa: no se envía.'); }, false, new URLSearchParams(), true);
+    const dialog = host.querySelector('dialog');
+    if (!dialog) { host.remove(); return; }
+    dialog.addEventListener('close', () => host.remove());
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector('h2')?.focus();
   };
   if (window.PAGOSYA_CONFIG) {
     document.addEventListener('pagosya:cart-updated', () => window.PAGOSYA_RETENTION_REFRESH?.());

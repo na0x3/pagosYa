@@ -48,6 +48,9 @@ export interface TemplatePreset {
   readonly productLayout?: ReadonlyArray<Readonly<Record<string, unknown>>>;
   /** The template's own demo shop (Plantillas › Ver): name, tagline, categories and products in its industry. */
   readonly demo?: Readonly<{ storeName: string; tagline?: string; products: ReadonlyArray<Readonly<{ name: string; price: number; description?: string; category?: string }>> }>;
+  /** Spec 2026-11-10 Merienda: what each store draws for itself (by its id) — font pairs, values of some parts, looks per section type. */
+  readonly choices?: Readonly<{ fonts?: readonly string[]; variants?: Readonly<Record<string, readonly string[]>>; looks?: Readonly<Record<string, readonly string[]>>;
+    orders?: readonly (readonly number[])[]; swaps?: Readonly<Record<string, readonly string[]>>; bands?: readonly Readonly<Record<string, string>>[] }>;
 }
 export type TemplateCopyRole = 'headline' | 'title' | 'lead' | 'body' | 'cta' | 'label' | 'item' | 'question' | 'answer' | 'quote' | 'name' | 'alt';
 export interface TemplateCopySlot { readonly key: string; readonly role: TemplateCopyRole; readonly default: string; readonly max: number }

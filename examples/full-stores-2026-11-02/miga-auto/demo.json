@@ -1,0 +1,43 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwb2ueex0001e68m0p4imczp",
+  "slug": "55tvtc61",
+  "photos": {
+    "caja-rolls-ellena-auto.jpg": "/v1/uploads/5617059b-75ed-48f7-8fb8-9218b2c1e006.jpg",
+    "combo-matcha-cookie-verde.jpg": "/v1/uploads/0ed42c10-17d9-47a8-a971-b4acf367f924.jpg",
+    "desayuno-box-latte-ellena.jpg": "/v1/uploads/207bb93d-8394-4ce1-8f7e-f501fc779a62.jpg",
+    "galletas-chocochip-bandeja.jpg": "/v1/uploads/bc8d1842-2b8a-4d1f-9fdc-c66db748721e.jpg",
+    "torre-cookies-rellenas-gourmet.jpg": "/v1/uploads/3e393057-d76f-4fa9-b184-e83cc79c8728.jpg",
+    "degustacion-cookies-surtidas.jpg": "/v1/uploads/862967e1-f177-4ebd-9906-a978dd802e48.jpg",
+    "caja-the-bake-lab-surtida.jpg": "/v1/uploads/44413428-78fd-4292-8ca6-abea76eaed7e.jpg",
+    "coleccion-cookies-pantone.jpg": "/v1/uploads/8fc29e50-2b3b-4469-9a3a-427a31cefdfb.jpg"
+  },
+  "categories": {
+    "Pastelería": "cmwb2uefd0003e68m38yj7q7d",
+    "Combos": "cmwb2uefk0005e68madocvwnq",
+    "Desayunos": "cmwb2uefm0007e68mhnk0lwto",
+    "Galletas": "cmwb2uefm0009e68mn0c1u5ue",
+    "Cajas": "cmwb2uefn000be68mkjqv9rf0",
+    "Colecciones": "cmwb2uefn000de68m9fl9f0ff"
+  },
+  "products": {
+    "Caja de rolls rellenos EllenA": "cmwb2uefx000he68m759difs2",
+    "Combo matcha latte + cookie velvet": "cmwb2ueg9000le68m314sjzq7",
+    "Desayuno box EllenA con latte helado": "cmwb2uegc000pe68mth2xe956",
+    "Galletas chocochip artesanales": "cmwb2uegi000te68mchdqx8rl",
+    "Torre de cookies rellenas gourmet": "cmwb2uegm000xe68mf0vemlyc",
+    "Degustación de cookies surtidas": "cmwb2uegq0011e68me1y3ylgk",
+    "Caja surtida The Bake Lab": "cmwb2uegu0015e68mpvrvaw5v",
+    "Colección cookies Pantone": "cmwb2uegw0019e68monptlst4"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwb2uehw001je68mmd1zth5z"
+}

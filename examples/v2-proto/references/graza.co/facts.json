@@ -1,0 +1,910 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.graza.co/",
+    "title": "GRAZA | High Quality Olive Oil | Graza",
+    "width": 1440,
+    "pageHeight": 8699,
+    "fonts": {
+      "h1": {
+        "family": "ITC Garamond Condensed",
+        "size": "72px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-2.16px",
+        "text": "Extra Virgin Olive Oil makes everything better."
+      },
+      "h2": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cart(0)0 items"
+      },
+      "body": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This website is AudioEye enabled and is being optimized for "
+      },
+      "button": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(246, 230, 217)",
+    "header": {
+      "height": 60,
+      "position": "sticky",
+      "bg": "rgb(246, 230, 217)",
+      "links": [
+        "Graza",
+        "Shop",
+        "Get Refills",
+        "About",
+        "Glog",
+        "Search",
+        "Account",
+        "Cart[0]"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 2,
+    "sections": [
+      {
+        "y": 0,
+        "h": 900,
+        "bg": "rgb(246, 230, 217)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-2.16px",
+          "text": "Extra Virgin Olive Oil makes everything better."
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 112,
+        "bg": "rgb(246, 230, 217)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1012,
+        "h": 744,
+        "bg": "rgb(246, 230, 217)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "102px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-2.16px",
+          "text": "Get The Trio"
+        },
+        "words": 112,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1756,
+        "h": 2451,
+        "bg": "rgb(246, 230, 217)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "120px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-3.6px",
+          "text": "Olive oil so fresh, you can taste it."
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4197,
+        "h": 1116,
+        "bg": "rgb(246, 230, 217)",
+        "images": 3,
+        "video": true,
+        "heading": {
+          "family": "GT Alpina Typewriter",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "“Drizzle”Extra Virgin Olive Oil"
+        },
+        "words": 70,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5313,
+        "h": 658,
+        "bg": "rgb(246, 230, 217)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 89,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5971,
+        "h": 722,
+        "bg": "rgb(246, 230, 217)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "GT Alpina Typewriter",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "So many ways to GRAZA"
+        },
+        "words": 71,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6693,
+        "h": 500,
+        "bg": "rgb(246, 230, 217)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "GT Alpina Typewriter",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Now Serving Olives From"
+        },
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 3,
+      "columns": 3,
+      "photoRatio": 0.82,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.graza.co/",
+    "title": "GRAZA | High Quality Olive Oil | Graza",
+    "width": 390,
+    "pageHeight": 8542,
+    "fonts": {
+      "h1": {
+        "family": "ITC Garamond Condensed",
+        "size": "46px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "Extra Virgin Olive Oil makes everything better."
+      },
+      "h2": {
+        "family": "GT Alpina Typewriter",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cart(0)0 items"
+      },
+      "body": {
+        "family": "GT Alpina Typewriter",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This website is AudioEye enabled and is being optimized for "
+      },
+      "button": {
+        "family": "GT Alpina Typewriter",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "GT Alpina Typewriter",
+        "size": "60px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(246, 230, 217)",
+    "header": {
+      "height": 60,
+      "position": "sticky",
+      "bg": "rgb(246, 230, 217)",
+      "links": [
+        "Graza",
+        "Open menu",
+        "Search",
+        "Cart[0]"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 2,
+    "sections": [
+      {
+        "y": 0,
+        "h": 844,
+        "bg": "rgb(246, 230, 217)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "46px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Extra Virgin Olive Oil makes everything better."
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 844,
+        "h": 819,
+        "bg": "rgb(246, 230, 217)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-2.16px",
+          "text": "Get The Trio"
+        },
+        "words": 112,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1663,
+        "h": 1244,
+        "bg": "rgb(246, 230, 217)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "46px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Olive oil so fresh, you can taste it."
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2898,
+        "h": 2202,
+        "bg": "rgb(246, 230, 217)",
+        "images": 3,
+        "video": true,
+        "heading": {
+          "family": "GT Alpina Typewriter",
+          "size": "15px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "“Drizzle”Extra Virgin Olive Oil"
+        },
+        "words": 70,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5100,
+        "h": 583,
+        "bg": "rgb(246, 230, 217)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 89,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5682,
+        "h": 813,
+        "bg": "rgb(246, 230, 217)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "GT Alpina Typewriter",
+          "size": "15px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "So many ways to GRAZA"
+        },
+        "words": 71,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6495,
+        "h": 390,
+        "bg": "rgb(246, 230, 217)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "46px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Made by people who take olives very seriously."
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.graza.co/collections/all",
+    "title": "All | Graza",
+    "width": 1440,
+    "pageHeight": 4278,
+    "fonts": {
+      "h1": {
+        "family": "ITC Garamond Condensed",
+        "size": "72px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-2.16px",
+        "text": "Join the Glug Club"
+      },
+      "h2": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cart(0)0 items"
+      },
+      "body": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Looks like your ca(r)t has some issues"
+      },
+      "button": {
+        "family": "GT Alpina Typewriter",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add – $45"
+      },
+      "nav": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(246, 230, 217)",
+    "header": {
+      "height": 60,
+      "position": "sticky",
+      "bg": "rgb(246, 230, 217)",
+      "links": [
+        "Graza",
+        "Shop",
+        "Get Refills",
+        "About",
+        "Glog",
+        "Search",
+        "Account",
+        "Cart[0]"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 84,
+        "h": 169,
+        "bg": "rgb(246, 230, 217)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-2.16px",
+          "text": "Join the Glug Club"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 295,
+        "h": 2478,
+        "bg": "rgb(246, 230, 217)",
+        "images": 20,
+        "video": true,
+        "heading": {
+          "family": "GT Alpina Typewriter",
+          "size": "20px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "“The Trio”"
+        },
+        "words": 213,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 15,
+      "columns": 4,
+      "photoRatio": 0.75,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.graza.co/collections/all?_su_rec=TsRiJ0Gao3m1D9qCws1vdt5y9EffJC1YDJ0km_YXkBo_0eD93E83KwD6g4IfPpVrfGVeJSoihHj-KgEd-Kj4fVMrXxMAl1Y-zkXgsj9smFR5i4MPQdYX1ooLh-iLa4g0DV3Yks7UTz6inhG7nCoD65BM6nqxKY1f_0lL26BIYc7Orv2D_MIoQFmoCz60R03Dp6hj-PZsqSMM4xjCrLU1JO7HyGgj6ewSCxlZuUNffhGFNEqydEVPFMg6HYhNHuHJVNxikETzrbPSpMqEikvOh6kCChBtJoPvT1kNIPX9BIh76zXMIwbItZ33z4Xl41CiFmLGuMTHJ1iK5PLtzXhyp1U8qvQRvn556EWRww&_su_rec_id=fd786feb-6277-4d65-a9e6-c46489c98101-1794666621",
+    "title": "All | Graza",
+    "width": 390,
+    "pageHeight": 5344,
+    "fonts": {
+      "h1": {
+        "family": "ITC Garamond Condensed",
+        "size": "46px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "Join the Glug Club"
+      },
+      "h2": {
+        "family": "GT Alpina Typewriter",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cart(0)0 items"
+      },
+      "body": {
+        "family": "GT Alpina Typewriter",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Looks like your ca(r)t has some issues"
+      },
+      "button": {
+        "family": "GT Alpina Typewriter",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add – $45"
+      },
+      "nav": {
+        "family": "GT Alpina Typewriter",
+        "size": "60px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(246, 230, 217)",
+    "header": {
+      "height": 60,
+      "position": "sticky",
+      "bg": "rgb(246, 230, 217)",
+      "links": [
+        "Graza",
+        "Open menu",
+        "Search",
+        "Cart[0]"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 60,
+        "h": 133,
+        "bg": "rgb(246, 230, 217)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "46px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Join the Glug Club"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 235,
+        "h": 3452,
+        "bg": "rgb(246, 230, 217)",
+        "images": 20,
+        "video": true,
+        "heading": {
+          "family": "GT Alpina Typewriter",
+          "size": "20px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "“The Trio”"
+        },
+        "words": 213,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 15,
+      "columns": 2,
+      "photoRatio": 0.75,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.graza.co/products/the-graza-tote?variant=42967455989974",
+    "title": "Graza Tote Bag",
+    "width": 1440,
+    "pageHeight": 4214,
+    "fonts": {
+      "h1": {
+        "family": "ITC Garamond Condensed",
+        "size": "60px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "Graza Tote Bag"
+      },
+      "h2": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cart(0)0 items"
+      },
+      "body": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Looks like your ca(r)t has some issues"
+      },
+      "button": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add to cart – $25"
+      },
+      "nav": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(246, 230, 217)",
+    "header": {
+      "height": 60,
+      "position": "absolute",
+      "bg": "rgb(246, 230, 217)",
+      "links": [
+        "Graza",
+        "Shop",
+        "Get Refills",
+        "About",
+        "Glog",
+        "Search",
+        "Account",
+        "Cart[0]"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 60,
+        "h": 900,
+        "bg": "rgb(246, 230, 217)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "60px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Graza Tote Bag"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1020,
+        "h": 1688,
+        "bg": "rgb(246, 230, 217)",
+        "images": 14,
+        "video": false,
+        "heading": null,
+        "words": 347,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart – $25",
+      "aboveFold": true,
+      "top": 460,
+      "x": 861,
+      "width": 438,
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    "price": null,
+    "galleryImages": 4,
+    "swatches": 1,
+    "selects": 1,
+    "accordions": 5
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.graza.co/products/the-graza-tote?variant=42967455989974",
+    "title": "Graza Tote Bag",
+    "width": 390,
+    "pageHeight": 5574,
+    "fonts": {
+      "h1": {
+        "family": "ITC Garamond Condensed",
+        "size": "46px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "Graza Tote Bag"
+      },
+      "h2": {
+        "family": "GT Alpina Typewriter",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cart(0)0 items"
+      },
+      "body": {
+        "family": "GT Alpina Typewriter",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Looks like your ca(r)t has some issues"
+      },
+      "button": {
+        "family": "GT Alpina Typewriter",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add to cart – $25"
+      },
+      "nav": {
+        "family": "GT Alpina Typewriter",
+        "size": "60px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(246, 230, 217)",
+    "header": {
+      "height": 60,
+      "position": "absolute",
+      "bg": "rgb(246, 230, 217)",
+      "links": [
+        "Graza",
+        "Open menu",
+        "Search",
+        "Cart[0]"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 60,
+        "h": 873,
+        "bg": "rgb(246, 230, 217)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "ITC Garamond Condensed",
+          "size": "46px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Graza Tote Bag"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 993,
+        "h": 2923,
+        "bg": "rgb(246, 230, 217)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 355,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart – $25",
+      "aboveFold": false,
+      "top": 878,
+      "x": 20,
+      "width": 350,
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    "price": null,
+    "galleryImages": 4,
+    "swatches": 1,
+    "selects": 1,
+    "accordions": 5
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.graza.co/cart",
+    "title": "Your Shopping Cart | Graza",
+    "width": 1440,
+    "pageHeight": 2405,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cart(1)1 item"
+      },
+      "body": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "1"
+      },
+      "button": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Checkout"
+      },
+      "nav": {
+        "family": "GT Alpina Typewriter",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(246, 230, 217)",
+    "header": {
+      "height": 60,
+      "position": "sticky",
+      "bg": "rgb(246, 230, 217)",
+      "links": [
+        "Graza",
+        "Shop",
+        "Get Refills",
+        "About",
+        "Glog",
+        "Search",
+        "Account",
+        "Cart[1]"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": []
+  }
+}

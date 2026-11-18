@@ -1,0 +1,20 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvrgyp8g0001grpkcwtjgjdg",
+  "slug": "lf599a3i",
+  "categories": {
+    "contemporaneo": "cmvrgyp8u0003grpksx99l39d",
+    "clasico": "cmvrgyp8x0005grpkvdgyhrct"
+  },
+  "products": {
+    "amalfi": "cmvrgyp9f000dgrpkxvdwx3mi",
+    "flores": "cmvrgypab000lgrpk4l83xvmy",
+    "noticias": "cmvrgypaq000tgrpk7e59ifm8",
+    "mercado": "cmvrgypaz0011grpkx8l2iqwj",
+    "otono": "cmvrgypb60019grpkwd46yg24",
+    "cafe": "cmvrgypbe001hgrpkiw7x9v9p",
+    "te": "cmvrgypbn001pgrpkl51wnktc",
+    "disqueria": "cmvrgypbv001xgrpkmx779r49",
+    "parque": "cmvrgypc10025grpki6hndghz"
+  }
+}

@@ -1,0 +1,614 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://lovevery.com/",
+    "title": "Lovevery | Stage-Based Play for Your Child's Developing Brain",
+    "width": 1440,
+    "pageHeight": 6160,
+    "fonts": {
+      "h1": {
+        "family": "BrownPro",
+        "size": "40px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Raise curious, capablekids with Lovevery"
+      },
+      "h2": {
+        "family": "BrownPro",
+        "size": "48px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Choose Your Starting Play Kit"
+      },
+      "body": {
+        "family": "BrownPro",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop the award-winning Play Kits today!"
+      },
+      "button": {
+        "family": "BrownPro",
+        "size": "18px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore The Play Kits"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 134,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Raise curious, capablekids with Lovevery"
+        },
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 808,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 35,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1528,
+        "h": 810,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2338,
+        "h": 912,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Choose Your Starting Play Kit"
+        },
+        "words": 71,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3250,
+        "h": 416,
+        "bg": "rgb(255, 255, 255)",
+        "images": 108,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "30px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "See How Real Families Play"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3666,
+        "h": 400,
+        "bg": "rgb(223, 245, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4066,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4810,
+        "h": 636,
+        "bg": "rgb(249, 248, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "We did all the research so you don’t have to"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://lovevery.com/",
+    "title": "Lovevery | Stage-Based Play for Your Child's Developing Brain",
+    "width": 390,
+    "pageHeight": 8148,
+    "fonts": {
+      "h1": {
+        "family": "BrownPro",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Raise curious, capablekids with Lovevery"
+      },
+      "h2": {
+        "family": "BrownPro",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Choose Your Starting Play Kit"
+      },
+      "body": {
+        "family": "BrownPro",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop the award-winning Play Kits today!"
+      },
+      "button": {
+        "family": "BrownPro",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore The Play Kits"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 117,
+        "h": 834,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Raise curious, capablekids with Lovevery"
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 951,
+        "h": 5293,
+        "bg": "rgb(255, 255, 255)",
+        "images": 119,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Choose Your Starting Play Kit"
+        },
+        "words": 237,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://lovevery.com/products/the-play-kits",
+    "title": "The Play Kits by Lovevery | Montessori Toy Subscription Ages 0-5 | Lovevery",
+    "width": 1440,
+    "pageHeight": 13029,
+    "fonts": {
+      "h1": {
+        "family": "BrownPro",
+        "size": "40px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore The Play Kits"
+      },
+      "h2": {
+        "family": "BrownPro",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "0-12 Months"
+      },
+      "body": {
+        "family": "BrownPro",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop the award-winning Play Kits today!"
+      },
+      "button": {
+        "family": "BrownPro",
+        "size": "18px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get Started"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 134,
+        "h": 448,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 582,
+        "h": 200,
+        "bg": "rgb(249, 248, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 889,
+        "h": 720,
+        "bg": "rgb(239, 250, 249)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1609,
+        "h": 6736,
+        "bg": "rgb(255, 255, 255)",
+        "images": 27,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore The Play Kits"
+        },
+        "words": 324,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 8345,
+        "h": 464,
+        "bg": "rgb(249, 248, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How it works"
+        },
+        "words": 67,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 8809,
+        "h": 978,
+        "bg": "rgb(234, 249, 240)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "What parents are saying"
+        },
+        "words": 227,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 9787,
+        "h": 2112,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 661,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 11899,
+        "h": 416,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "18px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "We did all the research so you don’t have to"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 36,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 9
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://lovevery.com/products/the-play-kits",
+    "title": "The Play Kits by Lovevery | Montessori Toy Subscription Ages 0-5 | Lovevery",
+    "width": 390,
+    "pageHeight": 16476,
+    "fonts": {
+      "h1": {
+        "family": "BrownPro",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore The Play Kits"
+      },
+      "h2": {
+        "family": "BrownPro",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "0-12 Months"
+      },
+      "body": {
+        "family": "BrownPro",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop the award-winning Play Kits today!"
+      },
+      "button": {
+        "family": "BrownPro",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get Started"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 117,
+        "h": 240,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 357,
+        "h": 157,
+        "bg": "rgb(249, 248, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore The Play Kits"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 601,
+        "h": 8699,
+        "bg": "rgb(255, 255, 255)",
+        "images": 26,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "0-12 Months"
+        },
+        "words": 315,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 9300,
+        "h": 372,
+        "bg": "rgb(249, 248, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How it works"
+        },
+        "words": 69,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 9672,
+        "h": 794,
+        "bg": "rgb(234, 249, 240)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "What parents are saying"
+        },
+        "words": 229,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 10466,
+        "h": 3642,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 615,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 14108,
+        "h": 464,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "BrownPro",
+          "size": "16px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "We did all the research so you don’t have to"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 34,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 8
+  }
+}

@@ -505,7 +505,9 @@ it('builds a new message on the preserved draft: the draft is saved first, then 
   expect(sendOptions(sent.mock.calls[1])).toEqual({});
 });
 
-it('keeps the new message in the box when the draft could not be saved', async () => {
+// Owner 2026-11-09 (Remolino: «muéstrame mi tienda» sat in the box after the old draft failed again): the new message still goes out,
+// on the saved design.
+it('sends the new message on the saved design when the draft could not be saved', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceDraftPreview').mockResolvedValue(preserved);
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue(answered);
   await mountSourceStudio(app);
@@ -513,9 +515,10 @@ it('keeps the new message in the box when the draft could not be saved', async (
   const field = app.querySelector<HTMLTextAreaElement>('#agent-command')!;
   field.value = 'Agrega una sección de sabores'; field.dispatchEvent(new Event('input'));
   app.querySelector<HTMLFormElement>('[data-composer]')!.requestSubmit();
-  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
-  await vi.waitFor(() => expect(app.querySelector<HTMLTextAreaElement>('#agent-command')!.value).toBe('Agrega una sección de sabores'));
-  expect(sent).toHaveBeenCalledTimes(1);
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2));
+  expect(sendOptions(sent.mock.calls[0])).toEqual({ resumeDraft: true });
+  expect(sent.mock.calls[1][1]).toContain('Agrega una sección de sabores');
+  expect(sendOptions(sent.mock.calls[1])).toEqual({});
 });
 
 const styleCard = (index: number) => ({ index, slot: index, name: `Estilo ${index}`, mode: index < 1 ? 'calm' : 'bold', vibe: 'Vibra', inspiration: ['Uno'], fonts: { display: 'outfit', text: 'manrope', displayFamily: 'Outfit', textFamily: 'Manrope' }, palette: ['#ffffff'], html: '<img src="/v1/uploads/a.jpg">', source: 'model' }) as const;
@@ -691,4 +694,92 @@ it('Confirmar, Editar and Quitar call the API and load the new revision', async 
   await vi.waitFor(() => expect(app.querySelector('[data-fact-remove="a1"]:not([disabled])')).not.toBeNull());
   app.querySelector<HTMLButtonElement>('[data-fact-remove="a1"]')!.click();
   await vi.waitFor(() => expect(remove).toHaveBeenCalledWith('s1', 'a1', 2));
+});
+
+// Spec 2026-11-09 YAPI A/B tests: the card under YAPI's newest message.
+const abCard = (actions: Array<[string, string]>, proposal: Record<string, unknown> | null = { id: 'p1', kind: 'design', revision: 2 }) => ({ messages: [
+  { id: 'a1', role: 'ASSISTANT', content: '¿Lanzo la prueba?', createdAt: '2026-11-09', metadata: { ...(proposal ? { abProposal: proposal } : {}), abChips: actions.map(([label, action]) => ({ label, action })) } },
+] } as any);
+it('a design test launch runs B checks, starts it with the merchant words, then YAPI says so', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue(abCard([['Lanzar prueba', 'launch'], ['Ver otra opción', 'another'], ['Cancelar', 'cancel']]));
+  vi.spyOn(MerchantStudioApi.prototype, 'abNote').mockResolvedValue({ message: null });
+  const answer = vi.spyOn(MerchantStudioApi.prototype, 'abAnswer').mockImplementation(async (_s, _p, action) => action === 'launch' ? { needsChecks: { revision: 2, request: 'prueba otra portada' } } : {});
+  const record = vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  const start = vi.spyOn(MerchantStudioApi.prototype, 'startSourceTest').mockResolvedValue({ revision: 1 } as any);
+  await mountSourceStudio(app);
+  const launch = await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-ab-action="launch"]'); expect(found).toBeTruthy(); return found!; });
+  launch.click();
+  await vi.waitFor(() => expect(start).toHaveBeenCalledWith('s1', 2, 0, 'prueba otra portada'));
+  expect(record).toHaveBeenCalled();
+  await vi.waitFor(() => expect(answer).toHaveBeenCalledWith('s1', 'p1', 'launched'));
+});
+it('«Ver otra opción» sends the words again; a failed check starts nothing and says why', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue(abCard([['Lanzar prueba', 'launch'], ['Ver otra opción', 'another']]));
+  vi.spyOn(MerchantStudioApi.prototype, 'abNote').mockResolvedValue({ message: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'abAnswer').mockImplementation(async (_s, _p, action) => action === 'launch' ? { needsChecks: { revision: 2, request: 'prueba otra portada' } } : { resend: 'prueba otra portada' });
+  const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } } as any);
+  const start = vi.spyOn(MerchantStudioApi.prototype, 'startSourceTest');
+  vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  vi.mocked(checkSourceWebsite).mockResolvedValue([{ label: 'Escritorio y móvil', status: 'failed', detail: 'Se sale del ancho' }] as any);
+  await mountSourceStudio(app);
+  (await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-ab-action="launch"]'); expect(found).toBeTruthy(); return found!; })).click();
+  await vi.waitFor(() => expect(app.textContent).toContain('La versión B tiene comprobaciones pendientes'));
+  expect(start).not.toHaveBeenCalled();
+  (await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-ab-action="another"]:not([disabled])'); expect(found).toBeTruthy(); return found!; })).click();
+  await vi.waitFor(() => expect(sent).toHaveBeenCalled());
+  expect(sent.mock.calls[0][1]).toBe('prueba otra portada');
+});
+it('asks for the day\'s test note when it opens, and Publish says why it waits while a test runs', async () => {
+  const note = vi.spyOn(MerchantStudioApi.prototype, 'abNote').mockResolvedValue({ message: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 2, versions: [version], nextBefore: null, publication: { revision: 1, version: 0, active: true, experiment: { id: 'e', status: 'RUNNING', startedAt: '2026-11-08', variants: [{ variant: 'A', revision: 1, visitors: 0, buyers: 0, paidOrders: 0, conversionRate: 0, revenue: [] }, { variant: 'B', revision: 2, visitors: 0, buyers: 0, paidOrders: 0, conversionRate: 0, revenue: [] }], evidence: { winner: null, reason: 'Recopilando datos.' } } } } as any);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(note).toHaveBeenCalledWith('s1'));
+  await vi.waitFor(() => expect(publish().title).toBe('Hay una prueba A/B corriendo; publica cuando termine.'));
+});
+it('a design B already checked on screen starts at once, without a second check run (live Remolino 2026-11-09: the second run hung)', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue(abCard([['Lanzar prueba', 'launch']]));
+  vi.spyOn(MerchantStudioApi.prototype, 'abNote').mockResolvedValue({ message: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'abAnswer').mockImplementation(async (_s, _p, action) => action === 'launch' ? { needsChecks: { revision: 2, request: 'prueba otra portada' } } : {});
+  vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  const start = vi.spyOn(MerchantStudioApi.prototype, 'startSourceTest').mockResolvedValue({ revision: 1 } as any);
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(app.querySelector('[data-ab-action="launch"]')).toBeTruthy());
+  await vi.waitFor(() => expect(vi.mocked(checkSourceWebsite)).toHaveBeenCalled());
+  await new Promise(resolve => setTimeout(resolve, 50));
+  const runs = vi.mocked(checkSourceWebsite).mock.calls.length;
+  app.querySelector<HTMLButtonElement>('[data-ab-action="launch"]')!.click();
+  await vi.waitFor(() => expect(start).toHaveBeenCalledWith('s1', 2, 0, 'prueba otra portada'));
+  expect(vi.mocked(checkSourceWebsite).mock.calls.length).toBe(runs);
+});
+it('a card button that works clears the error a failed one left (live Remolino 2026-11-09)', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue(abCard([['Dejar A', 'keepA']], null));
+  vi.spyOn(MerchantStudioApi.prototype, 'abNote').mockResolvedValue({ message: null });
+  const answer = vi.spyOn(MerchantStudioApi.prototype, 'abAnswer').mockRejectedValueOnce(new Error('Esta prueba ya terminó.')).mockResolvedValue({});
+  await mountSourceStudio(app);
+  (await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-ab-action="keepA"]:not([disabled])'); expect(found).toBeTruthy(); return found!; })).click();
+  await vi.waitFor(() => expect(app.textContent).toContain('Esta prueba ya terminó.'));
+  (await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-ab-action="keepA"]:not([disabled])'); expect(found).toBeTruthy(); return found!; })).click();
+  await vi.waitFor(() => expect(answer).toHaveBeenCalledTimes(2));
+  await vi.waitFor(() => expect(app.textContent).not.toContain('Esta prueba ya terminó.'));
+});
+it('a second tap while a launch waits starts nothing more (final review 2026-11-09)', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue(abCard([['Lanzar prueba', 'launch']]));
+  vi.spyOn(MerchantStudioApi.prototype, 'abNote').mockResolvedValue({ message: null });
+  let release!: () => void;
+  const answer = vi.spyOn(MerchantStudioApi.prototype, 'abAnswer').mockImplementation(async (_s, _p, action) => action === 'launch' ? { needsChecks: { revision: 2, request: 'prueba otra portada' } } : {});
+  vi.spyOn(MerchantStudioApi.prototype, 'recordSourceChecks').mockResolvedValue({});
+  const start = vi.spyOn(MerchantStudioApi.prototype, 'startSourceTest').mockResolvedValue({ revision: 1 } as any);
+  // The editor is still checking B when the merchant taps: the wait redraws the card.
+  vi.mocked(checkSourceWebsite).mockImplementation(() => new Promise(resolve => { release = () => resolve(passed); }));
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(vi.mocked(checkSourceWebsite)).toHaveBeenCalled());
+  (await vi.waitFor(() => { const found = app.querySelector<HTMLButtonElement>('[data-ab-action="launch"]:not([disabled])'); expect(found).toBeTruthy(); return found!; })).click();
+  await vi.waitFor(() => expect(app.textContent).toContain('Comprobando la versión B'));
+  expect(app.querySelector<HTMLButtonElement>('[data-ab-action="launch"]')!.disabled).toBe(true);
+  app.querySelector<HTMLButtonElement>('[data-ab-action="launch"]')!.click();
+  await new Promise(resolve => setTimeout(resolve, 50));
+  expect(answer.mock.calls.filter(call => call[2] === 'launch')).toHaveLength(1);
+  release();
+  await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(1));
+  await vi.waitFor(() => expect(answer).toHaveBeenCalledWith('s1', 'p1', 'launched'));
 });

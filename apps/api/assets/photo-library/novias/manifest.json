@@ -1,0 +1,131 @@
+{
+  "sector": "novias",
+  "label": "Novias y alta costura",
+  "keywords": [
+    "novia",
+    "novias",
+    "alta costura",
+    "vestido de novia",
+    "vestidos",
+    "atelier",
+    "boda",
+    "bodas",
+    "velo",
+    "encaje",
+    "costura"
+  ],
+  "photos": [
+    {
+      "file": "calas-blancas.jpg",
+      "subject": "calas blancas",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvZmw5NjgzMTM3NzMzLWltYWdlLWt0d3Ayb2ExLmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "prueba-ajuste-espalda.jpg",
+      "subject": "prueba ajuste espalda",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvZnJtYXJyaWFnZV9waG90b193ZWRkaW5nX2RyZXNzLWltYWdlLWt5YmQ2am9pLmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "aguja-maquina-de-coser.jpg",
+      "subject": "aguja maquina de coser",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvZnJzZXdpbmdfbWFjaGluZV9mb290X3lhcm4taW1hZ2Uta3liY3N6b3guanBn.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "novia-ramo-muro-piedra.jpg",
+      "subject": "novia ramo muro piedra",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTA0L3Vwd2s2MTgxNjc4NS13aWtpbWVkaWEtaW1hZ2Uta293cHNwd2guanBn.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "vestidos-blancos-en-penumbra.jpg",
+      "subject": "vestidos blancos en penumbra",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTA2L3Vwd2s2MTczNDQwNC13aWtpbWVkaWEtaW1hZ2Uta293cjB5bmguanBn.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "manos-maquina-de-coser.jpg",
+      "subject": "manos maquina de coser",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9zdGF0aWMvaW1hZ2Uvd2Vic2l0ZS8yMDIyLTA0L2xyL2ZyaXRhbGlhbl9zb2Zhc19pdGFsaWFuX21hbnVmYWN0dXJlLWltYWdlLWt5YmRpZXB1LmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "espalda-vestido-botones.jpg",
+      "subject": "espalda vestido botones",
+      "shape": "tall",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9zdGF0aWMvaW1hZ2Uvd2Vic2l0ZS8yMDIyLTA0L2xyL2Zyd2VkZGluZ193ZWRkaW5nX2RyZXNzX2JyaWRlXzAtaW1hZ2Uta3liYWFsZzguanBn.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "rollos-de-tela-taller.jpg",
+      "subject": "rollos de tela taller",
+      "shape": "square",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9zdGF0aWMvaW1hZ2Uvd2Vic2l0ZS8yMDIyLTA0L2xyL3B4NTk1NDg5LWltYWdlLWt3eXA3YmlzLmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "vestido-colgado-entre-biombos.jpg",
+      "subject": "vestido colgado entre biombos",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvaXMxNjEwNi1pbWFnZS1rd3lzZDk2ZC5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "novia-a-contraluz-ventana.jpg",
+      "subject": "novia a contraluz ventana",
+      "shape": "tall",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcHgxMjAzOTkzLWltYWdlLWt3dnkyOXE5LmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "vestido-colgado-ventana.jpg",
+      "subject": "vestido colgado ventana",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcHgxMTgwODU0LWltYWdlLWt3dnkxa3R0LmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "novia-mangas-de-encaje-ramo.jpg",
+      "subject": "novia mangas de encaje ramo",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcHUyMzQ5NzEyLWltYWdlLWt3dnk3b3VsLmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "novia-encaje-zapatos.jpg",
+      "subject": "novia encaje zapatos",
+      "shape": "tall",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcHUyMzU3MzQzLWltYWdlLWt3dnk3em9oLmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "vestidos-en-riel-atelier.jpg",
+      "subject": "vestidos en riel atelier",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvdXB3azYxNzM0MjcxLXdpa2ltZWRpYS1pbWFnZS1rb3dyMWwxei5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "vestido-colgado-pasillo.jpg",
+      "subject": "vestido colgado pasillo",
+      "shape": "tall",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvdXB3azYxNzM0NTU4LXdpa2ltZWRpYS1pbWFnZS1rb3dsbWVkei5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "calas-rosadas.jpg",
+      "subject": "calas rosadas",
+      "shape": "tall",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTA1L3Vwd2s2MTgwODk5MC13aWtpbWVkaWEtaW1hZ2Uta293YnhlNXYuanBn.jpg",
+      "license": "CC0"
+    }
+  ]
+}

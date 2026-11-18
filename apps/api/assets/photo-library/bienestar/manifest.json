@@ -1,0 +1,125 @@
+{
+  "sector": "bienestar",
+  "label": "Deporte y bienestar",
+  "keywords": [
+    "deporte",
+    "fitness",
+    "gimnasio",
+    "yoga",
+    "pilates",
+    "entrenamiento",
+    "suplementos",
+    "proteina",
+    "bienestar",
+    "running",
+    "nutricion",
+    "salud"
+  ],
+  "photos": [
+    {
+      "file": "bienestar-01.jpg",
+      "subject": "deporte y bienestar 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3295711/free-photo-image-pancakes-healthy-diabetes-bean",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-02.jpg",
+      "subject": "deporte y bienestar 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5912948/photo-image-light-public-domain-nature",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-03.jpg",
+      "subject": "deporte y bienestar 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3282999/free-photo-image-organic-food-healthy-breakfast-bowl",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-04.jpg",
+      "subject": "deporte y bienestar 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926278/photo-image-public-domain-free-plates",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-05.jpg",
+      "subject": "deporte y bienestar 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5919300/photo-image-public-domain-pink-person",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-06.jpg",
+      "subject": "deporte y bienestar 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6027660/photo-image-public-domain-free-meditation",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-07.jpg",
+      "subject": "deporte y bienestar 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5912662/photo-image-public-domain-free-workout",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-08.jpg",
+      "subject": "deporte y bienestar 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5916836/image-public-domain-free-workout",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-09.jpg",
+      "subject": "deporte y bienestar 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926037/photo-image-background-public-domain-fruit",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-10.jpg",
+      "subject": "deporte y bienestar 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926012/photo-image-public-domain-hand-pink",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-11.jpg",
+      "subject": "deporte y bienestar 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5923091/photo-image-public-domain-free-plates",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-12.jpg",
+      "subject": "deporte y bienestar 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5921924/photo-image-public-domain-leaf-plant",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-13.jpg",
+      "subject": "deporte y bienestar 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5923959/photo-image-public-domain-ocean-nature",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-14.jpg",
+      "subject": "deporte y bienestar 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5974912/photo-image-public-domain-ocean-nature",
+      "license": "CC0"
+    },
+    {
+      "file": "bienestar-15.jpg",
+      "subject": "deporte y bienestar 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5927649/photo-image-public-domain-people-woman",
+      "license": "CC0"
+    }
+  ]
+}

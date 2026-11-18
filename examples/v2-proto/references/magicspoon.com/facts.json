@@ -1,0 +1,1197 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://magicspoon.com/",
+    "title": "High Protein, Keto-Friendly, 0g Sugar Cereal | Magic Spoon Cereal",
+    "width": 1440,
+    "pageHeight": 7242,
+    "fonts": {
+      "h1": {
+        "family": "Poppins",
+        "size": "60px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This week only 41% off Sweet Tooth Bundle"
+      },
+      "h2": {
+        "family": "Poppins",
+        "size": "64px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get your childhood favorites delivered to your door monthly"
+      },
+      "body": {
+        "family": "Saira Condensed",
+        "size": "28.8px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "This week only"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cereal"
+      },
+      "nav": {
+        "family": "Poppins",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "⌛ Limited! FREE Bowl Set for New Subscribers! 🥣✨"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "⌛ Limited! FREE Bowl Set"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 5,
+    "sections": [
+      {
+        "y": 40,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Poppins",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "This week only 41% off Sweet Tooth Bundle"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 940,
+        "h": 267,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": null,
+        "words": 25,
+        "perRow": 9,
+        "fullBleed": true
+      },
+      {
+        "y": 1208,
+        "h": 779,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "64px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Get your childhood favorites delivered to your door monthly"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1987,
+        "h": 922,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "64px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "SHOP BEST SELLERS"
+        },
+        "words": 47,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2909,
+        "h": 918,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": true,
+        "heading": {
+          "family": "Poppins",
+          "size": "80px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "80,000+ 5-Star Reviews"
+        },
+        "words": 63,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3827,
+        "h": 1046,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "64px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Better for you breakfast options"
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4873,
+        "h": 779,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "64px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Amazing reviews & great lineup"
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5652,
+        "h": 840,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "High Protein"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6490,
+        "h": 229,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Happiness 100% Guaranteed"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 3,
+      "columns": 3,
+      "photoRatio": 1.2,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://magicspoon.com/",
+    "title": "High Protein, Keto-Friendly, 0g Sugar Cereal | Magic Spoon Cereal",
+    "width": 390,
+    "pageHeight": 7241,
+    "fonts": {
+      "h1": {
+        "family": "Poppins",
+        "size": "36px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This week only 41% off Sweet Tooth Bundle"
+      },
+      "h2": {
+        "family": "Poppins",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get your childhood favorites delivered to your door monthly"
+      },
+      "body": {
+        "family": "Saira Condensed",
+        "size": "20px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "This week only"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cereal"
+      },
+      "nav": {
+        "family": "Poppins",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🥣 Build a Bundle & Save Up to 26% →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🥣 Build a Bundle & Save"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 40,
+        "h": 700,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "Poppins",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "This week only 41% off Sweet Tooth Bundle"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 740,
+        "h": 213,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": null,
+        "words": 25,
+        "perRow": 9,
+        "fullBleed": true
+      },
+      {
+        "y": 953,
+        "h": 874,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Get your childhood favorites delivered to your door monthly"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1827,
+        "h": 703,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "SHOP BEST SELLERS"
+        },
+        "words": 47,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2530,
+        "h": 736,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": true,
+        "heading": {
+          "family": "Poppins",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "80,000+ 5-Star Reviews"
+        },
+        "words": 63,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3266,
+        "h": 1114,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Better for you breakfast options"
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4380,
+        "h": 649,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "36px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Amazing reviews & great lineup"
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5029,
+        "h": 1018,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "High Protein"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6045,
+        "h": 335,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Happiness 100% Guaranteed"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://magicspoon.com/collections/all",
+    "title": "All",
+    "width": 1440,
+    "pageHeight": 2428,
+    "fonts": {
+      "h1": {
+        "family": "Poppins",
+        "size": "35px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Explore Our Products"
+      },
+      "h2": {
+        "family": "Poppins",
+        "size": "45px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Frequently Asked Questions"
+      },
+      "body": {
+        "family": "Poppins",
+        "size": "18px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "$39"
+      },
+      "button": {
+        "family": "Poppins",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.8px",
+        "text": "Subscribe"
+      },
+      "nav": {
+        "family": "Poppins",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🥣 Build a Bundle & Save Up to 26% →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🥣 Build a Bundle & Save"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 190,
+        "h": 910,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "35px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Explore Our Products"
+        },
+        "words": 24,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1100,
+        "h": 805,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "45px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Frequently Asked Questions"
+        },
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 2,
+      "columns": 2,
+      "photoRatio": 1.09,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://magicspoon.com/collections/all?_su_rec=F4fllsDaWOdq93XPyOEfSc9YL39_XioY3sRxFX6SeCgsfDi8os5znQj-5UGNZq-R9JBXn4g19ybo58JBSzIy_EVJgNvw78PKEnQs3xLgcDNXzl3bPZo_ygUREdaeHeQyXe1bXfaMiTc5JWfA1iwY3xVij-BLhdQZ7B5uK8zswwbuZwVbUdNOhKTZeSzttNE978lL70nhTFmwB5KsPiq-motxig2sAk9dCSW08KpVi82Zf3dCXGBtQAPKddyneWii_THV0d8KqWjDhmziihTntMmUYNzDlZ-Fg2s5wdJ-alAvlHbzQpcP3qADYSDDi5bK_-inOwVjR-xosUIJyATX9iEGc9dte-6EArD0EQ&_su_rec_id=275e40fa-4a35-46e1-b4bd-b5b1cffd95f9-1794666994",
+    "title": "All",
+    "width": 390,
+    "pageHeight": 3284,
+    "fonts": {
+      "h1": {
+        "family": "Poppins",
+        "size": "30px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Explore Our Products"
+      },
+      "h2": {
+        "family": "Poppins",
+        "size": "35px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Frequently Asked Questions"
+      },
+      "body": {
+        "family": "Poppins",
+        "size": "15.5px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "$39"
+      },
+      "button": {
+        "family": "Poppins",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.8px",
+        "text": "Subscribe"
+      },
+      "nav": {
+        "family": "Poppins",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🥣 Build a Bundle & Save Up to 26% →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🥣 Build a Bundle & Save"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 170,
+        "h": 1317,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "30px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Explore Our Products"
+        },
+        "words": 30,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1487,
+        "h": 937,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "35px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Frequently Asked Questions"
+        },
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 2,
+      "columns": 1,
+      "photoRatio": 1.09,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://magicspoon.com/products/variety6-protein-with-marshmallows?selling_plan=3408035902",
+    "title": "Variety 6 - Protein Cereal + Protein Cereal with Marshmallows",
+    "width": 1440,
+    "pageHeight": 9487,
+    "fonts": {
+      "h1": {
+        "family": "Poppins",
+        "size": "48px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.44px",
+        "text": "Variety 6"
+      },
+      "h2": {
+        "family": "Poppins",
+        "size": "18px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Protein Cereal + Protein Cereal with Marshmallows"
+      },
+      "body": {
+        "family": "Poppins",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "⌛ Limited! FREE Bowl Set for New Subscribers! 🥣✨"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "13.3333px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Poppins",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 119,
+      "position": "absolute",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Cereal",
+        "Oatmeal",
+        "Treats",
+        "Granola",
+        "Pastries",
+        "About Us",
+        "Find In Store",
+        "Bundle & save up to 26% "
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 0,
+        "h": 2019,
+        "bg": "rgb(255, 255, 255)",
+        "images": 34,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "48px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.44px",
+          "text": "Variety 6"
+        },
+        "words": 211,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 2019,
+        "h": 823,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "28px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "High Protein"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2842,
+        "h": 984,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "60px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Ingredients: Milk Protein BlendMilk Protein BlendWhey protei"
+        },
+        "words": 359,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3826,
+        "h": 998,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": true,
+        "heading": {
+          "family": "Poppins",
+          "size": "80px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "80,000+ 5-Star Reviews"
+        },
+        "words": 72,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 4824,
+        "h": 1078,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How do we stack up to the \"classics\"?"
+        },
+        "words": 55,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5902,
+        "h": 721,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 36,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 6623,
+        "h": 1686,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "44.8px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.344px",
+          "text": "What Spooners are saying"
+        },
+        "words": 204,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 8309,
+        "h": 805,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "45px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Frequently Asked Questions"
+        },
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": false,
+      "top": 1476,
+      "x": 1073,
+      "width": 253,
+      "bg": "rgb(63, 7, 145)"
+    },
+    "price": {
+      "family": "Poppins",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$58.50 $55.50"
+    },
+    "galleryImages": 14,
+    "swatches": 2,
+    "selects": 4,
+    "accordions": 5
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://magicspoon.com/products/variety6-protein-with-marshmallows?selling_plan=3408035902",
+    "title": "Variety 6 - Protein Cereal + Protein Cereal with Marshmallows",
+    "width": 390,
+    "pageHeight": 10938,
+    "fonts": {
+      "h1": {
+        "family": "Poppins",
+        "size": "36px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.08px",
+        "text": "Variety 6"
+      },
+      "h2": {
+        "family": "Poppins",
+        "size": "18px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Protein Cereal + Protein Cereal with Marshmallows"
+      },
+      "body": {
+        "family": "Poppins",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Six classic flavors, one easy bundle. This variety pack incl"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "See Nutritional Facts"
+      },
+      "nav": {
+        "family": "Poppins",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🥣 Build a Bundle & Save Up to 26% →"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🥣 Build a Bundle & Save"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 40,
+        "h": 2911,
+        "bg": "rgb(255, 255, 255)",
+        "images": 34,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "36px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.08px",
+          "text": "Variety 6"
+        },
+        "words": 211,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2952,
+        "h": 785,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "19px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "High Protein"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3737,
+        "h": 1266,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Ingredients: Milk Protein BlendMilk Protein BlendWhey protei"
+        },
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5002,
+        "h": 768,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": true,
+        "heading": {
+          "family": "Poppins",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "80,000+ 5-Star Reviews"
+        },
+        "words": 72,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 5771,
+        "h": 887,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "16px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How do we stack up to the \"classics\"?"
+        },
+        "words": 55,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6658,
+        "h": 655,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 36,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 7313,
+        "h": 1977,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "40px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "What Spooners are saying"
+        },
+        "words": 211,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 9290,
+        "h": 937,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "35px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Frequently Asked Questions"
+        },
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": false,
+      "top": 2158,
+      "x": 202,
+      "width": 168,
+      "bg": "rgb(63, 7, 145)"
+    },
+    "price": {
+      "family": "Poppins",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$58.50 $55.50"
+    },
+    "galleryImages": 14,
+    "swatches": 2,
+    "selects": 4,
+    "accordions": 5
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://magicspoon.com/cart",
+    "title": "Your Shopping Cart",
+    "width": 1440,
+    "pageHeight": 1768,
+    "fonts": {
+      "h1": {
+        "family": "Poppins",
+        "size": "48px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "h2": {
+        "family": "Poppins",
+        "size": "28px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Variety 6 - Protein Cereal + Protein Cereal with Marshmallow"
+      },
+      "body": {
+        "family": "Poppins",
+        "size": "18px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.6px",
+        "text": "Subtotal: $55.50"
+      },
+      "button": {
+        "family": "Arial",
+        "size": "16px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.8px",
+        "text": "Add"
+      },
+      "nav": {
+        "family": "Poppins",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "⌛ Limited! FREE Bowl Set for New Subscribers! 🥣✨"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "⌛ Limited! FREE Bowl Set"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 220,
+        "h": 935,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Poppins",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Your Cart"
+        },
+        "words": 41,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

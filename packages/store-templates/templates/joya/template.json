@@ -1,0 +1,371 @@
+{
+  "id": "joya",
+  "name": "Joya",
+  "category": "moda",
+  "description": "Joyería y accesorios finos: capitales pequeñas y espaciadas, bloques de color junto a la pieza, fotos editoriales y mucho aire.",
+  "tags": [
+    "joyería",
+    "anillos",
+    "aros",
+    "collares",
+    "accesorios",
+    "plata",
+    "oro"
+  ],
+  "sitePurpose": "shop",
+  "order": 71,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (estilos hechos a mano, 2026-11-10)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "jo-anillo",
+      "role": "product",
+      "demo": "jo-anillo.jpg"
+    },
+    {
+      "slot": "jo-aros",
+      "role": "product",
+      "demo": "jo-aros.jpg"
+    },
+    {
+      "slot": "jo-collar",
+      "role": "product",
+      "demo": "jo-collar.jpg"
+    },
+    {
+      "slot": "jo-hero",
+      "role": "hero",
+      "demo": "jo-hero.jpg"
+    },
+    {
+      "slot": "jo-manos",
+      "role": "lifestyle",
+      "demo": "jo-manos.jpg"
+    },
+    {
+      "slot": "jo-retrato",
+      "role": "lifestyle",
+      "demo": "jo-retrato.jpg"
+    },
+    {
+      "slot": "jo-oreja",
+      "role": "lifestyle",
+      "demo": "jo-oreja.jpg"
+    },
+    {
+      "slot": "jo-regalo",
+      "role": "lifestyle",
+      "demo": "jo-regalo.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "joya-inter",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1a1a1a",
+      "muted": "#f3f1ee",
+      "accent": "#7a1f1f",
+      "deep": "#1a1a1a"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "joya",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "band",
+      "button": "underline",
+      "corners": "sharp",
+      "density": "airy",
+      "texture": "none",
+      "titles": "upper",
+      "photos": "natural",
+      "pdp": "split-scroll",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis y caja de regalo en cada pedido"
+    },
+    "layout": [
+      {
+        "type": "block-split",
+        "look": "left",
+        "eyebrow": "Nueva colección",
+        "title": "Colección Rompecabezas",
+        "text": "Anillos de oro que se arman en capas, a tu manera.",
+        "cta": "Ver colección",
+        "link": "products",
+        "photo": "slot:jo-anillo"
+      },
+      {
+        "type": "promo-banner",
+        "title": "Hechas para todos los días",
+        "text": "Oro de 18 k y plata 925, para no sacártelas nunca.",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:jo-hero"
+      },
+      {
+        "type": "products-slider",
+        "title": "Lo más regalado",
+        "cta": "Ver todo",
+        "link": "products",
+        "card": "framed"
+      },
+      {
+        "type": "promo-pair",
+        "items": [
+          {
+            "title": "Lo más regalado",
+            "photo": "slot:jo-oreja",
+            "link": "products"
+          },
+          {
+            "title": "Collares finos",
+            "photo": "slot:jo-collar",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "statement-inline",
+        "title": "Joyas para vivir con ellas, todos los días",
+        "photo": "slot:jo-manos",
+        "photo2": "slot:jo-retrato",
+        "cta": "Nosotros",
+        "link": "about"
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "Cómo se *lleva*",
+        "photo": "slot:jo-retrato",
+        "items": [
+          {
+            "title": "Aros Gota",
+            "x": 52,
+            "y": 48
+          },
+          {
+            "title": "Oro de 18 k",
+            "text": "No se oscurece.",
+            "icon": "gem"
+          },
+          {
+            "title": "Hecho a mano",
+            "text": "En nuestro taller.",
+            "icon": "hand"
+          }
+        ]
+      },
+      {
+        "type": "block-split",
+        "look": "right",
+        "eyebrow": "Grabado",
+        "title": "Tus iniciales, a mano",
+        "text": "Grabamos cada pieza en el taller, sin costo.",
+        "cta": "Grabar la mía",
+        "link": "products",
+        "photo": "slot:jo-manos"
+      },
+      {
+        "type": "image-columns",
+        "title": "Tienda y servicios",
+        "items": [
+          {
+            "title": "Nuestra tienda",
+            "text": "Ven a probártelas.",
+            "photo": "slot:jo-hero",
+            "link": "products"
+          },
+          {
+            "title": "Grabado",
+            "text": "Iniciales y fechas.",
+            "photo": "slot:jo-manos",
+            "link": "products"
+          },
+          {
+            "title": "Para regalar",
+            "text": "Caja y tarjeta.",
+            "photo": "slot:jo-regalo",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-cards",
+        "look": "soft",
+        "title": "Para regalar",
+        "cta": "Ver regalos",
+        "link": "products",
+        "products": [
+          "Collar Hilo",
+          "Collar Esmeralda"
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿De qué están hechas?",
+            "text": "Oro de 18 k y plata 925."
+          },
+          {
+            "title": "¿Se oscurecen?",
+            "text": "No, con el cuidado de siempre."
+          },
+          {
+            "title": "¿Hacen cambios?",
+            "text": "Sí, dentro de 30 días."
+          }
+        ]
+      },
+      {
+        "type": "closing-wordmark",
+        "title": "Para siempre, *todos los días*",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:jo-regalo"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Cuidado y envío",
+        "items": [
+          {
+            "title": "¿Cómo la cuido?",
+            "text": "Guárdala en su bolsita."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En 24 a 48 horas."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "joya-inter",
+        "joya-manrope",
+        "joya-hanken",
+        "joya-mona",
+        "joya-jost"
+      ],
+      "variants": {
+        "photos": [
+          "natural",
+          "framed"
+        ],
+        "footer": [
+          "band",
+          "column"
+        ]
+      },
+      "looks": {
+        "block-split": [
+          "left",
+          "right"
+        ]
+      },
+      "swaps": {
+        "promo-banner": [
+          "promo-banner",
+          "cover-full",
+          "marquee-photo"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        [
+          0,
+          2,
+          1,
+          4,
+          3,
+          6,
+          5,
+          8,
+          7,
+          9,
+          10
+        ],
+        [
+          0,
+          1,
+          3,
+          2,
+          5,
+          4,
+          7,
+          6,
+          8,
+          9,
+          10
+        ]
+      ],
+      "bands": [
+        {},
+        {
+          "4": "muted",
+          "7": "muted"
+        },
+        {
+          "2": "muted"
+        }
+      ]
+    },
+    "demo": {
+      "storeName": "Joya",
+      "tagline": "Joyas para todos los días",
+      "products": [
+        {
+          "name": "Anillo Sello",
+          "price": 890,
+          "description": "Oro de 18 k.",
+          "category": "Anillos"
+        },
+        {
+          "name": "Aros Gota",
+          "price": 520,
+          "description": "Oro de 18 k.",
+          "category": "Aros"
+        },
+        {
+          "name": "Collar Hilo",
+          "price": 380,
+          "description": "Plata 925.",
+          "category": "Collares"
+        },
+        {
+          "name": "Collar Esmeralda",
+          "price": 1200,
+          "description": "Oro y esmeralda.",
+          "category": "Collares"
+        }
+      ]
+    }
+  }
+}

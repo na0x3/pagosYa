@@ -1,0 +1,124 @@
+/* YAPI's panel in the dashboard's Clyro glass (owner 2026-11-16, «change yapi to the new design»; was the charcoal terminal of
+   2026-11-15): the page wash behind, one frosted white panel in Onest and ink, a status pill on top (a green dot; «YAPI te escucha»,
+   or «YAPI trabaja» with a moving waveform while it builds), the merchant's words in ink bubbles, YAPI's under the yellow star, and
+   a white glass composer with an ink pill to send. Same tokens as apps/merchant-dashboard/src/clyro.css. Desktop panel only
+   (≥900px); phones keep the pill. */
+@font-face { font-family: "Onest"; src: url("/fonts/onest.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@media (min-width: 900px) {
+  .studio-shell.is-yapi-pill {
+    --yc-ink: #17191c; --yc-ink-soft: #5d6066; --yc-faint: #5f6166; --yc-line: #e7e5dc; --yc-green: #3f9d6b;
+    --yc-body: "Onest", ui-sans-serif, system-ui, sans-serif;
+    --yc-glass: rgb(255 255 255 / .55); --yc-glass-strong: rgb(255 255 255 / .82); --yc-glass-edge: rgb(255 255 255 / .75);
+    --yc-blur: blur(24px) saturate(160%);
+    --yc-shadow: inset 0 1px 0 rgb(255 255 255 / .85), 0 1px 2px rgb(23 25 28 / .04), 0 24px 50px -30px rgb(23 25 28 / .35);
+    --yc-wash: radial-gradient(1000px 720px at 2% 4%, #c9e9d6 0%, transparent 64%), radial-gradient(900px 680px at 100% 0%, #f8d5c0 0%, transparent 62%),
+      radial-gradient(900px 700px at 40% 100%, #dcdff5 0%, transparent 66%), #fdfcf6;
+  }
+  /* One class more than .studio-shell.source-mode (source-workspace-design.css), which paints the shell later. */
+  .studio-shell.source-mode.is-yapi-pill { background: var(--yc-wash) fixed; }
+  .studio-shell.is-yapi-pill .yapi-dock {
+    padding: 70px 12px 12px; border: 1px solid var(--yc-glass-edge); background: var(--yc-glass); box-shadow: var(--yc-shadow);
+    -webkit-backdrop-filter: var(--yc-blur); backdrop-filter: var(--yc-blur); color: var(--yc-ink); font-family: var(--yc-body);
+  }
+  .studio-shell.is-yapi-pill .yapi-dock :is(p, strong, button, textarea, small, span, li, a) { font-family: var(--yc-body); }
+
+  /* The status pill: dot, words and the waveform (flat while YAPI waits for you, moving while it works). */
+  .studio-shell.is-yapi-pill .yapi-dock::before {
+    content: "YAPI te escucha"; top: 14px; left: 58px; right: 54px; height: 42px; box-sizing: border-box; display: flex; align-items: center;
+    padding: 0 96px 0 32px; border: 1px solid var(--yc-glass-edge); border-radius: 999px; color: var(--yc-ink);
+    background: radial-gradient(circle at 17px 50%, var(--yc-green) 0 4.5px, rgb(63 157 107 / .22) 5px 7px, transparent 7.5px), var(--yc-glass-strong);
+    font: 500 14px/1 var(--yc-body); letter-spacing: -.01em; white-space: nowrap; overflow: hidden;
+  }
+  .studio-shell.is-yapi-pill .yapi-dock::after {
+    content: "··········"; position: absolute; top: 14px; right: 66px; height: 42px; display: flex; align-items: center;
+    color: rgb(23 25 28 / .35); font: 600 13px/1 var(--yc-body); letter-spacing: -.5px; pointer-events: none;
+  }
+  .studio-shell.is-yapi-pill .yapi-dock:has([data-build-progress], .build-waiting)::before { content: "YAPI trabaja"; }
+  .studio-shell.is-yapi-pill .yapi-dock:has([data-build-progress], .build-waiting)::after { color: var(--yc-ink); animation: yapi-wave 1.1s steps(1) infinite; }
+  @keyframes yapi-wave {
+    0% { content: "··ılıllıılı··"; } 25% { content: "·ıllılııllı··"; } 50% { content: "··lıılıllıı·"; } 75% { content: "·ılıllıılıl··"; }
+  }
+  /* The exit (×): a white glass circle where the panel starts. */
+  .studio-shell.is-yapi-pill:not(.is-dock-hidden) .yapi-exit { top: 26px; left: 24px; width: 40px; height: 40px; border: 1px solid var(--yc-glass-edge);
+    background: var(--yc-glass-strong); color: var(--yc-ink); opacity: 1; -webkit-backdrop-filter: var(--yc-blur); backdrop-filter: var(--yc-blur); box-shadow: var(--yc-shadow); }
+  .studio-shell.is-yapi-pill:not(.is-dock-hidden) .yapi-exit:hover { background: #fff; }
+  .studio-shell.is-yapi-pill .yapi-dock-hide { top: 18px; right: 12px; color: var(--yc-ink-soft); }
+  .studio-shell.is-yapi-pill .yapi-dock-hide:hover, .studio-shell.is-yapi-pill .yapi-dock-hide:focus-visible { background: rgb(23 25 28 / .06); color: var(--yc-ink); }
+
+  /* The chat: one lighter glass card inside the panel. */
+  .studio-shell.is-yapi-pill .yapi-dock > .yapi-history, .studio-shell.is-yapi-pill .yapi-dock > .yapi-history[hidden] {
+    border: 1px solid var(--yc-glass-edge); border-radius: 20px; background: rgb(255 255 255 / .42); box-shadow: inset 0 1px 0 rgb(255 255 255 / .8);
+  }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history__list { scrollbar-color: rgb(23 25 28 / .18) transparent; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history .message--remote-user {
+    margin: 4px 0 14px auto; padding: 12px 16px; border: 0; border-radius: 18px 18px 6px 18px; background: var(--yc-ink); color: #fff; text-align: right;
+  }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history .message--remote-user p { color: #fff; font-size: 14.5px; line-height: 1.5; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history .message--remote-user .message-attachments a { background: rgb(255 255 255 / .12); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history .agent-note { margin: 0 0 18px; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history .agent-note__meta { gap: 10px; margin: 0 0 8px; color: var(--yc-ink-soft); font: 500 13.5px/1 var(--yc-body); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history .agent-note__meta strong { color: var(--yc-ink); font-weight: 600; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history .agent-note > p,
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-history .agent-note .build-waiting { color: var(--yc-ink); font: 400 14.5px/1.6 var(--yc-body); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-mention { color: var(--yc-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* YAPI's mark: the yellow star (the site's logo); it hops while YAPI works. */
+  .studio-shell.is-yapi-pill .yapi-dock .agent-note__meta .yapi-mark {
+    width: 28px; height: 28px; flex: 0 0 28px; border-radius: 0; background: url("/assets/pagosya-star-yellow.png") center / contain no-repeat;
+  }
+  .studio-shell.is-yapi-pill .yapi-dock .agent-note__meta .yapi-mark > * { display: none; }
+  .studio-shell.is-yapi-pill .yapi-dock .agent-note__meta:not(:has(.yapi-mark))::before {
+    content: ""; width: 28px; height: 28px; flex: 0 0 28px; background: url("/assets/pagosya-star-yellow.png") center / contain no-repeat;
+  }
+  .studio-shell.is-yapi-pill .yapi-dock .agent-note:has([data-build-progress]) .agent-note__meta::before { animation: yapi-hop .5s ease-in-out infinite alternate; }
+  .studio-shell.is-yapi-pill .yapi-dock .agent-note:has([data-build-progress]) .agent-note__meta strong::after { content: " está trabajando"; }
+  @keyframes yapi-hop { to { transform: translateY(-3px); } }
+
+  /* Choices YAPI offers: white glass pills. */
+  .studio-shell.is-yapi-pill .yapi-dock :is(.source-suggestions, .clarification-options) button {
+    min-height: 34px; padding: 0 14px; border: 1px solid var(--yc-line); border-radius: 999px; background: rgb(255 255 255 / .75); color: var(--yc-ink); font-size: 13px; font-weight: 500;
+  }
+  .studio-shell.is-yapi-pill .yapi-dock :is(.source-suggestions, .clarification-options) button:hover:not(:disabled) { border-color: var(--yc-ink); background: #fff; }
+  .studio-shell.is-yapi-pill .yapi-dock .source-suggestions__dismiss { color: var(--yc-ink-soft) !important; }
+
+  /* Progress while YAPI builds. */
+  .studio-shell.is-yapi-pill .yapi-dock :is(.source-build-progress, .yapi-stage) { color: var(--yc-ink-soft); font-family: var(--yc-body); }
+  .studio-shell.is-yapi-pill .yapi-dock :is(.source-build-progress li, .yapi-stage__status) { color: var(--yc-ink); }
+  .studio-shell.is-yapi-pill .yapi-dock :is(.source-build-progress small, .build-duration, .yapi-stage__meta) { color: var(--yc-faint); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-stage__meter { background: rgb(23 25 28 / .08); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-stage__meter > span { background: var(--yc-ink); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-stage__link { color: var(--yc-ink); }
+  .studio-shell.is-yapi-pill .yapi-dock .build-state { border-color: var(--yc-line); }
+  .studio-shell.is-yapi-pill .yapi-dock :is(.yapi-cards, .yapi-sheet, .yapi-narrator) { border: 1px solid var(--yc-glass-edge); background: var(--yc-glass-strong); color: var(--yc-ink); }
+
+  /* The composer: a white glass box, Onest words, an ink pill to send. */
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill { padding: 8px; border: 1px solid var(--yc-glass-edge); border-radius: 20px; background: var(--yc-glass-strong); box-shadow: var(--yc-shadow); color: var(--yc-ink); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill:focus-within { border-color: var(--yc-ink); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill textarea { color: var(--yc-ink); caret-color: var(--yc-ink); font: 400 15px/1.5 var(--yc-body); background: transparent; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill textarea::placeholder { color: var(--yc-faint); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__star { display: none; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__icon { color: var(--yc-ink-soft); background: transparent; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__icon:hover { color: var(--yc-ink); background: rgb(23 25 28 / .06); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__send {
+    position: relative; width: 44px; min-width: 44px; height: 44px; padding: 0; border: 0; border-radius: 999px; background: var(--yc-ink);
+    color: transparent; font-size: 0; box-shadow: 0 6px 16px -8px rgb(23 25 28 / .5); transition: transform .16s cubic-bezier(.22,1,.36,1), background-color .16s;
+  }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__send::after {
+    content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; background: #fff;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M5 12l7-7 7 7'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M5 12l7-7 7 7'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__send:hover:not(:disabled) { background: #000; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__send:active:not(:disabled) { transform: scale(.94); }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__send:disabled { opacity: .35; }
+  .studio-shell.is-yapi-pill .yapi-dock :focus-visible { outline: 2px solid var(--yc-ink); outline-offset: 2px; }
+}
+@media (min-width: 900px) and (prefers-reduced-motion: reduce) {
+  .studio-shell.is-yapi-pill .yapi-dock::after, .studio-shell.is-yapi-pill .yapi-dock .agent-note__meta::before { animation: none !important; }
+  .studio-shell.is-yapi-pill .yapi-dock .yapi-pill__send:active:not(:disabled) { transform: none; }
+}
+@media (min-width: 900px) {
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .studio-shell.is-yapi-pill { --yc-glass: rgb(255 255 255 / .94); --yc-glass-strong: rgb(255 255 255 / .97); }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://topicals.com/",
+    "title": "",
+    "width": 1440,
+    "pageHeight": 900,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "-apple-system",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Before you can access this site, we need to verify you’re hu"
+      },
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(241, 245, 249)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://topicals.com/",
+    "title": "",
+    "width": 390,
+    "pageHeight": 844,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "-apple-system",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Before you can access this site, we need to verify you’re hu"
+      },
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(241, 245, 249)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  }
+}

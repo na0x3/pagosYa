@@ -1,0 +1,1528 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://nomadgoods.com/",
+    "title": "NOMAD | Premium iPhone Cases, Watch Bands and Chargers",
+    "width": 1440,
+    "pageHeight": 8524,
+    "fonts": {
+      "h1": {
+        "family": "Gotham-Bold",
+        "size": "66.24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-2.6496px",
+        "text": "Heritage Meets Everyday"
+      },
+      "h2": {
+        "family": "Gotham-Bold",
+        "size": "56px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-2.24px",
+        "text": "New for iPhone 18"
+      },
+      "body": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved Apple Watch Bands | Shop Now"
+      },
+      "button": {
+        "family": "Aleo",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(243, 243, 243)",
+    "header": {
+      "height": 135,
+      "position": "fixed",
+      "bg": "rgb(243, 243, 243)",
+      "links": [
+        "Shop Now",
+        "Nomad",
+        "Best Sellers",
+        "Cases",
+        "Watch",
+        "Charging",
+        "Tracking & Wallets",
+        "More Gear",
+        "Sale",
+        "$ USD",
+        "3",
+        "Account",
+        "Search",
+        "Cart drawer"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 2,
+    "sections": [
+      {
+        "y": 0,
+        "h": 814,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "66.24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.6496px",
+          "text": "Heritage Meets Everyday"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 814,
+        "h": 151,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "New for iPhone 18"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 965,
+        "h": 549,
+        "bg": "rgb(243, 243, 243)",
+        "images": 14,
+        "video": false,
+        "heading": null,
+        "words": 89,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 1513,
+        "h": 160,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "55px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.2px",
+          "text": "Shop by Category"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1674,
+        "h": 130,
+        "bg": "rgb(243, 243, 243)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "33px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.32px",
+          "text": "iPhone 18"
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1804,
+        "h": 566,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "Explore iPhone 18 Cases"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2370,
+        "h": 566,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "Introducing Saddle"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2936,
+        "h": 566,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "Find My Wallet Tracking"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3502,
+        "h": 316,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3818,
+        "h": 582,
+        "bg": "rgb(243, 243, 243)",
+        "images": 16,
+        "video": true,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "55px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.2px",
+          "text": "From the Nomad Community"
+        },
+        "words": 44,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 4400,
+        "h": 466,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "Horween® Leather"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4866,
+        "h": 716,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "55px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.2px",
+          "text": "Leather That Gets Better with Age"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5582,
+        "h": 207,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "55px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.2px",
+          "text": "Horween® Leather"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5789,
+        "h": 670,
+        "bg": "rgb(243, 243, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "Leather That Gets Better with Age"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6459,
+        "h": 180,
+        "bg": "rgb(243, 243, 243)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "33px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.32px",
+          "text": "Shop Horween®"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6639,
+        "h": 466,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "★★★★★ 17,000+ 5 Star Reviews"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7105,
+        "h": 151,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "Explore More"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7256,
+        "h": 570,
+        "bg": "rgb(243, 243, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.24px",
+          "text": "We Are Nomad"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://nomadgoods.com/",
+    "title": "NOMAD | Premium iPhone Cases, Watch Bands and Chargers",
+    "width": 390,
+    "pageHeight": 7655,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Gotham-Bold",
+        "size": "40.95px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-2.0475px",
+        "text": "Heritage Meets Everyday"
+      },
+      "body": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved | Sport Band & Rocky Point Band"
+      },
+      "button": {
+        "family": "Aleo",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved | Sport Band & Rocky Point Band"
+      }
+    },
+    "page": "rgb(243, 243, 243)",
+    "header": {
+      "height": 102,
+      "position": "fixed",
+      "bg": "rgb(243, 243, 243)",
+      "links": [
+        "New & Improved | Sport B",
+        "Nomad",
+        "Search",
+        "Cart drawer",
+        "Open menu"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 700,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "40.95px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2.0475px",
+          "text": "Heritage Meets Everyday"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 700,
+        "h": 157,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "New for iPhone 18"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 857,
+        "h": 332,
+        "bg": "rgb(243, 243, 243)",
+        "images": 14,
+        "video": false,
+        "heading": null,
+        "words": 89,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 1189,
+        "h": 152,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "44px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.76px",
+          "text": "Shop by Category"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1341,
+        "h": 170,
+        "bg": "rgb(243, 243, 243)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "22px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.88px",
+          "text": "iPhone 18"
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1511,
+        "h": 491,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Explore iPhone 18 Cases"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2002,
+        "h": 475,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Introducing Saddle"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2477,
+        "h": 491,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Find My Wallet Tracking"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2968,
+        "h": 280,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3248,
+        "h": 410,
+        "bg": "rgb(243, 243, 243)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "44px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.76px",
+          "text": "From the Nomad Community"
+        },
+        "words": 44,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 3657,
+        "h": 256,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Horween® Leather"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3913,
+        "h": 744,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "44px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.76px",
+          "text": "Leather That Gets Better with Age"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4657,
+        "h": 186,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "44px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.76px",
+          "text": "Horween® Leather"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4843,
+        "h": 390,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Leather That Gets Better with Age"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5233,
+        "h": 470,
+        "bg": "rgb(243, 243, 243)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "22px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.88px",
+          "text": "Shop Horween®"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5703,
+        "h": 516,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "★★★★★ 17,000+ 5 Star Reviews"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6219,
+        "h": 113,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Explore More"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6332,
+        "h": 530,
+        "bg": "rgb(243, 243, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "We Are Nomad"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://nomadgoods.com/collections/sport-rocky-point-band",
+    "title": "Sport & Rocky Point Watch Bands | Rugged & Waterproof | NOMAD",
+    "width": 1440,
+    "pageHeight": 2859,
+    "fonts": {
+      "h1": {
+        "family": "Gotham-Bold",
+        "size": "77px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-3.08px",
+        "text": "Sport Band & Rocky Point Band"
+      },
+      "h2": {
+        "family": "Gotham-Bold",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.96px",
+        "text": "Rocky Point Band"
+      },
+      "body": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved Apple Watch Bands | Shop Now"
+      },
+      "button": {
+        "family": "Aleo",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Device"
+      },
+      "nav": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(243, 243, 243)",
+    "header": {
+      "height": 125,
+      "position": "sticky",
+      "bg": "rgb(243, 243, 243)",
+      "links": [
+        "Shop Now",
+        "Nomad",
+        "Best Sellers",
+        "Cases",
+        "Watch",
+        "Charging",
+        "Tracking & Wallets",
+        "More Gear",
+        "Sale",
+        "$ USD",
+        "3",
+        "Account",
+        "Search",
+        "Cart drawer"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 135,
+        "h": 366,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "77px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-3.08px",
+          "text": "Sport Band & Rocky Point Band"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 541,
+        "h": 1579,
+        "bg": "rgb(243, 243, 243)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.96px",
+          "text": "Rocky Point Band"
+        },
+        "words": 130,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://nomadgoods.com/collections/sport-rocky-point-band",
+    "title": "Sport & Rocky Point Watch Bands | Rugged & Waterproof | NOMAD",
+    "width": 390,
+    "pageHeight": 3119,
+    "fonts": {
+      "h1": {
+        "family": "Gotham-Bold",
+        "size": "47px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-1.88px",
+        "text": "Sport Band & Rocky Point Band"
+      },
+      "h2": {
+        "family": "Gotham-Bold",
+        "size": "18px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.72px",
+        "text": "Rocky Point Band"
+      },
+      "body": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved | Sport Band & Rocky Point Band"
+      },
+      "button": {
+        "family": "Gotham-Book",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.28px",
+        "text": "1"
+      },
+      "nav": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved | Sport Band & Rocky Point Band"
+      }
+    },
+    "page": "rgb(243, 243, 243)",
+    "header": {
+      "height": 92,
+      "position": "sticky",
+      "bg": "rgb(243, 243, 243)",
+      "links": [
+        "New & Improved | Sport B",
+        "Nomad",
+        "Search",
+        "Cart drawer",
+        "Open menu"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 102,
+        "h": 216,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Sport Band & Rocky Point Band"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 318,
+        "h": 1987,
+        "bg": "rgb(243, 243, 243)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "18px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.72px",
+          "text": "Rocky Point Band"
+        },
+        "words": 129,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://nomadgoods.com/products/leather-mag-wallet-with-find-my-tracking-black-camino-leather",
+    "title": "Mag Wallet with Find My - Black - Camino Leather | NOMAD",
+    "width": 1440,
+    "pageHeight": 8297,
+    "fonts": {
+      "h1": {
+        "family": "Gotham-Bold",
+        "size": "36px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-1.44px",
+        "text": "Leather Mag Wallet Find My Tracking"
+      },
+      "h2": {
+        "family": "Gotham-Bold",
+        "size": "77px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-3.08px",
+        "text": "Tracking Made Easy"
+      },
+      "body": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved Apple Watch Bands | Shop Now"
+      },
+      "button": {
+        "family": "Aleo",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(243, 243, 243)",
+    "header": {
+      "height": 125,
+      "position": "sticky",
+      "bg": "rgb(243, 243, 243)",
+      "links": [
+        "Shop Now",
+        "Nomad",
+        "Best Sellers",
+        "Cases",
+        "Watch",
+        "Charging",
+        "Tracking & Wallets",
+        "More Gear",
+        "Sale",
+        "$ USD",
+        "3",
+        "Account",
+        "Search",
+        "Cart drawer"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 155,
+        "h": 927,
+        "bg": "rgb(243, 243, 243)",
+        "images": 19,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Leather Mag Wallet Find My Tracking"
+        },
+        "words": 156,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1082,
+        "h": 716,
+        "bg": "rgb(243, 243, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "77px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-3.08px",
+          "text": "Tracking Made Easy"
+        },
+        "words": 40,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1798,
+        "h": 716,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2514,
+        "h": 716,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "77px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-3.08px",
+          "text": "Snap On. Snap Off."
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3230,
+        "h": 716,
+        "bg": "rgb(243, 243, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "77px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-3.08px",
+          "text": "Rugged Patina"
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3946,
+        "h": 716,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4662,
+        "h": 716,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "77px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-3.08px",
+          "text": "Simplify Your Everyday"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5378,
+        "h": 716,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6094,
+        "h": 254,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 237,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6348,
+        "h": 635,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "50px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2px",
+          "text": "Reviews"
+        },
+        "words": 69,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6982,
+        "h": 616,
+        "bg": "rgb(243, 243, 243)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "50px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-2px",
+          "text": "Keep Exploring"
+        },
+        "words": 41,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Gotham-Bold",
+      "size": "32px",
+      "weight": "700",
+      "case": "none",
+      "tracking": "-1.28px",
+      "text": "$69"
+    },
+    "galleryImages": 21,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 23
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://nomadgoods.com/products/leather-mag-wallet-with-find-my-tracking-black-camino-leather",
+    "title": "Mag Wallet with Find My - Black - Camino Leather | NOMAD",
+    "width": 390,
+    "pageHeight": 8074,
+    "fonts": {
+      "h1": {
+        "family": "Gotham-Bold",
+        "size": "28px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Leather Mag Wallet Find My Tracking"
+      },
+      "h2": {
+        "family": "Gotham-Bold",
+        "size": "47px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-1.88px",
+        "text": "Tracking Made Easy"
+      },
+      "body": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved | Sport Band & Rocky Point Band"
+      },
+      "button": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "Back"
+      },
+      "nav": {
+        "family": "Gotham-Bold",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "New & Improved | Sport Band & Rocky Point Band"
+      }
+    },
+    "page": "rgb(243, 243, 243)",
+    "header": {
+      "height": 92,
+      "position": "sticky",
+      "bg": "rgb(243, 243, 243)",
+      "links": [
+        "New & Improved | Sport B",
+        "Nomad",
+        "Search",
+        "Cart drawer",
+        "Open menu"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 102,
+        "h": 1381,
+        "bg": "rgb(243, 243, 243)",
+        "images": 19,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "28px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.12px",
+          "text": "Leather Mag Wallet Find My Tracking"
+        },
+        "words": 157,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1483,
+        "h": 788,
+        "bg": "rgb(243, 243, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Tracking Made Easy"
+        },
+        "words": 40,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2272,
+        "h": 516,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2788,
+        "h": 675,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Snap On. Snap Off."
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3463,
+        "h": 771,
+        "bg": "rgb(243, 243, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Rugged Patina"
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4234,
+        "h": 516,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4750,
+        "h": 755,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "47px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.88px",
+          "text": "Simplify Your Everyday"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5505,
+        "h": 516,
+        "bg": "rgb(243, 243, 243)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6021,
+        "h": 176,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 237,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6197,
+        "h": 633,
+        "bg": "rgb(243, 243, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "28px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.12px",
+          "text": "Reviews"
+        },
+        "words": 69,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6830,
+        "h": 451,
+        "bg": "rgb(243, 243, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Gotham-Bold",
+          "size": "28px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.12px",
+          "text": "Keep Exploring"
+        },
+        "words": 34,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Gotham-Bold",
+      "size": "22px",
+      "weight": "700",
+      "case": "none",
+      "tracking": "-0.88px",
+      "text": "$69"
+    },
+    "galleryImages": 20,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 23
+  }
+}

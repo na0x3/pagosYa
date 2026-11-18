@@ -8,11 +8,15 @@ import { SAFE_TEXT_PATTERN } from '../common/validation/safe-text.decorator';
 import { STORE_FAQ_LIMITS, STORE_POLICY_KEYS, type StoreFaqEntry, type StorePolicies } from '../stores/store-presentation';
 import type { ProductVariant } from '../payment-links/product-variants';
 import { isFilterStyle, type FilterStyle } from './source-filter-style';
+import type { MasterPart } from './source-master';
+import { nextPopupLook, POPUP_LOOK_NAMES, readPopupLook, type PopupLookId } from '../store-popups/popup-looks';
+import { readShape, type PopupInterests, type PopupShape } from '../store-popups/popup-games';
 
-export const STORE_PARTS = ['about', 'contact', 'policy', 'faq', 'announcement', 'footer', 'social', 'popup', 'catalog', 'product'] as const;
+export const STORE_PARTS = ['about', 'contact', 'policy', 'faq', 'announcement', 'header', 'footer', 'social', 'popup', 'catalog', 'product'] as const;
 export type StorePart = typeof STORE_PARTS[number];
-export const STORE_FIELDS = ['tagline', 'text', 'phone', 'email', ...STORE_POLICY_KEYS, 'add', 'set', 'remove', 'instagram', 'tiktok', 'facebook', 'youtube', 'x',
-  'on', 'off', 'title', 'button', 'discount', 'name', 'price', 'description', 'photo', 'filters'] as const;
+const SHAPE_NAMES: Record<string, PopupShape> = { galleta: 'cookie', lata: 'can', botella: 'bottle', taza: 'cup', flor: 'flower', prenda: 'garment', caja: 'box', bolsa: 'bag' };
+export const STORE_FIELDS = ['tagline', 'text', 'phone', 'email', 'whatsapp', ...STORE_POLICY_KEYS, 'add', 'set', 'remove', 'instagram', 'tiktok', 'facebook', 'youtube', 'x',
+  'on', 'off', 'title', 'button', 'discount', 'name', 'price', 'description', 'photo', 'filters', 'color', 'style', 'redesign', 'undo', 'game', 'prize', 'question', 'prizes', 'shape', 'contact', 'interests'] as const;
 export type StoreOp = { part: StorePart; field: string; at: number; title: string; value: string };
 
 export type StoreEditProduct = { id: string; name: string; amount: number; description: string; imageUrls: string[]; options: boolean;
@@ -22,15 +26,22 @@ export type StoreEditCategory = { id: string; name: string; count: number };
 export type StoreEditCode = { id: string; code: string; type: 'PERCENT' | 'FIXED'; value: number; active: boolean; emails: boolean; assistant: boolean };
 export type StoreEditState = {
   tagline: string; aboutText: string; contactPhone: string; contactEmail: string;
+  /** The floating WhatsApp button (owner 2026-11-08); absent reads as on, the column's default. */
+  whatsappButton?: boolean;
   policies: StorePolicies; faq: StoreFaqEntry[];
   /** The store-data words the template Shell draws (copy.announcement, copy.tagline). */
   announcement: string; footer: string;
   links: Array<{ label: string; url: string }>;
-  popup: { on: boolean; title: string; text: string; button: string; discount: number };
+  /** designed: the store has its own popup design (spec 2026-11-08); previous: there is one to go back to. */
+  popup: { on: boolean; title: string; text: string; button: string; discount: number; look?: PopupLookId; previous?: boolean };
   /** The catalogue page's title, or null when the store has no such page to edit. */
   catalogTitle: string | null;
   /** Browse catalogue (spec 2026-11-06): the catalogue's filter style (config.js filterStyle), when it has one. */
   filterStyle?: string;
+  /** Miga Dorada 2026-11-07: the header, bar and footer colours of their own (store-data look.parts); a part left out shows its theme's. */
+  parts?: Partial<Record<MasterPart, string>>;
+  /** The footer's look (store-data variants.footer) and the looks the template offers; absent when it has none to choose. */
+  footerStyle?: string; footerStyles?: readonly string[];
   products: StoreEditProduct[];
   /** Part 2: archived products (to bring back), the categories in their order and the discount codes, active first. */
   archived?: Array<{ id: string; name: string }>;
@@ -44,16 +55,40 @@ export type StoreEditPhoto = { url: string; from: 'mensaje' | 'producto' | 'tien
 
 export type StoreChange = {
   store?: Partial<Record<'tagline' | 'aboutText' | 'contactPhone' | 'contactEmail', string | null>>;
+  /** Store.whatsappButton, when the chat turned the floating WhatsApp button on or off. */
+  whatsappButton?: boolean;
   /** The whole policies JSON to save (texts + faq), when any of it changed. */
   policies?: StorePolicies & { faq?: StoreFaqEntry[] };
   copy?: { announcement?: string; tagline?: string };
   /** The whole link list to save, when it changed. */
   links?: Array<{ label: string; url: string }>;
   popup?: { signupEnabled?: boolean; signupTitle?: string; signupBody?: string; signupButton?: string; discount?: number };
+  /** Spec 2026-11-08: the popup design — a new one (optionally with a chosen photo), its photo only, or one step back. */
+  popupLook?: { action: 'look'; look: PopupLookId } | { action: 'photo'; photo: string } | { action: 'undo' };
+  /** Spec 2026-11-09 popup games: a game on/off, the top prize, or the tap question (null = none). */
+  popupGame?: { game?: 'scratch' | 'wheel' | 'off'; topPrize?: number; question?: { text: string; answers: string[] } | null; prizes?: Array<{ percent: number; chance?: number }>;
+    /** Spec 2026-11-10 rasca y elige. */ shape?: PopupShape | null; contact?: 'whatsapp' | 'email'; interests?: PopupInterests | null };
   catalogTitle?: string;
   filterStyle?: FilterStyle;
+  /** Part colours to save over the theme's: #rrggbb, or "" to give the part back to the theme. */
+  parts?: Partial<Record<MasterPart, string>>;
+  footerStyle?: string;
   products: Array<{ id: string; name?: string; amount?: number; description?: string; imageUrls?: string[] }>;
 };
+
+/** The footer looks the template offers, as the merchant reads them («el pie de página ahora …»). */
+export const FOOTER_STYLE_WORDS: Record<string, string> = { columns: 'tiene columnas con tus páginas y tu contacto', bigname: 'muestra el nombre de tu tienda bien grande arriba',
+  minimal: 'es una sola línea sencilla', twotone: 'tiene tu marca en un recuadro de color', column: 'es una tarjeta sobre la foto de tu tienda', band: 'es del color principal de tu tienda',
+  bignav: 'tiene tus páginas en letras grandes', card: 'es una tarjeta de esquinas redondas', centered: 'está centrado', mega: 'tiene columnas y la suscripción a un lado',
+  photo: 'tiene una foto de tu tienda a un lado', signup: 'invita a suscribirse en grande', ticker: 'tiene tu frase pasando en una cinta',
+  visit: 'invita a visitarte, con tu dirección en grande', wordmark: 'termina con el nombre de tu tienda gigante' };
+const PART_WORDS: Record<MasterPart, string> = { header: 'el encabezado', announce: 'la cinta de arriba', footer: 'el pie de página' };
+/** «#abc», «#AABBCC» → «#aabbcc»; null when it is not a colour. */
+export function hexColour(value: string): string | null {
+  const text = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(text)) return text;
+  return /^#[0-9a-f]{3}$/.test(text) ? `#${text[1]}${text[1]}${text[2]}${text[2]}${text[3]}${text[3]}` : null;
+}
 
 const FILTER_STYLE_WORDS: Record<FilterStyle, string> = { bar: 'los filtros en una barra arriba', chips: 'los filtros como botones',
   sidebar: 'los filtros en una columna a la izquierda', browse: 'filtros a la izquierda que se pueden ocultar y las fotos de cada color en los productos, como Nike' };
@@ -103,15 +138,18 @@ export function socialUrl(network: string, value: string): string | null {
 export function storeDigest(state: StoreEditState, photos: readonly StoreEditPhoto[]) {
   return {
     nosotros: { frase: state.tagline, texto: short(state.aboutText, 1500) },
-    contacto: { telefono: state.contactPhone, correo: state.contactEmail },
+    contacto: { telefono: state.contactPhone, correo: state.contactEmail, botonWhatsapp: state.whatsappButton !== false && Boolean(state.contactPhone) },
     politicas: Object.fromEntries(STORE_POLICY_KEYS.map(key => [key, short(state.policies[key] ?? '', 600)])),
     preguntas: state.faq.map((entry, at) => ({ at, pregunta: entry.q, respuesta: short(entry.a, 300) })),
     cinta: state.announcement,
     pie: state.footer,
     redes: state.links.map(link => ({ red: link.label, url: link.url })),
-    popup: { encendido: state.popup.on, titulo: state.popup.title, texto: state.popup.text, boton: state.popup.button, ...(state.popup.discount ? { descuento: state.popup.discount } : {}) },
+    popup: { encendido: state.popup.on, titulo: state.popup.title, texto: state.popup.text, boton: state.popup.button, ...(state.popup.discount ? { descuento: state.popup.discount } : {}), ...(state.popup.look ? { estilo: POPUP_LOOK_NAMES[state.popup.look] } : {}) },
     ...(state.catalogTitle !== null ? { catalogo: state.catalogTitle } : {}),
     ...(state.filterStyle ? { filtros: state.filterStyle } : {}),
+    colores: { encabezado: state.parts?.header ?? 'el de la plantilla', cinta: state.parts?.announce ?? 'el de la plantilla', pie: state.parts?.footer ?? 'el de la plantilla' },
+    ...(state.footerStyle && state.footerStyles?.length ? { pie_estilo: { actual: state.footerStyle,
+      otros: state.footerStyles.filter(id => id !== state.footerStyle && FOOTER_STYLE_WORDS[id]).map(id => ({ id, como: FOOTER_STYLE_WORDS[id] })) } } : {}),
     productos: state.products.slice(0, 40).map((product, at) => ({ at, nombre: product.name, precio: bs(product.amount), descripcion: short(product.description, 160),
       ...(product.stock !== undefined ? { stock: product.stock === null ? 'sin límite' : product.stock } : {}),
       ...(product.categoryId ? { categoria: state.categories?.find(category => category.id === product.categoryId)?.name ?? '' } : {}),
@@ -131,7 +169,8 @@ La tienda también tiene datos propios en «tienda» (no son secciones de la por
 { part, field, at, title, value } (los que no se usan: at -1, title ""):
 - about: field tagline (la frase corta de la tienda) o text (la página «Nosotros»: su historia, en párrafos separados por una línea
   vacía). value = el texto nuevo completo; si el comercio dio sus palabras, úsalas.
-- contact: field phone o email; value "" lo quita.
+- contact: field phone o email; value "" lo quita. field whatsapp, value "on" u "off": el botón flotante de WhatsApp de la tienda
+  («agrega WhatsApp», «quita el botón de WhatsApp»); usa el teléfono de contacto.
 - policy: field delivery (Envíos y entregas), returns (Cambios y devoluciones), privacy o terms. value = la política completa,
   en texto simple, con los datos que dio el comercio y sin inventar plazos ni precios. value "" la quita.
 - faq: las «preguntas frecuentes» propias del comercio (la página de preguntas frecuentes). field add (title = pregunta, value =
@@ -139,9 +178,22 @@ La tienda también tiene datos propios en «tienda» (no son secciones de la por
   los datos de la tienda: si pide una pregunta sin su respuesta, no la agregues y pon en «ask» una pregunta corta pidiéndole la
   respuesta (por ejemplo: ¿Qué respuesta le pongo a la pregunta «¿Hacen arreglos?»?). «ask» es "" en todo otro caso.
 - announcement: field text = la cinta de arriba de todas las páginas (una frase corta, «Envío gratis desde Bs 200»); "" la quita.
-- footer: field tagline = la frase del pie de página.
+- footer: field tagline = la frase del pie de página. field style = cómo se ve el pie: value = un id de «pie_estilo.otros». «haz el
+  pie más bonito», «mejora el footer» = style (el que mejor quede con la tienda), y si quieres también su frase. «el nombre grande
+  abajo», «que diga [nombre de la tienda] bien grande» = style bigname o wordmark; nunca pongas el nombre de la tienda como frase.
+- header, announcement o footer: field color = el color de fondo de esa parte («colores»: header = el encabezado, la barra con el
+  logo y el menú; announcement = la cinta; footer = el pie de página). value = el color en hex #rrggbb («rosado» → un rosado
+  suave como #f4c2cc, «verde oscuro» → #1d3b2a; un color en hex que dio el comercio, tal cual); title = el color en palabras, como
+  lo dijo el comercio («rosado»); value "" vuelve al color de la plantilla. Solo cambia esa parte: el color principal de la tienda
+  no cambia y nunca va a «rest». La letra se ajusta sola para que se lea.
 - social: field instagram, tiktok, facebook, youtube o x; value = el usuario (@marca) o el enlace; "" lo quita.
 - popup: la ventana de suscripción. field on / off; title, text o button (sus textos); discount (value = el porcentaje, 5 a 50).
+  field redesign = otro estilo de ventana («rediseña la ventana», «cambia el estilo de la ventana»). field style = un estilo por
+  nombre (value = clasica, portada, cartel, postal, revista o etiqueta; «ventana tipo postal»). field photo = «cambia la foto de la
+  ventana» (value = una foto de «fotos», f0, f1…; «esta foto» = la primera con de "mensaje"). field undo = «vuelve a la ventana anterior».
+  field game = un juego en la ventana (value scratch = «rasca y gana», wheel = «ruleta», off = sin juego). field prize = el premio mayor del
+  juego (value «25 %»). field prizes = todos los premios (value «10, 15, 20, 30», o con probabilidades «10:60, 30:40»). field question = la pregunta del juego (value «pregunta|respuesta|respuesta…», 2 a 4 respuestas, o «sin pregunta»).
+  field shape = la forma de la tarjeta para rascar (value galleta, lata, botella, taza, flor, prenda, caja, bolsa o «sin forma»). field contact = lo que pide para guardar el premio (value whatsapp o correo). field interests = la pregunta «¿qué te interesa?» con varias respuestas (value «pregunta|respuesta|respuesta…», 2 a 6; «sin intereses» la quita).
 - catalog: field title = el título de la página de todos los productos. field filters = cómo se filtra el catálogo («filtros»):
   bar (botón de filtrar y barra arriba), chips (filtros como botones), sidebar (columna de filtros a la izquierda) o browse (la
   tienda grande, «como Nike»: columna de filtros, «Ocultar filtros», «Recoger hoy» y las fotos de cada color en los productos).
@@ -185,6 +237,22 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
   const product = (at: number) => Number.isInteger(at) && at >= 0 && at < Math.min(40, state.products.length) ? state.products[at] : undefined;
   const productChange = (id: string) => { let entry = change.products.find(item => item.id === id); if (!entry) { entry = { id }; change.products.push(entry); } return entry; };
   const setStore = (key: keyof NonNullable<StoreChange['store']>, value: string | null) => { change.store = { ...(change.store ?? {}), [key]: value }; };
+  // A part's own colour (Miga Dorada 2026-11-07); the words say the colour as the merchant did.
+  const partColour = (part: MasterPart, op: StoreOp) => {
+    const name = oneLine(op.title, 40);
+    const said = name && safe(name) ? name : '';
+    if (!op.value.trim()) {
+      if (!state.parts?.[part]) return;
+      change.parts = { ...(change.parts ?? {}), [part]: '' };
+      done.push(`${PART_WORDS[part]} volvió al color de la plantilla`);
+      return;
+    }
+    const hex = hexColour(op.value);
+    if (!hex) { refused.push(`No entendí el color para ${PART_WORDS[part]}: dime el color en palabras («rosado», «verde oscuro»).`); return; }
+    if (state.parts?.[part] === hex) { done.push(`${PART_WORDS[part]} ya es ${said || 'de ese color'}`); return; }
+    change.parts = { ...(change.parts ?? {}), [part]: hex };
+    done.push(`${PART_WORDS[part]} ahora es ${said || 'del color que pediste'}`);
+  };
 
   for (const op of ops) {
     switch (op.part) {
@@ -214,6 +282,17 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
           if (value === state.contactEmail) break;
           setStore('contactEmail', value || null);
           done.push(value ? `el correo de contacto ahora es ${value}` : 'quité el correo de contacto');
+        } else if (op.field === 'whatsapp') {
+          const on = !/^(?:off|no|false|0)$/i.test(value);
+          const phone = change.store?.contactPhone !== undefined ? change.store.contactPhone : state.contactPhone;
+          if (on && !phone) { refused.push('Para mostrar el botón de WhatsApp necesito tu número: dímelo y lo agrego.'); break; }
+          if (on === (state.whatsappButton !== false)) {
+            // Already on, but the store had no number until this message: the button shows now.
+            if (on && !state.contactPhone) done.push('agregué el botón de WhatsApp');
+            break;
+          }
+          change.whatsappButton = on;
+          done.push(on ? 'agregué el botón de WhatsApp' : 'quité el botón de WhatsApp');
         }
         break;
       }
@@ -256,7 +335,16 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
         }
         break;
       }
+      case 'header': {
+        if (op.field === 'color') partColour('header', op);
+        break;
+      }
       case 'announcement': {
+        if (op.field === 'color') {
+          if (!state.announcement && !change.copy?.announcement) { refused.push('Tu tienda no tiene cinta arriba: dime qué frase poner en ella y le pongo ese color.'); break; }
+          partColour('announce', op);
+          break;
+        }
         if (op.field !== 'text') break;
         const value = oneLine(op.value, STORE_CAPS.announcement);
         if (!safe(value) || value === state.announcement) break;
@@ -265,6 +353,14 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
         break;
       }
       case 'footer': {
+        if (op.field === 'color') { partColour('footer', op); break; }
+        if (op.field === 'style') {
+          const style = op.value.trim().toLowerCase();
+          if (!state.footerStyle || !state.footerStyles?.includes(style) || !FOOTER_STYLE_WORDS[style] || style === state.footerStyle) break;
+          change.footerStyle = style;
+          done.push(`el pie de página ahora ${FOOTER_STYLE_WORDS[style]}`);
+          break;
+        }
         if (op.field !== 'tagline') break;
         const value = oneLine(op.value, STORE_CAPS.footer);
         if (!safe(value) || value === state.footer) break;
@@ -313,6 +409,77 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
           popup.discount = percent;
           if (!state.popup.on) popup.signupEnabled = true;
           done.push(`la ventana de suscripción regala un código de ${percent} % de descuento`);
+        } else if (op.field === 'redesign' || op.field === 'style') {
+          // Spec 2026-11-09 popup looks: «rediseña la ventana» = the next look; «ventana tipo postal» = that look.
+          const look = op.field === 'redesign' ? nextPopupLook(state.popup.look) : readPopupLook(op.value);
+          if (!look) { refused.push('Los estilos de la ventana son: Clásica, Portada, Cartel, Postal, Revista y Etiqueta.'); break; }
+          if (look === state.popup.look) { done.push(`tu ventana de suscripción ya tiene el estilo ${POPUP_LOOK_NAMES[look]}`); break; }
+          change.popupLook = { action: 'look', look };
+          done.push(`tu ventana de suscripción ahora tiene el estilo ${POPUP_LOOK_NAMES[look]}`);
+        } else if (op.field === 'photo') {
+          const url = photoRef(op.value, photos);
+          if (!url) { refused.push('No encontré esa foto para la ventana de suscripción. Mándamela o dime cuál de tus fotos uso.'); break; }
+          change.popupLook = { action: 'photo', photo: url };
+          done.push('cambié la foto de tu ventana de suscripción');
+        } else if (op.field === 'undo') {
+          if (!state.popup.previous) { refused.push('Tu ventana de suscripción no tiene un estilo anterior al que volver.'); break; }
+          change.popupLook = { action: 'undo' };
+          done.push('volví al estilo anterior de tu ventana de suscripción');
+        } else if (op.field === 'game') {
+          // Spec 2026-11-09 popup games: rasca y gana or ruleta, everyone wins one of four real discounts.
+          const game = op.value.trim().toLowerCase();
+          if (!['scratch', 'wheel', 'off'].includes(game)) { refused.push('Los juegos son rasca y gana y ruleta.'); break; }
+          change.popupGame = { ...change.popupGame, game: game as 'scratch' | 'wheel' | 'off' };
+          // A game asked for on a switched-off popup switches the popup on (else nobody would ever see it).
+          if (game !== 'off' && !state.popup.on) popup.signupEnabled = true;
+          done.push(game === 'off' ? 'quité el juego de tu ventana de suscripción'
+            : `tu ventana de suscripción ahora es ${game === 'scratch' ? 'un rasca y gana' : 'una ruleta'} con premios de 5 %, 10 %, 15 % y 20 % de descuento`);
+        } else if (op.field === 'prize') {
+          const percent = Number(String(op.value).replace(/[^\d]/g, ''));
+          if (!Number.isInteger(percent) || percent < 5 || percent > 50) { refused.push('El premio mayor va de 5 % a 50 %.'); break; }
+          change.popupGame = { ...change.popupGame, topPrize: percent };
+          done.push(`el premio mayor de tu juego ahora es ${percent} % de descuento`);
+        } else if (op.field === 'prizes') {
+          // Owner 2026-11-09: «que la ruleta tenga 10, 15, 20 y 30 %», optionally with each chance («10:60, 30:40»).
+          const parts = op.value.split(/[,;y]+/).map(part => part.trim()).filter(Boolean).map(part => { const [p, c] = part.split(':').map(x => x.replace(/[^\d]/g, '')); return { percent: Number(p), ...(c ? { chance: Number(c) } : {}) }; });
+          const withChance = parts.filter(p => p.chance !== undefined).length;
+          const ok = parts.length >= 2 && parts.length <= 6 && parts.every(p => Number.isInteger(p.percent) && p.percent >= 1 && p.percent <= 50) && new Set(parts.map(p => p.percent)).size === parts.length
+            && (withChance === 0 || (withChance === parts.length && parts.reduce((sum, p) => sum + (p.chance ?? 0), 0) === 100));
+          if (!ok) { refused.push('Los premios van de 2 a 6, cada uno de 1 % a 50 %, sin repetir; si das las probabilidades, deben sumar 100.'); break; }
+          const sorted = [...parts].sort((a, b) => a.percent - b.percent);
+          change.popupGame = { ...change.popupGame, prizes: sorted };
+          const list = sorted.map(p => withChance ? `${p.percent} % (${p.chance} % de las veces)` : `${p.percent} %`);
+          done.push(`tu juego ahora da ${list.length > 1 ? `${list.slice(0, -1).join(', ')} y ${list.at(-1)}` : list[0]} de descuento${withChance ? '' : ' (los premios grandes salen menos)'}`);
+        } else if (op.field === 'question') {
+          const value = op.value.trim();
+          if (/^sin pregunta$/i.test(value)) { change.popupGame = { ...change.popupGame, question: null, interests: null }; done.push('quité la pregunta del juego'); break; }
+          const [text, ...answers] = value.split('|').map(part => oneLine(part, 80));
+          const clean = answers.filter(Boolean).map(answer => answer.slice(0, 40));
+          if (!text || !safe(text) || clean.length < 2 || clean.length > 4 || !clean.every(safe)) { refused.push('Escribe la pregunta y 2 a 4 respuestas.'); break; }
+          change.popupGame = { ...change.popupGame, question: { text, answers: clean }, interests: { text, answers: clean.map(label => ({ label, icon: '' })) } };
+          done.push(`el juego ahora pregunta «${short(text)}»`);
+        } else if (op.field === 'shape') {
+          // Spec 2026-11-10 rasca y elige: the scratch card's shape, by its Spanish name.
+          const value = op.value.trim().toLowerCase();
+          if (/^sin forma$/.test(value)) { change.popupGame = { ...change.popupGame, shape: null }; done.push('la tarjeta para rascar ya no tiene forma'); break; }
+          const shape = SHAPE_NAMES[value] ?? readShape(value);
+          if (!shape) { refused.push('Las formas son: galleta, lata, botella, taza, flor, prenda, caja y bolsa.'); break; }
+          change.popupGame = { ...change.popupGame, shape };
+          done.push(`la tarjeta para rascar ahora tiene forma de ${Object.keys(SHAPE_NAMES).find(name => SHAPE_NAMES[name] === shape)}`);
+        } else if (op.field === 'contact') {
+          const value = op.value.trim().toLowerCase();
+          const contact = /^(whatsapp|wsp|wpp|numero|número|celular)$/.test(value) ? 'whatsapp' : /^(correo|email|e-mail|mail)$/.test(value) ? 'email' : null;
+          if (!contact) { refused.push('El juego puede pedir WhatsApp o correo.'); break; }
+          change.popupGame = { ...change.popupGame, contact };
+          done.push(`tu juego ahora pide el ${contact === 'whatsapp' ? 'WhatsApp' : 'correo'} para guardar el premio`);
+        } else if (op.field === 'interests') {
+          const value = op.value.trim();
+          if (/^sin intereses$/i.test(value)) { change.popupGame = { ...change.popupGame, interests: null }; done.push('quité la pregunta de intereses del juego'); break; }
+          const [text, ...answers] = value.split('|').map(part => oneLine(part, 80));
+          const clean = [...new Set(answers.filter(Boolean).map(answer => answer.slice(0, 28)))];
+          if (!text || !safe(text) || clean.length < 2 || clean.length > 6 || !clean.every(safe)) { refused.push('Escribe la pregunta y 2 a 6 respuestas cortas.'); break; }
+          change.popupGame = { ...change.popupGame, interests: { text, answers: clean.map(label => ({ label, icon: '' })) } };
+          done.push(`el juego ahora pregunta «${short(text)}» y deja elegir varias respuestas`);
         }
         if (Object.keys(popup).length) change.popup = popup;
         break;
@@ -371,7 +538,7 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
 }
 
 /** Whether the change writes anything. */
-export const storeChangeEmpty = (change: StoreChange) => !change.store && !change.policies && !change.copy && !change.links && !change.popup && change.catalogTitle === undefined && change.filterStyle === undefined && !change.products.length;
+export const storeChangeEmpty = (change: StoreChange) => !change.store && change.whatsappButton === undefined && !change.policies && !change.copy && !change.links && !change.popup && !change.popupLook && !change.popupGame && change.catalogTitle === undefined && change.filterStyle === undefined && !change.parts && change.footerStyle === undefined && !change.products.length;
 
 const CATALOG_TITLE = /(<h1 className="es-catalog-page__title">)([^<{}]*)(<\/h1>)/;
 const CATALOG_FILE = 'components/page-productos.tsx';

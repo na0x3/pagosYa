@@ -1,0 +1,69 @@
+{
+  "host": "papier.com",
+  "name": "Papier",
+  "at": "2026-11-14T15:43:43.356Z",
+  "mood": "Editorial de papelería, táctil y culto, con promociones tratadas como piezas gráficas en vez de rótulos de supermercado.",
+  "idea": "Construir la tienda como una revista de papel: una serif expresiva da relato y escala, mientras una sans pequeña organiza navegación, producto y conversión.",
+  "header": "En escritorio ocupa 134 px antes del contenido: una banda superior de 32 px en tinta oscura, con un mensaje promocional centrado; debajo, una cabecera crema de unos 102 px. La primera fila coloca búsqueda a la izquierda, logotipo PAPIER centrado y, a la derecha, Sign in, favorito y bolsa. Una segunda fila centra 9 categorías: Christmas, Gifting & Home, Diaries & Planners, Notebooks & Journals, Photo, Greeting Cards, Stationery, Wedding y Magazine. La categoría estacional se marca en rojo. En teléfono quedan 88 px: banda de anuncio de 32 px y barra principal de 56 px con menú y búsqueda a la izquierda, logotipo centrado, cuenta y bolsa a la derecha; desaparecen categorías, texto de acceso y favorito. En las mediciones la posición es relative, por lo que no se presenta como cabecera fija.",
+  "hero": "Empieza en y=134 y mide 450 px en escritorio, a sangre y con proporción aproximada 3,2:1. Una fotografía macro de un sobre rosa con cierre de cordón llena el bloque; el objeto se coloca centrado y el texto blanco se superpone en el tercio izquierdo inferior. La secuencia es antetítulo sans de 12 px, mayúsculas y tracking de 1 px; titular Self Modern de 48 px en dos líneas; botón blanco rectangular de unos 165 × 46 px. En teléfono empieza en y=88 y mide 390 px: se convierte en un cuadrado, recorta el sobre por los laterales y conserva el cierre en el eje central. El texto baja a 32 px y ocupa la mitad inferior; el botón crece proporcionalmente hasta unos 164 × 46 px, con margen lateral cercano a 16 px.",
+  "catalog": "Cabecera editorial con breadcrumb, título “Autumn/Winter 2026 Collection” en Self Modern de 48 px, explicación de la promoción y dos bloques de autoridad a la derecha: valoración de 4,6/5 con más de 17.000 reseñas y logotipos de prensa. Debajo aparece una barra de herramientas: All filters, Style, Colour y Product a la izquierda; contador de 28 diseños y selector de orden a la derecha. La retícula es de 4 columnas en 1440 px, con calles de unos 16 px y fotografías cuadradas. En 390 px, la valoración y la prensa pasan antes del título; el título baja a 32 px y los filtros se disponen en una fila horizontal que puede desbordar. La retícula pasa a 2 columnas. Un modal oscuro de captación tapa parte de ambas capturas —especialmente el catálogo móvil—; se ignora para estudiar la estructura de la página.",
+  "card": "Tarjeta sin caja ni borde: fotografía de producto sobre fondo marfil pálido, prácticamente cuadrada en escritorio, seguida por una zona de texto compacta y alineada a la izquierda. Incluye nombre de diseño en seminegrita, tipo de producto en la línea siguiente, precio alineado al extremo derecho o junto al nombre según el ancho, muestras circulares de color, corazón superpuesto en la esquina inferior derecha de la foto y pequeñas etiquetas amarillas de promoción como “Sign up for 20% off”. En teléfono conserva dos columnas y reduce textos a aproximadamente 11–12 px; los nombres pueden ocupar dos líneas. No se ve botón de compra rápida. La existencia de una segunda fotografía al pasar no puede confirmarse con capturas estáticas.",
+  "product": "No se proporcionó captura de la página de producto; no es posible determinar con fiabilidad la estructura de la galería, la caja de compra, las variantes, los acordeones ni el contenido situado bajo el pliegue.",
+  "cart": "No se proporcionó captura del carrito; no puede saberse si funciona como cajón o página, ni documentar filas, totales o ventas adicionales.",
+  "type": "El sistema enfrenta Self Modern, una serif editorial de contraste alto y cursivas muy visibles, con SuisseIntl, una sans funcional. H1 y grandes llamadas usan Self Modern Regular: 48 px en escritorio y 32 px en teléfono, peso 400, sin tracking añadido. Los encabezados secundarios bajan de 32 px a 24 px. La sans se reserva para navegación, ficha y controles: normalmente 12 px, peso 400; antetítulos promocionales en 12 px, peso 600, mayúsculas y 1 px de tracking; botones alrededor de 14 px y peso 600. La mezcla dentro de una misma frase —cursiva para palabras emocionales y romana o mayúsculas para la parte comercial— convierte el titular en una composición editorial sin perder claridad transaccional.",
+  "colour": "El fondo general es crema cálido rgb(250, 247, 240), usado también entre imágenes y en las fichas. La tinta principal es casi negra; la banda superior y el modal usan rgb(30, 37, 37). El rosa frambuesa del sobre domina la campaña y se repite como fondo de las seis baldosas de descuento y en medallones circulares. El blanco se usa sobre fotografía y en botones de alto contraste. El amarillo pálido queda restringido a microetiquetas de descuento; el rojo solo señala la categoría estacional activa. Así, la promoción tiene color sin teñir toda la interfaz.",
+  "photos": "Se alternan tres tratamientos. Primero, macrofotografía táctil a sangre —papel, cordón, ojales y grano visibles— para la campaña. Segundo, producto aislado y centrado sobre fondos crema, con sombra suave y bastante aire en las tarjetas. Tercero, escenas de uso con manos, ropa, escritorios y objetos domésticos para explicar escala y contexto. Los recortes editoriales son cerrados y permiten que cuadernos o manos salgan parcialmente del encuadre. En los mosaicos sociales se mezclan fotografías, tipografía incrustada y piezas gráficas; no se intenta homogeneizar todos los fondos.",
+  "motion": "Hay un vídeo confirmado en la portada: ocupa un bloque a sangre de 694 px de alto en escritorio y unos 406 px en teléfono, antes del mensaje “Sold out three years in a ROW”. No se detecta marquesina. Los mensajes de la banda superior cambian entre capturas, por lo que podría existir un rotador, pero el movimiento no queda demostrado. Corazón, filtros y tarjetas tienen estados de interacción previsibles, aunque las capturas no permiten confirmar animaciones, transición de segunda imagen o compra rápida.",
+  "phone": "La adaptación mantiene densidad comercial en vez de convertir todo en una sola columna. La navegación se reduce a cinco iconos/logotipo; el hero panorámico se recorta a cuadrado; las seis promociones pasan de 6 a 2 columnas; el bloque de cuero conserva 2 columnas, con una imagen de estilo de vida ocupando el ancho disponible y productos pequeños debajo; los dos relatos de categoría siguen lado a lado. El vídeo y los mensajes editoriales pasan a ancho completo. El feed social cambia de 5 a 2 columnas y muestra 6 piezas en lugar de 10. Los títulos pasan de 48 a 32 px y los secundarios de 32 a 24 px. Catálogo y recomendaciones conservan 2 columnas, con controles compactos y desplazamiento horizontal potencial en filtros. Los márgenes habituales son cercanos a 10–16 px, y el chat permanece flotante en la esquina inferior derecha.",
+  "signature": "Convertir una única textura de sobre rosa en todo el lenguaje de la campaña: fotografía macro en el hero y la misma superficie, sin producto adicional, como fondo de cada baldosa que anuncia un porcentaje distinto.",
+  "home": [
+    {
+      "role": "Traducir la promoción general en accesos concretos.",
+      "composition": "Inmediatamente después del hero aparece una franja de 235 px con seis baldosas iguales en una fila. Cada cuadrado usa la textura rosa, porcentaje grande centrado y categoría subrayada junto al borde inferior. En teléfono son 2 columnas y el bloque crece a 561 px."
+    },
+    {
+      "role": "Vender una familia premium combinando deseo y compra directa.",
+      "composition": "Bloque “20% off LEATHER treasures” de 962 px: una gran fotografía de estilo de vida ocupa aproximadamente la mitad izquierda y cuatro tarjetas de producto forman una retícula 2 × 2 a la derecha. Los medallones rosas superponen el porcentaje. En teléfono se mantiene una gran imagen y una retícula de productos de 2 columnas."
+    },
+    {
+      "role": "Abrir dos rutas de categoría mediante escenas de uso.",
+      "composition": "Dos fotografías de igual anchura en escritorio, para Notecards y Notebooks & Journals, con enlace blanco abajo y medallón de descuento en una esquina. En teléfono siguen en 2 columnas, de modo que funcionan como díptico y no como carrusel vertical."
+    },
+    {
+      "role": "Presentar un producto cultural como acontecimiento.",
+      "composition": "Vídeo a sangre de 694 px en escritorio, recortado horizontalmente y sin texto superpuesto visible. En teléfono ocupa unos 406 px y usa un recorte más vertical."
+    },
+    {
+      "role": "Aportar escasez y prueba de demanda.",
+      "composition": "Bloque tipográfico centrado de 233 px sobre crema: titular Self Modern de 48 px “Sold out three years in a ROW”, breve explicación en sans pequeña y botón oscuro compacto. En teléfono el titular baja a 32 px y el bloque ronda 247 px."
+    },
+    {
+      "role": "Captar correo con la campaña todavía presente.",
+      "composition": "Franja de 269 px en escritorio con antetítulo pequeño, titular serif de 48 px y campo de email más botón dispuestos horizontalmente. En teléfono se apilan dentro de unos 319 px."
+    },
+    {
+      "role": "Dar prueba social visual y ampliar el universo de marca.",
+      "composition": "Sección “Follow us” de 669 px: mosaico de 10 imágenes en 5 columnas y 2 filas, con recortes cuadrados y mezcla de producto, personas y piezas tipográficas. En teléfono usa 2 columnas, muestra 6 piezas y un título de 24 px."
+    },
+    {
+      "role": "Reforzar confianza con reseñas.",
+      "composition": "Banda de 239 px en escritorio, sin imágenes, encabezada por “Over 7,500 five-star reviews”; el contenido se organiza como testimonios o métricas en una franja horizontal. En teléfono aumenta a 316 px para apilar el contenido."
+    },
+    {
+      "role": "Convertir contenido editorial en otra vía de descubrimiento.",
+      "composition": "“Read our online magazine” ocupa 562 px y presenta 4 artículos en 4 columnas: imagen vertical o casi cuadrada, categoría pequeña y titular serif debajo. En teléfono conserva 4 piezas en una composición horizontal muy compacta o desplazable, con título de 24 px."
+    },
+    {
+      "role": "Cerrar con navegación institucional y de servicio.",
+      "composition": "Footer oscuro a todo el ancho, dividido en varias columnas de enlaces —Papier, Shop y Customer Service— y una llamada promocional; invierte el contraste respecto al fondo crema del resto de la página."
+    }
+  ],
+  "lessons": [
+    "Asigna funciones distintas a las fuentes: una serif de 48/32 px para relato y una sans de 12–14 px para navegación, precio y acción. La diferencia de escala crea jerarquía sin añadir cajas ni divisores.",
+    "Reutiliza un único material de campaña en varios niveles: macrofotografía para impacto, textura plana para categorías y color en medallones. Esto da continuidad sin repetir exactamente la misma composición.",
+    "En una retícula comercial, combina una imagen de contexto grande con cuatro fichas comprables pequeñas. La primera explica deseo y escala; las demás permiten comparar y actuar sin abandonar la sección.",
+    "No apiles automáticamente todo en móvil: conservar dípticos y retículas de 2 columnas mantiene ritmo, comparación y densidad, siempre que nombres y precios sigan siendo legibles a 11–12 px.",
+    "Separa los colores por trabajo: crema para el sistema, tinta oscura para navegación y cierre, un color de campaña para impacto y amarillo solo para microofertas. Limitar cada color a una función evita que la promoción domine toda la interfaz.",
+    "Intercala comercio, relato y confianza en ese orden: producto, escena de uso, vídeo, prueba de demanda, captación, comunidad, reseñas y revista. La portada larga cambia de función antes de que cada formato se vuelva repetitivo."
+  ]
+}

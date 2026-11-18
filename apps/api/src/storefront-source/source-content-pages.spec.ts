@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { nextStoreFiles } from './fixtures/next-store';
-import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, keptMenuPages, sectionablePage, sectionedPageFile, withCurrentSectionedPages, withSectionedPages, withStandardPages } from './source-content-pages';
+import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, aboutPageTypes, keptMenuPages, sectionablePage, sectionedPageFile, withCurrentSectionedPages, withSectionedPages, withStandardPages, withStudioPages } from './source-content-pages';
 import { compileNextPreview, nextContentPages, nextSourceFile } from './source-next';
 import { assembleTemplateRevision } from './source-templates';
 
@@ -235,4 +235,33 @@ it('a plain page the code generator only wrapped can take sections; a page with 
   expect(withSectionedPages([library, wrapped], ['shipping'])[1].content).toContain('<LibraryHome');
   const own = { ...wrapped, content: wrapped.content.replace('<InfoPage kind="shipping" />', '<h2>Entregas en 24 h</h2><InfoPage kind="shipping" />') };
   expect(sectionablePage([library, own], 'shipping')).toBe(false);
+});
+
+describe('a studio store\'s own pages (owner 2026-11-12 «the entire stores are only product pages»)', () => {
+  const fit = ['cover-split', 'cover-centered', 'story-split', 'story-overlap', 'benefits-bento', 'icon-columns', 'steps-howto', 'story-timeline', 'closing-photo', 'faq-split'];
+  it('«Nosotros» gets a header, the story, values, how it works and a closing, all from what fits the template', () => {
+    expect(aboutPageTypes({ fit, vetoed: [], home: [], blocked: () => false })).toEqual(['cover-centered', 'story-split', 'benefits-bento', 'steps-howto', 'closing-photo']);
+  });
+  it('prefers sections the home does not show, skips vetoed and unfillable ones, and leaves out a role with none', () => {
+    expect(aboutPageTypes({ fit, vetoed: ['benefits-bento'], home: ['story-split', 'steps-howto'], blocked: type => type === 'closing-photo' }))
+      .toEqual(['cover-centered', 'story-overlap', 'icon-columns', 'story-timeline']);
+    expect(aboutPageTypes({ fit: ['faq-split', 'products-grid'], vetoed: [], home: [], blocked: () => false })).toEqual([]);
+  });
+  it('writes only the product page\'s and the menu pages\' lines of store-data, and draws «Nosotros» from its sections', () => {
+    const data = 'export const store = {"name":"X"} as const;\nexport const productLayout: any[] = [{"type":"image-columns","title":"Resiste el agua"}];\nexport const pageLayouts: Record<string, any[]> = {};\nexport const extraPages: any[] = [];\n';
+    const about = CONTENT_PAGE_FILES.find(file => file.path === sectionedPageFile('about').path)!;
+    const files = [{ path: 'components/store-data.tsx', content: data }, { path: 'components/library.tsx', content: '' }, about, { path: 'styles/globals.css', content: ':root{--es-heading:x}' }];
+    const out = withStudioPages(files, { productLayout: [{ type: 'steps-howto', title: 'Cómo se toma' }], pageLayouts: { about: [{ type: 'story-split', title: 'Nuestra historia' }] } });
+    const written = out.find(file => file.path === 'components/store-data.tsx')!.content;
+    expect(written).toContain('export const productLayout: any[] = [{"type":"steps-howto","title":"Cómo se toma"}];');
+    expect(written).toContain('export const pageLayouts: Record<string, any[]> = {"about":[{"type":"story-split","title":"Nuestra historia"}]};');
+    expect(written).not.toContain('Resiste el agua');
+    expect(written).toContain('export const store = {"name":"X"} as const;');
+    expect(out.find(file => file.path === about.path)!.content).toBe(sectionedPageFile('about').content);
+    expect(out.find(file => file.path === 'styles/globals.css')!.content).toBe(':root{--es-heading:x}');
+    // An empty product page (the call failed) still drops the template's demo words; no about sections leaves the page as it was.
+    const bare = withStudioPages(files, { productLayout: [] });
+    expect(bare.find(file => file.path === 'components/store-data.tsx')!.content).toContain('export const productLayout: any[] = [];');
+    expect(bare.find(file => file.path === about.path)!.content).toBe(about.content);
+  });
 });

@@ -66,4 +66,18 @@ describe("PromoCodesService", () => {
     await expect(new PromoCodesService(prisma as any).setFlags("merchant_1", "store_1", "promo_x", { isActive: false })).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.promoCode.update).not.toHaveBeenCalled();
   });
+
+  it("refuses a one-use winner code once a paid order used it (spec addendum 2026-11-09)", async () => {
+    const prisma: any = { ...makePrisma(), store: { findFirst: jest.fn(), findUnique: jest.fn().mockResolvedValue({ merchantId: "m1" }) }, paymentIntent: { count: jest.fn().mockResolvedValue(1) } };
+    prisma.promoCode.findFirst.mockResolvedValue({ id: "p1", storeId: "store_1", code: "RULETA15-K7QM2X", maxUses: 1, isActive: true });
+    const service = new PromoCodesService(prisma);
+    await expect(service.resolveActiveForStore("store_1", "ruleta15-k7qm2x")).rejects.toThrow("Este código ya se usó");
+    expect(prisma.paymentIntent.count).toHaveBeenCalledWith({ where: { merchantId: "m1", status: "SUCCEEDED", metadata: { path: ["promoCode"], equals: "RULETA15-K7QM2X" } } });
+    prisma.paymentIntent.count.mockResolvedValue(0);
+    await expect(service.resolveActiveForStore("store_1", "RULETA15-K7QM2X")).resolves.toMatchObject({ code: "RULETA15-K7QM2X" });
+    prisma.promoCode.findFirst.mockResolvedValue({ id: "p2", storeId: "store_1", code: "VERANO20", maxUses: null, isActive: true });
+    prisma.paymentIntent.count.mockClear();
+    await expect(service.resolveActiveForStore("store_1", "VERANO20")).resolves.toMatchObject({ code: "VERANO20" });
+    expect(prisma.paymentIntent.count).not.toHaveBeenCalled();
+  });
 });

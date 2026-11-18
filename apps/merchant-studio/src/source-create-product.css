@@ -34,7 +34,7 @@
 .product-create-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .product-create-photos:empty { margin: 0; }
 .product-create-photos figure { margin: 0; min-width: 0; }
-.product-create-photos img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
+.product-create-photos img, .product-create-photos video { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: #000; }
 .product-create-photos figcaption { margin: 5px 0; font-size: 12px; }
 .product-create-photos button { width: 100%; padding: 6px; font-size: 12px; }
 .product-create-panel :focus-visible { outline: 2px solid #333; outline-offset: 3px; }

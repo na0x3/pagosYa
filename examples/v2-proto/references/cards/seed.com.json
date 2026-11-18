@@ -1,0 +1,69 @@
+{
+  "host": "seed.com",
+  "name": "Seed",
+  "at": "2026-11-14T14:58:34.417Z",
+  "mood": "Ciencia clínica presentada como ritual cotidiano: sobrio, biológico y preciso.",
+  "idea": "Construye confianza alternando demostraciones científicas con escenas sensoriales del producto, todo dentro de una paleta casi monocroma de verdes.",
+  "header": "En escritorio mide 56 px y es sticky. En la primera pantalla se integra visualmente sobre el hero verde: logotipo “Seed” con punto blanco a la izquierda; después, tres enlaces —Shop, Science y Learn—, y Sign in aislado en el extremo derecho. No hay barra de anuncio. En teléfono baja a 48 px y conserva solo el logotipo a la izquierda y un menú de tres líneas a la derecha; los enlaces desaparecen. Las mediciones registran fondo blanco para el estado sticky, aunque las capturas muestran su estado inicial transparente sobre el hero.",
+  "hero": "Bloque a sangre de 1440 × 844 px en escritorio, con las dos esquinas inferiores redondeadas, aproximadamente 30–32 px. Una fotografía oscura verde ocupa todo el fondo: vaso centrado, bote a la derecha y cápsulas en el extremo inferior derecho. El contenido se coloca en el tercio izquierdo, aproximadamente a 56 px del borde. Incluye una píldora verde lima, titular de 48 px en tres líneas, texto de 16 px y dos acciones: botón blanco redondeado y enlace subrayado con flecha. En teléfono, el bloque mide unos 788 px según la medición: primero dispone logo, etiqueta, titular de 32 px, descripción y dos CTA en una fila; la fotografía continúa debajo y recorta el vaso por la izquierda y el bote en el centro-derecha. El radio inferior aumenta visualmente hasta unos 32 px.",
+  "catalog": "No se proporcionó captura de catálogo. La medición automática indica presencia de filtros, pero no permite verificar cabecera, número de columnas, ordenación ni comportamiento móvil; no conviene deducirlos de la portada.",
+  "card": "No hay captura de catálogo ni una tarjeta de producto aislada. Por tanto, no se pueden confirmar proporción de fotografía, jerarquía de nombre y precio, muestras de color, compra rápida o cambio a segunda imagen al pasar.",
+  "product": "No se proporcionó captura de página de producto. No es posible verificar la proporción entre galería y caja de compra, el contenido sobre el pliegue, las variantes, la suscripción, los acordeones ni las secciones posteriores.",
+  "cart": "No se proporcionó captura del carrito; no puede determinarse si funciona como cajón o página, ni su estructura de filas, totales o ventas adicionales.",
+  "type": "Toda la interfaz medida usa Seed Sans. Es una sans de trazo ligero y formas amplias: titulares con peso 350, texto con peso 350 y navegación con peso 300. El titular principal es de 48 px en escritorio, tracking −1.2 px, y baja a 32 px con tracking −0.8 px en teléfono. Los títulos de sección oscilan entre 32 y 48 px en escritorio y entre 24 y 32 px en móvil. El cuerpo se mantiene en 16 px con tracking −0.16 px; botones, en 14 px con tracking −0.14 px. La mayoría de textos emplea caja normal, sin capitalizar cada palabra. Solo los rótulos técnicos, como “PREBIOTIC OUTER CAPSULE”, usan 12 px, peso 500 y mayúsculas. La combinación depende más del cambio de escala y peso que de mezclar familias.",
+  "colour": "El verde muy oscuro funciona como tinta, fondo inmersivo y territorio principal de marca; la medición registra rgb(28, 58, 19). El fondo editorial alternativo es un marfil verdoso rgb(239, 241, 228), y varias secciones usan un blanco cálido rgb(252, 252, 247). El blanco se reserva para texto sobre fotografía, botones principales y el punto del logotipo. Un verde lima brillante aparece solo en etiquetas promocionales —por ejemplo, el descuento del 25 %—, de modo que actúa como señal transaccional y no como fondo dominante. Los botones de formularios usan verde bosque sólido.",
+  "photos": "El hero utiliza fotografía de estudio en clave baja, teñida de verde y con reflejos controlados: producto grande, vaso de agua y cápsulas sobre una superficie del mismo tono. Más abajo se alternan macrofotografía orgánica, envases recortados, composiciones de bodegón y retratos o testimonios en situación real. El producto suele ocupar una escala grande y comparte encuadre con elementos que explican uso o procedencia. Las imágenes se contienen en paneles de esquinas redondeadas y, en móvil, se recortan agresivamente en vez de reducir todos los objetos. La portada incluye cinco vídeos según la medición.",
+  "motion": "La medición detecta cinco vídeos en la portada, incluidos los bloques de tecnología de cápsula y beneficios; es probable que funcionen como demostraciones ambientales o explicativas dentro de la página. Las filas de testimonios e imágenes sugieren carruseles horizontales, especialmente en teléfono, pero no puede confirmarse su interacción con capturas estáticas. No hay marquesina. No se dispone de evidencia para describir transiciones al pasar sobre productos.",
+  "phone": "La composición pasa de capas horizontales a una secuencia vertical. La navegación se reduce a logo y menú; el hero mantiene los dos CTA en una misma fila, pero separa claramente el bloque tipográfico de la imagen. Los títulos bajan de 48 a 32 px y las secciones ganan altura: la explicación de tecnología pasa de 720 a 936 px y el bloque de beneficios de 709 a 879 px. La banda de beneficios se reorganiza como cuadrícula 2 × 2 de tarjetas, mientras los paneles complejos se convierten en una sola columna y los carruseles muestran una tarjeta principal con la siguiente parcialmente insinuada. El fondo, los radios amplios y la jerarquía tipográfica se conservan. Un modal promocional de “Claim Your 25% Off” tapa parte de varias capturas: debe ignorarse al estudiar la composición base; en móvil ocupa casi todo el ancho, combina imagen superior, formulario y botón apilados.",
+  "signature": "El punto blanco del logotipo reaparece como un círculo aislado sobre el bote negro, convirtiendo una marca mínima en el ancla visual de toda la fotografía.",
+  "home": [
+    {
+      "role": "Presentar la promesa principal y abrir dos rutas de conversión.",
+      "composition": "Hero a sangre de 844 px de alto en escritorio, con fotografía oscura y contenido alineado a la izquierda. Píldora promocional, titular de 48 px, párrafo de 16 px, botón blanco y enlace subrayado; producto y vaso ocupan los dos tercios derechos."
+    },
+    {
+      "role": "Traducir la eficacia clínica a una cronología fácil de escanear.",
+      "composition": "Banda marfil de 285 px en escritorio y 558 px en teléfono. Titular de 32 px —24 px en móvil— y cuatro hitos temporales: 7 días, 2 semanas, 4 semanas y 3 meses. En escritorio se extienden en una fila; en móvil forman una cuadrícula 2 × 2 de tarjetas claras con icono lineal, plazo y beneficio."
+    },
+    {
+      "role": "Explicar por qué el producto sobrevive a la digestión y justificar su tecnología.",
+      "composition": "Sección de 720 px en escritorio y 936 px en móvil, construida sobre una imagen o vídeo macro orgánico. Encima aparece un panel translúcido gris verdoso con esquinas redondeadas, titular, pequeños textos técnicos, líneas de llamada y un CTA. En móvil el panel ocupa casi todo el ancho y apila la información."
+    },
+    {
+      "role": "Convertir la ciencia en una gama comprable por objetivos de salud.",
+      "composition": "Bloque marfil verdoso de 709 px en escritorio y 879 px en móvil. Encabezado “Whole-body benefits start here”, breve explicación y productos separados por beneficio. Combina envases recortados con botones “Shop now”; el material disponible está parcialmente tapado por el modal promocional."
+    },
+    {
+      "role": "Ampliar el relato desde un producto digestivo hacia el ecosistema humano y microbiano.",
+      "composition": "Sección editorial de 760 px sobre blanco cálido. Titular de 48 px en escritorio y 32 px en teléfono, párrafo corto y botón; una ilustración científica lineal ocupa la mitad derecha. En móvil texto e ilustración se apilan."
+    },
+    {
+      "role": "Presentar otra familia de productos como un sistema diario.",
+      "composition": "Banda verde oscuro de 741 px en escritorio y 778 px en móvil, con cuatro imágenes registradas en escritorio y tres visibles en teléfono. Usa envases verdes, pequeñas escenas de uso y texto claro; el contraste separa con contundencia esta familia del bloque editorial anterior."
+    },
+    {
+      "role": "Mostrar una combinación o rutina de productos y conducir a su compra.",
+      "composition": "Bloque de 1075 px en escritorio y 817 px en móvil sobre blanco cálido. Una imagen principal de producto comparte espacio con texto y CTA; en las capturas se reconoce el mensaje “Daily essentials for nutrition and digestive health” junto a bodegones secundarios."
+    },
+    {
+      "role": "Introducir la prueba social.",
+      "composition": "Interludio tipográfico muy bajo: 246 px en escritorio y 154 px en móvil, con una frase de transición sobre transformaciones y comunidad antes de las historias."
+    },
+    {
+      "role": "Aportar testimonios mediante personas y formatos de vídeo.",
+      "composition": "Carrusel visual de 501 px en escritorio y 469 px en móvil, con ocho imágenes registradas en escritorio y siete en teléfono. Las tarjetas son grandes, de esquinas redondeadas, con retratos y rótulos superpuestos; en móvil se muestra una por vez o una tarjeta dominante."
+    },
+    {
+      "role": "Cerrar la portada con historias y contenido editorial de autoridad.",
+      "composition": "Sección de 832 px en escritorio y 764 px en teléfono sobre blanco cálido. Combina una imagen principal con unas 31 palabras y un título editorial del tipo “Stories from scientists, innovators, and members like you”, antes del cierre de página no incluido en las capturas."
+    }
+  ],
+  "lessons": [
+    "Limita la paleta y asigna una tarea a cada tono: verde oscuro para inmersión y autoridad, marfil para lectura, blanco para acciones y lima exclusivamente para promociones.",
+    "Explica una promesa técnica en capas: primero beneficio emocional, después cronología de resultados, luego mecanismo científico y finalmente productos concretos.",
+    "En móvil no reduzcas mecánicamente la escena de escritorio: conserva el tamaño aparente del producto y cambia el recorte para mantener impacto.",
+    "Usa una única familia tipográfica con pocos pesos; crea jerarquía mediante escalas de 48, 32, 16, 14 y 12 px, tracking negativo en títulos y mayúsculas solo para etiquetas técnicas.",
+    "Alterna fondos claros y oscuros para dividir una portada extensa sin recurrir a líneas o cajas constantes; aquí cada cambio de color marca un capítulo narrativo.",
+    "Repite un elemento mínimo de identidad —como el punto blanco— en logo, envase y fotografía para unir interfaz y producto sin añadir ornamento."
+  ]
+}

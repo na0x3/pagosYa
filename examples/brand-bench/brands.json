@@ -1,0 +1,86 @@
+{
+  "noa": {
+    "storeId": "cmwc5s2vj0001c0vq5xbewkfn",
+    "merchantId": "cmuh0eezs000411tlde879610",
+    "instruction": "Somos NOA VARGAS, un atelier de alta costura en Sopocachi, La Paz. Hacemos vestidos de novia y de noche a mano, con nuestras calas esculpidas, más piezas sueltas y accesorios de seda. Quiero una tienda completa y elegante, de revista, con muchas secciones: la colección por categoría (novias, noche, piezas, accesorios), el Vestido Cala destacado, nuestra historia del atelier, cómo funciona una prueba a medida en pasos, el atelier con dirección y horario de citas, preguntas frecuentes (tiempos, pruebas, envíos) y el código ATELIER5. Usa la plantilla Broadcast.",
+    "assetUrls": [
+      "/v1/uploads/79d3da8a-f264-405d-b307-c0173b52e762.jpg",
+      "/v1/uploads/5658a0fb-0063-4bd9-896e-b8acb1079a0e.jpg",
+      "/v1/uploads/05d50e04-8fb0-43fe-badf-c93897fd2fd3.jpg",
+      "/v1/uploads/12b47c19-ec28-4d3e-9756-d3674149e3e5.jpg",
+      "/v1/uploads/ac767d17-14b5-47d2-b38d-3e63a0eeff05.jpg",
+      "/v1/uploads/0d089ab7-208a-43e0-8e8c-9907ada84bb7.jpg",
+      "/v1/uploads/9f02581c-0914-49f3-b642-e63796abba61.jpg",
+      "/v1/uploads/45659b85-6586-48d4-bd06-c3c4adc6bddc.jpg",
+      "/v1/uploads/09e4969c-b468-458b-a24a-2fea95efcd69.jpg",
+      "/v1/uploads/240c2de7-3027-461c-bc02-d8287e1f1950.jpg",
+      "/v1/uploads/dc608f2c-8c20-4f92-9be3-9a07407654f6.jpg"
+    ]
+  },
+  "ohbelly": {
+    "storeId": "cmvul2f8k0001l64td1bc3mfp",
+    "merchantId": "cmuh0eezs000411tlde879610",
+    "instruction": "Crea la tienda completa de Oh Belly, nuestra soda prebiótica con burbujas y sin azúcar. Quiero una tienda muy animada y alegre como la marca: los personajes de las latas bailando, burbujas que suben, latas que flotan y movimiento al hacer scroll. Usa las fotos y el video que te adjunto (el video de los 5 sabores va en la portada) y el logo OH BELLY. Colores de la marca: rosa pálido, rojo-naranja, verde oliva y morado. Muestra los 5 sabores, cada uno con su fruta. En el encabezado quiero un menú desplegable: al pasar o tocar Sodas, Packs y Regalos se abre un panel con fondo sólido (nada transparente) con los productos de cada uno. Quiero una tienda completa con muchas secciones: los 5 sabores con su fruta, qué es una soda prebiótica y por qué es buena para la panza, cómo la hacemos, packs y suscripción mensual, opiniones de clientes y preguntas frecuentes. Activa el asistente de chat, un formulario de contacto, la ventana de suscripción con el código BELLY10 y el campo para dejar el correo en el pie.",
+    "assetUrls": [
+      "/v1/uploads/24e14c9a-a00f-490e-b9fe-2b3c1caa4b80.jpg",
+      "/v1/uploads/105c2619-8d7a-44a4-a181-450f1c54c4f3.jpg",
+      "/v1/uploads/8c74d94d-45e7-429e-a0f2-234f00598a8a.jpg",
+      "/v1/uploads/4507642a-f721-44bf-9d64-ab8c7e47f41b.jpg",
+      "/v1/uploads/6f4fef7b-789d-4de9-9069-a427d314e32a.jpg",
+      "/v1/uploads/bab5a896-9038-4b7c-ba62-8312f90f6c7d.mp4"
+    ]
+  },
+  "boxy": {
+    "storeId": "cmvv622te0001zcgtgc8dtvob",
+    "merchantId": "cmuh0eezs000411tlde879610",
+    "instruction": "Quiero una tienda elegante y completa para BOXY, mis hoodies de corte boxy. Que se vea premium y minimalista, con muchas secciones: portada con foto grande, colecciones (Básicos y Gráficos), productos destacados, nuestra historia, guía de tallas, cuidado de la prenda, preguntas frecuentes, el blog con mis artículos y el boletín en el pie de página para que la gente deje su correo. Activa el asistente de chat y la ventana emergente de suscripción con el código BOXY10. En el catálogo quiero selector de colores en los productos y poder ordenar y filtrar. Usa la plantilla Symmetry.",
+    "assetUrls": []
+  },
+  "pawby": {
+    "storeId": "cmwbj4jox0001bod58xeo3r30",
+    "merchantId": "cmuh0eezs000411tlde879610",
+    "instruction": "Hola! Somos Pawby Kitchen: comida fresca para perros, hecha en Cochabamba con ingredientes de verdad. Tenemos comida fresca, un plan semanal, croquetas naturales, snacks y camas. Quiero una tienda tierna y confiable, que explique por qué comida fresca, cómo funciona el plan semanal, cuánto darle según su peso, y que tenga el código PAWBY10. Usa la plantilla Mimo.",
+    "assetUrls": [
+      "/v1/uploads/e4984acc-7110-410b-a1a6-603d11c1cbd5.jpg",
+      "/v1/uploads/713cdaaf-2f7d-490f-824d-a613726c99a3.jpg",
+      "/v1/uploads/396ce8e0-11d7-4b2b-97ab-777bd0279f67.jpg",
+      "/v1/uploads/77998fdd-734a-45fc-81e1-c8e0c9977a1d.jpg",
+      "/v1/uploads/cb63ded2-fd78-49be-9177-6f2616dd0555.jpg",
+      "/v1/uploads/879d23ae-2407-4949-bd79-8def96542cec.jpg",
+      "/v1/uploads/575b9a63-56d7-47f2-b4b9-090a12e37f3e.jpg",
+      "/v1/uploads/6bdc8afe-7f72-4e3f-a1f1-7a9d928ae72b.jpg",
+      "/v1/uploads/0fc705b8-2bf1-4fbd-b4ee-7832f4bb3481.jpg",
+      "/v1/uploads/a99002ed-0d87-4d3e-b435-02d94eaa7a3f.jpg",
+      "/v1/uploads/b5478051-082f-44cd-8e04-4b1592618ef0.jpg",
+      "/v1/uploads/086bf078-0561-4b76-9367-142f9bb1d8b0.jpg",
+      "/v1/uploads/42316440-963f-47be-a220-5bc22847b61d.jpg"
+    ]
+  },
+  "rhode": {
+    "storeId": "cmvwgh64y0001vv1dyzie6now",
+    "merchantId": "cmuh0eezs000411tlde879610",
+    "instruction": "Crea la tienda completa de rhode en La Paz: tintes labiales con péptidos, tratamientos labiales y rubores en barra. Los tonos están inspirados en postres (berry, mocha, chocolate, avellana, limón), así que quiero una tienda dulce, jugosa y femenina, moderna y con movimiento, que dé ganas de probar cada tono. Usa las fotos que te adjunto. Muestra los productos por categoría (Labios, Rubor, Sets), ayuda a elegir el tono, explica qué hacen los péptidos, opiniones de clientas y preguntas frecuentes. Usa la plantilla Ola.",
+    "assetUrls": [
+      "/v1/uploads/8b65dd31-dceb-4fb5-8b9c-13b2f87af969.jpg",
+      "/v1/uploads/97e4b9c0-7897-488c-8608-969757cc1ce7.jpg",
+      "/v1/uploads/8b386e40-f4f6-44f6-bb8b-de914e7753d3.jpg",
+      "/v1/uploads/d446ffda-f4c4-4ac6-8ab3-ee9df26b1248.jpg",
+      "/v1/uploads/8ac19d77-5052-47ef-a505-03de88a21343.jpg",
+      "/v1/uploads/2b5cd037-e88d-4763-9174-16389bcd8425.jpg",
+      "/v1/uploads/a2eb2c41-11b3-4688-a7d0-faa032876b5e.jpg",
+      "/v1/uploads/2bf1de87-2659-4b89-852f-eefb531cd3f6.jpg"
+    ]
+  },
+  "remolino": {
+    "storeId": "cmvul25q60001chg3q25y98wh",
+    "merchantId": "cmuh0eezs000411tlde879610",
+    "instruction": "Crea la tienda de Remolino: licuadoras para batidos, cremas y hielo picado. Mi logo es el espiral rojo. Quiero una tienda alegre y con movimiento, pero ordenada y fácil de leer, con muchas secciones: portada, nuestras licuadoras, el pack de batidos con suscripción, el Club Remolino, la guía en PDF, los combos, recetas del blog, preguntas frecuentes y un formulario de contacto en la página. Activa el asistente de chat, la ventana de suscripción con el código REMOLINO10 y el campo para dejar el correo en el pie de página. En el catálogo, selector de colores y poder ordenar y filtrar. Usa la plantilla Motion.",
+    "assetUrls": []
+  },
+  "cuadrizate": {
+    "storeId": "cmvukelsz0001e6nnuphjpuug",
+    "merchantId": "cmuh0eezs000411tlde879610",
+    "instruction": "Hazme la tienda de Cuadrízate: láminas de arte impresas en papel de algodón y enmarcadas a mano en La Paz; clásicos impresionistas e ilustración contemporánea. Las obras que vendemos mandan en el diseño: galería editorial con mucho aire alrededor de la obra, tipografía con personalidad y un color tomado de la pintura misma. Quiero una tienda completa con muchas secciones: cómo imprimimos y enmarcamos cada lámina, los marcos y tamaños disponibles (con medidas en cm), cómo elegir la obra para tu pared, envíos a toda Bolivia, opiniones de clientes y preguntas frecuentes. Activa el asistente de chat, un formulario de contacto, la ventana de suscripción con el código ARTE10 y el campo para dejar el correo en el pie. Usa la plantilla Morada.",
+    "assetUrls": []
+  }
+}

@@ -451,6 +451,9 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-footer[data-es-footer="columns"]{}
 .es-footer__big{margin:0 0 48px;font:400 clamp(40px,11vw,200px)/.95 var(--es-heading);letter-spacing:-.02em}
 .es-footer[data-es-footer="bigname"] .es-footer__name{display:none}
+/* Owner 2026-11-14 («footer is huge… smaller letters depending on quantity»): a Shell that marks the name's length fits it to about
+   one line — a short name stays big (up to --es-big-max), a long one shrinks; --es-big-k is the theme's average letter width. */
+.es-footer .es-footer__big[data-es-len]{font-size:clamp(36px,calc((100vw - 48px) / (var(--es-word-len) * var(--es-big-k,.58))),var(--es-big-max,200px))}
 .es-footer[data-es-footer="minimal"] .es-footer__grid{display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px}
 .es-footer[data-es-footer="minimal"] .es-footer__grid h2,.es-footer[data-es-footer="minimal"] .es-footer__brand p:not(.es-footer__name){display:none}
 .es-footer[data-es-footer="minimal"] .es-footer__grid nav,.es-footer[data-es-footer="minimal"] .es-footer__grid>div{display:flex;flex-wrap:wrap;gap:12px 24px}
@@ -887,7 +890,8 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   .es-origin[data-es-side="end"] .es-origin__figure>img{order:2}
 }
 /* Owner 2026-10-29 («the title a little different», NOA's «PIEZAS DE ALTA COSTURA»): uppercase cover and section titles, set tight. */
-.es[data-es-titles="upper"] :is(.es-display,.es-h2){text-transform:uppercase;letter-spacing:-.03em;line-height:.95}
+/* NOA 2026-11-11 («text is all cramped up»): uppercase titles get a little air. */
+.es[data-es-titles="upper"] :is(.es-display,.es-h2){text-transform:uppercase;letter-spacing:-.02em;line-height:1.04}
 /* Chunky colour titles (spec 2026-11-03): the four styles YAPI picks per product on Único. The font comes from the theme block
    (--es-title-font); a store without one falls back to its heading font. */
 .es:is([data-es-titles="burbuja"],[data-es-titles="redonda"],[data-es-titles="firme"],[data-es-titles="poster"]) :is(.es-display,.es-h2,.lb-title){font-family:var(--es-title-font,var(--es-heading));line-height:1.04;letter-spacing:0;text-transform:none}
@@ -988,7 +992,7 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .lb-cover-ribbon{background:var(--es-base-accent);--es-paper:var(--es-base-accent);--es-ink:var(--es-base-on-accent);--es-accent:var(--es-base-on-accent);--es-on-accent:var(--es-base-accent);color:var(--es-ink);padding-bottom:clamp(90px,11vw,170px)}
 .lb-cover-ribbon__inner{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:center;width:min(1280px,100%);margin:0 auto;padding:clamp(48px,6vw,88px) 24px 0}
 .lb-cover-ribbon .es-display{text-transform:uppercase;font-size:clamp(46px,6.6vw,108px);line-height:.92;letter-spacing:-.03em}
-.lb-cover-ribbon__media{position:relative;aspect-ratio:1;border-radius:50%;overflow:hidden;border:6px solid var(--es-ink);animation:lb-bob 6s ease-in-out infinite}
+.lb-cover-ribbon__media{position:relative;aspect-ratio:4/5;border-radius:var(--lb-r-lg,28px);overflow:hidden;box-shadow:0 30px 60px -34px rgb(0 0 0 / .45);animation:lb-bob 6s ease-in-out infinite}
 .lb-cover-ribbon__media img{width:100%;height:100%;object-fit:cover}
 .lb-ribbon{position:absolute;left:0;right:0;bottom:0;width:100%;height:clamp(110px,13vw,200px);overflow:visible}
 .lb-ribbon__band{fill:none;stroke:var(--es-base-paper);stroke-width:64}
@@ -1181,7 +1185,7 @@ main[data-lb-home]{overflow-x:clip}
 .es .es-section.lb-promo-code,.es[data-es-density] .es-section.lb-promo-code{padding-top:clamp(32px,4vw,56px);padding-bottom:clamp(32px,4vw,56px)}
 .lb-promo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px 48px;padding:clamp(26px,3.4vw,44px) clamp(24px,4vw,56px);border-radius:var(--lb-r-lg);background:color-mix(in srgb,var(--es-accent) 14%,var(--es-paper));border:1px solid color-mix(in srgb,var(--es-accent) 30%,transparent)}
 .lb-promo__words{flex:1 1 320px;max-width:620px}
-.lb-promo__photo{flex:none;width:clamp(96px,10vw,132px);aspect-ratio:1;object-fit:cover;border-radius:50%;box-shadow:0 0 0 6px var(--es-paper)}
+.lb-promo__photo{flex:none;width:clamp(110px,11vw,150px);aspect-ratio:4/5;object-fit:contain;border-radius:14px;background:var(--es-paper);box-shadow:0 0 0 6px var(--es-paper)}
 .lb-promo-code[data-es-band] .lb-promo{background:var(--es-paper)}
 .lb-promo__title{margin:0;font:400 clamp(28px,3.2vw,46px)/1.08 var(--es-heading)}
 .lb-promo__words p:not(.lb-eyebrow){margin:10px 0 0;line-height:1.55;opacity:.8}
@@ -1952,13 +1956,16 @@ main[data-lb-home]{overflow-x:clip}
 .lb-overlap__b{right:4%;top:0;box-shadow:0 30px 60px -36px rgba(0,0,0,.5)}
 .lb-overlap__points{display:grid;gap:14px;margin:24px 0 0;padding:0;list-style:none}
 .lb-overlap__points li{display:grid;grid-template-columns:auto 1fr;gap:12px;line-height:1.55}
+/* NOA 2026-11-11 («text is all cramped up»): each point's title on its own line, the list read from the left. */
+.lb-overlap__points strong{display:block;margin-bottom:2px}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__points{justify-items:start;text-align:left;max-width:46ch}
 .lb-overlap__points i{font-style:normal;color:var(--es-accent)}
 .lb-overlap__a{transform:translateY(calc((var(--p,.5) - .5) * 90px))}
 .lb-overlap__b{transform:translateY(calc((var(--p,.5) - .5) * -90px))}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap{grid-template-columns:1.2fr 1fr}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__photos{min-height:clamp(380px,42vw,600px)}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__a{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
-.lb-story-overlap[data-lb-look="pair"] .lb-overlap__b{position:absolute;left:auto;top:auto;right:-30%;bottom:6%;z-index:2;width:34%;transform:none;box-shadow:0 24px 40px -24px rgba(0,0,0,.45)}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__b{position:absolute;left:auto;top:auto;right:-10%;bottom:6%;z-index:2;width:34%;transform:none;box-shadow:0 24px 40px -24px rgba(0,0,0,.45)}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__photos{overflow:visible}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{padding-bottom:clamp(120px,14vw,200px)}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{display:grid;justify-items:center;text-align:center}
@@ -2433,6 +2440,215 @@ main[data-lb-home]{overflow-x:clip}
   .lb-wordmark__photo{aspect-ratio:4/3}
 }
 
+/* lb:cover-mega,products-rows,names-list,statement-sticker */
+/* Hand-made styles (spec 2026-11-10: Merienda, Burbuja, Neón, Mimo): the photo treatment and the title lean each store draws. */
+.lb-fx{border-radius:var(--lb-r-lg,24px)}
+.es[data-es-photos="sticker"] .lb-fx{border:clamp(5px,.6vw,8px) solid #fff;border-radius:22px;box-shadow:0 14px 34px rgb(0 0 0 / .18);rotate:-2deg}
+.es[data-es-photos="blend"] .lb-fx{mix-blend-mode:multiply;border-radius:0}
+.es[data-es-photos="blend"] .lb-stsk .lb-fx{mix-blend-mode:normal;border-radius:var(--lb-r-lg,24px)}
+.es[data-es-photos="framed"] .lb-fx{border-radius:999px 999px var(--lb-r-lg,24px) var(--lb-r-lg,24px)}
+.es[data-es-photos="duotone"] .lb-fx{filter:grayscale(1) contrast(1.1);background:var(--es-accent)}
+.es[data-es-titles="slant"]{--es-t-style:italic}
+.es :is(.lb-rows__name,.lb-names__word,.lb-stsk__title,.lb-cover-mega .es-display){font-synthesis-weight:none}
+/* /lb:cover-mega,products-rows,names-list,statement-sticker */
+/* lb:cover-mega */
+/* Merienda (spec 2026-11-10): huge capitals on the brand colour, the product photo with a sticker, the curved ribbon under it. */
+.lb-cover-mega{position:relative;overflow:hidden;background:var(--es-base-accent);--es-paper:var(--es-base-accent);--es-ink:var(--es-base-on-accent);--es-accent:var(--es-base-on-accent);--es-on-accent:var(--es-base-accent);color:var(--es-ink);padding-bottom:clamp(110px,12vw,190px)}
+.lb-mega__inner{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:clamp(20px,4vw,64px);align-items:center;width:min(1280px,100%);margin:0 auto;padding:clamp(40px,5vw,80px) 24px 0}
+.lb-cover-mega .es-display{font-size:clamp(48px,8.4vw,128px);line-height:.9;letter-spacing:-.025em;text-transform:uppercase;overflow-wrap:anywhere}
+.lb-cover-mega .lb-cover__sub{max-width:44ch;margin:18px 0 0;font-size:clamp(15px,1.3vw,18px)}
+.lb-cover-mega .lb-actions{margin-top:24px}
+.lb-mega__media{position:relative;justify-self:center;width:min(100%,520px);animation:lb-bob 7s ease-in-out infinite}
+.lb-mega__media img{display:block;width:100%;aspect-ratio:1;object-fit:cover}
+.lb-mega__sticker{position:absolute;left:-4%;top:6%;display:grid;place-items:center;width:clamp(84px,9vw,120px);aspect-ratio:1;border-radius:50%;background:var(--es-base-paper);color:var(--es-base-ink);font:900 clamp(12px,1.1vw,15px)/1.05 var(--es-heading);text-transform:uppercase;text-align:center;padding:10px;transform:rotate(-12deg);box-shadow:0 8px 24px rgb(0 0 0 / .18)}
+.lb-cover-mega[data-lb-look="stack"] .lb-mega__inner{grid-template-columns:1fr;text-align:center;justify-items:center}
+.lb-cover-mega[data-lb-look="stack"] .lb-cover__sub{margin-inline:auto}
+.lb-cover-mega[data-lb-look="stack"] .lb-actions{justify-content:center}
+.lb-cover-mega[data-lb-look="stack"] .lb-mega__media{width:min(100%,440px)}
+.lb-cover-mega[data-lb-look="tilt"] .lb-mega__inner{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}
+.lb-cover-mega[data-lb-look="tilt"] .lb-mega__media{order:-1;transform:rotate(-5deg);animation:none}
+.lb-cover-mega[data-lb-look="tilt"] .lb-mega__sticker{left:auto;right:-4%}
+@media (max-width:760px){.lb-mega__inner,.lb-cover-mega[data-lb-look="tilt"] .lb-mega__inner{grid-template-columns:1fr}.lb-cover-mega[data-lb-look="tilt"] .lb-mega__media{order:0}.lb-mega__media{width:min(100%,360px)}.lb-cover-mega .es-display{font-size:clamp(42px,13vw,72px)}}
+/* /lb:cover-mega */
+/* lb:products-rows */
+/* Merienda: one tinted row per product — its name huge, a line, and the store's own card (photo, price, Agregar). */
+.lb-rows{list-style:none;margin:0;padding:0;display:grid;gap:clamp(16px,2vw,24px)}
+.lb-rows__row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(20px,4vw,56px);align-items:center;padding:clamp(22px,4vw,48px);border-radius:var(--lb-r-lg,28px);background:var(--mer-tint,color-mix(in srgb,var(--es-accent) 16%,var(--es-paper)))}
+.lb-rows__row[data-tint="1"]{--mer-tint:color-mix(in srgb,var(--es-accent) 9%,var(--es-paper))}
+.lb-rows__row[data-tint="2"]{--mer-tint:color-mix(in srgb,var(--es-ink) 7%,var(--es-paper))}
+.lb-rows__row[data-tint="3"]{--mer-tint:color-mix(in srgb,var(--es-accent) 24%,var(--es-paper))}
+.lb-rows__row[style]{--mer-tint:color-mix(in srgb,var(--mer-photo) 26%,var(--es-paper))}
+.lb-rows__name{margin:0;font:var(--es-t-weight,900) clamp(36px,5.4vw,84px)/.92 var(--es-heading);font-style:var(--es-t-style,normal);letter-spacing:-.02em;text-transform:uppercase;overflow-wrap:anywhere}
+.lb-rows__line{margin:14px 0 0;max-width:42ch;font-size:clamp(15px,1.2vw,17px)}
+.lb-rows__card.es-grid{display:block;width:min(400px,100%);justify-self:center}
+.lb-rows__card .lb-card{background:var(--es-paper);border-radius:calc(var(--lb-r-lg,28px) - 8px);padding:10px;box-shadow:0 10px 30px rgb(0 0 0 / .08)}
+.lb-products-rows[data-lb-look="alternate"] .lb-rows__row:nth-child(even) .lb-rows__words{order:2}
+.lb-products-rows[data-lb-look="cards"] .lb-rows{grid-template-columns:repeat(2,minmax(0,1fr))}
+.lb-products-rows[data-lb-look="cards"] .lb-rows__row{grid-template-columns:1fr;align-content:start}
+.lb-products-rows[data-lb-look="cards"] .lb-rows__name{font-size:clamp(30px,3.6vw,56px)}
+.lb-products-rows[data-lb-look="stack"] .lb-rows__row{grid-template-columns:1fr;text-align:center;justify-items:center}
+.lb-products-rows[data-lb-look="stack"] .lb-rows__line{margin-inline:auto}
+@media (max-width:760px){.lb-rows__row,.lb-products-rows[data-lb-look="cards"] .lb-rows{grid-template-columns:1fr}.lb-products-rows[data-lb-look="alternate"] .lb-rows__row:nth-child(even) .lb-rows__words{order:0}.lb-rows__name{font-size:clamp(34px,11vw,56px)}}
+/* /lb:products-rows */
+/* lb:names-list */
+/* Merienda: the names huge, one per line, lit one at a time with the scroll; the lit one shows its photo. */
+.lb-names-list{text-align:center}
+.lb-names{list-style:none;margin:0;padding:0;display:grid;gap:clamp(2px,.6vw,8px)}
+.lb-names__link{position:relative;display:inline-flex;align-items:center;gap:clamp(10px,2vw,24px);text-decoration:none;color:inherit}
+.lb-names__word{font:var(--es-t-weight,900) clamp(26px,min(7.6vw,calc(150vw / var(--names-len,12))),118px)/1 var(--es-heading);font-style:var(--es-t-style,normal);letter-spacing:-.02em;text-transform:uppercase;color:color-mix(in srgb,var(--es-ink) 16%,var(--es-paper));transition:color .35s,-webkit-text-stroke-color .35s}
+.lb-names__photo{width:clamp(56px,8vw,120px);aspect-ratio:1;object-fit:cover;opacity:0;transform:scale(.6) rotate(-10deg);transition:opacity .35s,transform .45s cubic-bezier(.2,.8,.2,1.2)}
+.lb-names-list[data-lb-look="outline"] .lb-names__word{color:transparent;-webkit-text-stroke:2px var(--es-ink)}
+:is(.lb-names-list[data-step="0"] [data-i="0"],.lb-names-list[data-step="1"] [data-i="1"],.lb-names-list[data-step="2"] [data-i="2"],.lb-names-list[data-step="3"] [data-i="3"],.lb-names-list[data-step="4"] [data-i="4"],.lb-names-list[data-step="5"] [data-i="5"],.lb-names-list[data-step="6"] [data-i="6"],.lb-names-list[data-step="7"] [data-i="7"],.lb-names-list:not([data-step]) li,.lb-names li:hover) .lb-names__word{color:var(--es-ink)}
+:is(.lb-names-list[data-step="0"] [data-i="0"],.lb-names-list[data-step="1"] [data-i="1"],.lb-names-list[data-step="2"] [data-i="2"],.lb-names-list[data-step="3"] [data-i="3"],.lb-names-list[data-step="4"] [data-i="4"],.lb-names-list[data-step="5"] [data-i="5"],.lb-names-list[data-step="6"] [data-i="6"],.lb-names-list[data-step="7"] [data-i="7"],.lb-names li:hover) .lb-names__photo{opacity:1;transform:none}
+@media (max-width:760px){.lb-names__word{font-size:clamp(24px,min(10vw,calc(260vw / var(--names-len,12))),52px)}.lb-names__photo{width:48px}}
+/* /lb:names-list */
+/* lb:statement-sticker */
+/* Merienda: a big sentence about the product beside two of its photos as stickers. */
+.lb-stsk{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:center}
+.lb-stsk__title{margin:0;font:var(--es-t-weight,900) clamp(40px,6vw,96px)/.92 var(--es-heading);font-style:var(--es-t-style,normal);letter-spacing:-.02em;text-transform:uppercase}
+.lb-stsk .lb-lede{margin-top:18px}
+.lb-stsk__media{position:relative;min-height:clamp(220px,28vw,380px)}
+.lb-stsk__media img{position:absolute;width:62%;aspect-ratio:1;object-fit:cover}
+.lb-stsk__one{right:4%;top:0;transform:rotate(6deg)}
+.lb-stsk__two{left:2%;bottom:0;transform:rotate(-8deg)}
+.lb-statement-sticker[data-lb-look="center"] .lb-stsk{grid-template-columns:1fr;text-align:center;justify-items:center}
+.lb-statement-sticker[data-lb-look="center"] .lb-stsk__media{width:min(520px,100%);order:-1}
+@media (max-width:760px){.lb-stsk{grid-template-columns:1fr}.lb-stsk__title{font-size:clamp(34px,10vw,56px)}.lb-stsk__media{min-height:240px}}
+/* /lb:statement-sticker */
+/* lb:products-words */
+/* Burbuja, after rhode: a sideways row of tall cards, each under one giant lowercase word, the store's own product card inside. */
+.lb-words{list-style:none;margin:0;padding:0 0 12px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(260px,31%);gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:thin}
+.lb-words__card{scroll-snap-align:start;display:grid;align-content:start;gap:8px;padding:clamp(16px,2vw,24px);border-radius:var(--lb-r-lg,24px);background:color-mix(in srgb,var(--es-ink) 5%,var(--es-paper));min-width:0}
+.lb-products-words[data-lb-look="white"] .lb-words__card{background:var(--es-paper);border:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}
+.lb-words__word{margin:0;font:700 clamp(40px,4.6vw,72px)/.95 var(--es-heading);letter-spacing:-.04em;text-transform:lowercase;color:color-mix(in srgb,var(--es-ink) 78%,var(--es-paper));overflow-wrap:anywhere}
+.lb-words__product.es-grid{display:block}
+.lb-words__product .lb-card{background:transparent}
+@media (max-width:760px){.lb-words{grid-auto-columns:78%}}
+/* /lb:products-words */
+/* lb:values-portrait */
+/* Burbuja, after rhode: a statement and values that open, beside a black-and-white portrait. */
+.lb-values{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(12px,1.6vw,20px);align-items:stretch}
+.lb-values__words{display:grid;align-content:space-between;gap:40px;padding:clamp(24px,3.4vw,48px);border-radius:var(--lb-r-lg,24px);background:color-mix(in srgb,var(--es-ink) 5%,var(--es-paper))}
+.lb-values__title{margin:0;font:500 clamp(24px,2.6vw,38px)/1.15 var(--es-heading);letter-spacing:-.02em;max-width:22ch}
+.lb-values__cta{margin:20px 0 0}
+.lb-values__list{list-style:none;margin:0;padding:0;border-top:1px solid color-mix(in srgb,var(--es-ink) 16%,transparent)}
+.lb-values__list li{border-bottom:1px solid color-mix(in srgb,var(--es-ink) 16%,transparent)}
+.lb-values__list summary{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;cursor:pointer;list-style:none;font:500 18px/1.2 var(--es-heading);text-transform:lowercase}
+.lb-values__list summary::-webkit-details-marker{display:none}
+.lb-values__list summary svg{width:18px;height:18px;transition:transform .2s}
+.lb-values__list details[open] summary svg{transform:rotate(90deg)}
+.lb-values__list p{margin:0 0 16px;max-width:46ch;color:color-mix(in srgb,var(--es-ink) 72%,var(--es-paper))}
+.lb-values__photo{border-radius:var(--lb-r-lg,24px);overflow:hidden;min-height:clamp(320px,40vw,560px)}
+.lb-values__photo img{width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.05)}
+.lb-values-portrait[data-lb-look="right"] .lb-values__words{order:2}
+@media (max-width:760px){.lb-values{grid-template-columns:1fr}.lb-values-portrait[data-lb-look="right"] .lb-values__words{order:0}}
+/* /lb:values-portrait */
+/* lb:campaign-strip */
+/* Neón, after Kith: a campaign photo across the page, its words bottom-left and buttons bottom-right, then four of its products. */
+.lb-campaign-strip{padding-bottom:clamp(32px,4vw,56px)}
+.lb-campaign__photo{position:relative;height:clamp(420px,62vw,820px);overflow:hidden;color:#fff}
+.lb-campaign-strip[data-lb-look="wide"] .lb-campaign__photo{height:clamp(320px,42vw,560px)}
+.lb-campaign__photo>img{width:100%;height:100%;object-fit:cover}
+.lb-campaign__photo::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgb(0 0 0 / .55),transparent 45%);pointer-events:none}
+.lb-campaign__bar{position:absolute;z-index:1;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;padding:clamp(18px,3vw,36px)}
+.lb-campaign__words{max-width:48ch;min-width:0}
+.lb-campaign__words .lb-eyebrow{color:#fff;opacity:.85}
+.lb-campaign__title{margin:0;color:#fff;font-size:clamp(26px,3.4vw,48px);line-height:1}
+.lb-campaign__text{margin:8px 0 0;color:#fff;opacity:.9}
+.lb-campaign__products.es-grid{width:min(1280px,100%);margin:clamp(12px,1.6vw,20px) auto 0;padding-inline:clamp(12px,2vw,24px)}
+/* /lb:campaign-strip */
+/* lb:block-split */
+/* Mimo, after Wild One: a colour panel with its words beside a photo filling the other half. */
+.lb-block{display:grid;grid-template-columns:1fr 1fr;min-height:clamp(320px,36vw,520px)}
+.lb-block__panel{display:grid;place-items:center;padding:clamp(28px,4vw,64px);background:color-mix(in srgb,var(--es-accent) 16%,var(--es-paper));text-align:center}
+.lb-block-split[data-tint="1"] .lb-block__panel{background:color-mix(in srgb,var(--es-accent) 9%,var(--es-paper))}
+.lb-block-split[data-tint="2"] .lb-block__panel{background:color-mix(in srgb,var(--es-ink) 7%,var(--es-paper))}
+.lb-block__words{display:grid;justify-items:center;gap:12px;max-width:40ch}
+.lb-block__title{margin:0;font-size:clamp(26px,3vw,44px);line-height:1.05}
+.lb-block__words .lb-lede{margin:0}
+.lb-block__photo{position:relative;min-height:280px}
+.lb-block__photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lb-block-split[data-lb-look="right"] .lb-block__panel{order:2}
+@media (max-width:760px){.lb-block{grid-template-columns:1fr}.lb-block-split[data-lb-look="right"] .lb-block__panel{order:0}}
+/* /lb:block-split */
+/* lb:letters-split */
+/* Mimo, after Wild One: a word in colourful letter tiles (one tile a photo) beside its words. */
+.lb-letters{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:center}
+.lb-letters__grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lb-letters__grid[data-count="2"],.lb-letters__grid[data-count="4"]{grid-template-columns:repeat(2,1fr)}
+.lb-letters__grid[data-count="7"],.lb-letters__grid[data-count="8"],.lb-letters__grid[data-count="9"]{grid-template-columns:repeat(3,1fr)}
+.lb-letters__tile{display:grid;place-items:center;aspect-ratio:1;overflow:hidden;font:700 clamp(40px,6vw,96px)/1 var(--es-heading);color:var(--es-ink);background:color-mix(in srgb,var(--es-accent) 30%,var(--es-paper))}
+.lb-letters__tile[data-tint="1"]{background:var(--es-accent);color:var(--es-on-accent)}
+.lb-letters__tile[data-tint="2"]{background:color-mix(in srgb,var(--es-ink) 10%,var(--es-paper))}
+.lb-letters__tile[data-shape="0"]{border-radius:50% 50% 0 0}
+.lb-letters__tile[data-shape="1"]{border-radius:0 50% 50% 0}
+.lb-letters__tile[data-shape="2"]{border-radius:50%}
+.lb-letters__tile[data-shape="3"]{border-radius:0 0 50% 50%}
+.lb-letters__tile--photo{border-radius:24px}
+.lb-letters__tile--photo img{width:100%;height:100%;object-fit:cover}
+.lb-letters__words{display:grid;gap:14px;justify-items:start}
+.lb-letters__title{margin:0;font-size:clamp(28px,3.4vw,52px);line-height:1.02}
+.lb-letters__words .lb-lede{margin:0}
+.lb-letters-split[data-lb-look="right"] .lb-letters__grid{order:2}
+@media (max-width:760px){.lb-letters{grid-template-columns:1fr}.lb-letters-split[data-lb-look="right"] .lb-letters__grid{order:0}.lb-letters__tile{font-size:clamp(32px,12vw,64px)}}
+/* /lb:letters-split */
+/* lb:statement-offset */
+/* Oliva, after Graza: a big sentence in two lines, one left and one right, a small round photo between them. */
+.lb-offset{display:grid;gap:22px;justify-items:center;text-align:center}
+.lb-offset__title{margin:0;width:100%;display:grid;gap:4px;font:400 clamp(40px,6vw,96px)/1 var(--es-heading);letter-spacing:-.02em}
+.lb-offset__one{justify-self:start;text-align:left}
+.lb-offset__two{justify-self:end;text-align:right}
+.lb-offset__photo{justify-self:center;width:clamp(90px,10vw,150px);aspect-ratio:1;object-fit:cover;border-radius:50%}
+.lb-offset__text{margin:0;max-width:44ch;font-size:15px}
+@media (max-width:760px){.lb-offset__title{font-size:clamp(34px,10vw,52px)}}
+/* /lb:statement-offset */
+/* lb:products-nicknames */
+/* Oliva, after Graza: the store's name huge, its line, each product under a nickname in quotes, a full-width button. */
+.lb-nick__head{text-align:center;margin-bottom:clamp(24px,3vw,40px)}
+.lb-nick__name{margin:0;font:400 clamp(72px,17vw,260px)/.85 var(--es-heading);letter-spacing:-.04em;color:var(--es-ink);overflow-wrap:anywhere}
+.lb-nick__title{margin:10px 0 0;font:400 clamp(22px,2.4vw,34px)/1.1 var(--es-heading)}
+.lb-nick{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:clamp(12px,1.6vw,20px)}
+.lb-nick[data-count="2"]{--n:2}.lb-nick[data-count="4"]{--n:4}
+.lb-nick li{display:grid;gap:8px;align-content:start;min-width:0}
+.lb-nick__nick{margin:0;text-align:center;font:400 clamp(22px,2.2vw,32px)/1 var(--es-heading)}
+.lb-nick__card.es-grid{display:block}
+.lb-nick__all{margin:clamp(20px,2.6vw,32px) 0 0}
+.lb-nick__all .es-btn{display:flex;justify-content:center;width:100%;padding-block:18px;font-size:18px}
+@media (max-width:760px){.lb-nick{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* /lb:products-nicknames */
+/* lb:verbs-photo */
+/* Oliva, after Graza: a band in the brand colour, its words running on top, the ways to use it scattered big beside a photo. */
+.lb-verbs-photo{background:var(--es-base-accent);--es-paper:var(--es-base-accent);--es-ink:var(--es-base-on-accent);--es-accent:var(--es-base-on-accent);--es-on-accent:var(--es-base-accent);color:var(--es-ink);overflow:hidden}
+.lb-verbs__run{margin:0;display:flex;width:max-content;padding:10px 0;border-bottom:1px solid currentColor;font:600 12px/1 var(--es-mono,var(--es-body));letter-spacing:.12em;text-transform:uppercase;white-space:pre;animation:lb-run 40s linear infinite}
+@keyframes lb-run{to{transform:translateX(-50%)}}
+.lb-verbs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(20px,4vw,56px);align-items:center;width:min(1280px,100%);margin:0 auto;padding:clamp(32px,5vw,72px) 24px}
+.lb-verbs__list{list-style:none;margin:0 0 28px;padding:0;display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline}
+.lb-verbs__list li{font:400 clamp(30px,3.6vw,58px)/1.05 var(--es-heading)}
+.lb-verbs__list li[data-v="1"]{font-size:clamp(24px,2.6vw,42px);rotate:-4deg}
+.lb-verbs__list li[data-v="2"]{font-style:italic;translate:0 8px}
+.lb-verbs__list li[data-v="3"]{font-size:clamp(26px,3vw,48px);rotate:3deg}
+.lb-verbs__list li:first-child{border:2px solid currentColor;border-radius:999px;padding:2px 18px}
+.lb-verbs__photo{position:relative;border-radius:var(--lb-r-lg,24px);overflow:hidden}
+.lb-verbs__photo img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.lb-verbs__note{margin:0;padding:12px 4px 0;font-size:13px}
+@media (max-width:760px){.lb-verbs{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.lb-verbs__run{animation:none}}
+/* /lb:verbs-photo */
+/* lb:origins-arches */
+/* Origen, after Onyx: photos with an arched top, the name of each origin over its photo, a line and a link under. */
+.lb-arches{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:clamp(14px,2vw,28px)}
+.lb-arches[data-count="2"]{--n:2}.lb-arches[data-count="4"]{--n:4}
+.lb-arches__card{display:grid;gap:10px;color:inherit;text-decoration:none;text-align:center}
+.lb-arches__photo{position:relative;display:block;aspect-ratio:3/4;border-radius:999px 999px 0 0;overflow:hidden}
+.lb-arches__photo img{width:100%;height:100%;object-fit:cover;transition:transform .8s cubic-bezier(.2,.7,.2,1)}
+.lb-arches__card:hover img{transform:scale(1.04)}
+.lb-arches__photo::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgb(0 0 0 / .45),transparent 50%)}
+.lb-arches__name{position:absolute;z-index:1;left:0;right:0;top:44%;color:#fff;font:400 clamp(26px,3vw,44px)/1 var(--es-heading);letter-spacing:.12em;text-transform:uppercase}
+.lb-arches__text{font-size:14px;max-width:32ch;justify-self:center;opacity:.85}
+.lb-arches__more{display:inline-flex;gap:6px;align-items:center;justify-self:center;font:600 12px/1 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+.lb-arches__more svg{width:14px;height:14px}
+@media (max-width:760px){.lb-arches{grid-template-columns:1fr 1fr}}
+/* /lb:origins-arches */
 /* theme:paloalto */
 /* Palo Alto (themes.shopify.com/themes/palo-alto): blush ground, black type, Archivo bold headings, Space Mono for small labels,
  * square uppercase buttons, a split header with circle icons, a rounded panel rising over the hero, red sale ribbons. */
@@ -2489,7 +2705,7 @@ main[data-lb-home]{overflow-x:clip}
 :root[data-es-scroll="down"] [data-es-theme="paloalto"] .es-header{transform:translateY(-101%)}
 [data-es-theme="paloalto"] .es-footer{background:#111;color:#fff;border-top:0}
 [data-es-theme="paloalto"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
-[data-es-theme="paloalto"] .es-footer__big{color:transparent;-webkit-text-stroke:1.2px rgba(255,255,255,.6);font-family:var(--es-heading);font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+[data-es-theme="paloalto"] .es-footer__big{--es-big-k:.78;color:transparent;-webkit-text-stroke:1.2px rgba(255,255,255,.6);font-family:var(--es-heading);font-weight:800;letter-spacing:.02em;text-transform:uppercase}
 @media (min-width:900px){
   [data-es-theme="paloalto"] main{position:relative;z-index:1;background:var(--es-paper);border-radius:0 0 40px 40px;box-shadow:0 30px 60px -40px rgba(0,0,0,.4)}
   [data-es-theme="paloalto"] .es-footer{position:sticky;bottom:0;z-index:0;margin-top:-40px;padding-top:80px}
@@ -2513,9 +2729,9 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="impulse"] .es-header__links a{font-size:13px;font-weight:500}
 [data-es-theme="impulse"] .es-logo{font:600 22px/1 var(--es-heading);letter-spacing:.28em;text-transform:uppercase}
 [data-es-theme="impulse"] .es-header .es-header__end a[href="buscar.html"]{order:-1}
-:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="impulse"]:has(main>.lb-cover:first-child) .es-header{background:transparent;color:#fff}
-:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="impulse"]:has(main>.lb-cover:first-child) .es-header :is(a,button,.es-logo,.es-icon-btn){color:#fff}
-[data-es-theme="impulse"]:has(main>.lb-cover:first-child) main>.lb-cover:first-child{margin-top:-76px}
+:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="impulse"]:has(main>.lb-cover[data-lb-overlap]:first-child) .es-header{background:transparent;color:#fff}
+:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="impulse"]:has(main>.lb-cover[data-lb-overlap]:first-child) .es-header :is(a,button,.es-logo,.es-icon-btn){color:#fff}
+[data-es-theme="impulse"]:has(main>.lb-cover[data-lb-overlap]:first-child) main>.lb-cover[data-lb-overlap]:first-child{margin-top:-76px}
 [data-es-theme="impulse"] :is(.es-h2,.lb-title,.lb-head h2){font-weight:500;letter-spacing:-.01em}
 [data-es-theme="impulse"] .es-btn,[data-es-theme="impulse"] .es-pdp .product-detail__buy{min-height:42px;padding:0 22px;font-size:11px;letter-spacing:.16em}
 [data-es-theme="impulse"] .es-btn svg{display:none}
@@ -2549,9 +2765,9 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="motion"] .es-announce{background:#f04e12;color:#fff;font-size:12px}
 [data-es-theme="motion"] .es-header{min-height:64px;border-bottom:0;transition:background .3s ease,color .3s ease}
 [data-es-theme="motion"] .es-logo{font:700 18px/1 var(--es-heading);letter-spacing:.12em;text-transform:uppercase}
-:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="motion"]:has(main>.lb-cover:first-child) .es-header{background:transparent}
-:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="motion"]:has(main>.lb-cover:first-child) .es-header :is(a,button,.es-logo,.es-icon-btn){color:#fff}
-[data-es-theme="motion"]:has(main>.lb-cover:first-child) main>.lb-cover:first-child{margin-top:-64px}
+:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="motion"]:has(main>.lb-cover[data-lb-overlap]:first-child) .es-header{background:transparent}
+:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="motion"]:has(main>.lb-cover[data-lb-overlap]:first-child) .es-header :is(a,button,.es-logo,.es-icon-btn){color:#fff}
+[data-es-theme="motion"]:has(main>.lb-cover[data-lb-overlap]:first-child) main>.lb-cover[data-lb-overlap]:first-child{margin-top:-64px}
 [data-es-theme="motion"] :is(.es-h2,.lb-title,.lb-head h2,.lb-countdown__title){font-weight:500;letter-spacing:.02em;text-transform:uppercase}
 [data-es-theme="motion"] .lb-head h2{font-size:clamp(15px,1.2vw,18px);letter-spacing:.08em}
 [data-es-theme="motion"] .es-btn,[data-es-theme="motion"] .es-pdp .product-detail__buy{min-height:38px;padding:0 18px;border-radius:0;font-size:11px;letter-spacing:.1em}
@@ -2643,7 +2859,7 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="broadcast"] .es-header{min-height:70px;background:var(--es-paper);border-bottom:0}
 [data-es-theme="broadcast"] .es-logo{font:400 24px/1 'Instrument Serif',var(--es-heading);letter-spacing:.02em}
 [data-es-theme="broadcast"] .es-header__links a{font-size:13px}
-[data-es-theme="broadcast"] :is(.es-h2,.lb-title,.lb-head h2,.lb-stage__title){font-weight:600;letter-spacing:.01em;text-transform:uppercase}
+[data-es-theme="broadcast"] :is(.es-h2,.lb-title,.lb-head h2,.lb-stage__title){font-weight:600;letter-spacing:.01em;text-transform:uppercase;line-height:1.12}
 [data-es-theme="broadcast"] .lb-stage__title{font-size:clamp(36px,4.4vw,60px)}
 [data-es-theme="broadcast"] .es-btn,[data-es-theme="broadcast"] .es-pdp .product-detail__buy{min-height:40px;padding:0 20px;border-radius:99px;font-size:11px;letter-spacing:.12em}
 [data-es-theme="broadcast"] .es-btn svg{display:none}
@@ -2684,7 +2900,7 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="shrine"] .lb-benefits-orbit[data-es-band="accent"] :is(h2,h3,p){color:#fff}
 [data-es-theme="shrine"] .es-footer{background:var(--es-accent);color:#fff}
 [data-es-theme="shrine"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
-[data-es-theme="shrine"] .es-footer__big{font:800 clamp(60px,10vw,140px)/1 var(--es-heading);text-transform:uppercase;color:#fff}
+[data-es-theme="shrine"] .es-footer__big{--es-big-max:140px;--es-big-k:.78;font:800 clamp(60px,10vw,140px)/1 var(--es-heading);text-transform:uppercase;color:#fff}
 :root:not([data-es-still]) [data-es-theme="shrine"] main .lb:not([data-in]):not(.lb-wave):not(.lb-cover){opacity:0}
 [data-es-theme="shrine"] main .lb[data-in]:not(.lb-wave):not(.lb-cover){animation:sh-in .8s ease both}
 /* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una tarjeta flotante. */
@@ -2773,8 +2989,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="amigos"] .es-header{background:transparent;border-bottom:0;transition:background .3s}
 [data-es-theme="amigos"] .es-logo{color:#f6b3c2!important;font:400 clamp(26px,2.6vw,36px)/.9 var(--es-mono);letter-spacing:.01em;text-transform:uppercase}
 [data-es-theme="amigos"] .es-header__links a{color:#f6b3c2;font:500 14px/1 var(--es-body)}
-:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="amigos"]:has(main>.lb-cover:first-child) .es-header .es-icon-btn{color:#fff}
-[data-es-theme="amigos"]:has(main>.lb-cover:first-child) main>.lb-cover:first-child{margin-top:-72px}
+:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="amigos"]:has(main>.lb-cover[data-lb-overlap]:first-child) .es-header .es-icon-btn{color:#fff}
+[data-es-theme="amigos"]:has(main>.lb-cover[data-lb-overlap]:first-child) main>.lb-cover[data-lb-overlap]:first-child{margin-top:-72px}
 :root:is([data-es-scroll="down"],[data-es-scroll="up"]) [data-es-theme="amigos"] .es-header{background:#fff}
 [data-es-theme="amigos"] .lb-cover-stage[data-lb-look="plain"]{min-height:min(92vh,860px)}
 [data-es-theme="amigos"] .lb-cover-stage[data-lb-look="plain"]::after{background:none}
@@ -3079,7 +3295,7 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="tacon"] .lb-strip-marquee{background:var(--es-accent);color:var(--es-on-accent);font:400 18px/1 var(--es-heading);text-transform:uppercase}
 [data-es-theme="tacon"] .es-footer{background:#141414;color:#fff}
 [data-es-theme="tacon"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
-[data-es-theme="tacon"] .es-footer__big{text-transform:uppercase;font-weight:400}
+[data-es-theme="tacon"] .es-footer__big{--es-big-k:.72;text-transform:uppercase;font-weight:400}
 :root:not([data-es-still]) [data-es-theme="tacon"] main .lb:not([data-in]) :is(.lb-head,.lb-title){opacity:0}
 [data-es-theme="tacon"] main .lb[data-in] :is(.lb-head,.lb-title){animation:ta-up .7s cubic-bezier(.33,0,0,1) both}
 [data-es-theme="tacon"] main .lb[data-in] :is(.lb-split__media img,.lb-tiles__tile img){animation:ta-settle 1.2s cubic-bezier(.33,0,0,1) both}
@@ -3724,7 +3940,7 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="noble"] :is(.lb-split__media,.lb-tiles__tile,.lb-mosaic__tile){border-radius:0}
 [data-es-theme="noble"] .es-footer{background:#111;color:#e9e1d2}
 [data-es-theme="noble"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
-[data-es-theme="noble"] .es-footer__big{letter-spacing:.2em;text-transform:uppercase;font-weight:400}
+[data-es-theme="noble"] .es-footer__big{--es-big-k:.95;letter-spacing:.2em;text-transform:uppercase;font-weight:400}
 :root:not([data-es-still]) [data-es-theme="noble"] main .lb:not([data-in]) :is(.lb-head,.lb-title){opacity:0}
 [data-es-theme="noble"] main .lb[data-in] :is(.lb-head,.lb-title){animation:nb-rise .9s cubic-bezier(.33,0,0,1) both}
 [data-es-theme="noble"] main .lb[data-in] :is(.lb-split__media img,.lb-tiles__tile img){animation:nb-settle 1.4s cubic-bezier(.33,0,0,1) both}
@@ -3856,6 +4072,266 @@ main[data-lb-home]{overflow-x:clip}
 @media (min-width:861px){[data-es-theme="ruta"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="ruta"] .pym-footer{display:none}}
 [data-es-theme="ruta"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:ruta */
+/* theme:merienda */
+/* Merienda (spec 2026-11-10, after bakeme.pages.dev): a loud, happy snack shop — pill links and round icon buttons, chunky capitals
+ * (the store's drawn font, leaned when titles=slant), tints mixed from the brand's own colours, product photos as stickers, blended
+ * or rounded (photos=sticker|blend|rounded). Motion: sections pop up, the cover photo bobs, the names light up with the scroll. */
+@keyframes mr-pop{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
+[data-es-theme="merienda"]{--es-radius:22px;--lb-r-lg:30px;--es-t-weight:900;--es-t-track:-.02em;--es-t-case:uppercase}
+[data-es-theme="merienda"] :is(h1,h2,h3,.es-display,.es-h2,.lb-title,.lb-rows__name,.lb-names__word,.lb-stsk__title,.es-logo){font-synthesis-weight:none}
+[data-es-theme="merienda"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display){font-family:var(--es-heading);font-weight:900;font-style:var(--es-t-style,normal);letter-spacing:-.02em;text-transform:uppercase;line-height:.95}
+[data-es-theme="merienda"] .lb-head h2{font-size:clamp(34px,5vw,76px)}
+[data-es-theme="merienda"] .lb-em{color:var(--es-accent);font-style:inherit}
+[data-es-theme="merienda"] .es-announce{background:var(--es-deep,var(--es-ink));color:var(--es-on-deep,#fff);font:700 12px/1 var(--es-body);letter-spacing:.04em}
+[data-es-theme="merienda"] .es-header{background:var(--es-paper);border-bottom:0}
+[data-es-theme="merienda"] .es-logo{font:900 26px/1 var(--es-heading);font-style:var(--es-t-style,normal);text-transform:uppercase;letter-spacing:-.02em}
+[data-es-theme="merienda"] .es-header__links a{padding:9px 16px;border-radius:999px;background:color-mix(in srgb,var(--es-accent) 14%,var(--es-paper));font:800 12px/1 var(--es-body);letter-spacing:.06em;text-transform:uppercase;transition:background .2s,color .2s}
+[data-es-theme="merienda"] .es-header__links a:hover{background:var(--es-ink);color:var(--es-paper)}
+[data-es-theme="merienda"] .es-icon-btn{border-radius:50%;background:color-mix(in srgb,var(--es-accent) 14%,var(--es-paper))}
+[data-es-theme="merienda"] .es-btn,[data-es-theme="merienda"] .lb-card__buy{border-radius:999px;font:800 13px/1 var(--es-body);letter-spacing:.06em;text-transform:uppercase}
+[data-es-theme="merienda"] .lb-card .lb-card__media{border-radius:calc(var(--lb-r-lg) - 12px)}
+[data-es-theme="merienda"] .lb-card .es-card__name{font:900 18px/1.05 var(--es-heading);font-style:var(--es-t-style,normal);text-transform:uppercase}
+[data-es-theme="merienda"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media){border-radius:var(--lb-r-lg)}
+[data-es-theme="merienda"] .lb-tiles li:nth-child(4n+1) .lb-tiles__tile{background:color-mix(in srgb,var(--es-accent) 18%,var(--es-paper))}
+[data-es-theme="merienda"] .lb-tiles li:nth-child(4n+2) .lb-tiles__tile{background:color-mix(in srgb,var(--es-ink) 7%,var(--es-paper))}
+[data-es-theme="merienda"] .lb-strip-marquee[data-lb-look="outline"]{background:var(--es-paper);color:var(--es-ink)}
+[data-es-theme="merienda"] .lb-strip-marquee[data-lb-look="outline"] .lb-marquee__track{font:900 clamp(30px,4.4vw,64px)/1.1 var(--es-heading);font-style:var(--es-t-style,normal);text-transform:uppercase}
+[data-es-theme="merienda"] .lb-strip-marquee[data-lb-look="outline"] .lb-marquee__run>span:nth-child(even){color:transparent;-webkit-text-stroke:1.5px var(--es-ink)}
+[data-es-theme="merienda"] .lb-strip-marquee[data-lb-look="outline"] i{color:var(--es-accent);font-style:normal}
+:root:not([data-es-still]) [data-es-theme="merienda"] main .lb:not([data-in]) :is(.lb-head,.lb-rows__row,.lb-stsk){opacity:0}
+[data-es-theme="merienda"] main .lb[data-in] :is(.lb-head,.lb-rows__row,.lb-stsk){animation:mr-pop .7s cubic-bezier(.2,.8,.2,1.15) both}
+[data-es-theme="merienda"] main .lb[data-in] .lb-rows__row:nth-child(2){animation-delay:.08s}
+[data-es-theme="merienda"] .lb-wordmark__word{font-family:var(--es-heading);font-weight:900;font-style:var(--es-t-style,normal);text-transform:uppercase;letter-spacing:-.03em}
+@media (max-width:760px){[data-es-theme="merienda"] .lb-cover-mega .es-display{font-size:clamp(36px,10.5vw,60px)}[data-es-theme="merienda"] :is(.lb-rows__name,.lb-stsk__title){font-size:clamp(28px,8.4vw,46px)}[data-es-theme="merienda"] .lb-names__word{font-size:clamp(24px,min(8.4vw,calc(240vw / var(--names-len,12))),44px)}[data-es-theme="merienda"] .lb-head h2{font-size:clamp(30px,9vw,48px)}}
+[data-es-theme="merienda"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:merienda */
+/* theme:burbuja */
+/* Burbuja (spec 2026-11-10 round 2, after rhode): quiet grey and lowercase — a full photo cover with small words bottom-left, tall
+ * product cards under one giant lowercase word, story cards inset on grey with their words low, values beside a black-and-white
+ * portrait, a huge lowercase wordmark. Outline pills, soft corners, no colour bands: the brand colour only on small marks. */
+@keyframes bu-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+[data-es-theme="burbuja"]{--es-radius:18px;--lb-r-lg:22px;--es-t-weight:600;--es-t-track:-.035em;--es-t-case:lowercase}
+[data-es-theme="burbuja"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display,.lb-values__title,.lb-campaign__title){font-family:var(--es-heading);font-weight:600;font-style:var(--es-t-style,normal);text-transform:lowercase;letter-spacing:-.035em;line-height:1.02}
+[data-es-theme="burbuja"] .lb-head h2{font-size:clamp(26px,2.6vw,38px)}
+[data-es-theme="burbuja"] .lb-em{font-style:inherit;color:inherit}
+[data-es-theme="burbuja"] .es-announce{background:color-mix(in srgb,var(--es-ink) 6%,var(--es-paper));color:var(--es-ink);font:500 11px/1 var(--es-body);letter-spacing:.08em;text-transform:uppercase}
+[data-es-theme="burbuja"] .es-header{background:var(--es-paper);border-bottom:0}
+[data-es-theme="burbuja"] .es-logo{font:700 30px/1 var(--es-heading);letter-spacing:-.05em;text-transform:lowercase}
+[data-es-theme="burbuja"] .es-header__links a{font:500 13px/1 var(--es-body);text-transform:lowercase}
+[data-es-theme="burbuja"] .es-btn,[data-es-theme="burbuja"] .lb-card__buy{border-radius:999px;background:transparent;border:1px solid currentColor;color:var(--es-ink);font:500 12px/1 var(--es-body);letter-spacing:.06em;text-transform:uppercase;padding:10px 20px;box-shadow:none}
+[data-es-theme="burbuja"] .es-btn svg{display:none}
+[data-es-theme="burbuja"] .es-btn:hover{background:var(--es-ink);color:var(--es-paper)}
+[data-es-theme="burbuja"] .lb-cover-full .es-btn{color:#fff;border-color:#fff}
+[data-es-theme="burbuja"] .lb-cover-full .es-display{font-size:clamp(34px,4.4vw,64px);text-transform:lowercase}
+[data-es-theme="burbuja"] .lb-cover-full{margin:12px;border-radius:var(--lb-r-lg);overflow:hidden}
+[data-es-theme="burbuja"] .lb-story-split .lb-split{background:color-mix(in srgb,var(--es-ink) 5%,var(--es-paper));border-radius:var(--lb-r-lg);overflow:hidden;gap:0;align-items:stretch}
+[data-es-theme="burbuja"] .lb-story-split .lb-split__copy{align-self:end;padding:clamp(22px,3vw,44px)}
+[data-es-theme="burbuja"] .lb-story-split .lb-split__media{border-radius:0}
+[data-es-theme="burbuja"] .lb-story-split .lb-split__media img{height:100%;object-fit:cover}
+[data-es-theme="burbuja"] .lb-story-split .lb-title{font-size:clamp(24px,2.4vw,34px)}
+[data-es-theme="burbuja"] .lb-card .lb-card__media{border-radius:12px;background:color-mix(in srgb,var(--es-ink) 6%,var(--es-paper))}
+[data-es-theme="burbuja"] .lb-card .es-card__name{font:600 14px/1.2 var(--es-body);letter-spacing:.02em;text-transform:uppercase}
+[data-es-theme="burbuja"] .lb-wordmark__word{font-family:var(--es-heading);font-weight:700;text-transform:lowercase;letter-spacing:-.06em;color:color-mix(in srgb,var(--es-ink) 72%,var(--es-paper))}
+[data-es-theme="burbuja"] :is(.lb-scroller img,.lb-tiles__tile){border-radius:16px}
+:root:not([data-es-still]) [data-es-theme="burbuja"] main .lb:not([data-in]) .lb-head{opacity:0}
+[data-es-theme="burbuja"] main .lb[data-in] .lb-head{animation:bu-rise .8s cubic-bezier(.2,.7,.2,1) both}
+[data-es-theme="burbuja"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:burbuja */
+/* theme:neon */
+/* Neón (spec 2026-11-10 round 2, after Kith): campaign-led — a stage cover of full photos, new arrivals in a sliding row, then each
+ * collection as a full-bleed campaign photo with its words low-left and buttons low-right followed by four of its products.
+ * Condensed capitals, sharp corners, square buttons; the brand colour only as a highlight. */
+@keyframes ne-in{from{opacity:0;clip-path:inset(0 0 100% 0)}to{opacity:1;clip-path:inset(0)}}
+[data-es-theme="neon"]{--es-radius:0;--lb-r-lg:0;--es-t-weight:400;--es-t-track:.01em;--es-t-case:uppercase}
+[data-es-theme="neon"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display,.lb-campaign__title){font-family:var(--es-heading);font-weight:400;font-style:var(--es-t-style,normal);text-transform:uppercase;letter-spacing:.01em;line-height:.92}
+[data-es-theme="neon"] .lb-head h2{font-size:clamp(30px,3.6vw,56px)}
+[data-es-theme="neon"] .lb-campaign__title{font-size:clamp(34px,5vw,80px)}
+[data-es-theme="neon"] .lb-em{color:var(--es-accent);font-style:inherit}
+[data-es-theme="neon"] .lb-campaign__title .lb-em{color:#fff;text-decoration:underline;text-decoration-color:var(--es-base-accent);text-decoration-thickness:.08em;text-underline-offset:.1em}
+[data-es-theme="neon"] .es-announce{background:var(--es-base-ink,#111);color:#fff;font:600 11px/1 var(--es-body);letter-spacing:.14em;text-transform:uppercase}
+[data-es-theme="neon"] .es-header{background:var(--es-paper);border-bottom:1px solid var(--es-ink)}
+[data-es-theme="neon"] .es-logo{font:400 30px/1 var(--es-heading);text-transform:uppercase;letter-spacing:.04em}
+[data-es-theme="neon"] .es-header__links a{font:600 12px/1 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+[data-es-theme="neon"] .es-btn,[data-es-theme="neon"] .lb-card__buy{border-radius:0;font:600 12px/1 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+[data-es-theme="neon"] .es-btn:hover{background:var(--es-accent);border-color:var(--es-accent);color:var(--es-on-accent)}
+[data-es-theme="neon"] .lb-campaign__bar .es-btn{background:transparent;border:1px solid #fff;color:#fff}
+[data-es-theme="neon"] .lb-campaign__bar .es-btn:hover{background:#fff;color:#111}
+[data-es-theme="neon"] .lb-campaign__bar .es-btn *{color:inherit}
+[data-es-theme="neon"] .lb-card .lb-card__media{border-radius:0;background:color-mix(in srgb,var(--es-ink) 5%,var(--es-paper))}
+[data-es-theme="neon"] .lb-card .es-card__name{font:600 12px/1.3 var(--es-body);letter-spacing:.06em;text-transform:uppercase}
+[data-es-theme="neon"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media,.lb-campaign__photo){border-radius:0}
+[data-es-theme="neon"][data-es-photos="duotone"] .lb-campaign__photo>img{filter:grayscale(1) contrast(1.1)}
+[data-es-theme="neon"] .lb-wordmark__word{font-family:var(--es-heading);text-transform:uppercase}
+:root:not([data-es-still]) [data-es-theme="neon"] main .lb:not([data-in]) :is(.lb-head,.lb-campaign__words){opacity:0}
+[data-es-theme="neon"] main .lb[data-in] :is(.lb-head,.lb-campaign__words){animation:ne-in .6s cubic-bezier(.7,0,.2,1) both}
+[data-es-theme="neon"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:neon */
+/* theme:mimo */
+/* Mimo (spec 2026-11-10 round 2, after Wild One): light and friendly — a full photo cover with a small headline and one bright pill,
+ * a row of photos, favourites in a sliding row per category, colour panels beside photos, the store's name in colourful letter
+ * tiles. Round letters, pills, soft tints of the brand colour; the marked word gets a wavy underline. */
+@keyframes mi-bounce{0%{opacity:0;transform:translateY(22px)}60%{opacity:1;transform:translateY(-4px)}100%{transform:none}}
+[data-es-theme="mimo"]{--es-radius:24px;--lb-r-lg:28px;--es-t-weight:600;--es-t-track:-.01em;--es-t-case:none}
+[data-es-theme="mimo"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display,.lb-block__title,.lb-letters__title){font-family:var(--es-heading);font-weight:600;font-style:var(--es-t-style,normal);text-transform:var(--es-t-case,none);letter-spacing:-.01em;line-height:1.02}
+[data-es-theme="mimo"][data-es-titles="upper"]{--es-t-case:uppercase}
+[data-es-theme="mimo"] .lb-head h2{font-size:clamp(26px,3vw,44px)}
+[data-es-theme="mimo"] .lb-em{color:var(--es-accent);font-style:inherit;text-decoration:underline wavy color-mix(in srgb,var(--es-accent) 60%,transparent);text-decoration-thickness:3px;text-underline-offset:.16em}
+[data-es-theme="mimo"] .es-announce{background:var(--es-accent);color:var(--es-on-accent);font:700 13px/1 var(--es-body)}
+[data-es-theme="mimo"] .es-header{background:var(--es-paper);border-bottom:0}
+[data-es-theme="mimo"] .es-logo{font:600 28px/1 var(--es-heading)}
+[data-es-theme="mimo"] .es-header__links a{font:600 14px/1 var(--es-body)}
+[data-es-theme="mimo"] .es-btn,[data-es-theme="mimo"] .lb-card__buy{border-radius:999px;font:700 14px/1 var(--es-body);transition:transform .15s}
+[data-es-theme="mimo"] .es-btn:hover{transform:translateY(-2px)}
+[data-es-theme="mimo"] .lb-cover-full .es-display{font-size:clamp(34px,4.6vw,68px)}
+[data-es-theme="mimo"] .lb-cover-full .es-btn--light{background:var(--es-base-accent);border-color:var(--es-base-accent);color:var(--es-base-on-accent)}
+[data-es-theme="mimo"] .lb-letters__tile{font-family:var(--es-heading)}
+[data-es-theme="mimo"] .lb-card .lb-card__media{border-radius:20px}
+[data-es-theme="mimo"] .lb-card .es-card__name{font:600 17px/1.15 var(--es-heading)}
+[data-es-theme="mimo"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media,.lb-scroller img){border-radius:var(--lb-r-lg)}
+[data-es-theme="mimo"] .lb-wordmark__word{font-family:var(--es-heading);font-weight:600;color:var(--es-accent)}
+:root:not([data-es-still]) [data-es-theme="mimo"] main .lb:not([data-in]) :is(.lb-head,.lb-block__words,.lb-letters__words){opacity:0}
+[data-es-theme="mimo"] main .lb[data-in] :is(.lb-head,.lb-block__words,.lb-letters__words){animation:mi-bounce .8s cubic-bezier(.3,.7,.3,1) both}
+[data-es-theme="mimo"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:mimo */
+/* theme:oliva */
+/* Oliva (spec 2026-11-10 round 4, after Graza): a warm peach ground, a soft serif for everything big, small typewriter words for labels,
+ * the brand colour as a bright band (the trio, the ways to use it), pill buttons in the brand colour, a giant name under the products. */
+[data-es-theme="oliva"]{--es-radius:16px;--lb-r-lg:18px;--es-t-weight:400;--es-t-track:-.02em;--es-t-case:none}
+[data-es-theme="oliva"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display,.lb-block__title){font-family:var(--es-heading);font-weight:400;font-style:var(--es-t-style,normal);text-transform:none;letter-spacing:-.02em;line-height:1}
+[data-es-theme="oliva"] .lb-head h2{font-size:clamp(32px,4vw,60px)}
+[data-es-theme="oliva"] :is(.es-eyebrow,.lb-eyebrow,.es-announce,.lb-lede,.lb-body){font-family:var(--es-body)}
+[data-es-theme="oliva"] :is(.es-eyebrow,.lb-eyebrow){letter-spacing:.14em;text-transform:uppercase;font-size:11px}
+[data-es-theme="oliva"] .lb-em{font-style:italic;color:inherit}
+[data-es-theme="oliva"] .es-announce{background:var(--es-ink);color:var(--es-paper);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+[data-es-theme="oliva"] .es-header{background:var(--es-paper);border-bottom:1px solid color-mix(in srgb,var(--es-ink) 18%,transparent)}
+[data-es-theme="oliva"] .es-logo{font:400 30px/1 var(--es-heading);letter-spacing:-.03em;text-transform:uppercase}
+[data-es-theme="oliva"] .es-btn,[data-es-theme="oliva"] .lb-card__buy{border-radius:999px;background:var(--es-accent);border:1.5px solid var(--es-ink);color:var(--es-on-accent);font:600 12px/1 var(--es-body);letter-spacing:.08em;text-transform:uppercase}
+[data-es-theme="oliva"] .lb-block-split .lb-block__panel{background:var(--es-accent);color:var(--es-on-accent)}
+[data-es-theme="oliva"] .lb-block-split .lb-block__panel :is(h2,p,.lb-eyebrow){color:inherit}
+[data-es-theme="oliva"] .lb-block-split .lb-block__photo img{object-fit:contain;padding:clamp(16px,3vw,40px);background:color-mix(in srgb,var(--es-ink) 6%,var(--es-paper))}
+[data-es-theme="oliva"] .lb-card .lb-card__media{border-radius:14px;background:color-mix(in srgb,var(--es-ink) 6%,var(--es-paper))}
+[data-es-theme="oliva"] .lb-card .es-card__name{font:400 20px/1.1 var(--es-heading)}
+[data-es-theme="oliva"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media,.lb-scroller img){border-radius:var(--lb-r-lg)}
+[data-es-theme="oliva"] .lb-wordmark__word{font-family:var(--es-heading);text-transform:uppercase;letter-spacing:-.04em}
+[data-es-theme="oliva"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:oliva */
+/* theme:joya */
+/* Joya (spec 2026-11-10 round 4, after Mejuri): fine jewellery calm — small spaced capitals for every title, a deep block of the brand
+ * colour beside the product, editorial photos edge to edge, twin tall tiles, square corners and a lot of air. */
+[data-es-theme="joya"]{--es-radius:0;--lb-r-lg:0;--es-t-weight:500;--es-t-track:.16em;--es-t-case:uppercase}
+[data-es-theme="joya"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display,.lb-block__title){font-family:var(--es-heading);font-weight:500;font-style:var(--es-t-style,normal);text-transform:uppercase;letter-spacing:.16em;line-height:1.2}
+[data-es-theme="joya"] .lb-head h2{font-size:clamp(15px,1.4vw,20px)}
+[data-es-theme="joya"] .es-display{font-size:clamp(18px,1.8vw,26px)!important}
+[data-es-theme="joya"] .lb-em{font-style:inherit;color:inherit}
+[data-es-theme="joya"] .es-announce{background:var(--es-ink);color:var(--es-paper);font:500 11px/1 var(--es-body);letter-spacing:.14em;text-transform:uppercase}
+[data-es-theme="joya"] .es-header{background:var(--es-paper);border-bottom:0}
+[data-es-theme="joya"] .es-logo{font:600 24px/1 var(--es-heading);letter-spacing:.32em;text-transform:uppercase}
+[data-es-theme="joya"] .es-header__links a{font:500 11px/1 var(--es-body);letter-spacing:.16em;text-transform:uppercase}
+[data-es-theme="joya"] .es-btn,[data-es-theme="joya"] .lb-card__buy{border-radius:0;background:transparent;border:0;border-bottom:1px solid currentColor;color:inherit;padding:4px 0;font:600 11px/1 var(--es-body);letter-spacing:.16em;text-transform:uppercase}
+[data-es-theme="joya"] .es-btn svg{display:none}
+[data-es-theme="joya"] .lb-block-split .lb-block__panel{background:color-mix(in srgb,var(--es-accent) 82%,var(--es-ink));color:#fff;text-align:left;place-items:end start}
+[data-es-theme="joya"] .lb-block-split .lb-block__panel :is(h2,p,.lb-eyebrow,.es-btn){color:#fff}
+[data-es-theme="joya"] .lb-block-split .lb-block__words{justify-items:start}
+[data-es-theme="joya"] .lb-block-split .lb-block__title{font-size:clamp(16px,1.6vw,22px)}
+[data-es-theme="joya"] .lb-block{min-height:clamp(360px,38vw,520px)}
+[data-es-theme="joya"] .lb-card .lb-card__media{border-radius:0;background:color-mix(in srgb,var(--es-ink) 4%,var(--es-paper))}
+[data-es-theme="joya"] .lb-card .es-card__name{font:500 12px/1.3 var(--es-body);letter-spacing:.1em;text-transform:uppercase}
+[data-es-theme="joya"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media,.lb-scroller img,.lb-pair__tile){border-radius:0}
+[data-es-theme="joya"] .lb-statement-inline .lb-title{font-size:clamp(20px,2.4vw,32px);letter-spacing:.12em}
+[data-es-theme="joya"] .lb-wordmark__word{font-family:var(--es-heading);font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+[data-es-theme="joya"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:joya */
+/* theme:origen */
+/* Origen (spec 2026-11-10 round 5, after Onyx Coffee Lab): a coffee house at night — a black photo cover, an elegant serif in small
+ * spaced capitals and big italic lines, cream pages between deep photo bands, origins under arches, thin outline buttons. */
+[data-es-theme="origen"]{--es-radius:2px;--lb-r-lg:4px;--es-t-weight:400;--es-t-track:.02em;--es-t-case:none}
+[data-es-theme="origen"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display){font-family:var(--es-heading);font-weight:400;font-style:var(--es-t-style,normal);letter-spacing:.01em;line-height:1.02}
+[data-es-theme="origen"] .lb-head h2{font-size:clamp(34px,4.4vw,64px)}
+[data-es-theme="origen"] .lb-em{font-style:italic;color:inherit}
+[data-es-theme="origen"] :is(.es-eyebrow,.lb-eyebrow){font:600 11px/1 var(--es-body);letter-spacing:.22em;text-transform:uppercase}
+[data-es-theme="origen"] .es-announce{background:#0e0d0c;color:#efe7da;font:500 11px/1 var(--es-body);letter-spacing:.16em;text-transform:uppercase}
+[data-es-theme="origen"] .es-header{background:#0e0d0c;color:#efe7da;border-bottom:0}
+[data-es-theme="origen"] .es-header :is(a,button,.es-logo,svg){color:#efe7da}
+[data-es-theme="origen"] .es-logo{font:400 30px/1 var(--es-heading);font-style:italic;letter-spacing:.02em}
+[data-es-theme="origen"] .es-header__links a{font:500 11px/1 var(--es-body);letter-spacing:.18em;text-transform:uppercase}
+[data-es-theme="origen"] .es-btn,[data-es-theme="origen"] .lb-card__buy{border-radius:0;background:transparent;border:1px solid currentColor;color:inherit;font:600 11px/1 var(--es-body);letter-spacing:.18em;text-transform:uppercase;padding:13px 22px}
+[data-es-theme="origen"] .es-btn:hover{background:var(--es-ink);color:var(--es-paper)}
+[data-es-theme="origen"] .es-btn *{color:inherit}
+[data-es-theme="origen"] :is([data-es-band="deep"],[data-lb-band="deep"]) .es-btn:hover{background:#efe7da;color:#0e0d0c}
+[data-es-theme="origen"] .lb-cover--dark .es-display,[data-es-theme="origen"] .lb-cover-full .es-display{font-size:clamp(44px,6.4vw,104px);font-style:italic}
+[data-es-theme="origen"] .lb-card .lb-card__media{border-radius:0;background:color-mix(in srgb,var(--es-ink) 6%,var(--es-paper))}
+[data-es-theme="origen"] .lb-card .es-card__name{font:400 20px/1.1 var(--es-heading)}
+[data-es-theme="origen"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media,.lb-scroller img,.lb-pair__tile){border-radius:0}
+[data-es-theme="origen"] .lb-wordmark__word{font-family:var(--es-heading);font-style:italic}
+[data-es-theme="origen"] .es-footer{background:#0e0d0c;color:#efe7da}
+[data-es-theme="origen"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:origen */
+/* theme:morada */
+/* Morada (spec 2026-11-10 round 5, after Schoolhouse): a well-made home — a warm cream page, a bookish serif, charcoal bands that hold
+ * the categories and collections as square photo tiles, rooms beside their story, black square buttons. */
+[data-es-theme="morada"]{--es-radius:4px;--lb-r-lg:6px;--es-t-weight:400;--es-t-track:-.01em;--es-t-case:none}
+[data-es-theme="morada"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display){font-family:var(--es-heading);font-weight:400;font-style:var(--es-t-style,normal);letter-spacing:-.01em;line-height:1.08}
+[data-es-theme="morada"] .lb-head h2{font-size:clamp(28px,3vw,44px)}
+[data-es-theme="morada"] .lb-em{font-style:italic;color:inherit}
+[data-es-theme="morada"] .es-announce{background:var(--es-ink);color:var(--es-paper);font:500 12px/1 var(--es-body)}
+[data-es-theme="morada"] .es-header{background:var(--es-paper);border-bottom:1px solid color-mix(in srgb,var(--es-ink) 14%,transparent)}
+[data-es-theme="morada"] .es-logo{font:600 22px/1 var(--es-body);letter-spacing:.3em;text-transform:uppercase}
+[data-es-theme="morada"] .es-header__links a{font:500 13px/1 var(--es-body)}
+[data-es-theme="morada"] .es-btn,[data-es-theme="morada"] .lb-card__buy{border-radius:2px;background:var(--es-ink);border-color:var(--es-ink);color:var(--es-paper);font:600 12px/1 var(--es-body);letter-spacing:.08em;text-transform:uppercase}
+[data-es-theme="morada"] .es-btn *{color:inherit}
+[data-es-theme="morada"] :is([data-es-band="deep"],[data-lb-band="deep"]){--es-paper:#2d2d2b;--es-ink:#f4efe6;background:#2d2d2b;color:#f4efe6}
+[data-es-theme="morada"] :is([data-es-band="deep"],[data-lb-band="deep"]) .es-btn{background:#f4efe6;color:#2d2d2b;border-color:#f4efe6}
+[data-es-theme="morada"] :is([data-es-band="deep"],[data-lb-band="deep"]) .lb-tiles__tile{aspect-ratio:1}
+[data-es-theme="morada"] .lb-card .lb-card__media{border-radius:2px;background:color-mix(in srgb,var(--es-ink) 5%,var(--es-paper))}
+[data-es-theme="morada"] .lb-card .es-card__name{font:400 17px/1.2 var(--es-heading)}
+[data-es-theme="morada"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media,.lb-scroller img,.lb-pair__tile){border-radius:2px}
+[data-es-theme="morada"] .lb-wordmark__word{font-family:var(--es-body);font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+[data-es-theme="morada"] .es-footer{background:#2d2d2b;color:#f4efe6}
+[data-es-theme="morada"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:morada */
+/* theme:vigor */
+/* Vigor (spec 2026-11-10 round 5, after Alo): a clean white studio — small black capitals, two big photos side by side at the top, tall
+ * portrait tiles for each activity or colour, product rows with their colour dots, black square buttons, nothing rounded. */
+[data-es-theme="vigor"]{--es-radius:0;--lb-r-lg:0;--es-t-weight:600;--es-t-track:.08em;--es-t-case:uppercase}
+[data-es-theme="vigor"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display){font-family:var(--es-heading);font-weight:600;font-style:var(--es-t-style,normal);text-transform:uppercase;letter-spacing:.08em;line-height:1.1}
+[data-es-theme="vigor"] .lb-head h2{font-size:clamp(16px,1.5vw,22px)}
+[data-es-theme="vigor"] .es-display{font-size:clamp(22px,2.4vw,36px)!important}
+[data-es-theme="vigor"] .lb-em{font-style:inherit;color:inherit}
+[data-es-theme="vigor"] .es-announce{background:#000;color:#fff;font:600 11px/1 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+[data-es-theme="vigor"] .es-header{background:#fff;border-bottom:0}
+[data-es-theme="vigor"] .es-logo{font:700 30px/1 var(--es-heading);letter-spacing:-.04em;text-transform:lowercase}
+[data-es-theme="vigor"] .es-header__links a{font:600 12px/1 var(--es-body);letter-spacing:.1em;text-transform:uppercase}
+[data-es-theme="vigor"] .es-btn,[data-es-theme="vigor"] .lb-card__buy{border-radius:0;background:#000;border-color:#000;color:#fff;font:600 11px/1 var(--es-body);letter-spacing:.14em;text-transform:uppercase}
+[data-es-theme="vigor"] .es-btn *{color:inherit}
+[data-es-theme="vigor"] .lb-imgcols__photo,[data-es-theme="vigor"] .lb-image-columns img{aspect-ratio:3/4.4;object-fit:cover}
+[data-es-theme="vigor"] .lb-card .lb-card__media{border-radius:0;background:#f4f4f2;aspect-ratio:3/4}
+[data-es-theme="vigor"] .lb-card .es-card__name{font:500 12px/1.3 var(--es-body);text-transform:uppercase;letter-spacing:.06em}
+[data-es-theme="vigor"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media,.lb-scroller img,.lb-pair__tile,.lb-imgcols__photo){border-radius:0}
+[data-es-theme="vigor"] .lb-wordmark__word{font-family:var(--es-heading);font-weight:700;letter-spacing:-.05em;text-transform:lowercase}
+@media (max-width:760px){[data-es-theme="vigor"] .lb-tiles__label{font-size:12px;letter-spacing:.04em;overflow-wrap:anywhere}}
+[data-es-theme="vigor"] .es-footer{background:#000;color:#fff}
+[data-es-theme="vigor"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:vigor */
+/* theme:ramo */
+/* Ramo (spec 2026-11-10 round 5, after Bloom & Wild): a friendly gift shop — round photos for each occasion at the top, a warm serif,
+ * occasion cards, a bright offer bar in the brand's light tint, deep colour splits beside a photo, rounded corners and pill buttons. */
+[data-es-theme="ramo"]{--es-radius:16px;--lb-r-lg:18px;--es-t-weight:500;--es-t-track:-.01em;--es-t-case:none}
+[data-es-theme="ramo"] :is(.es-h2,.lb-title,.lb-head h2,h1,.es-display,.lb-block__title){font-family:var(--es-heading);font-weight:500;font-style:var(--es-t-style,normal);letter-spacing:-.01em;line-height:1.05}
+[data-es-theme="ramo"] .lb-head h2{font-size:clamp(26px,2.8vw,40px)}
+[data-es-theme="ramo"] .lb-em{font-style:italic;color:var(--es-accent)}
+[data-es-theme="ramo"] .es-announce{background:color-mix(in srgb,var(--es-accent) 22%,#fff7d6);color:var(--es-ink);font:600 13px/1 var(--es-body)}
+[data-es-theme="ramo"] .es-header{background:var(--es-paper);border-bottom:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}
+[data-es-theme="ramo"] .es-logo{font:600 26px/.95 var(--es-heading);letter-spacing:-.01em}
+[data-es-theme="ramo"] .es-btn,[data-es-theme="ramo"] .lb-card__buy{border-radius:999px;font:700 14px/1 var(--es-body)}
+[data-es-theme="ramo"] .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile{border-radius:50%}
+[data-es-theme="ramo"] .lb-block-split .lb-block__panel{background:color-mix(in srgb,var(--es-accent) 86%,var(--es-ink));color:#fff}
+[data-es-theme="ramo"] .lb-block-split .lb-block__panel :is(h2,p,.lb-eyebrow){color:#fff}
+[data-es-theme="ramo"] .lb-card .lb-card__media{border-radius:14px}
+[data-es-theme="ramo"] .lb-card .es-card__name{font:500 18px/1.15 var(--es-heading)}
+[data-es-theme="ramo"] :is(.lb-tiles__tile,.lb-split__media,.lb-steps__media,.lb-scroller img,.lb-pair__tile){border-radius:var(--lb-r-lg)}
+[data-es-theme="ramo"] .lb-wordmark__word{font-family:var(--es-heading);color:var(--es-accent)}
+[data-es-theme="ramo"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:ramo */
 /* New sections copied from real stores (spec docs/superpowers/specs/2026-11-04-new-sections-from-real-stores.md). */
 /* lb:cover-duo */
 .lb-duo{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--es-paper)}
@@ -3939,3 +4415,310 @@ main[data-lb-home]{overflow-x:clip}
 .lb-ba__frame:has(.lb-ba__range:focus-visible) .lb-ba__knob{outline:3px solid var(--es-accent);outline-offset:3px}
 @media (max-width:760px){.lb-ba__frame{aspect-ratio:1}}
 /* /lb:before-after */
+/* Owner 2026-11-10 («something i dont like at all is really big pictures», Láminas Lu and the end of BOXY): tighter still — a cover
+ * about half a screen, banners and campaign photos lower, two product cards never half the page each, the photo beside products
+ * no taller than its products. */
+.lb-cover-full{min-height:min(64vh,600px)}
+.lb-promo-banner,.lb-closing-photo{min-height:min(46vh,420px)}
+.lb-lookbook__photo{min-height:360px;max-height:min(60vh,500px)}
+.lb-cards[data-count="2"]{max-width:620px}
+.lb-cards[data-count="3"]{max-width:900px;margin-inline:auto}
+.lb-bento__photo{min-height:300px;max-height:min(56vh,480px)}
+.lb-split__media,.lb-list__media,.lb-steps__media{max-height:min(60vh,480px)}
+.lb-campaign__photo{height:clamp(300px,42vw,540px)}
+.lb-campaign-strip[data-lb-look="wide"] .lb-campaign__photo{height:clamp(240px,30vw,400px)}
+.lb-block{min-height:clamp(280px,30vw,440px)}
+.lb-values__photo{min-height:clamp(300px,32vw,440px)}
+.lb-mega__media{width:min(100%,440px)}
+.lb-arches__photo{max-height:min(56vh,460px)}
+.lb-verbs__photo img{max-height:min(56vh,440px)}
+.lb-cover-stage{min-height:min(66vh,620px)}
+.lb-cover-duo .lb-duo__half{min-height:min(64vh,600px)}
+.lb-marquee-photo{padding:clamp(56px,7vw,110px) 0}
+.lb-cases__photo{max-height:min(48vh,400px);object-fit:cover}
+/* Owner 2026-11-10 (Bake Me's floating cookie): a product cut-out floats — no frame, no crop, a soft shadow under it. */
+.lb-cut{border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;rotate:0deg!important;mix-blend-mode:normal!important;object-fit:contain!important;filter:drop-shadow(0 18px 22px rgb(0 0 0 / .2))}
+.lb-mega__media .lb-cut{aspect-ratio:auto;max-height:min(60vh,520px)}
+.lb-names__photo.lb-cut{width:clamp(70px,9vw,140px)}
+
+/* lb:cover-kinetic,strip-velocity,statement-rotate,story-carousel,tabs-photo */
+/* Rich sections (owner 2026-11-13): the kit's rich pieces as library sections; type and colours stay the template's. */
+.lb-kinetic__copy{width:min(1100px,100%);margin:0 auto;padding:clamp(56px,8vw,120px) 24px clamp(28px,4vw,56px)}
+.lb-kinetic__title{margin:0;max-width:16ch;font-family:var(--es-heading);text-wrap:balance}
+/* The moving cover is light: the themes that clear their header over a photo cover (Impulse, Motion, Amigos) keep it solid
+ * over this one (selectors use .lb-cover:not(.lb-cover-kinetic), owner 2026-11-13 Remolino). */
+/* Beats a theme's plain .lb-title size (Botica 26–36px): this cover's headline is the page's largest words in every template. */
+.lb.lb-cover-kinetic .lb-kinetic__title{font-size:clamp(40px,6vw,80px);line-height:1.02}
+.lb-kinetic__copy .lb-eyebrow{margin-bottom:18px}
+/* Whole photos (owner 2026-11-13 «dont let yapi crop pictures»): the photo's own shape, never cut, never wider than it is. */
+.lb-whole{display:block;width:auto;height:auto;max-width:100%;margin-inline:auto;border-radius:var(--lb-r-lg)}
+.lb-kinetic__media{width:min(1100px,calc(100% - 48px));margin:0 auto clamp(48px,6vw,88px)}
+.lb-kinetic__media .lb-whole{max-height:76vh}
+.lb-rotate{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(28px,6vw,96px);align-items:center}
+.lb-rotate[data-lb-side=left] .lb-rotate__media{order:-1}
+.lb-rotate__title{margin:0;text-wrap:balance}
+.lb-rotate__word{color:var(--es-accent)}
+[data-es-band=accent] .lb-rotate__word,[data-es-band=deep] .lb-rotate__word{color:inherit;text-decoration:underline;text-decoration-thickness:.06em;text-underline-offset:.12em}
+.lb-rotate__copy .lb-lede{margin-top:20px}
+.lb-rotate__media{margin:0;width:min(520px,100%);justify-self:center}
+.lb-rotate__media .lb-whole{max-height:70vh}
+.lb-carousel{margin-top:clamp(20px,3vw,36px)}
+.lb-carousel .ui-k-carousel__track{border-radius:var(--lb-r-lg)}
+/* One frame for every slide; each photo shows whole inside it on the store's soft ground. */
+.lb-carousel .ui-k-carousel__slide{background:var(--es-muted,#eee)}
+.lb-carousel .ui-k-carousel__slide img{object-fit:contain}
+.lb-carousel .ui-k-carousel__copy a{color:#fff;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.lb-tabs{margin-top:clamp(16px,2.5vw,28px)}
+.lb-tabs .ui-k-tabs__list{justify-content:flex-start;gap:10px}
+.lb-tabs .ui-k-tabs__list .ui-k-tabs__tab{min-height:44px;padding:10px 22px;border:1px solid var(--lb-line);border-radius:999px;background:transparent;color:var(--es-ink);font:500 15px/1.2 var(--es-body);letter-spacing:0;text-transform:none;box-shadow:none}
+.lb-tabs .ui-k-tabs__list .ui-k-tabs__tab[aria-selected="true"]{background:var(--es-accent);border-color:var(--es-accent);color:var(--es-on-accent)}
+.lb-tabs__panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:center}
+.lb-tabs__photo{margin:0}
+.lb-tabs__photo .lb-whole{max-height:62vh}
+.lb-tabs__lead{margin:0 0 18px;max-width:34ch;font:500 clamp(20px,2vw,28px)/1.35 var(--es-heading);text-wrap:pretty}
+.lb-strip-velocity{overflow:hidden;padding:clamp(14px,2vw,22px) 0;background:var(--es-paper);color:var(--es-ink);border-block:1px solid var(--lb-line)}
+.lb-strip-velocity[data-lb-band=accent]{background:var(--es-accent);color:var(--es-on-accent);border:0}
+.lb-strip-velocity[data-lb-band=deep]{background:var(--es-deep);color:var(--es-paper);border:0}
+.lb-velocity__line{display:flex;gap:40px;margin:0;white-space:nowrap;font:600 clamp(28px,4vw,56px)/1.1 var(--es-heading);letter-spacing:-.01em}
+.lb-velocity__line span{display:inline-flex;align-items:center;gap:40px}
+.lb-velocity__line i{font-style:normal;font-size:.45em;color:var(--es-accent)}
+.lb-strip-velocity[data-lb-band] .lb-velocity__line i{color:inherit;opacity:.7}
+@media (max-width:760px){
+  .lb-rotate,.lb-tabs__panel{grid-template-columns:1fr}
+  .lb-rotate[data-lb-side=left] .lb-rotate__media{order:0}
+  .lb-rotate__media{width:100%}
+  .lb-kinetic__media{width:calc(100% - 32px)}
+  .lb-kinetic__media .lb-whole{max-height:70vh}
+  .lb-carousel .ui-k-carousel__slide{aspect-ratio:4/5}
+}
+/* /lb:cover-kinetic,strip-velocity,statement-rotate,story-carousel,tabs-photo */
+
+/* Hero kit + cards (owner 2026-11-13 «better inside of product cards, better looking buttons, no tiene que verse apagado, more
+ * modern design luxury», after Amboras's heroes). */
+/* Product cards: the add button is the brand's solid colour, never a grey outline; price reads first after the name. */
+.lb-card .es-card__add{border:0;background:var(--es-accent);color:var(--es-on-accent);box-shadow:0 10px 22px -12px color-mix(in srgb,var(--es-accent) 80%,#000);transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s,filter .2s}
+.lb-card .es-card__add:hover{background:var(--es-accent);color:var(--es-on-accent);transform:translateY(-1px) scale(1.06);filter:brightness(1.06);box-shadow:0 14px 26px -12px color-mix(in srgb,var(--es-accent) 85%,#000)}
+.lb-card .es-card__add:active,.lb-card .lb-card__buy:active{transform:scale(.96)}
+.lb-card .lb-card__buy{border:0;background:var(--es-accent);color:var(--es-on-accent);transition:transform .2s cubic-bezier(.2,.7,.2,1),filter .2s,box-shadow .2s}
+.lb-card .lb-card__buy:hover{filter:brightness(1.06);box-shadow:0 14px 26px -14px color-mix(in srgb,var(--es-accent) 85%,#000)}
+.lb-card .es-card__price{font-size:clamp(15px,1.15vw,17px);font-weight:650;letter-spacing:-.005em}
+.lb-card .es-card__media img{transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.lb-card:hover .es-card__media img{transform:scale(1.035)}
+@media (prefers-reduced-motion:reduce){.lb-card .es-card__add,.lb-card .lb-card__buy,.lb-card .es-card__media img{transition:none}.lb-card:hover .es-card__media img{transform:none}}
+/* Cover words: the place label in a spaced monospace, the main button a pill with its arrow in a dark circle. */
+:is(.lb-cover,.lb-hero-split) :is(.lb-eyebrow,.lb-hero-split__eyebrow){font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;font-weight:500;font-size:clamp(11px,.9vw,13px);letter-spacing:.22em;text-transform:uppercase}
+.es:not([data-es-button="underline"]) .lb-cover .lb-actions .lb-btn:first-child{padding-right:7px;gap:16px}
+.es:not([data-es-button="underline"]) .lb-cover .lb-actions .lb-btn:first-child svg{box-sizing:border-box;width:38px;height:38px;padding:10px;border-radius:50%;background:var(--es-ink);color:var(--es-paper);flex:none}
+.es:not([data-es-button="underline"]) .lb-cover--dark .lb-actions .lb-btn:first-child svg,.es:not([data-es-button="underline"]) .lb-cover .lb-actions .es-btn--ink:first-child svg{background:var(--es-accent);color:var(--es-on-accent)}
+/* On a photo cover the accent word must read over the photo: a light tint of the accent. */
+.lb-cover--dark :is(h1,.lb-title,.lb-stage__title) .lb-em{color:color-mix(in srgb,var(--es-accent) 45%,#fff)}
+
+/* lb:heroshop */
+/* The hero shop: real products on the cover. Floating over a photo cover's corner, or a row under the words. */
+.lb-heroshop{position:relative;z-index:2}
+.lb-heroshop[data-place="float"]{position:absolute;right:clamp(16px,3vw,40px);bottom:clamp(16px,3vw,40px);width:min(400px,calc(100% - 32px))}
+.lb-heroshop[data-place="row"]{width:min(1280px,100%);margin:0 auto;padding:0 24px clamp(32px,4vw,56px)}
+.lb-hero-split__panel .lb-heroshop[data-place="row"]{width:100%;padding:24px 0 0}
+.lb-heroshop .lb-heroshop__cards{display:grid;gap:10px;grid-template-columns:1fr}
+.lb-heroshop[data-place="row"] .lb-heroshop__cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+.lb-heroshop .lb-card{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:14px;margin:0;padding:10px 12px 10px 10px;border:0;border-radius:18px;background:var(--es-paper);color:var(--es-ink);box-shadow:0 22px 44px -26px rgb(0 0 0 / .5);min-height:0;height:auto;text-align:left}
+.lb-heroshop .lb-card__media{display:block;width:64px;height:64px;margin:0;padding:0;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--es-muted)}
+.lb-heroshop .lb-card__media img{width:100%;height:100%;object-fit:contain;border-radius:0}
+.lb-heroshop .lb-card__body{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 12px;margin:0;padding:0;background:none;text-align:left}
+.lb-heroshop .lb-card :is(.lb-card__body,.es-card__name,.es-card__price,.es-card__add,.lb-card__buy){position:static;transform:none;inset:auto}
+.lb-heroshop .es-card__row{display:contents}
+.lb-heroshop .lb-card .es-card__name{grid-column:1;margin:0;font:600 15px/1.25 var(--es-body);letter-spacing:0;text-transform:none;color:inherit;text-shadow:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-heroshop .lb-card .es-card__price{grid-column:1;margin:0;font:500 13px/1.3 var(--es-body);opacity:.72}
+.lb-heroshop .lb-card :is(.es-card__add,.lb-card__buy){grid-column:2;grid-row:1 / span 2;margin:0}
+.lb-heroshop .lb-card .lb-card__buy{width:auto;min-height:40px;padding:0 16px;border-radius:999px;font:600 13px/1 var(--es-body);letter-spacing:0;text-transform:none}
+.lb-heroshop .lb-card :is(.lb-card__badge,.lb-card__ribbon,.lb-card__options,.es-card__save,.menu-item__eyebrow,.menu-item__points,.menu-item__chips,.menu-item__deal,.menu-item__best){display:none}
+@media (max-width:760px){
+  .lb-heroshop[data-place="float"]{position:relative;right:auto;bottom:auto;width:auto;margin:0 16px 20px}
+  .lb-heroshop[data-place="row"]{padding:0 16px 28px}
+}
+/* Hero shop, whatever the store's card: one compact, left-aligned row (overlay/centred card styles reset), on the paper. */
+.lb-heroshop .lb-card,.lb-heroshop .lb-card *{text-align:left}
+.lb-heroshop .lb-card .lb-card__body,.lb-heroshop .lb-card .lb-card__media{background:none;background-image:none;box-shadow:none;color:inherit;justify-items:start}
+.lb-heroshop .lb-card .lb-card__media{background:var(--es-muted)}
+.lb-heroshop .lb-card :is(.lb-card__body,.lb-card__media)::before,.lb-heroshop .lb-card :is(.lb-card__body,.lb-card__media)::after{content:none;display:none}
+.lb-heroshop .lb-card .es-card__name,.lb-heroshop .lb-card .es-card__price{color:var(--es-ink);text-shadow:none}
+.lb-heroshop .lb-card .es-card__add{width:40px;height:40px;justify-self:end}
+.lb-heroshop .lb-card .lb-card__body{position:static;inset:auto;padding:0;border-radius:0;z-index:auto}
+.lb-heroshop .lb-card .lb-card__body :is(.es-card__name,.es-card__price){color:var(--es-ink)}
+.lb-heroshop .lb-card .es-card__add{background:var(--es-accent);color:var(--es-on-accent);border:0}
+/* A centred cover shows its shop between the words and the photo, where the eye already is. */
+.lb-cover-centered{display:flex;flex-direction:column}
+.lb-cover-centered>.lb-cover-centered__copy{order:0}
+.lb-cover-centered>.lb-heroshop{order:1;width:min(980px,100%)}
+.lb-cover-centered>.lb-cover-centered__media{order:2}
+/* On a coloured cover band the section's own paper/ink are the band's: the shop cards keep the store's base paper, ink and accent. */
+.lb-heroshop{--es-paper:var(--es-base-paper,#fff);--es-ink:var(--es-base-ink,#111);--es-muted:var(--es-base-muted,#eee);--es-accent:var(--es-base-accent,#111);--es-on-accent:var(--es-base-on-accent,#fff)}
+.lb-heroshop .lb-card .lb-card__buy{background:var(--es-accent);color:var(--es-on-accent);border:0;box-shadow:none}
+.lb-heroshop[data-place="row"]{padding-top:24px}
+.lb-heroshop[data-place="row"][data-count="1"] .lb-heroshop__cards{max-width:420px}
+/* /lb:heroshop */
+
+/* lb:cover-split,cover-centered,cover-half,cover-ribbon,cover-mega,cover-poster */
+/* Fuller hero (owner 2026-11-13 «i want the picture fuller in hero»): a cover on its photo's own backdrop colour — the photo melts into
+ * the page, whole and large, with no frame, border or shadow; the words take the ink that reads on that ground. */
+.lb-bleed[data-ground]{background:var(--lb-ground);--es-paper:var(--lb-ground);--es-muted:color-mix(in srgb,var(--lb-ground) 88%,var(--es-base-ink,#111))}
+.lb-bleed[data-ground="light"]{--es-ink:var(--es-base-ink,#111);color:var(--es-ink)}
+.lb-bleed[data-ground="dark"]{--es-ink:#ffffff;color:#ffffff}
+.lb-bleed[data-ground]::before,.lb-bleed[data-ground]::after{background:none}
+.lb-bleed[data-ground] :is(.lb-cover-split__media,.lb-cover-centered__media,.lb-cover-half__media,.lb-cover-ribbon__media,.lb-mega__media,.lb-cover-poster__media){border:0;border-radius:0;box-shadow:none;background:none;overflow:visible;transform:none;animation:none}
+.lb-bleed[data-ground] :is(.lb-cover-split__media,.lb-cover-centered__media,.lb-cover-half__media,.lb-cover-ribbon__media,.lb-mega__media,.lb-cover-poster__media) img{object-fit:contain;border-radius:0;box-shadow:none;transform:none}
+.lb-cover-split[data-ground] .lb-cover-split__media,.lb-cover-ribbon[data-ground] .lb-cover-ribbon__media{aspect-ratio:auto;height:min(78vh,760px);max-height:none}
+.lb-cover-split[data-ground] .lb-cover-split__media img,.lb-cover-ribbon[data-ground] .lb-cover-ribbon__media img{display:block;width:auto;max-width:100%;height:100%;margin-inline:auto}
+.lb-cover-centered[data-ground] .lb-cover-centered__media{width:min(1280px,100%);aspect-ratio:auto;height:min(70vh,700px);margin-bottom:0}
+.lb-cover-centered[data-ground] .lb-cover-centered__media img{display:block;width:auto;max-width:100%;height:100%;margin-inline:auto}
+@media (max-width:760px){.lb-cover-split[data-ground] .lb-cover-split__media,.lb-cover-ribbon[data-ground] .lb-cover-ribbon__media,.lb-cover-centered[data-ground] .lb-cover-centered__media{height:min(60vh,520px)}}
+.lb-cover-mega[data-ground] .lb-mega__media{width:min(100%,640px)}
+.lb-cover-mega[data-ground] .lb-mega__media img{border:0;border-radius:0;box-shadow:none;transform:none}
+.lb-bleed[data-ground="light"] :is(h1,.lb-title,.lb-stage__title) .lb-em{color:var(--es-base-accent)}
+.lb-bleed[data-ground="dark"] :is(h1,.lb-title,.lb-stage__title) .lb-em{color:color-mix(in srgb,var(--es-base-accent) 45%,#fff)}
+/* Owner 2026-11-13 («that background… its blurry»): no faded edges — the photo stays sharp; a busy one gets rounded corners. */
+.lb-bleed[data-ground][data-lb-look="framed"] :is(.lb-cover-split__media,.lb-cover-half__media) img{border-radius:22px}
+.lb-bleed[data-ground] :is(.lb-cover-split__media,.lb-cover-centered__media,.lb-cover-half__media,.lb-cover-ribbon__media,.lb-mega__media,.lb-cover-poster__media) img{background:none}
+/* /lb:cover-split,cover-centered,cover-half,cover-ribbon,cover-mega,cover-poster */
+
+/* lb:packs-kits */
+/* The store's packs (owner 2026-11-13): one card per pack — its products' photos side by side, name, contents, saving, one button. */
+.lb-packs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:clamp(14px,2vw,22px);margin-top:clamp(18px,3vw,32px)}
+.lb-packs>p{margin:0;color:var(--es-ink);opacity:.7}
+.pym-pack{display:grid;grid-template-rows:auto 1fr;border-radius:var(--lb-r-lg,22px);overflow:hidden;background:var(--es-paper);border:1px solid var(--lb-line,#0001);box-shadow:0 22px 44px -32px rgb(0 0 0 / .4)}
+.pym-pack__photos{display:grid;grid-template-columns:repeat(var(--n,1),1fr);gap:2px;aspect-ratio:16/10;background:var(--es-muted)}
+.pym-pack__photos[data-count="2"]{--n:2}.pym-pack__photos[data-count="3"]{--n:3}
+.pym-pack__photos img{width:100%;height:100%;object-fit:contain;display:block;background:var(--es-paper)}
+.pym-pack__body{display:grid;gap:6px;align-content:start;padding:16px 18px 18px}
+.pym-pack__label{justify-self:start;margin:0;padding:3px 10px;border-radius:999px;background:var(--es-accent);color:var(--es-on-accent);font:600 11px/1.4 var(--es-body);letter-spacing:.04em}
+.pym-pack__name{margin:0;font:600 clamp(18px,1.5vw,22px)/1.2 var(--es-heading)}
+.pym-pack__inside{margin:0;font-size:14px;line-height:1.45;opacity:.8}
+.pym-pack__save{margin:2px 0 0;font:700 15px/1.3 var(--es-body);color:var(--es-accent)}
+.pym-pack__note{margin:6px 0 0;font-size:12px;opacity:.65}
+.pym-pack__add{justify-self:start;margin-top:10px;min-height:44px;padding:0 22px;border:0;border-radius:999px;background:var(--es-accent);color:var(--es-on-accent);font:600 14px/1 var(--es-body);cursor:pointer;box-shadow:0 12px 24px -14px color-mix(in srgb,var(--es-accent) 80%,#000);transition:transform .2s cubic-bezier(.2,.7,.2,1),filter .2s}
+.pym-pack__add:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.pym-pack__add:active{transform:scale(.97)}
+/* /lb:packs-kits */
+
+/* lb:pay-ways */
+/* Ways to pay (owner 2026-11-13): the store's real methods as a calm row of tiles, the brand's accent on the names. */
+.lb-payways{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,2fr);gap:clamp(18px,4vw,56px);align-items:center}
+.lb-payways .lb-payways__title{margin:0;font-size:clamp(26px,2.6vw,38px);line-height:1.1}
+.pym-pay{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px;margin:0;padding:0;list-style:none}
+.pym-pay li{display:grid;gap:4px;padding:14px 16px;border-radius:16px;background:var(--es-paper);border:1px solid var(--lb-line,#0001)}
+.pym-pay strong{font:700 16px/1.2 var(--es-heading);color:var(--es-accent)}
+.pym-pay span{font-size:13px;line-height:1.4;opacity:.75}
+.pym-pay__note{margin:10px 0 0;font-size:12px;opacity:.65}
+@media (max-width:760px){.lb-payways{grid-template-columns:1fr}}
+/* /lb:pay-ways */
+
+/* lb:visit-store */
+/* Visítanos (owner 2026-11-13, Boosterpack «Visit us»): the photo whole and rounded inside one card, the map loads on tap. */
+.lb-visit{gap:clamp(12px,2vw,24px);padding:clamp(10px,1.4vw,16px);align-items:center;background:var(--es-paper);border:1px solid var(--lb-line,#0001);box-shadow:0 30px 60px -44px rgb(0 0 0 / .45)}
+.lb-visit__media{position:relative;display:grid;place-items:center;min-height:0;align-self:center;border-radius:calc(var(--lb-r-lg,22px) - 6px);overflow:hidden}
+.lb-visit__media img{display:block;width:auto;max-width:100%;height:auto;max-height:620px;border-radius:inherit}
+.lb-visit__media--map{min-height:360px;background:color-mix(in srgb,var(--es-accent) 12%,var(--es-muted))}
+.lb-visit__pin{display:grid;place-items:center;width:84px;height:84px;border-radius:50%;background:var(--es-paper);color:var(--es-accent);box-shadow:0 18px 40px -22px rgb(0 0 0 / .5)}
+.lb-visit__pin svg{width:34px;height:34px}
+.lb-visit__maptap{position:absolute;left:16px;bottom:16px;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 18px;border:0;border-radius:999px;background:var(--es-paper);color:var(--es-ink);font:600 14px/1 var(--es-body);cursor:pointer;box-shadow:0 12px 28px -14px rgb(0 0 0 / .55);transition:transform .2s ease}
+.lb-visit__maptap svg{width:16px;height:16px;color:var(--es-accent)}
+.lb-visit__maptap:hover{transform:translateY(-1px)}
+.lb-visit__maptap:active{transform:scale(.97)}
+.lb-visit__media[data-map]{align-self:stretch;min-height:380px}
+.lb-visit__media[data-map] :is(img,.lb-visit__pin){visibility:hidden}
+.lb-visit__media[data-map] .lb-visit__maptap{display:none}
+.lb-visit__map{position:absolute;inset:0;width:100%;height:100%;border:0}
+.lb-visit__card{padding:clamp(20px,3.4vw,52px);color:var(--es-ink)}
+.lb-visit__rows{margin:22px 0 0}
+.lb-visit__zones{display:grid;gap:10px;width:100%;margin-top:20px}
+.lb-visit__label{display:flex;align-items:center;gap:10px;margin:0;font:600 13px/1.2 var(--es-body);letter-spacing:.12em;text-transform:uppercase;opacity:.7}
+.lb-visit__label svg{width:18px;height:18px;color:var(--es-accent)}
+.lb-visit__zones ul{display:grid;margin:0;padding:0;list-style:none;border-top:1px solid var(--lb-line,#0001)}
+.lb-visit__zones li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;padding:11px 0;border-bottom:1px solid var(--lb-line,#0001);font-size:15px;line-height:1.4}
+.lb-visit__zones li span:first-child{font-weight:600}
+.lb-visit__zones li span:last-child{opacity:.75;font-variant-numeric:tabular-nums}
+.lb-visit__actions{margin-top:26px;flex-wrap:wrap}
+@media (max-width:760px){.lb-visit{grid-template-columns:1fr}.lb-visit__media img{max-height:440px}}
+/* /lb:visit-store */
+
+/* ---- product page «duo» (owner 2026-11-13, after Clyro's product page): two rounded panels — the photo whole on its own ground with
+   the thumbnails over it, the purchase on a soft panel (kit parts through their data-part hooks: the kit drops store rules aimed at .product-detail__*) with dashed dividers, the price inside the button, payment and two products. */
+.es-pdp[data-es-pdp="duo"]{width:min(1400px,100%);padding-top:20px}
+.es-pdp[data-es-pdp="duo"] .es-pdp__grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(12px,1.6vw,24px);align-items:start}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery{position:sticky;top:88px;aspect-ratio:1;border-radius:26px;overflow:hidden;background:var(--pdp-ground,var(--es-muted));transition:background-color .4s ease}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=gallery]{position:relative;display:block;height:100%;margin:0}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=stage]{height:100%;margin:0;border:0;border-radius:0;background:transparent;aspect-ratio:auto}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=stage] img{width:100%;height:100%;object-fit:contain;background:transparent}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=stage]>div:has([data-product-prev]),.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part^=decor]{display:none}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=thumbs]{position:absolute;left:16px;bottom:16px;z-index:2;display:flex;flex-direction:column;gap:8px;width:auto;max-height:calc(100% - 32px);margin:0;padding:0;overflow:auto;scrollbar-width:none}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=thumb]{flex:none;width:54px;height:54px;padding:0;border:2px solid transparent;border-radius:14px;overflow:hidden;background:var(--es-paper);box-shadow:0 8px 18px -10px rgb(0 0 0 / .45);opacity:.85;transition:opacity .2s ease,border-color .2s ease}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=thumb][aria-pressed="true"]{border-color:var(--es-paper);opacity:1;outline:2px solid var(--es-ink);outline-offset:-4px}
+.es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=thumb] img{width:100%;height:100%;object-fit:contain}
+.es-pdp[data-es-pdp="duo"] .es-pdp__info{position:static;align-content:start;gap:16px;padding:clamp(26px,3.6vw,54px);border-radius:26px;background:color-mix(in srgb,var(--es-ink) 4%,var(--es-paper))}
+.es-pdp[data-es-pdp="duo"] .es-pdp__title :is(h1,h2){margin:0;font-size:clamp(34px,3.4vw,52px);line-height:1.04}
+.es-pdp[data-es-pdp="duo"] .es-pdp__price{font-size:19px}
+.es-pdp[data-es-pdp="duo"] .es-pdp__desc{line-height:1.65}
+.es-pdp[data-es-pdp="duo"] :is(.es-pdp__buy,.es-pdp__pairs):not(:empty){padding-top:22px;border-top:1.5px dashed color-mix(in srgb,var(--es-ink) 30%,transparent)}
+.es .es-pdp[data-es-pdp="duo"] .es-pdp__buy :is(button[data-add],button[data-variant-add]){flex:1 1 auto;width:100%;min-height:58px;font-size:15px}
+.es .es-pdp[data-es-pdp="duo"] .es-pdp__buy [data-product-total]{display:inline}
+.es .es-pdp[data-es-pdp="duo"] .es-pdp__buy [data-product-total]:not(:empty)::before{content:"—";margin:0 10px}
+.es .es-pdp[data-es-pdp="duo"] .es-pdp__buy button:disabled [data-product-total]{display:none}
+.es-pdp__payments:empty,.es-pdp__pairs:empty,.es-pdp__sticky-mark{display:none}
+.es-pdp[data-es-pdp="duo"] [data-part=payments]{display:grid;justify-items:center;gap:8px;margin:-2px 0 4px}
+.es-pdp[data-es-pdp="duo"] [data-part=payments] p{margin:0;font-size:12.5px;opacity:.7}
+.es-pdp[data-es-pdp="duo"] [data-part=payment-logos]{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.es-pdp[data-es-pdp="duo"] [data-part=payment-logos] svg{width:38px;height:24px;border-radius:4px;box-shadow:0 0 0 1px color-mix(in srgb,var(--es-ink) 14%,transparent)}
+.es-pdp[data-es-pdp="duo"] [data-part=pairs]{display:grid;gap:14px;margin:0}
+.es-pdp[data-es-pdp="duo"] [data-part=pairs] h2{margin:0;font:600 13px/1.2 var(--es-body);letter-spacing:.14em;text-transform:uppercase}
+.es-pdp[data-es-pdp="duo"] [data-part=pairs] ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:10px;margin:0;padding:0;list-style:none}
+.es-pdp[data-es-pdp="duo"] [data-part=pair]{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px 10px 10px;border-radius:16px;background:var(--es-paper);box-shadow:0 10px 24px -20px rgb(0 0 0 / .5)}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-photo]{display:block;width:64px;height:64px;border-radius:12px;overflow:hidden;background:var(--es-muted)}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-photo] img{width:100%;height:100%;object-fit:contain}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-copy]{display:grid;gap:3px;min-width:0}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-copy] a{overflow:hidden;color:inherit;font-weight:600;font-size:14.5px;line-height:1.25;text-decoration:none;text-overflow:ellipsis;white-space:nowrap}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-copy] span{white-space:nowrap;font-size:14px;font-variant-numeric:tabular-nums;opacity:.8}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-add]{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--es-accent);color:var(--es-on-accent);font:600 13px/1 var(--es-body);text-decoration:none;cursor:pointer;transition:transform .2s ease,filter .2s ease}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-add]:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-add]:active{transform:scale(.96)}
+.es-pdp[data-es-pdp="duo"] [data-part=pair-add]:disabled{opacity:.45;cursor:default;transform:none}
+@media (max-width:860px){
+  .es-pdp[data-es-pdp="duo"] .es-pdp__grid{grid-template-columns:1fr}
+  .es-pdp[data-es-pdp="duo"] .es-pdp__gallery{position:relative;top:auto}
+  .es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=thumbs]{flex-direction:row;left:12px;right:12px;bottom:12px;max-height:none}
+  .es-pdp[data-es-pdp="duo"] .es-pdp__gallery [data-part=thumb]{width:46px;height:46px}
+  /* A phone has no room for «— Bs 890,00» in the button: the price stays above it and in the buy bar. */
+  .es .es-pdp[data-es-pdp="duo"] .es-pdp__buy :is(button[data-add],button[data-variant-add]){min-width:0;padding-inline:14px;font-size:13.5px;white-space:normal;text-align:center}
+  .es .es-pdp[data-es-pdp="duo"] .es-pdp__buy [data-product-total]{display:none}
+}
+
+/* lb:steps-howto */
+/* Steps as panels (owner 2026-11-13, Clyro «(01) Application»): one step in large type on a soft panel, the photo whole beside it. */
+.lb-stepp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(12px,1.6vw,24px)}
+.lb-stepp--plain{grid-template-columns:minmax(0,1fr);max-width:820px;margin-inline:auto}
+.lb-stepp__card{display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:clamp(360px,38vw,600px);padding:clamp(24px,3vw,40px);border-radius:26px;background:color-mix(in srgb,var(--es-ink) 4%,var(--es-paper));color:var(--es-ink)}
+.lb-stepp__tabs{display:flex;flex-wrap:wrap;gap:8px}
+.lb-stepp__tabs button{min-height:36px;padding:0 14px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:999px;background:transparent;color:inherit;font:500 13px/1 var(--es-body);cursor:pointer;transition:background-color .2s ease,color .2s ease}
+.lb-stepp__tabs button[aria-selected="true"]{border-color:var(--es-ink);background:var(--es-ink);color:var(--es-paper)}
+.lb-stepp__body{position:relative;display:grid;align-content:end;gap:14px}
+.lb-stepp__body .lb-eyebrow{margin:0}
+.lb-stepp__text{margin:0;padding-right:64px;font:400 clamp(26px,2.6vw,40px)/1.22 var(--es-heading);letter-spacing:-.01em;text-wrap:pretty}
+.lb-stepp__text sup{margin-right:4px;font:500 14px/1 var(--es-body);vertical-align:top;opacity:.6}
+.lb-stepp__next{position:absolute;right:0;bottom:0;display:grid;place-items:center;width:50px;height:50px;padding:0;border:1px solid color-mix(in srgb,var(--es-ink) 35%,transparent);border-radius:50%;background:transparent;color:inherit;cursor:pointer;transition:background-color .2s ease,color .2s ease,transform .2s ease}
+.lb-stepp__next svg{width:20px;height:20px}
+.lb-stepp__next:hover{background:var(--es-ink);color:var(--es-paper)}
+.lb-stepp__next:active{transform:scale(.94)}
+/* The photo panel is as wide as the photo at the card's height: whole, no bars. */
+.lb-stepp__media{height:clamp(360px,38vw,600px);max-width:min(58vw,820px);border-radius:26px;overflow:hidden;background:var(--es-muted)}
+.lb-stepp__media img{display:block;width:auto;max-width:100%;height:100%;object-fit:contain}
+@media (max-width:760px){.lb-stepp{grid-template-columns:minmax(0,1fr)}.lb-stepp__media{order:-1;height:auto;max-width:none}.lb-stepp__media img{width:100%;height:auto}.lb-stepp__card{min-height:0}}
+/* /lb:steps-howto */
+
+/* Hollow white buttons (owner 2026-11-13): on a hero over a photo or a dark backdrop, the buttons are white outlines, filled on hover. */
+.es .lb-cover:is(.lb-cover--dark,[data-ground="dark"]) .lb-actions .es-btn{background:transparent;border:1.5px solid #fff;color:#fff;box-shadow:none}
+.es .lb-cover:is(.lb-cover--dark,[data-ground="dark"]) .lb-actions .es-btn:hover{background:#fff;color:#151515}
+.es .lb-cover:is(.lb-cover--dark,[data-ground="dark"]) .lb-actions .lb-btn:first-child svg{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
+
+/* Owner 2026-11-13 («text on that suppressed header looks bad»): the see-through header rules of the themes need a hero with
+   data-lb-overlap, which none has now — the menu always sits on its own bar.
+   Owner 2026-11-13 (hero on its photo's colour): the words' half takes that colour too, so the hero is one field. */
+.lb-cover[data-ground] :is(.lb-cover-half__panel,.lb-cover-split__copy){background:transparent}

@@ -1,0 +1,423 @@
+{
+  "id": "neon",
+  "name": "Neón",
+  "category": "moda",
+  "description": "Moda urbana guiada por campañas: fotos a todo el ancho con su colección debajo, lo nuevo en una fila y letra condensada enorme.",
+  "tags": [
+    "streetwear",
+    "moda urbana",
+    "zapatillas",
+    "hoodies",
+    "ropa",
+    "accesorios"
+  ],
+  "sitePurpose": "shop",
+  "order": 68,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (estilos hechos a mano, 2026-11-10)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "ne-hero",
+      "role": "hero",
+      "demo": "ne-hero.jpg"
+    },
+    {
+      "slot": "ne-hoodie",
+      "role": "product",
+      "demo": "ne-hoodie.jpg"
+    },
+    {
+      "slot": "ne-zapa",
+      "role": "product",
+      "demo": "ne-zapa.jpg"
+    },
+    {
+      "slot": "ne-polera",
+      "role": "product",
+      "demo": "ne-polera.jpg"
+    },
+    {
+      "slot": "ne-gorra",
+      "role": "product",
+      "demo": "ne-gorra.jpg"
+    },
+    {
+      "slot": "ne-calle",
+      "role": "lifestyle",
+      "demo": "ne-calle.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "neon-anton",
+    "colors": {
+      "paper": "#f1f1ee",
+      "ink": "#111111",
+      "muted": "#e2e2dd",
+      "accent": "#ff5a1f",
+      "deep": "#111111"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "neon",
+      "icons": "line",
+      "header": "split",
+      "announce": "ticker",
+      "footer": "mega",
+      "button": "block",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "photos": "natural",
+      "pdp": "sticky-thumbs",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Nuevo lanzamiento cada viernes · Envío en 24 horas"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "title": "Hecho para *la calle*",
+        "text": "Series cortas que se agotan rápido.",
+        "cta": "Ver lo nuevo",
+        "link": "products",
+        "photo": "slot:ne-hero",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:ne-calle"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "title": "Lo nuevo",
+        "cta": "Ver todo",
+        "link": "products",
+        "card": "caps"
+      },
+      {
+        "type": "campaign-strip",
+        "look": "tall",
+        "eyebrow": "Invierno",
+        "title": "Hoodies de *noche*",
+        "text": "Algodón de 380 g, corte amplio.",
+        "cta": "Comprar",
+        "cta2": "Ver todo",
+        "link": "category:Hoodies",
+        "link2": "products",
+        "photo": "slot:ne-hoodie"
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "Arma tu *look*",
+        "photo": "slot:ne-calle",
+        "items": [
+          {
+            "title": "Hoodie Noche",
+            "x": 38,
+            "y": 42
+          },
+          {
+            "title": "Corte amplio",
+            "text": "Hombro caído y tela pesada.",
+            "icon": "shirt"
+          },
+          {
+            "title": "Serie corta",
+            "text": "Pocas unidades por color.",
+            "icon": "zap"
+          }
+        ]
+      },
+      {
+        "type": "campaign-strip",
+        "look": "wide",
+        "eyebrow": "Calle",
+        "title": "Zapatillas que *aguantan*",
+        "text": "Suela de goma, para caminar todo el día.",
+        "cta": "Comprar",
+        "cta2": "Ver todo",
+        "link": "category:Zapatillas",
+        "link2": "products",
+        "photo": "slot:ne-zapa"
+      },
+      {
+        "type": "marquee-photo",
+        "title": "Serie corta",
+        "photo": "slot:ne-polera",
+        "items": [
+          {
+            "title": "Serie corta"
+          },
+          {
+            "title": "No vuelve"
+          }
+        ],
+        "cta": "Ver lo nuevo",
+        "link": "products"
+      },
+      {
+        "type": "products-cards",
+        "look": "dashed",
+        "title": "Los que *más salen*",
+        "cta": "Ver todo",
+        "link": "products",
+        "products": [
+          "Hoodie Noche",
+          "Zapatilla Señal"
+        ]
+      },
+      {
+        "type": "campaign-strip",
+        "look": "tall",
+        "eyebrow": "Básicos",
+        "title": "Lo de *siempre*",
+        "text": "Poleras y gorras para todos los días.",
+        "cta": "Comprar",
+        "cta2": "Ver todo",
+        "link": "category:Accesorios",
+        "link2": "products",
+        "photo": "slot:ne-gorra"
+      },
+      {
+        "type": "image-columns",
+        "title": "Por *categoría*",
+        "items": [
+          {
+            "title": "Hoodies",
+            "text": "Algodón pesado.",
+            "photo": "slot:ne-hoodie",
+            "link": "products"
+          },
+          {
+            "title": "Zapatillas",
+            "text": "Para todo el día.",
+            "photo": "slot:ne-zapa",
+            "link": "products"
+          },
+          {
+            "title": "Poleras",
+            "text": "Colores que se ven.",
+            "photo": "slot:ne-polera",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "photo-scroller",
+        "title": "En la *calle*",
+        "items": [
+          {
+            "title": "Calle",
+            "text": "Así se usa.",
+            "photo": "slot:ne-calle"
+          },
+          {
+            "title": "Noche",
+            "text": "Hoodie Noche.",
+            "photo": "slot:ne-hero"
+          },
+          {
+            "title": "Gorra",
+            "text": "Gorra Base.",
+            "photo": "slot:ne-gorra"
+          }
+        ]
+      },
+      {
+        "type": "promo-banner",
+        "title": "La guía de *regalos*",
+        "text": "Ideas para regalar, de Bs 150 a Bs 600.",
+        "cta": "Ver la guía",
+        "link": "products",
+        "photo": "slot:ne-hoodie"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Antes de comprar",
+        "items": [
+          {
+            "title": "¿Cómo calzan?",
+            "text": "Tu número de siempre."
+          },
+          {
+            "title": "¿Puedo cambiar la talla?",
+            "text": "Sí, dentro de 15 días."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En la ciudad, en 24 horas."
+          }
+        ]
+      },
+      {
+        "type": "closing-wordmark",
+        "title": "El próximo lanzamiento, *el viernes*",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:ne-calle"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Talla y envío",
+        "items": [
+          {
+            "title": "¿Cómo calza?",
+            "text": "Tu talla de siempre."
+          },
+          {
+            "title": "¿Cambios?",
+            "text": "Dentro de 15 días."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En 24 horas en la ciudad."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "neon-anton",
+        "neon-bebas",
+        "neon-shoulders",
+        "neon-oswald",
+        "neon-archivo"
+      ],
+      "variants": {
+        "photos": [
+          "natural",
+          "duotone"
+        ],
+        "titles": [
+          "upper",
+          "slant"
+        ],
+        "button": [
+          "block",
+          "square",
+          "caps"
+        ],
+        "footer": [
+          "mega",
+          "twotone"
+        ]
+      },
+      "looks": {
+        "campaign-strip": [
+          "tall",
+          "wide"
+        ]
+      },
+      "swaps": {
+        "cover-stage": [
+          "cover-stage",
+          "cover-full",
+          "cover-split"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        [
+          0,
+          2,
+          1,
+          3,
+          4,
+          6,
+          5,
+          7,
+          9,
+          8,
+          10,
+          11,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          4,
+          3,
+          5,
+          7,
+          6,
+          8,
+          10,
+          9,
+          11,
+          12
+        ]
+      ],
+      "bands": [
+        {},
+        {
+          "6": "muted",
+          "9": "muted"
+        },
+        {
+          "1": "muted",
+          "8": "muted"
+        }
+      ]
+    },
+    "demo": {
+      "storeName": "Neón",
+      "tagline": "Ropa urbana en series cortas",
+      "products": [
+        {
+          "name": "Hoodie Noche",
+          "price": 390,
+          "description": "Algodón de 380 g.",
+          "category": "Hoodies"
+        },
+        {
+          "name": "Zapatilla Señal",
+          "price": 620,
+          "description": "Suela de goma.",
+          "category": "Zapatillas"
+        },
+        {
+          "name": "Polera Naranja",
+          "price": 180,
+          "description": "Algodón peinado.",
+          "category": "Poleras"
+        },
+        {
+          "name": "Gorra Base",
+          "price": 150,
+          "description": "Visera curva.",
+          "category": "Accesorios"
+        }
+      ]
+    }
+  }
+}

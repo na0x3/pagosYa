@@ -1,0 +1,1037 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://athleticbrewing.com/",
+    "title": "Non Alcoholic Beer | Athletic Brewing Co.",
+    "width": 1440,
+    "pageHeight": 7699,
+    "fonts": {
+      "h1": {
+        "family": "Barlow Condensed",
+        "size": "66px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Barlow",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "WELCOME OFFER: Save 20% + Free Shipping →"
+      },
+      "body": {
+        "family": "Barlow",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "When you buy any four 6-packs and/or 4-packs. Terms and Cond"
+      },
+      "button": {
+        "family": "Barlow Condensed",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Barlow",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 69,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "The Club",
+        "Subscribe",
+        "For You",
+        "Learn",
+        "Find In Store",
+        "Login",
+        "Cart"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 132,
+        "h": 576,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "72px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Fit for all times®"
+        },
+        "words": 50,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 708,
+        "h": 607,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "60px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Great-tasting, non-alcoholic beer"
+        },
+        "words": 48,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1315,
+        "h": 667,
+        "bg": "rgb(247, 251, 252)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "60px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "All the Taste. None of the Tradeoffs."
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1982,
+        "h": 744,
+        "bg": "rgb(65, 195, 214)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "30px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "New Customer"
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2726,
+        "h": 941,
+        "bg": "rgb(235, 217, 35)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "60px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Join 1,000,000+ Who Have Tried Athletic"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3667,
+        "h": 725,
+        "bg": "rgb(255, 255, 255)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "60px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "We’ve Got a Brew For You"
+        },
+        "words": 335,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4392,
+        "h": 707,
+        "bg": "rgb(65, 195, 214)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 19,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5099,
+        "h": 1316,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "60px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Any last questions?"
+        },
+        "words": 151,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 21,
+      "columns": 20,
+      "photoRatio": 0.75,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://athleticbrewing.com/",
+    "title": "Non Alcoholic Beer | Athletic Brewing Co.",
+    "width": 390,
+    "pageHeight": 10391,
+    "fonts": {
+      "h1": {
+        "family": "Barlow Condensed",
+        "size": "42px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Barlow",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "WELCOME OFFER: Save 20% + Free Shipping →"
+      },
+      "body": {
+        "family": "Barlow",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "When you buy any four 6-packs and/or 4-packs. Terms and Cond"
+      },
+      "button": {
+        "family": "Barlow Condensed",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Barlow Condensed",
+        "size": "18px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Login"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 62,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Login",
+        "Cart"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 153,
+        "h": 585,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "44px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Fit for all times®"
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 738,
+        "h": 1206,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "40px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "0.8px",
+          "text": "Great-tasting, non-alcoholic beer"
+        },
+        "words": 48,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1944,
+        "h": 743,
+        "bg": "rgb(247, 251, 252)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "40px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "All the Taste. None of the Tradeoffs."
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2687,
+        "h": 676,
+        "bg": "rgb(65, 195, 214)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "30px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "New Customer"
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3363,
+        "h": 839,
+        "bg": "rgb(235, 217, 35)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "40px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "0.8px",
+          "text": "Join 1,000,000+ Who Have Tried Athletic"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4202,
+        "h": 600,
+        "bg": "rgb(255, 255, 255)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "40px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "We’ve Got a Brew For You"
+        },
+        "words": 278,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4803,
+        "h": 1130,
+        "bg": "rgb(65, 195, 214)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 19,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5932,
+        "h": 1673,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "40px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Any last questions?"
+        },
+        "words": 151,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 20,
+      "columns": 20,
+      "photoRatio": 0.75,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://athleticbrewing.com/collections/all",
+    "title": "Products – Athletic Brewing Company",
+    "width": 1440,
+    "pageHeight": 6522,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Barlow",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "WELCOME OFFER: Save 20% + Free Shipping →"
+      },
+      "body": {
+        "family": "Barlow",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "When you buy any four 6-packs and/or 4-packs. Terms and Cond"
+      },
+      "button": {
+        "family": "Barlow Condensed",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Barlow",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 69,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "The Club",
+        "Subscribe",
+        "For You",
+        "Learn",
+        "Find In Store",
+        "Login",
+        "Cart"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 132,
+        "h": 168,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": null,
+        "words": 31,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 300,
+        "h": 4937,
+        "bg": "rgb(255, 255, 255)",
+        "images": 37,
+        "video": false,
+        "heading": {
+          "family": "Barlow",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "266 products"
+        },
+        "words": 818,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 36,
+      "columns": 4,
+      "photoRatio": 0.75,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://athleticbrewing.com/collections/all?_su_rec=a_7HmXXeqk1GyqinVmUbXkbAqPa0tURZVSDmZA6TdpCfzbgHfu53ZoM7nuc3Lifn4Y2yE0g9tUqZ692tKFbrRo5MFwuGyZT7sJ4Wxc2uIxrgBFVvPUVcRJp2km348VWGYQLtEauRHr1uM4vOyIppFWmRgWK6SfxdMNyvc-FA1zHYC9D49pVMcoaxrjcJg_4RrJhVr2nrQxJrzY41YKjFMSO9IGAQ-KvaxIAfZj4gvpcFW2ejahdNLZuFbtQ_Y8T8pAwsr4W3csZIak3cz736SVd72HB--vqRnM5RhssSeq5ROWZcVGBH-wQhKTQ0M_OaRT1xB29wr6txPt4qgdTe-TSpZHb1uHA-x9a2DD1YI-h1Rkg&_su_rec_id=32c48b78-9a1e-4da5-ba6d-a08fb8bec19f-1794666942",
+    "title": "Products – Athletic Brewing Company",
+    "width": 390,
+    "pageHeight": 9817,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Barlow",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "WELCOME OFFER: Save 20% + Free Shipping →"
+      },
+      "body": {
+        "family": "Barlow",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "When you buy any four 6-packs and/or 4-packs. Terms and Cond"
+      },
+      "button": {
+        "family": "Barlow Condensed",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Barlow Condensed",
+        "size": "18px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Login"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 62,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Login",
+        "Cart"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 166,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": null,
+        "words": 31,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 284,
+        "h": 6747,
+        "bg": "rgb(255, 255, 255)",
+        "images": 37,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "14px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Filter and sort"
+        },
+        "words": 439,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 36,
+      "columns": 2,
+      "photoRatio": 0.75,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://athleticbrewing.com/products/move-as-one",
+    "title": "Move As One – Athletic Brewing Company",
+    "width": 1440,
+    "pageHeight": 6135,
+    "fonts": {
+      "h1": {
+        "family": "Barlow Condensed",
+        "size": "39px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Move As One Pils"
+      },
+      "h2": {
+        "family": "Barlow",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "WELCOME OFFER: Save 20% + Free Shipping →"
+      },
+      "body": {
+        "family": "Barlow",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "When you buy any four 6-packs and/or 4-packs. Terms and Cond"
+      },
+      "button": {
+        "family": "Barlow Condensed",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Barlow",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 69,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "The Club",
+        "Subscribe",
+        "For You",
+        "Learn",
+        "Find In Store",
+        "Login",
+        "Cart"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 132,
+        "h": 1317,
+        "bg": "rgb(255, 255, 255)",
+        "images": 17,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "39px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Move As One Pils"
+        },
+        "words": 217,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1449,
+        "h": 676,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "60px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Moving Tirelessly Towards Access for All"
+        },
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2124,
+        "h": 637,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "60px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "West Coast Roots. Limitless Dreams."
+        },
+        "words": 50,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2761,
+        "h": 865,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "60px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Brewer's Notes"
+        },
+        "words": 35,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3626,
+        "h": 1160,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Barlow",
+          "size": "20.02px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Customer reviews"
+        },
+        "words": 147,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": true,
+      "top": 663,
+      "x": 948,
+      "width": 272,
+      "bg": "rgb(235, 217, 35)"
+    },
+    "price": {
+      "family": "Barlow",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.6px",
+      "text": "$14.99"
+    },
+    "galleryImages": 7,
+    "swatches": 0,
+    "selects": 2,
+    "accordions": 10
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://athleticbrewing.com/products/move-as-one",
+    "title": "Move As One – Athletic Brewing Company",
+    "width": 390,
+    "pageHeight": 8871,
+    "fonts": {
+      "h1": {
+        "family": "Barlow Condensed",
+        "size": "34px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Move As One Pils"
+      },
+      "h2": {
+        "family": "Barlow",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "WELCOME OFFER: Save 20% + Free Shipping →"
+      },
+      "body": {
+        "family": "Barlow",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "When you buy any four 6-packs and/or 4-packs. Terms and Cond"
+      },
+      "button": {
+        "family": "Barlow Condensed",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Barlow Condensed",
+        "size": "18px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Login"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 62,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Login",
+        "Cart"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 1890,
+        "bg": "rgb(255, 255, 255)",
+        "images": 17,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "34px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Move As One Pils"
+        },
+        "words": 189,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 2008,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "40px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Moving Tirelessly Towards Access for All"
+        },
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2852,
+        "h": 645,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "40px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "West Coast Roots. Limitless Dreams."
+        },
+        "words": 50,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3497,
+        "h": 1097,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Barlow Condensed",
+          "size": "40px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Brewer's Notes"
+        },
+        "words": 35,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4594,
+        "h": 1444,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Barlow",
+          "size": "20.02px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Customer reviews"
+        },
+        "words": 147,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": true,
+      "top": 803,
+      "x": 168,
+      "width": 202,
+      "bg": "rgb(235, 217, 35)"
+    },
+    "price": {
+      "family": "Barlow",
+      "size": "15px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.6px",
+      "text": "$14.99"
+    },
+    "galleryImages": 7,
+    "swatches": 0,
+    "selects": 2,
+    "accordions": 10
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://athleticbrewing.com/cart",
+    "title": "Your Shopping Cart – Athletic Brewing Company",
+    "width": 1440,
+    "pageHeight": 1957,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Barlow",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "WELCOME OFFER: Save 20% + Free Shipping →"
+      },
+      "body": {
+        "family": "Barlow",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "When you buy any four 6-packs and/or 4-packs. Terms and Cond"
+      },
+      "button": {
+        "family": "Barlow Condensed",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "2px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Barlow",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 69,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "The Club",
+        "Subscribe",
+        "For You",
+        "Learn",
+        "Find In Store",
+        "Login",
+        "Cart11 item"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": []
+  }
+}

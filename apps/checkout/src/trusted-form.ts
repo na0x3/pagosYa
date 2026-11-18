@@ -187,6 +187,14 @@ export async function collectPersonalFields(action: string, body: Record<string,
     return values && { trackingToken: values.trackingToken, displayName: values.displayName, rating: Number(values.rating), body: values.body };
   }
   if (action === 'retention' && ['subscribe', 'carts', 'cards'].includes(String(body.path))) {
+    // Spec 2026-11-10 rasca y elige: a popup game that asks for WhatsApp gets only the number here.
+    if (body.path === 'subscribe' && (body.payload as { contact?: unknown } | undefined)?.contact === 'whatsapp') {
+      const values = await trustedForm({ title: `Guarda tu premio de ${name}`, submitLabel: 'Suscribirme', ...previous, fields: [
+        { name: 'phone', label: 'Tu WhatsApp', type: 'tel', required: true, maxLength: 20, autocomplete: 'tel' },
+        { name: 'consent', label: `Acepto recibir novedades y promociones de ${name} por WhatsApp. Puedo pedir que dejen de escribirme cuando quiera.`, type: 'checkbox', required: true },
+      ] });
+      return values && { phone: values.phone, consent: values.consent === true };
+    }
     const marketing = body.path !== 'cards';
     const values = await trustedForm({
       title: body.path === 'subscribe' ? `Novedades de ${name}` : body.path === 'carts' ? 'Guardar tu pedido para después' : 'Recibir tu tarjeta por correo',

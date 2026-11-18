@@ -67,7 +67,7 @@ test('published runtime quotes shipping and submits only selected service and ad
   await page.addScriptTag({ content: commerce });
   await expect(page.getByRole('button', { name: 'Añadir Café', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Añadir Café', exact: true }).click();
-  await page.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await page.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   const review = page.locator('[data-checkout-review]');
   await review.getByLabel('Dirección').fill('Calle de prueba 123');
   await review.getByRole('button', { name: 'Calcular envío' }).click();
@@ -125,7 +125,7 @@ test('hosted source passes shipping through its confined parent bridge', async (
     await mountPublishedSource(document.querySelector('#shop'), 'test', store, async () => { document.querySelector('#shop')!.textContent = 'Pago listo'; });
   }, { path, store });
   const frame = page.frameLocator('iframe');
-  await frame.getByRole('button', { name: 'Añadir Café', exact: true }).click(); await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await frame.getByRole('button', { name: 'Añadir Café', exact: true }).click(); await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   const review = frame.locator('[data-checkout-review]');
   // The address is typed in pagosYa's trusted form, never inside the generated design.
   await expect(review.getByLabel('Dirección')).toHaveCount(0);

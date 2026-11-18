@@ -1,0 +1,735 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://bluebottlecoffee.com/us/eng",
+    "title": "Blue Bottle Coffee | Specialty Coffee",
+    "width": 1440,
+    "pageHeight": 7883,
+    "fonts": {
+      "h1": {
+        "family": "ABC Marfa Regular",
+        "size": "24px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "THE HOLIDAY COLLECTION IS HERE"
+      },
+      "h2": {
+        "family": "ABC Marfa Regular",
+        "size": "24px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "Holiday Best Sellers"
+      },
+      "body": {
+        "family": "ABC Diatype Regular",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Our best selling mug is going quick | Shop Now"
+      },
+      "button": {
+        "family": "ABC Diatype Regular",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Slide 101(Current Slide)"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 116,
+        "h": 642,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": true,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "THE HOLIDAY COLLECTION IS HERE"
+        },
+        "words": 119,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 758,
+        "h": 764,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Holiday Best Sellers"
+        },
+        "words": 268,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1522,
+        "h": 624,
+        "bg": "rgb(246, 246, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Explore our holiday gift guide"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2146,
+        "h": 644,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Shop By Collection"
+        },
+        "words": 36,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2790,
+        "h": 832,
+        "bg": "rgb(246, 246, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "new arrivals: our winter coffees"
+        },
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3622,
+        "h": 480,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "ABC Diatype Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "2.4px",
+          "text": "Barista Picks for Holiday Gifting"
+        },
+        "words": 190,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4102,
+        "h": 894,
+        "bg": "rgb(246, 246, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Blue Bottle at Home Specialty Coffee Subscriptions"
+        },
+        "words": 100,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4996,
+        "h": 1082,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Blue Bottle Cafes"
+        },
+        "words": 55,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6078,
+        "h": 571,
+        "bg": "rgb(246, 246, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Explore Our Brew Guides"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6649,
+        "h": 609,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "200",
+          "case": "uppercase",
+          "tracking": "2.4px",
+          "text": "What Our Customers Are Saying"
+        },
+        "words": 707,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 11,
+      "columns": 9,
+      "photoRatio": 1.25,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://bluebottlecoffee.com/us/eng",
+    "title": "Blue Bottle Coffee | Specialty Coffee",
+    "width": 390,
+    "pageHeight": 9881,
+    "fonts": {
+      "h1": {
+        "family": "ABC Marfa Regular",
+        "size": "20px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "THE HOLIDAY COLLECTION IS HERE"
+      },
+      "h2": {
+        "family": "ABC Marfa Regular",
+        "size": "20px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "Holiday Best Sellers"
+      },
+      "body": {
+        "family": "ABC Diatype Regular",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free shipping on subscriptions and orders over $45"
+      },
+      "button": {
+        "family": "ABC Diatype Regular",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Slide 101(Current Slide)"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 140,
+        "h": 619,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": true,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "THE HOLIDAY COLLECTION IS HERE"
+        },
+        "words": 119,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 759,
+        "h": 794,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Holiday Best Sellers"
+        },
+        "words": 268,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1553,
+        "h": 661,
+        "bg": "rgb(246, 246, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Explore our holiday gift guide"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2214,
+        "h": 822,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Shop By Collection"
+        },
+        "words": 36,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3036,
+        "h": 931,
+        "bg": "rgb(246, 246, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "new arrivals: our winter coffees"
+        },
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3967,
+        "h": 699,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "ABC Diatype Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "2px",
+          "text": "Barista Picks for Holiday Gifting"
+        },
+        "words": 222,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4666,
+        "h": 1425,
+        "bg": "rgb(246, 246, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Blue Bottle at Home Specialty Coffee Subscriptions"
+        },
+        "words": 100,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6090,
+        "h": 925,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Blue Bottle Cafes"
+        },
+        "words": 55,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7015,
+        "h": 684,
+        "bg": "rgb(246, 246, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Explore Our Brew Guides"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7699,
+        "h": 714,
+        "bg": "rgb(255, 255, 255)",
+        "images": 18,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "200",
+          "case": "uppercase",
+          "tracking": "2.4px",
+          "text": "What Our Customers Are Saying"
+        },
+        "words": 480,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 2,
+      "columns": 1,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://bluebottlecoffee.com/us/eng/product/holiday-mug-2026",
+    "title": "Holiday Mug 2026 | Blue Bottle Coffee",
+    "width": 1440,
+    "pageHeight": 4061,
+    "fonts": {
+      "h1": {
+        "family": "ABC Marfa Regular",
+        "size": "32px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "Holiday Mug 2026"
+      },
+      "h2": {
+        "family": "ABC Marfa Regular",
+        "size": "24px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "Holiday Mug 2026"
+      },
+      "body": {
+        "family": "ABC Diatype Regular",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free shipping on subscriptions and orders over $45"
+      },
+      "button": {
+        "family": "ABC Diatype Regular",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 116,
+        "h": 124,
+        "bg": "rgb(246, 246, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 240,
+        "h": 1074,
+        "bg": "rgb(246, 246, 243)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Holiday Mug 2026"
+        },
+        "words": 204,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1314,
+        "h": 832,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Holiday Mug"
+        },
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2146,
+        "h": 480,
+        "bg": "rgb(246, 246, 243)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "ABC Diatype Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "2.4px",
+          "text": "Customer Reviews Over the Years"
+        },
+        "words": 74,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2626,
+        "h": 810,
+        "bg": "rgb(246, 246, 243)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart|$32",
+      "aboveFold": true,
+      "top": 346,
+      "x": 1053,
+      "width": 267,
+      "bg": "rgb(51, 51, 51)"
+    },
+    "price": null,
+    "galleryImages": 12,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 11
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://bluebottlecoffee.com/us/eng/product/holiday-mug-2026",
+    "title": "Holiday Mug 2026 | Blue Bottle Coffee",
+    "width": 390,
+    "pageHeight": 5800,
+    "fonts": {
+      "h1": {
+        "family": "ABC Marfa Regular",
+        "size": "20px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "Holiday Mug 2026"
+      },
+      "h2": {
+        "family": "ABC Marfa Regular",
+        "size": "20px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.6px",
+        "text": "Holiday Mug 2026"
+      },
+      "body": {
+        "family": "ABC Diatype Regular",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get the perfect gift for everyone on your list | Explore our"
+      },
+      "button": {
+        "family": "ABC Diatype Regular",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 122,
+        "h": 1669,
+        "bg": "rgb(246, 246, 243)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Holiday Mug 2026"
+        },
+        "words": 204,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1791,
+        "h": 1197,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "ABC Marfa Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.6px",
+          "text": "Holiday Mug"
+        },
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2988,
+        "h": 651,
+        "bg": "rgb(246, 246, 243)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "ABC Diatype Regular",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "2px",
+          "text": "Customer Reviews Over the Years"
+        },
+        "words": 88,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3639,
+        "h": 693,
+        "bg": "rgb(246, 246, 243)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart|$32",
+      "aboveFold": true,
+      "top": 679,
+      "x": 138,
+      "width": 232,
+      "bg": "rgb(51, 51, 51)"
+    },
+    "price": null,
+    "galleryImages": 12,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 11
+  }
+}

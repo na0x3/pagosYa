@@ -1,0 +1,85 @@
+{
+  "host": "onyxcoffeelab.com",
+  "name": "Onyx Coffee Lab",
+  "at": "2026-11-14T14:49:50.986Z",
+  "mood": "Editorial oscuro, ritualista y contracultural: café de especialidad presentado con códigos de sello, blackletter, cráneo, tinta negra y campañas casi cinematográficas.",
+  "idea": "Alternar grandes campañas inmersivas de ancho completo con parejas de módulos editoriales para que la portada funcione como una revista de marca, mientras catálogo y compra se reducen a una retícula blanca y directa.",
+  "header": "Dos niveles. Arriba hay una marquesina negra de noticias y accesos a las submarcas —Onyx, Doyenne, The Preserve y Well Met— más promociones como Advent 2026 y Trending Coffee; el contenido se desplaza horizontalmente y no debe confundirse con la barra principal. Debajo, una cabecera sticky de 74 px: emblema de cráneo a la izquierda, y a la derecha búsqueda, LOGIN y menú de tres líneas; no presenta una navegación tradicional desplegada. Sobre el hero oscuro, los elementos aparecen en blanco y la cabecera se integra visualmente con la imagen; en catálogo y producto usa fondo blanco. En teléfono desaparecen Login y los textos de la marquesina en la captura: quedan el cráneo de aproximadamente 56–60 px a la izquierda, lupa y hamburguesa ampliada a la derecha, dentro de 74 px. El widget de chat es externo, flotante y no forma parte de la cabecera.",
+  "hero": "En escritorio ocupa los primeros 900 px, prácticamente una pantalla completa, incluido el sistema superior. Es un vídeo o imagen full bleed muy oscura, dominada por negro y granate, con una ilustración de cráneo recortada y un logotipo caligráfico blanco centrado. El bloque de contenido queda alrededor del centro: firma de gran escala, párrafo de dos líneas de unos 14–16 px y llamada textual dorada en mayúsculas, con tracking amplio y flecha; no hay una caja de botón. En el borde inferior aparece SCROLL con chevrón. En teléfono mide 844 px según el DOM, aunque la captura muestra una composición vertical cercana a 1.700 px de pantalla física: se conserva la imagen en cover, se deja una gran zona negra superior, la firma cruza casi todo el ancho, el párrafo se centra con líneas largas y el CTA dorado queda debajo. No se limita a recortar el escritorio: reposiciona los focos para mantener firma, texto y cráneo legibles.",
+  "catalog": "Cabecera de colección blanca con «All Products» en Room-205, 38 px, alineado a la izquierda y separado de la retícula por una regla fina. El contenido usa márgenes laterales cercanos a 58 px en 1440 px. Hay 3 columnas con calles de unos 20 px; se registran 179 tarjetas. Cada imagen es cuadrada y ocupa todo el ancho de la columna, aproximadamente 428 × 428 px en la primera fila. Bajo ella, una única línea horizontal coloca nombre a la izquierda y precio a la derecha. La medición detecta filtros, aunque no aparecen desplegados en la captura; no conviene inventar su posición o formato. En teléfono la captura del catálogo está tapada por el modal de captación «join our pilgrimage», por lo que no permite verificar columnas, filtros ni ordenación móvil; por el ancho de las tarjetas del sistema, la adaptación esperable es una columna, pero no queda demostrada por la imagen.",
+  "card": "Imagen cuadrada, ratio 1:1, sin marco ni sombra; la fotografía toca los límites de su celda. Debajo hay nombre en Montserrat, mayúsculas, de unos 14 px, normalmente truncado con puntos suspensivos para no invadir el precio; el precio se alinea al extremo derecho en la misma línea. No se ven valoración, descripción, colores, etiqueta promocional ni botón de compra rápida. Algunas tarjetas son bodegones ambientales y otras producto frontal sobre fondo neutro, pero conservan exactamente el mismo cuadrado. La captura no demuestra una segunda foto al pasar ni una interacción hover, así que no deben darse por presentes.",
+  "product": "En escritorio, tras la cabecera, la parte principal se divide aproximadamente en 60/40. A la izquierda hay una galería de cuatro imágenes en una cuadrícula 2 × 2, cada celda cercana a 432 × 416 px: dos usos en contexto y dos vistas aisladas del vaso. A la derecha, una caja de compra de unos 420 px comienza bastante más abajo, alineada hacia el centro vertical de la primera pareja de imágenes. Incluye título Room-205 de 38 px, dos párrafos de introducción, subtítulo y lista técnica en negrita, precio de 38 px y peso 800, selector de cantidad y botón negro «+ Add to Cart» de 337 px. El botón comienza cerca de y=901, de modo que no queda sobre el primer pliegue de escritorio. Este producto no tiene variantes, swatches ni selectores registrados. En teléfono, las cuatro fotos forman un mosaico 2 × 2 arriba, con alturas y recortes desiguales; después aparecen título de 32 px, descripción y lista. El precio y la fila de compra llegan hacia y=1.147, también bajo el pliegue; el botón mide unos 270 px y comparte fila con un contador estrecho. Debajo aparece «PAIRS WELL WITH» sobre fondo marfil y una recomendación grande. La medición registra 11 acordeones en la página completa, aunque las capturas inferiores están bloqueadas por el modal de newsletter y no permiten identificar con seguridad cada título.",
+  "cart": "No hay captura del carrito; no se puede determinar si es cajón o página, ni documentar filas, totales, mensajes de envío o ventas adicionales.",
+  "type": "El sistema contrapone tres voces. Room-205 es una display de formas blackletter/editoriales para títulos comerciales: 38 px en escritorio y 32 px en producto móvil, peso 400 y mayúsculas/minúsculas normales. Bajern es la blackletter más ornamental, usada en campañas y en el modal; la medición registra 68 px para «Join Our Pilgrimage». Montserrat resuelve cuerpo, navegación y controles: cuerpo de 14 px/400, navegación de 16 px/400 y botones de 11 px/500 en mayúsculas con 2 px de tracking. Los precios usan Montserrat a 38 px y peso 800. En la portada también aparecen titulares de módulos a 24 px/600 y rótulos de campaña a 16 px/700 con espaciado visual muy amplio. La combinación funciona por reparto de tareas: blackletter para identidad y relato; sans geométrica para información, especificaciones y conversión.",
+  "colour": "La base de portada es marfil cálido rgb(251, 250, 243), alternada con blanco puro y bandas arena rgb(238, 233, 223). Catálogo y producto usan blanco rgb(255, 255, 255) para que las fotografías y la retícula sean el único ritmo. La tinta principal es negro, con una banda oscura registrada como rgb(25, 25, 25). El hero mezcla negro con granate profundo y usa blanco para firma y texto; el acento de campaña es dorado apagado en CTA y algunos controles. El empleo es funcional: marfil para editorial de marca, blanco para comercio, negro para navegación y contraste, arena para separar bloques de contenido secundario.",
+  "photos": "La portada mezcla vídeos de ambiente, producto, espacios y personas; se registran 14 vídeos. Las campañas de una columna usan imagen o vídeo full bleed con texto superpuesto, mientras las parejas editoriales colocan dos recortes del mismo tamaño dentro de una banda marfil. Hay contraste deliberado entre fotografía documental —manos, cafeterías, exteriores, preparación— y bodegón de envase. En catálogo todos los originales se normalizan a cuadrados 1:1 mediante cover: el producto suele ocupar entre la mitad y dos tercios del encuadre y conserva aire alrededor. En producto se alternan vistas aisladas sobre blanco con tomas de uso; las cuatro imágenes no repiten el mismo ángulo, sino que explican frontal, reverso, escala en mano y contexto de barra.",
+  "motion": "La marquesina superior se desplaza horizontalmente. La portada registra 14 vídeos y varias campañas funcionan como fondos en movimiento de ancho completo. El indicador SCROLL invita al desplazamiento y probablemente tiene una animación breve, aunque una captura fija no lo confirma. No se demuestra carrusel en las secciones visibles, cambio de imagen al pasar sobre tarjetas ni animaciones de hover; deben describirse como no verificadas. El modal de newsletter aparece sobre catálogo y parte baja del producto, oscurece el fondo y domina la interacción; para el estudio visual se considera una interrupción, no una sección de contenido.",
+  "phone": "La cabecera se reduce a tres símbolos: cráneo, búsqueda y hamburguesa; desaparece Login. El hero recompone focales y texto en vertical, no se limita a escalar. Los módulos con una sola campaña pasan a bloques de unos 549 px; las parejas de 772 px del escritorio se apilan y crecen hasta unos 1.092 px, es decir, cada tarjeta conserva cerca de 546 px de altura. La primera historia de producto es una excepción más larga: imagen arriba y texto debajo dentro de 970 px. Los márgenes laterales visibles son de unos 10–12 px en módulos editoriales y de 12–20 px en textos. En producto, la galería sigue siendo 2 × 2 pero con recortes compactos; la información de compra ocupa todo el ancho y el botón comparte línea con la cantidad. La página completa de portada crece de 15.984 a 19.278 px porque las parejas se apilan. El chat flotante tapa contenido con frecuencia y el modal bloquea el catálogo móvil de la captura.",
+  "signature": "La firma única es tratar el cráneo como un sello editorial omnipresente —logo, estampación sobre cajas y grabado en producto— y enfrentarlo a titulares blackletter, de modo que la misma iconografía conecta navegación, campañas, embalaje y mercancía.",
+  "home": [
+    {
+      "role": "Abrir con manifiesto y campaña temporal.",
+      "composition": "Hero audiovisual full bleed de 900 px en escritorio y 844 px medidos en teléfono; fondo negro/granate, firma blanca centrada, párrafo breve, CTA dorado y señal de scroll."
+    },
+    {
+      "role": "Destacar un café excepcional como historia principal.",
+      "composition": "Bloque blanco de 772 px: en escritorio, fotografía aproximadamente en la mitad izquierda y texto en la derecha; en teléfono, imagen superior casi cuadrada y texto debajo dentro de 970 px. Titular blackletter grande, notas de cata, párrafo y CTA negro."
+    },
+    {
+      "role": "Presentar la línea Barista Provisions.",
+      "composition": "Campaña full bleed de 585 px en escritorio y 549 px en teléfono, con vídeo oscuro, recipiente ampliado desde el borde inferior y texto blanco centrado sobre la imagen."
+    },
+    {
+      "role": "Cruzar dos novedades de merchandising.",
+      "composition": "Banda marfil de 772 px con dos columnas iguales: gorra a la izquierda y pegatina a la derecha, cada una con texto blanco superpuesto y botón delineado. En teléfono se apilan en 1.092 px."
+    },
+    {
+      "role": "Contar una apertura o colaboración física.",
+      "composition": "Vídeo panorámico full bleed de 585 px con arquitectura de The Preserve, titular blackletter blanco centrado, párrafo estrecho y botón claro; 549 px en móvil."
+    },
+    {
+      "role": "Separar dos familias de regalo.",
+      "composition": "Dos tarjetas verticales dentro de fondo marfil, Box Sets y Terroir; fotografías ocupan casi toda la tarjeta y el texto blanco se apoya en su zona inferior. 772 px en escritorio, 1.092 px apiladas en móvil."
+    },
+    {
+      "role": "Dar entidad propia a Doyenne.",
+      "composition": "Franja fotográfica de 585 px con bolsa, vaso y equipo de café; titular y texto alineados a la izquierda sobre una zona oscura, en lugar del centrado de otras campañas."
+    },
+    {
+      "role": "Promocionar clases y contenido práctico.",
+      "composition": "Pareja de módulos visuales de 772 px, uno por columna, con escenas de preparación; en teléfono se convierten en dos bloques consecutivos dentro de 1.092 px."
+    },
+    {
+      "role": "Acreditar valores corporativos.",
+      "composition": "Campaña única de 585 px para Certified B-Corp, con imagen de fondo, rótulo de 16 px/700 y texto breve; pasa a 549 px en teléfono."
+    },
+    {
+      "role": "Abrir rutas de compra de café.",
+      "composition": "Dos columnas de 772 px bajo «Explore Our Coffee», con fotografía o vídeo y textos de categoría; apiladas en 1.092 px en móvil."
+    },
+    {
+      "role": "Aportar contenido editorial y educativo.",
+      "composition": "Banda arena rgb(238, 233, 223) de 772 px con dos imágenes y bloques de texto; en móvil se apila y alcanza 1.117 px."
+    },
+    {
+      "role": "Convertir una selección estacional.",
+      "composition": "Sección negra rgb(25, 25, 25) de 999 px con tres imágenes y vídeo, bajo «Fall Offerings»; en móvil se compacta a 762 px, probablemente mediante carril o recortes más densos."
+    },
+    {
+      "role": "Presentar la campaña Circadian.",
+      "composition": "Banner único de 585 px con imagen y texto superpuesto; versión móvil de 549 px."
+    },
+    {
+      "role": "Continuar el relato con dos piezas de campaña.",
+      "composition": "Fondo arena, dos columnas y vídeo en una de ellas; 772 px en escritorio y 1.174 px al apilarse en móvil."
+    }
+  ],
+  "lessons": [
+    "Asigna una función a cada tipografía: una display reconocible para relato, una sans para lectura y pesos fuertes solo para precio o especificaciones.",
+    "Crea ritmo alternando dos plantillas repetibles: campaña panorámica de unos 585 px y pareja editorial de unos 772 px. La consistencia permite cambiar de tema sin rediseñar cada sección.",
+    "Separa el mundo de marca del mundo de compra: portada marfil, oscura y audiovisual; catálogo y producto blancos, geométricos y con menos ornamento.",
+    "En móvil no reduzcas simplemente el escritorio: recoloca los puntos focales del hero y apila cada pareja conservando una altura cercana a la de una tarjeta completa.",
+    "Normaliza el catálogo con imágenes 1:1 y una sola línea de metadatos; así pueden convivir bodegones, envases y escenas de uso sin romper la retícula.",
+    "Haz que la galería responda preguntas distintas —frontal, reverso, escala y uso— antes de repetir imágenes decorativas; después coloca una recomendación contextual para prolongar la compra."
+  ]
+}

@@ -1,0 +1,2343 @@
+{
+  "glossier.com": {
+    "host": "glossier.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://glossier.com/collections/all",
+      "product": "https://glossier.com/products/balm-dotcom-trio",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:28:03.154Z"
+  },
+  "graza.co": {
+    "host": "graza.co",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://graza.co/collections/all",
+      "product": "https://graza.co/products/the-graza-tote",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:29:42.107Z"
+  },
+  "liquiddeath.com": {
+    "host": "liquiddeath.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://liquiddeath.com/collections/all",
+      "product": "https://liquiddeath.com/products/team-death-supporter-scarf",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:31:08.412Z"
+  },
+  "drinkrecess.com": {
+    "host": "drinkrecess.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://drinkrecess.com/collections/all",
+      "product": "https://drinkrecess.com/products/recess-zero-proof-apple-tini",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:31:08.412Z"
+  },
+  "omsom.com": {
+    "host": "omsom.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T15:05:44.766Z"
+  },
+  "drinkpoppi.com": {
+    "host": "drinkpoppi.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://www.drinkpoppi.com/collections/drinks",
+      "product": "https://www.drinkpoppi.com/products/cranberry-fizz",
+      "shopify": false
+    },
+    "at": "2026-11-14T14:31:08.411Z"
+  },
+  "brightland.co": {
+    "host": "brightland.co",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://brightland.co/collections/all",
+      "product": "https://brightland.co/products/the-holiday-hosting-set-2026",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:32:51.438Z"
+  },
+  "flybyjing.com": {
+    "host": "flybyjing.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://flybyjing.com/collections/all",
+      "product": "https://flybyjing.com/products/triple-threat-gift-box",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:33:04.202Z"
+  },
+  "sietefoods.com": {
+    "host": "sietefoods.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://sietefoods.com/shop/",
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T14:33:59.283Z"
+  },
+  "milkbarstore.com": {
+    "host": "milkbarstore.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://milkbarstore.com/collections/all",
+      "product": "https://milkbarstore.com/products/candy-letters",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:34:41.523Z"
+  },
+  "athleticbrewing.com": {
+    "host": "athleticbrewing.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://athleticbrewing.com/collections/all",
+      "product": "https://athleticbrewing.com/products/move-as-one",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:32:08.340Z"
+  },
+  "sugarfina.com": {
+    "host": "sugarfina.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T14:36:12.832Z"
+  },
+  "levainbakery.com": {
+    "host": "levainbakery.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://levainbakery.com/collections/all",
+      "product": "https://levainbakery.com/products/holiday-assortment",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:35:39.410Z"
+  },
+  "magicspoon.com": {
+    "host": "magicspoon.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://magicspoon.com/collections/all",
+      "product": "https://magicspoon.com/products/variety6-protein-with-marshmallows",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:33:52.720Z"
+  },
+  "bluebottlecoffee.com": {
+    "host": "bluebottlecoffee.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-drawer.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": "https://bluebottlecoffee.com/us/eng/product/holiday-mug-2026",
+      "shopify": false
+    },
+    "at": "2026-11-14T14:36:43.692Z"
+  },
+  "mirrorwater.earth": {
+    "host": "mirrorwater.earth",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://mirrorwater.earth/collections/all",
+      "product": "https://mirrorwater.earth/products/the-radiance-gift",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:37:16.928Z"
+  },
+  "summerfridays.com": {
+    "host": "summerfridays.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://summerfridays.com/collections/all",
+      "product": "https://summerfridays.com/products/glossy-travel-case-in-mocha",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:37:31.323Z"
+  },
+  "topicals.com": {
+    "host": "topicals.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T14:38:40.027Z"
+  },
+  "onyxcoffeelab.com": {
+    "host": "onyxcoffeelab.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": []
+    },
+    "pages": {
+      "catalog": "https://onyxcoffeelab.com/collections/all",
+      "product": "https://onyxcoffeelab.com/products/blackletter-drip-tumbler",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:36:24.460Z"
+  },
+  "meritbeauty.com": {
+    "host": "meritbeauty.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://meritbeauty.com/collections/all",
+      "product": "https://meritbeauty.com/products/the-compact-merit-x-completedworks",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:38:22.881Z"
+  },
+  "ceremonia.com": {
+    "host": "ceremonia.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://ceremonia.com/collections/all",
+      "product": "https://ceremonia.com/products/the-hair-wellness-kit",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:38:52.216Z"
+  },
+  "seed.com": {
+    "host": "seed.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T14:40:26.214Z"
+  },
+  "otherland.com": {
+    "host": "otherland.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://otherland.com/collections/all",
+      "product": "https://otherland.com/products/fireside-edit",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:39:40.356Z"
+  },
+  "ritual.com": {
+    "host": "ritual.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://ritual.com/collections/all",
+      "product": "https://ritual.com/products/hers-his-daily-health-support-ritual",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:39:53.464Z"
+  },
+  "daniellefrankelstudio.com": {
+    "host": "daniellefrankelstudio.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://daniellefrankelstudio.com/collections/all",
+      "product": "https://daniellefrankelstudio.com/products/miriam",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:41:01.242Z"
+  },
+  "toteme-studio.com": {
+    "host": "toteme-studio.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://toteme-studio.com/collections/all",
+      "product": "https://toteme-studio.com/products/tasseled-ballerinas-black",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:40:48.432Z"
+  },
+  "khaite.com": {
+    "host": "khaite.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://khaite.com/collections/all",
+      "product": "https://khaite.com/products/soft-blake-small-shoulder-bag-in-natural-python-and-black-suede",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:40:48.487Z"
+  },
+  "sezane.com": {
+    "host": "sezane.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T14:42:09.553Z"
+  },
+  "shopdoen.com": {
+    "host": "shopdoen.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://shopdoen.com/collections/all",
+      "product": "https://shopdoen.com/products/rose-top-black-winter-ditsy",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:42:10.041Z"
+  },
+  "kotn.com": {
+    "host": "kotn.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://kotn.com/collections/all",
+      "product": "https://kotn.com/products/grid-stitch-wool-throw-in-natural-taupe",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:42:26.572Z"
+  },
+  "johannaortiz.com": {
+    "host": "johannaortiz.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://johannaortiz.com/collections/all",
+      "product": "https://johannaortiz.com/products/reveries-of-eden-earrings-in-orange",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:42:15.019Z"
+  },
+  "aimeleondore.com": {
+    "host": "aimeleondore.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://aimeleondore.com/collections/all",
+      "product": "https://aimeleondore.com/products/fw23-venetian-loafer",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:43:29.817Z"
+  },
+  "aloyoga.com": {
+    "host": "aloyoga.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://aloyoga.com/collections/all",
+      "product": "https://aloyoga.com/products/w4524r-metallic-break-line-trench-silver-metallic",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:44:18.959Z"
+  },
+  "kith.com": {
+    "host": "kith.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://kith.com/collections/all",
+      "product": "https://kith.com/products/cna20526c",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:43:35.388Z"
+  },
+  "buckmason.com": {
+    "host": "buckmason.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://www.buckmason.com/collections/mens-new-arrivals?f=7451",
+      "product": "https://www.buckmason.com/products/dress-navy-shaggy-alpaca-saddle-crew",
+      "shopify": false
+    },
+    "at": "2026-11-14T14:43:17.031Z"
+  },
+  "outdoorvoices.com": {
+    "host": "outdoorvoices.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://outdoorvoices.com/collections/all",
+      "product": "https://outdoorvoices.com/products/w-puffer-vest-war-plum",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:45:36.089Z"
+  },
+  "baggu.com": {
+    "host": "baggu.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://baggu.com/collections/bowler-bags",
+      "product": "https://baggu.com/products/nylon-bowler-bag-black-and-cream-polka-dot",
+      "shopify": false
+    },
+    "at": "2026-11-14T14:46:18.406Z"
+  },
+  "catbirdnyc.com": {
+    "host": "catbirdnyc.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://www.catbirdnyc.com/collections/limited-edition-black-diamond.html",
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T14:47:15.063Z"
+  },
+  "mejuri.com": {
+    "host": "mejuri.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-drawer.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://mejuri.com/world/en/collections/best-sellers",
+      "product": "https://mejuri.com/world/en/products/tube-huggie-hoops?Material=18k+Gold+Vermeil",
+      "shopify": false
+    },
+    "at": "2026-11-14T14:46:58.440Z"
+  },
+  "lovevery.com": {
+    "host": "lovevery.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": "https://lovevery.com/products/the-play-kits",
+      "shopify": false
+    },
+    "at": "2026-11-14T14:48:08.442Z"
+  },
+  "puravidabracelets.com": {
+    "host": "puravidabracelets.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://puravidabracelets.com/collections/all",
+      "product": "https://puravidabracelets.com/products/silver-harper-textured-heart-charm",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:47:58.915Z"
+  },
+  "allbirds.com": {
+    "host": "allbirds.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://allbirds.com/collections/all",
+      "product": "https://allbirds.com/products/womens-wool-cruiser-port-port-sole",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:45:36.652Z"
+  },
+  "us.tonies.com": {
+    "host": "us.tonies.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://us.tonies.com/collections/all",
+      "product": "https://us.tonies.com/products/fcs-sing-along-songs-tonie",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:48:59.876Z"
+  },
+  "wildone.com": {
+    "host": "wildone.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://wildone.com/collections/all",
+      "product": "https://wildone.com/products/cat-harness-leash-collar-kit",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:49:22.803Z"
+  },
+  "fablepets.com": {
+    "host": "fablepets.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://fablepets.com/collections/all",
+      "product": "https://fablepets.com/products/reggie-raccoon-huggleflatties™-durable-plush-dog-toy",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:49:41.248Z"
+  },
+  "maxbone.com": {
+    "host": "maxbone.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://maxbone.com/collections/all",
+      "product": "https://maxbone.com/products/terrain-gf-beef",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:50:12.777Z"
+  },
+  "parachutehome.com": {
+    "host": "parachutehome.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://parachutehome.com/collections/all",
+      "product": "https://parachutehome.com/products/soft-rib-towels-pebble",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:50:33.901Z"
+  },
+  "floydhome.com": {
+    "host": "floydhome.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://floydhome.com/collections/all",
+      "product": "https://floydhome.com/products/the-media-console",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:51:19.132Z"
+  },
+  "eastfork.com": {
+    "host": "eastfork.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://eastfork.com/collections/all",
+      "product": "https://eastfork.com/products/cake-plate-set-la-sirene-sb",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:51:52.942Z"
+  },
+  "schoolhouse.com": {
+    "host": "schoolhouse.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://schoolhouse.com/collections/all",
+      "product": "https://schoolhouse.com/products/mainsail-throw-pillow-cover",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:50:39.115Z"
+  },
+  "greatjonesgoods.com": {
+    "host": "greatjonesgoods.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://greatjonesgoods.com/collections/all",
+      "product": "https://greatjonesgoods.com/products/great-jones-gift-card",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:55:37.999Z"
+  },
+  "vitamix.com": {
+    "host": "vitamix.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T14:56:34.167Z"
+  },
+  "thesill.com": {
+    "host": "thesill.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://thesill.com/collections/all",
+      "product": "https://thesill.com/products/mixed-greens-holiday-wreath",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:57:01.717Z"
+  },
+  "bloomandwild.com": {
+    "host": "bloomandwild.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T14:58:18.969Z"
+  },
+  "blueland.com": {
+    "host": "blueland.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://blueland.com/collections/all",
+      "product": "https://blueland.com/products/holidays-at-home-hand-soaps-tablet-refills",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:58:44.668Z"
+  },
+  "framebridge.com": {
+    "host": "framebridge.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://framebridge.com/collections/all",
+      "product": "https://framebridge.com/products/the-colour-drenched-stack",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:59:52.564Z"
+  },
+  "tappancollective.com": {
+    "host": "tappancollective.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://tappancollective.com/collections/all",
+      "product": "https://tappancollective.com/products/woodfired-vase",
+      "shopify": true
+    },
+    "at": "2026-11-14T15:01:02.721Z"
+  },
+  "papier.com": {
+    "host": "papier.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://www.papier.com/collections/autumn-winter-2026/",
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T15:02:08.221Z"
+  },
+  "poketo.com": {
+    "host": "poketo.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": null,
+      "shopify": false
+    },
+    "at": "2026-11-14T15:02:54.468Z"
+  },
+  "fellowproducts.com": {
+    "host": "fellowproducts.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://fellowproducts.com/collections/all",
+      "product": "https://fellowproducts.com/products/equator-holiday-blend",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:52:21.215Z"
+  },
+  "nothing.tech": {
+    "host": "nothing.tech",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://nothing.tech/collections/sale",
+      "product": "https://nothing.tech/products/headphone-1-pro",
+      "shopify": false
+    },
+    "at": "2026-11-14T15:03:10.665Z"
+  },
+  "fromourplace.com": {
+    "host": "fromourplace.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://fromourplace.com/collections/all",
+      "product": "https://fromourplace.com/products/petite-perfect-pot",
+      "shopify": true
+    },
+    "at": "2026-11-14T14:53:02.756Z"
+  },
+  "teenage.engineering": {
+    "host": "teenage.engineering",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": null,
+      "product": "https://teenage.engineering/products/audio-and-synthesizers",
+      "shopify": false
+    },
+    "at": "2026-11-14T15:04:10.414Z"
+  },
+  "nomadgoods.com": {
+    "host": "nomadgoods.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://nomadgoods.com/collections/sport-rocky-point-band",
+      "product": "https://nomadgoods.com/products/leather-mag-wallet-with-find-my-tracking-black-camino-leather",
+      "shopify": false
+    },
+    "at": "2026-11-14T15:03:51.931Z"
+  },
+  "huckberry.com": {
+    "host": "huckberry.com",
+    "shots": {},
+    "pages": {},
+    "at": "2026-11-14T15:04:45.563Z",
+    "blocked": "Attention Required! | Cloudflare",
+    "error": null
+  },
+  "cotopaxi.com": {
+    "host": "cotopaxi.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://cotopaxi.com/collections/all",
+      "product": "https://cotopaxi.com/products/contiguo-encima-fleece-pullover-dark-mode-mens",
+      "shopify": true
+    },
+    "at": "2026-11-14T15:04:12.245Z"
+  },
+  "eatfishwife.com": {
+    "host": "eatfishwife.com",
+    "shots": {
+      "home": [
+        "home-d-1.jpg",
+        "home-d-2.jpg",
+        "home-d-3.jpg",
+        "home-d-4.jpg",
+        "home-d-5.jpg",
+        "home-d-6.jpg"
+      ],
+      "homePhone": [
+        "home-p-1.jpg",
+        "home-p-2.jpg",
+        "home-p-3.jpg"
+      ],
+      "catalog": [
+        "catalog-d-1.jpg",
+        "catalog-d-2.jpg",
+        "catalog-p-1.jpg"
+      ],
+      "product": [
+        "product-d-1.jpg",
+        "product-d-2.jpg",
+        "product-d-3.jpg",
+        "product-p-1.jpg",
+        "product-p-2.jpg"
+      ],
+      "cart": [
+        "cart-d-1.jpg"
+      ]
+    },
+    "pages": {
+      "catalog": "https://eatfishwife.com/collections/all",
+      "product": "https://eatfishwife.com/products/the-spicy-trio-3-pack-2",
+      "shopify": true
+    },
+    "at": "2026-11-14T15:05:44.766Z"
+  }
+}

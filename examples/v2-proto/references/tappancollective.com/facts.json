@@ -1,0 +1,987 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.tappancollective.com/",
+    "title": "",
+    "width": 1440,
+    "pageHeight": 6152,
+    "fonts": {
+      "h1": {
+        "family": "Goldenbook",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "1.5px",
+        "text": "Tappan"
+      },
+      "h2": {
+        "family": "Neuzeit-Grotesk",
+        "size": "28px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "5.04px",
+        "text": "New Arrivals"
+      },
+      "body": {
+        "family": "Goldenbook",
+        "size": "52.8px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "9.504px",
+        "text": "NEW PAINTINGS"
+      },
+      "button": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "1.5px",
+        "text": "Go to item 1"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 57,
+        "h": 810,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 33,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 867,
+        "h": 709,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "28px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "5.04px",
+          "text": "New Arrivals"
+        },
+        "words": 107,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1576,
+        "h": 724,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 7,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2300,
+        "h": 384,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2684,
+        "h": 724,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3408,
+        "h": 686,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "28px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "5.04px",
+          "text": "THE EDITS"
+        },
+        "words": 6,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 4093,
+        "h": 628,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "28px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "5.04px",
+          "text": "Paintings"
+        },
+        "words": 92,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 4721,
+        "h": 840,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "28px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "5.04px",
+          "text": "JOURNAL"
+        },
+        "words": 121,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 5562,
+        "h": 590,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 12,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.tappancollective.com/",
+    "title": "",
+    "width": 390,
+    "pageHeight": 6541,
+    "fonts": {
+      "h1": {
+        "family": "Goldenbook",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "1.5px",
+        "text": "Tappan"
+      },
+      "h2": {
+        "family": "Neuzeit-Grotesk",
+        "size": "20.1171px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "3.62107px",
+        "text": "New Arrivals"
+      },
+      "body": {
+        "family": "Goldenbook",
+        "size": "36.5415px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "6.57746px",
+        "text": "NEW PAINTINGS"
+      },
+      "button": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "1.5px",
+        "text": "Go to item 1"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 55,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 55,
+        "h": 487,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 33,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 542,
+        "h": 532,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "20.1171px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "3.62107px",
+          "text": "New Arrivals"
+        },
+        "words": 106,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1074,
+        "h": 748,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 7,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1822,
+        "h": 832,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2654,
+        "h": 748,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3402,
+        "h": 657,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "20.1171px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "3.62107px",
+          "text": "THE EDITS"
+        },
+        "words": 6,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4059,
+        "h": 471,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "20.1171px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "3.62107px",
+          "text": "Paintings"
+        },
+        "words": 91,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 4530,
+        "h": 691,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "20.1171px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "3.62107px",
+          "text": "JOURNAL"
+        },
+        "words": 121,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 5221,
+        "h": 1319,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.tappancollective.com/collections/all",
+    "title": "",
+    "width": 1440,
+    "pageHeight": 8838,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Neuzeit-Grotesk",
+        "size": "28px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "5.04px",
+        "text": "Journal"
+      },
+      "body": {
+        "family": "Neuzeit-Grotesk",
+        "size": "12px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "2.16px",
+        "text": "Explore"
+      },
+      "button": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Price"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 119,
+        "h": 194,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 313,
+        "h": 7094,
+        "bg": "rgb(255, 255, 255)",
+        "images": 48,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.5px",
+          "text": "Price"
+        },
+        "words": 679,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 7407,
+        "h": 840,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "28px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "5.04px",
+          "text": "Journal"
+        },
+        "words": 121,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 8247,
+        "h": 590,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 48,
+      "columns": 3,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.tappancollective.com/collections/all?_su_rec=smcxDYwvlEugPWj8vJCutDlYdrCvooz2-TBwivR9GRsv1ktphP83uxj62G04Z-Iih5n18ggTBYvb9sW36e1r3cteK40CRqdPU7LaLoj_IUJuM1hIvL5FqeQ5b3EjdYqq35NCa9dsW5BJWaaLLQ05aRTyhHC9m7zqUT7m5tB7kn6VI3X67pL5HolKsAduwS6l_uGEcPKqFcRxzWw7AYNY6u8A7uj9wL5BF8WJjkosW89bCpyM_OJHFJz5rpdj1SCDbMkq3WYlGmw0FIg2Ha_KnzirSIQ-QczrWYtdXy6MdIVtmSM4I29X8PX0f2-RTEDRKveWPraQ_jMO0JmuwV0lpbGUTXFazecY9Z4qCo0YhhV4sDxL&_su_rec_id=4fdc5a43-d12a-4c82-8f34-725283e4f535-1794668498",
+    "title": "",
+    "width": 390,
+    "pageHeight": 9441,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Neuzeit-Grotesk",
+        "size": "20.1171px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "3.62107px",
+        "text": "Journal"
+      },
+      "body": {
+        "family": "Neuzeit-Grotesk",
+        "size": "12px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "2.16px",
+        "text": "Explore"
+      },
+      "button": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "1.5px",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 55,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 114,
+        "h": 142,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 255,
+        "h": 7174,
+        "bg": "rgb(255, 255, 255)",
+        "images": 48,
+        "video": false,
+        "heading": null,
+        "words": 621,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 7429,
+        "h": 691,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "20.1171px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "3.62107px",
+          "text": "Journal"
+        },
+        "words": 121,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 8120,
+        "h": 1319,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 48,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.tappancollective.com/products/woodfired-vase",
+    "title": "",
+    "width": 1440,
+    "pageHeight": 4908,
+    "fonts": {
+      "h1": {
+        "family": "Goldenbook",
+        "size": "22px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3.96px",
+        "text": "Woodfired Vase"
+      },
+      "h2": {
+        "family": "Neuzeit-Grotesk",
+        "size": "28px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "5.04px",
+        "text": "Related Artwork"
+      },
+      "body": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Woodfired Porcelain"
+      },
+      "button": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "1.5px",
+        "text": "Go to item 1"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 119,
+        "h": 2020,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Goldenbook",
+          "size": "22px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3.96px",
+          "text": "Woodfired Vase"
+        },
+        "words": 218,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2139,
+        "h": 627,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "28px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "5.04px",
+          "text": "Related Artwork"
+        },
+        "words": 73,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 2766,
+        "h": 864,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "28px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "5.04px",
+          "text": "Meet Our Artists"
+        },
+        "words": 27,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 3631,
+        "h": 687,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 88,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 4318,
+        "h": 590,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Neuzeit-Grotesk",
+      "size": "14px",
+      "weight": "300",
+      "case": "none",
+      "tracking": "1.5px",
+      "text": "Sculpture .price-list-font { font-size: .85rem; } $1,750 Reg"
+    },
+    "galleryImages": 31,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 10
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.tappancollective.com/products/woodfired-vase",
+    "title": "",
+    "width": 390,
+    "pageHeight": 5691,
+    "fonts": {
+      "h1": {
+        "family": "Goldenbook",
+        "size": "18.0585px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3.25054px",
+        "text": "Woodfired Vase"
+      },
+      "h2": {
+        "family": "Neuzeit-Grotesk",
+        "size": "20.1171px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "3.62107px",
+        "text": "Related Artwork"
+      },
+      "body": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Woodfired Porcelain"
+      },
+      "button": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "1.5px",
+        "text": "Zoom picture"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 55,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 114,
+        "h": 2688,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Goldenbook",
+          "size": "18.0585px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3.25054px",
+          "text": "Woodfired Vase"
+        },
+        "words": 220,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2801,
+        "h": 440,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "20.1171px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "3.62107px",
+          "text": "Related Artwork"
+        },
+        "words": 69,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 3241,
+        "h": 619,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Neuzeit-Grotesk",
+          "size": "20.1171px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "3.62107px",
+          "text": "Meet Our Artists"
+        },
+        "words": 26,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 3860,
+        "h": 510,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 87,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 4370,
+        "h": 1319,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Neuzeit-Grotesk",
+      "size": "14px",
+      "weight": "300",
+      "case": "none",
+      "tracking": "1.5px",
+      "text": "Sculpture .price-list-font { font-size: .85rem; } $1,750 Reg"
+    },
+    "galleryImages": 31,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 14
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.tappancollective.com/cart",
+    "title": "",
+    "width": 1440,
+    "pageHeight": 1681,
+    "fonts": {
+      "h1": {
+        "family": "Goldenbook",
+        "size": "18px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "3.24px",
+        "text": "Bag"
+      },
+      "h2": null,
+      "body": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Items in your bag are not reserved. Checkout now before they"
+      },
+      "button": {
+        "family": "Neuzeit-Grotesk",
+        "size": "14px",
+        "weight": "300",
+        "case": "uppercase",
+        "tracking": "2.52px",
+        "text": "Continue shopping"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 186,
+        "h": 767,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Goldenbook",
+          "size": "18px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "3.24px",
+          "text": "Bag"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 977,
+        "h": 113,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1090,
+        "h": 590,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

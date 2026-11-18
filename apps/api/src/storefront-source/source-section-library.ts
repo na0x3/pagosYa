@@ -15,7 +15,9 @@ export type LibraryNeeds = { photos?: number; items?: [number, number]; products
   /** Points on a close-up photo, each with a note (detail-hotspots, lively one-product stores 2026-11-03). */
   spots?: boolean;
   /** before-after: the merchant's own words speak of a before and an after (new sections 2026-11-04). */
-  pair?: boolean };
+  pair?: boolean;
+  /** product-personalizer (2026-11-09): a product with real options (colours, sizes, flavours). */
+  options?: boolean };
 export type LibrarySection = { id: string; role: LibraryRole; use: string; needs: LibraryNeeds; looks?: string[];
   /** Only inside a template's fixed home (34 templates): never offered when YAPI composes a home freely. */
   templateOnly?: boolean;
@@ -31,7 +33,7 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'cover-half', role: 'cover', use: 'Portada mitad foto, mitad color con el titular centrado; si hay un código de descuento activo puede mostrarlo. Buena para una oferta o un lanzamiento.', needs: { photos: 1 } },
   { id: 'cover-centered', role: 'cover', use: 'Portada tranquila: titular centrado y una foto ancha debajo. Para marcas serenas, de lujo o artesanales.', needs: { photos: 1 } },
   { id: 'cover-ribbon', role: 'cover', use: 'Portada divertida de color con la foto en un círculo y una cinta curva de palabras que se mueve abajo (items = 2 a 4 palabras). Solo marcas alegres (snacks, bebidas, dulces, juguetes).', needs: { photos: 1, items: [2, 4], mood: 'bold' } },
-  { id: 'strip-marquee', role: 'strip', use: 'Franja de palabras que se desplaza (items = 3 a 6 palabras cortas: sabores, tonos, valores). Va justo después de la portada.', needs: { items: [3, 6] }, looks: ['solid', 'line', 'tilt'] },
+  { id: 'strip-marquee', role: 'strip', use: 'Franja de palabras que se desplaza (items = 3 a 6 palabras cortas: sabores, tonos, valores; si el comercio dictó la frase, items = solo esa frase, tal cual). Va justo después de la portada, o bajo el menú si el comercio lo pide.', needs: { items: [1, 6] }, looks: ['solid', 'line', 'tilt'] },
   { id: 'strip-services', role: 'strip', use: 'Franja de servicios con iconos: envío, recojo, pago seguro, cambios. El texto lo pone pagosYa desde los datos reales de la tienda; tú solo eliges si va.', needs: { services: true } },
   { id: 'strip-badges', role: 'strip', use: 'Insignias redondas con icono de cualidades del producto (items = 3 a 6, 1 a 3 palabras cada una), solo cualidades que el comercio dijo o que están en sus productos.', needs: { items: [3, 6] } },
   { id: 'products-grid', role: 'products', use: 'La grilla principal de productos con buscador, filtros y orden. Obligatoria, una sola vez.', needs: {}, looks: ['grid4', 'grid3'] },
@@ -42,6 +44,7 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'detail-hotspots', role: 'story', use: 'Una foto de cerca del producto (photo: la que muestra un detalle: tela, textura, botones, terminación) con hasta 3 puntos «+». items: title = qué se ve en ese punto (≤ 60 letras), x, y = dónde está, en % del ancho y alto de la foto. title y text de la sección cortos. Sin una foto de detalle, deja la sección vacía.', needs: { photos: 1, items: [1, 3], spots: true }, templateOnly: true },
   { id: 'chips-marquee', role: 'proof', use: 'Dos filas de frases cortas que se deslizan, cada una con la foto del producto (photo). items: 6 a 10 title de ≤ 48 letras, solo hechos del producto o de la tienda (cómo llega, para qué sirve, colores que hay), nada inventado.', needs: { photos: 1, items: [6, 10] }, templateOnly: true },
   { id: 'products-spotlight', role: 'products', use: 'Un producto destacado con su tarjeta de compra (product = su id) y hasta 3 puntos de por qué es especial.', needs: { product: true, items: [0, 3] } },
+  { id: 'product-personalizer', role: 'products', use: 'El personalizador: el producto con opciones (colores, tallas, sabores) en un escenario grande, con sus opciones reales, precio y botón Añadir al carrito (lo dibuja pagosYa; product = su id). Solo si la tienda tiene un producto con opciones; en tiendas de arte cuelga en un marco.', needs: { product: true, options: true }, looks: ['stage', 'frame'] },
   { id: 'products-cards', role: 'products', use: 'De 2 a 4 productos elegidos (products = nombres exactos) en tarjetas de color con botón. «Los más pedidos», «Para regalar».', needs: { products: [2, 4] }, looks: ['soft', 'dashed'] },
   { id: 'products-lookbook', role: 'products', use: 'Una foto grande de ambiente con su titular y botón, y al lado de 2 a 3 productos (products = nombres exactos) para comprar ese look o esa rutina.', needs: { photos: 1, products: [2, 3] } },
   { id: 'categories-tiles', role: 'products', use: 'Mosaicos de categorías con foto (items = 2 a 4: title = nombre exacto de la categoría, photo = una foto de esa categoría).', needs: { categories: 2, items: [2, 4], itemPhotos: 2 } },
@@ -79,7 +82,8 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'social-marquee', role: 'proof', use: 'Titular con una palabra en *asteriscos* (va en letra manuscrita) y fotos que corren con «síguenos» y la @cuenta. Solo con cuenta enlazada.', needs: { social: true, items: [3, 6], itemPhotos: 3 }, templateOnly: true },
   { id: 'shop-look', role: 'products', use: 'Foto con puntos sobre los productos que aparecen en ella (items.title = nombre exacto del producto; x, y = posición en % sobre la foto).', needs: { photos: 1, items: [1, 4], pins: true }, templateOnly: true },
   { id: 'checker-rows', role: 'benefits', use: '2 a 4 cualidades en mosaicos de color (items.title, items.text) que alternan con fotos de la tienda (items.photo).', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
-  { id: 'wave-divider', role: 'strip', use: 'Borde de olas entre secciones (decorativo, sin textos).', needs: {}, templateOnly: true, decor: true },
+  // looks (2026-11-14, V2 edges): ripple / ripple-flip = scalloped edge into / out of a band, sway / sway-flip = a gentle sway.
+  { id: 'wave-divider', role: 'strip', use: 'Borde de olas entre secciones (decorativo, sin textos).', needs: {}, looks: ['ripple', 'ripple-flip', 'sway', 'sway-flip'], templateOnly: true, decor: true },
   { id: 'stats-rings', role: 'proof', use: '1 a 4 porcentajes que el comercio midió (items.value = el número, items.text = qué significa), cada uno en un anillo. Solo números que el comercio escribió.', needs: { items: [1, 4] }, templateOnly: true },
   { id: 'image-columns', role: 'story', use: '2 a 4 columnas de foto con título, una frase y un enlace (items con photo).', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
   { id: 'statement-marquee', role: 'promo', use: 'Unas pocas palabras (title, 2 a 4 palabras) que corren enormes sobre una banda oscura, una frase (text) y un botón.', needs: {}, templateOnly: true },
@@ -97,8 +101,69 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'promo-lines', role: 'promo', use: 'Dos tarjetas grandes de foto redondeadas (items = 2 con photo, title, text y link), cada una con una etiqueta redonda sobre la foto (items.value, 1 a 3 palabras: «Nuevo», «Sin azúcar», solo lo que el comercio dijo) y un botón debajo (cta). Dos líneas, dos sabores, dos colecciones.', needs: { items: [2, 2], itemPhotos: 2 } },
   { id: 'story-sunburst', role: 'story', use: 'Banda de color suave: titular, texto y botón a un lado; al otro la foto en un círculo con rayos de color que giran despacio (marcas tranquilas: anillos finos). Para lo que hace especial al producto: ingredientes, origen, cómo se hace. look rings = anillos finos en lugar de rayos (marcas tranquilas); left = la foto a la izquierda.', needs: { photos: 1 }, looks: ['rings', 'left'] },
   { id: 'perks-rows', role: 'benefits', use: 'Una foto enmarcada sobre un panel a rayas y, al lado, 2 a 4 filas con lo que gana el cliente al comprar aquí (items: title = el beneficio, text = una línea, value = una etiqueta corta como «Gratis» o «10% menos», link): suscripción, envío, recojo, un código. Solo beneficios que la tienda tiene de verdad.', needs: { photos: 1, items: [2, 4] } },
+  // Merienda (spec 2026-11-10, after bakeme.pages.dev): the playful snack-shop style's own sections.
+  { id: 'cover-mega', role: 'cover', use: 'Portada de la tienda alegre: titular enorme en mayúsculas (title, 2 a 6 palabras), una línea (text), botón; photo = la mejor foto del producto; eyebrow = el sticker redondo (1 a 3 palabras, un hecho del producto: «Hecho hoy»); items = 2 a 4 palabras cortas para la cinta curva que corre abajo.', needs: { photos: 1, items: [0, 4] }, looks: ['side', 'stack', 'tilt'], templateOnly: true },
+  { id: 'products-rows', role: 'products', use: 'Los productos uno por fila, cada uno en su color con su nombre enorme y su tarjeta de compra: products = 2 a 5 nombres exactos; items = los mismos productos (title = nombre exacto, text = una línea de ese producto, de su descripción o de lo que dijo el comercio).', needs: { products: [2, 5], items: [0, 5] }, looks: ['alternate', 'cards', 'stack'], templateOnly: true },
+  { id: 'names-list', role: 'products', use: 'Los nombres de los productos enormes, uno por línea, que se iluminan al bajar (items = 3 a 8: title = nombre exacto del producto, photo = su foto). eyebrow = una línea corta encima («¿Cuál es tu favorito?»).', needs: { items: [3, 8], itemPhotos: 3 }, looks: ['light', 'outline'], templateOnly: true },
+  { id: 'statement-sticker', role: 'story', use: 'Una frase grande sobre el producto (title, 3 a 7 palabras, un hecho: cómo se hace, cómo se come), una línea (text) y dos fotos del producto como stickers (photo y photo2).', needs: { photos: 1 }, looks: ['left', 'center'], templateOnly: true },
+  // Hand-made styles round 2 (owner 2026-11-10 «all of them are the same»): each style's own sections, after a real store.
+  { id: 'products-words', role: 'products', use: 'Fila deslizable de tarjetas altas de producto, cada una bajo UNA palabra enorme en minúsculas que dice para qué sirve (items = 3 a 8: title = nombre exacto del producto, value = esa palabra, 1 o 2 palabras, ≤ 14 letras: «prepara», «el kit», «rubor»).', needs: { items: [3, 8] }, looks: ['grey', 'white'], templateOnly: true },
+  { id: 'values-portrait', role: 'story', use: 'Una frase de lo que la marca cuida (title, 10 a 20 palabras) con botón, y 2 a 4 valores que se abren (items: title = el valor en 1 o 2 palabras, text = una línea), junto a un retrato en blanco y negro (photo: una persona o las manos).', needs: { photos: 1, items: [2, 4] }, looks: ['left', 'right'], templateOnly: true },
+  { id: 'campaign-strip', role: 'promo', use: 'Una campaña: foto a todo el ancho (photo: ambiente, persona usando el producto) con title y text abajo a la izquierda y dos botones (cta, cta2) a la derecha; debajo 4 productos de esa colección (link = category:Nombre exacto de una categoría; cada campaña de la página, otra categoría).', needs: { photos: 1 }, looks: ['tall', 'wide'], templateOnly: true },
+  { id: 'block-split', role: 'story', use: 'Un panel de color con un título corto, una línea y un botón, al lado de una foto que llena su mitad (photo: ambiente o el producto en uso).', needs: { photos: 1 }, looks: ['left', 'right'], templateOnly: true },
+  { id: 'letters-split', role: 'story', use: 'Una palabra corta en mosaicos de letras de colores (eyebrow: el nombre de la tienda o UNA palabra de 2 a 8 letras) con una foto en uno de los mosaicos (photo), junto a un título, una línea y un botón.', needs: { photos: 1 }, looks: ['left', 'right'], templateOnly: true },
+  { id: 'statement-offset', role: 'story', use: 'Una frase grande en dos líneas separadas por « / » (title: «Tan fresco / que se nota.»), una a la izquierda y otra a la derecha, con una foto redonda pequeña al medio (photo) y una línea abajo (text).', needs: { photos: 1 }, templateOnly: true },
+  { id: 'products-nicknames', role: 'products', use: 'El nombre de la tienda enorme, una línea (title) y sus productos, cada uno bajo un apodo entre comillas (items = 2 a 4: title = nombre exacto del producto, value = el apodo, 1 o 2 palabras: «Dulce», «Para freír»), con un botón a todo el ancho (cta).', needs: { items: [2, 4] }, templateOnly: true },
+  { id: 'verbs-photo', role: 'benefits', use: 'Banda del color de la marca: las formas de usar el producto (items = 3 a 8 verbos o palabras cortas: «Untar», «Hornear», «Compartir») grandes y desordenadas junto a una foto (photo), con una nota bajo la foto (text) y un botón. title = la frase que corre arriba («Tantas formas de comerlo»).', needs: { photos: 1, items: [3, 8] }, templateOnly: true },
+  { id: 'origins-arches', role: 'story', use: 'De 2 a 4 fotos con arco arriba, el nombre de cada origen, zona o línea encima de su foto (items: title = 1 a 2 palabras, text = una línea, photo = su foto, link), y cta = el texto del enlace («Ver el café»).', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
   { id: 'before-after', role: 'proof', use: 'Antes y después: dos fotos en un mismo marco (photo = antes, photo2 = después) que el cliente compara arrastrando una barra. Solo si el comercio habla de un antes y un después (limpieza, restauración, belleza, peluquería) y tiene esas dos fotos.', needs: { photos: 2, pair: true } },
+  // Rich sections (owner 2026-11-13): the kit's rich pieces; on a template they only take the place of the strip or one story (RICH_SWAPS).
+  // cover-kinetic stays drawable for the stores that have it, but is offered nowhere (owner: «i like more normal heroes»).
+  { id: 'cover-kinetic', role: 'cover', use: 'Portada en movimiento: el titular (title, 3 a 7 palabras, la idea de la marca) entra palabra por palabra, una línea (text), botones, y debajo la mejor foto de ambiente (photo) que crece al bajar.', needs: { photos: 1 }, templateOnly: true },
+  { id: 'strip-velocity', role: 'strip', use: 'Franja de palabras de la marca grandes (items = 3 a 6, title = 1 a 3 palabras) que corre más rápido cuando el cliente baja.', needs: { items: [3, 6] }, templateOnly: true },
+  { id: 'statement-rotate', role: 'story', use: 'Una frase grande cuyo final cambia solo: title = el comienzo («Burbujas para»), items = 2 a 5 finales (title, 1 a 3 palabras: «la tarde», «compartir»), una línea (text), botón y una foto enmarcada al lado (photo). look left = la foto a la izquierda.', needs: { photos: 1, items: [2, 5] }, looks: ['left', 'right'], templateOnly: true },
+  { id: 'story-carousel', role: 'story', use: 'Un carrusel de 2 a 4 momentos de la tienda, una foto a la vez (items: photo, title = una línea, text opcional, link opcional), con titular y texto arriba.', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
+  { id: 'pay-ways', role: 'strip', use: 'Las formas de pago reales de la tienda (las dibuja la tienda según su modo de cobro).', needs: {}, templateOnly: true },
+  { id: 'packs-kits', role: 'promo', use: 'Los packs y kits reales de la tienda (los dibuja la tienda: fotos, contenido, ahorro y botón para agregar el pack).', needs: {}, templateOnly: true },
+  { id: 'tabs-photo', role: 'benefits', use: '2 a 4 pestañas (items: title = la pestaña, 1 a 3 palabras: un uso, un momento, una línea; text = una o dos frases con datos reales; photo = su foto; link opcional), con titular arriba.', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
 ];
+/** Rich sections (owner 2026-11-13): what each role of a template's home may become. At most one swap per kind (strip, story or
+ *  benefits), in the same place and on the same band; the template's own cover, products, cards, cart and product page never are. */
+export const RICH_SWAPS: Readonly<Record<string, readonly string[]>> = {
+  strip: ['strip-velocity'], story: ['statement-rotate', 'story-carousel', 'tabs-photo'], benefits: ['tabs-photo', 'story-carousel', 'statement-rotate'],
+};
+const richKind = (role: string | undefined) => role === 'benefits' ? 'story' : role;
+/** Hero kit (owner 2026-11-13, after Amboras's heroes): the covers that draw a hero shop (library.tsx HERO_SHOP_COVERS). */
+export const HERO_SHOP_COVERS = new Set(['cover-split', 'cover-full', 'cover-poster', 'cover-half', 'cover-centered', 'cover-ribbon', 'cover-stage', 'cover-video', 'cover-duo', 'cover-mega', 'hero-split']);
+// Owner 2026-11-13 («i dont like the hero with the products there… too overloaded, not clean»): the cover carries no product cards.
+export const HERO_KIT_PROMPT = `PORTADA LIMPIA (la sección de portada, role cover): solo la foto, el título, una línea y el botón; ningún producto encima.
+- eyebrow: el tipo de tienda y su ciudad en pocas palabras separadas por « · » («TU TIENDA DE BARRIO · SANTA CRUZ», «MERCADO SALUDABLE A
+  DOMICILIO»), solo hechos de los datos.
+- title: marca con *asteriscos* la palabra o las últimas 2 a 4 palabras que van en el color de la marca («Hora de *comer*», «Comer bien
+  es más fácil *con la canasta lista*»). Una sola marca por título.`;
+
+export const BRAND_STYLE_PROMPT = `ESTILO PROPIO DE LA MARCA («brand»): la plantilla da la estructura; tú le das a esta tienda su propia letra e íconos.
+- fonts: el par de fuentes (títulos + texto) de «pares» que mejor cuenta esta marca, por su carácter (artesanal, lujo, juguetón,
+  técnico, natural, urbano); puede ser el de la plantilla si ya es el mejor. Que se lea bien en texto largo.
+- logoFont, logoCase, logoTrack, logoColour: el nombre de la tienda como logo con letras, con una fuente de «letras» que tenga
+  personalidad para esta marca (distinta de las de títulos y texto cuando eso le da carácter), en mayúsculas, minúsculas o como se
+  escribe, espaciado justo, normal o amplio, y en el color del texto o de acento. Un logo que se lea siempre, sin fuentes de fantasía
+  ilegibles.
+- iconStroke y iconFrame: los íconos de la tienda finos, normales o gruesos, sueltos o dentro de un círculo o un cuadrado suave.
+  Marcas delicadas o de lujo: finos y sueltos; alegres o para niños: gruesos y en círculo; técnicas: normales en cuadrado.
+- corners: la forma de TODOS los botones, buscador, filtros y paneles: sharp (esquinas rectas: lujo, moda, editorial), soft (apenas
+  redondeadas: natural, cotidiano), round (paneles redondeados y botones píldora: cálido, cosmética), pill (todo píldora: juguetón,
+  bebidas, niños), cut (una esquina redonda y otra recta: urbano, con carácter). Elígela por el carácter de esta marca, no por costumbre.
+- hover: cómo responde un botón al pasar el mouse: lift (sube con sombra), sweep (un color lo llena de izquierda a derecha), arrow (la
+  flecha avanza), glow (un halo del color de acento), press (crece y se aprieta al tocar). Que vaya con la marca.`;
+
+export const RICH_FILL_PROMPT = `SECCIONES RICAS (excepción a «exactamente esas secciones»): en «ricas» tienes secciones con movimiento. Puedes poner UNA de ellas
+en lugar de una sección de la plantilla, como máximo dos cambios: la franja (role strip) → strip-velocity; UNA sección de historia o
+beneficios (role story o benefits) → statement-rotate, story-carousel o tabs-photo. La sección rica va en el mismo lugar que la que
+reemplaza (y la reemplazada ya no va). La portada de la plantilla nunca se cambia. Úsalas cuando le dan vida a esta marca, nunca
+para productos, preguntas ni cierre. Llénalas
+completas con los datos de la tienda, sin nada inventado.`;
+const ART_WORDS = /\b(laminas?|cuadros?|arte|prints?|posters?|ilustracion(?:es)?|enmarcad[ao]s?|galeria)\b/;
 const BY_ID = new Map(LIBRARY_CATALOG.map(section => [section.id, section]));
 /** Sections whose items carry a short tag in `value` (spec docs/superpowers/specs/2026-11-04-new-sections-from-real-stores.md). */
 const TAGGED = new Set(['promo-lines', 'perks-rows']);
@@ -113,21 +178,36 @@ export type LibraryFacts = {
   storeName: string; what: string; story: string; city: string; request: string; tone: 'calm' | 'bold';
   /** about: the product's own description, on a store of three products or fewer (one-product stores, 2026-11-02). */
   products: Array<{ id: string; name: string; category?: string; price?: string; about?: string }>;
+  /** The personalizador's product (2026-11-09): one with real options, the most photographed first. */
+  optioned?: { id: string; name: string; groups: string[] };
+  /** An art store (láminas, cuadros, prints…): the personalizador hangs its product in a frame. */
+  art?: boolean;
   categories: string[];
-  photos: Array<{ url: string; product?: string; category?: string }>;
+  photos: Array<{ url: string; product?: string; category?: string; width?: number }>;
   codes: Array<{ code: string; offer: string }>;
   services: Array<{ title: string; text: string; icon: string }>;
   location?: { name: string; address: string; hours?: string };
+  /** Owner 2026-11-13 (delivery): each delivery zone the store set, its price and time, as rows of the Visítanos card. */
+  delivery?: Array<{ title: string; text: string }>;
+  /** What the card's map looks up: the address with the store's city. */
+  mapQuery?: string;
   reviews: number;
   /** The store's own Instagram or TikTok (from its links): social-* sections need it. */
   social?: { handle: string; url: string };
+  /** Owner 2026-11-13 («full kits»): how many active packs (StoreBundle) the store has; the packs section needs one. */
+  packs?: number;
+  /** Owner 2026-11-13 (ways to pay): the store's checkout mode — «payment» is online payment through pagosYa. */
+  checkoutMode?: string;
   /** 2026-11-02 (Miga Dorada: «¿Cuánto duran las cookies?» → «Consulta por WhatsApp»): what the merchant already wrote in their
    *  settings — delivery prices and times, policies, the notes they gave their assistant — for questions and steps. */
   notes?: string;
 };
 
 /** The answer schema (strict): every field is present; empty strings and -1 stand for «none». */
-export function libraryAnswerSchema(photoCount: number) {
+/** Owner 2026-11-13 («custom letters, custom icons»): on a template's home the answer also picks the store's own type, lettered logo
+ *  and icon style (BRAND_STYLE_PROMPT); `pairs` = the template base's font pairs, `fonts` = the catalog fonts. */
+export type BrandStyleChoices = { pairs: readonly string[]; fonts: readonly string[] };
+export function libraryAnswerSchema(photoCount: number, brand?: BrandStyleChoices) {
   const ids = LIBRARY_CATALOG.map(section => section.id);
   const looks = [...new Set(LIBRARY_CATALOG.flatMap(section => section.looks ?? [])), ''];
   const photo = { type: 'integer', minimum: -1, maximum: Math.max(0, photoCount - 1) };
@@ -139,7 +219,12 @@ export function libraryAnswerSchema(photoCount: number) {
     properties: { type: { type: 'string', enum: ids }, look: { type: 'string', enum: looks }, band: { type: 'string', enum: ['paper', 'muted', 'accent', 'deep', ''] },
       eyebrow: { type: 'string' }, title: { type: 'string' }, text: { type: 'string' }, cta: { type: 'string' }, link: { type: 'string' }, cta2: { type: 'string' }, link2: { type: 'string' },
       photo, photo2: photo, items: { type: 'array', items: item }, products: { type: 'array', items: { type: 'string' } }, product: { type: 'string' }, code: { type: 'string' }, card: { type: 'string', enum: [...LIBRARY_CARDS, ''] }, endsAt: { type: 'string' } } };
-  return { type: 'object', additionalProperties: false, required: ['blocks', 'mood', 'titleStyle'], properties: { blocks: { type: 'array', items: block }, mood: { type: 'string', enum: ['colourful', 'calm'] }, titleStyle: { type: 'string', enum: ['burbuja', 'redonda', 'firme', 'poster'] } } };
+  const style = brand ? { type: 'object', additionalProperties: false, required: ['fonts', 'logoFont', 'logoCase', 'logoTrack', 'logoColour', 'iconStroke', 'iconFrame', 'corners', 'hover'], properties: {
+    fonts: { type: 'string', enum: [...brand.pairs] }, logoFont: { type: 'string', enum: [...brand.fonts] }, logoCase: { type: 'string', enum: ['upper', 'lower', 'as-is'] },
+    logoTrack: { type: 'string', enum: ['tight', 'normal', 'wide'] }, logoColour: { type: 'string', enum: ['ink', 'accent'] },
+    iconStroke: { type: 'string', enum: ['thin', 'regular', 'bold'] }, iconFrame: { type: 'string', enum: ['none', 'circle', 'square'] },
+    corners: { type: 'string', enum: ['sharp', 'soft', 'round', 'pill', 'cut'] }, hover: { type: 'string', enum: ['lift', 'sweep', 'arrow', 'glow', 'press'] } } } : undefined;
+  return { type: 'object', additionalProperties: false, required: ['blocks', 'mood', 'titleStyle', ...(style ? ['brand'] : [])], properties: { blocks: { type: 'array', items: block }, mood: { type: 'string', enum: ['colourful', 'calm'] }, titleStyle: { type: 'string', enum: ['burbuja', 'redonda', 'firme', 'poster'] }, ...(style ? { brand: style } : {}) } };
 }
 
 /** Lively one-product stores (spec 2026-11-03): the mood YAPI chose for the product; a playful business (sweets, toys, parties) is
@@ -166,6 +251,13 @@ sección ni en dos secciones seguidas), y deja vacío (o sin items) lo que la ti
 look, band y card los pone la plantilla: déjalos vacíos. Escribe TODAS las secciones completas hasta la última (preguntas con sus
 respuestas, puntos, columnas, títulos de categorías y productos exactos para los puntos de shop-look): una sección que mandas vacía
 desaparece. Si te faltan fotos, deja photo en -1: el código pone una foto de la tienda.
+UNA idea de marca (owner 2026-11-11): antes de escribir, elige una sola idea para esta tienda, una palabra o un juego de palabras con
+su nombre o con lo que vende (Remolino → girar, giro, vueltas; Pawby → hogar, plato, un momento Pawby), y llévala por toda la portada:
+el titular de la portada es una frase con esa idea, nunca una descripción («Que todo gire a tu ritmo», no «Licuadoras para batidos»);
+como máximo dos títulos de sección más la retoman, con palabras distintas; los demás títulos dicen claro lo que muestra su sección
+(«Nuestros sabores», «Cómo funciona»), sin la palabra de la idea; las palabras de la franja que se mueve son palabras de la marca (no
+«Envío a domicilio»); y la sección de cierre termina con una frase grande de esa idea. Una idea ligera, no un estribillo. La idea es voz,
+no datos: nada inventado.
 - mood: «colourful» para productos alegres, de casa o de regalo que piden juego (un sofá nube, una bebida, juguetes, dulces); «calm» para productos serios o técnicos (herramientas, cuidado de la piel, salud, finanzas). Fuera de la plantilla Único no cambia nada.
 - titleStyle: el estilo de los títulos según el producto: «burbuja» (juguetes, mascotas, dulces, snacks, fiestas, niños), «redonda» (casa, muebles, cocina, ropa de cama), «firme» (tecnología, belleza, herramientas), «poster» (deportes, bebidas, ropa urbana). Fuera de la plantilla Único no cambia nada.
 - Etiquetas (product-hero items), frases (chips-marquee) y notas (detail-hotspots): solo hechos que están en los datos (lo que dijo el comercio, la descripción del producto, sus notas de entrega). Ningún plazo, número, premio o calificación que no esté escrito. Si no hay hechos, déjalos vacíos.`;
@@ -233,14 +325,23 @@ type RawBlock = { template?: LayoutBlock; type?: string; look?: string; band?: s
   photo?: number; photo2?: number; items?: RawItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string };
 export type LayoutItem = { title: string; text?: string; icon?: string; photo?: string; link?: string; value?: string; x?: number; y?: number };
 export type LayoutBlock = { type: string; look?: string; band?: string; eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
-  photo?: string; photo2?: string; items?: LayoutItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string; handle?: string; social?: string };
+  photo?: string; photo2?: string; items?: LayoutItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string; handle?: string; social?: string; map?: string };
 
 /** A model answer → a layout the template can always draw. Photos come back as the store's own URLs (bundled by the caller). */
 /** 34 templates (2026-10-31): `fixed` is a template's home — the answer only fills it. Its blocks keep their order, type, look, band
  *  and card; each takes the answer's first block of the same type (its words, photos, items); a block the answer left out, or that
  *  the store cannot back, goes. Nothing is added or moved. */
-export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | undefined, facts: LibraryFacts, options: { fixed?: LayoutBlock[]; now?: number } = {}): LayoutBlock[] {
+export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | undefined, facts: LibraryFacts, options: { fixed?: LayoutBlock[]; now?: number;
+  /** Spec 2026-11-11 store composer: a home composed inside a template — its allowed sections and looks, its photo rule. */
+  composed?: { allowed: readonly string[]; looks: Readonly<Record<string, readonly string[]>>; opener?: string };
+  /** A template's home (owner 2026-11-13): rich sections may take a cover's, the strip's or one story's place (RICH_SWAPS). */
+  richSwaps?: boolean;
+  /** Hero kit (owner 2026-11-13): the cover keeps up to 3 real products for its hero shop. */
+  heroShop?: boolean } = {}): LayoutBlock[] {
   const fixedMode = Boolean(options.fixed?.length);
+  const composed = options.composed;
+  // A template's photo rule (twice, never neighbouring) for its fixed home and for a home composed inside it.
+  const twice = fixedMode || Boolean(composed);
   const now = options.now ?? Date.now();
   const merchantWords = fold(`${facts.what} ${facts.story} ${facts.request}`);
   // Lively parts may also repeat the store's notes and its products' own descriptions (spec 2026-11-03).
@@ -256,7 +357,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   const takePhoto = (index: unknown): string | undefined => {
     const at = typeof index === 'number' ? index : -1;
     if (at < 0 || at >= facts.photos.length) return undefined;
-    if (fixedMode) {
+    if (twice) {
       const places = spots.get(at) ?? [];
       if (places.length >= 2 || places.includes(here) || places.includes(here - 1)) return undefined;
       // Owner 2026-11-02 («unused photos first»): a photo shows a second time only once every photo of the store has shown.
@@ -269,7 +370,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   // Template mode (live check 2026-10-31: the model left every photo place after the 11th empty): a place the answer left without a
   // photo takes the store's least-shown photo the rule allows — one of the category named, when there is one.
   const pick = (category?: string): string | undefined => {
-    if (!fixedMode) return undefined;
+    if (!twice) return undefined;
     const order = facts.photos.map((photo, at) => ({ at, shown: (spots.get(at) ?? []).length, match: category && photo.category && fold(photo.category) === fold(category) ? 0 : 1 }))
       .sort((a, b) => Math.sign(a.shown) - Math.sign(b.shown) || a.match - b.match || a.shown - b.shown || a.at - b.at);
     for (const { at } of order) { const url = takePhoto(at); if (url) return url; }
@@ -287,8 +388,15 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   };
   const blocks: LayoutBlock[] = [];
   const answered = [...(answer?.blocks ?? [])];
-  const sequence: RawBlock[] = fixedMode ? options.fixed!.flatMap(template => {
+  const swapped = new Set<string>();
+  const sequence: RawBlock[] = fixedMode ? options.fixed!.flatMap((template): RawBlock[] => {
     const at = answered.findIndex(raw => raw.type === template.type);
+    // Rich sections (owner 2026-11-13): the answer may put one rich section of each kind where the template's cover, strip or a story was.
+    const role = BY_ID.get(template.type)?.role, kind = richKind(role);
+    if (at < 0 && options.richSwaps && role && kind && !swapped.has(kind)) {
+      const rich = answered.findIndex(raw => (RICH_SWAPS[role] ?? []).includes(String(raw.type ?? '')));
+      if (rich >= 0) { swapped.add(kind); const [raw] = answered.splice(rich, 1); return [{ ...raw, band: template.band ?? '', card: '' }]; }
+    }
     // Decoration (a wave edge) has nothing to write: the template's own block stays when the answer skipped it.
     if (at < 0) return BY_ID.get(template.type)?.decor ? [{ type: template.type, look: template.look ?? '', band: template.band ?? '', template }] : [];
     const [raw] = answered.splice(at, 1);
@@ -296,7 +404,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   }) : answered;
   for (const raw of sequence) {
     const section = BY_ID.get(String(raw.type ?? ''));
-    if (!section || (section.templateOnly && !fixedMode)) continue;
+    if (!section || (section.templateOnly && !fixedMode && !composed?.allowed.includes(section.id))) continue;
+    if (composed && !composed.allowed.includes(section.id)) continue;
     const needs = section.needs;
     if (needs.mood === 'bold' && facts.tone !== 'bold') continue;
     if (needs.reviews && facts.reviews <= 0) continue;
@@ -317,7 +426,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     const block: LayoutBlock = { type: section.id };
     if (section.id === 'products-grid' || section.id === 'products-tabs' || section.id === 'products-slider') block.card = (LIBRARY_CARDS as readonly string[]).includes(raw.card ?? '') ? raw.card : defaultCard(facts);
     // A template's own look wins (arch, caption, uneven, parallax…); a free answer may only use the section's listed looks.
-    if (raw.look && (raw.template || section.looks?.includes(raw.look))) block.look = raw.look;
+    if (raw.look && (raw.template || section.looks?.includes(raw.look) || composed?.looks[section.id]?.includes(raw.look))) block.look = raw.look;
     // Owner rule 2026-10-29 (no section of only words on a plain ground), enforced on templates 2026-11-02: the icon columns stand
     // beside a photo, the category list shows its photos instead of the giant-letter stack, and the big paragraph has no photo to take.
     if (section.id === 'statement-reveal') continue;
@@ -339,7 +448,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (photoless) { /* no photo */ } else if ((needs.photos ?? 0) >= 1 || single || raw.template?.photo || besidePhoto || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
       const photo = photoOf(raw.photo); if (photo) block.photo = photo;
     }
-    if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline' || raw.template?.photo2) { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
+    if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline' || section.id === 'statement-sticker' || raw.template?.photo2) { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
     const liveCap = section.id === 'product-hero' || section.id === 'hero-split' ? 32 : section.id === 'chips-marquee' ? 48 : section.id === 'detail-hotspots' ? 60 : 0;
     // Items: capped words, a known icon, an item photo where the section shows one, a value only in the comparison.
     const [minItems, maxItems] = needs.items ?? [0, 0];
@@ -354,6 +463,9 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
       if (section.id === 'compare-table') out.value = item.value === 'yes' ? 'yes' : 'no';
+      // products-words: the one lowercase word over each product's card.
+      if (section.id === 'products-words') { const word = clip(item.value, 16); if (word) out.value = word.toLowerCase(); }
+      if (section.id === 'products-nicknames') { const nick = clip(item.value, 18); if (nick) out.value = nick.replace(/[«»"“”]/g, ''); }
       // A sticker (promo-lines) or a pill (perks-rows): a few words, and every number in it one the merchant wrote.
       if (TAGGED.has(section.id)) { const tag = clip(item.value, 22); if (tag && (tag.match(/\d+/g) ?? []).every(number => new RegExp(`(?<!\\d|\\d[.,])${number}(?!\\d|[.,]\\d)`).test(backedWords))) out.value = tag; }
       // A percentage ring shows only a number the merchant wrote («94%»).
@@ -380,22 +492,41 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (section.id === 'promo-trio' && !single) items = items.filter(item => item.photo);
     if (section.id === 'categories-list') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
     if (section.id === 'categories-tiles') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
+    // Merienda: a name that is a product links to it and reads as the product's own name; a row's line belongs to its product.
+    if (section.id === 'names-list') items = items.map(item => { const product = productByName.get(fold(item.title)); return product ? { ...item, title: product.name, link: `product:${product.id}` } : item; });
+    if (section.id === 'products-nicknames') items = items.filter(item => productByName.has(fold(item.title))).map(item => ({ ...item, title: productByName.get(fold(item.title))!.name }));
+    if (section.id === 'products-words') items = items.filter(item => productByName.has(fold(item.title))).map(item => ({ ...item, title: productByName.get(fold(item.title))!.name }));
+    if (section.id === 'products-rows') items = items.filter(item => productByName.has(fold(item.title))).map(item => ({ title: productByName.get(fold(item.title))!.name, ...(item.text ? { text: item.text } : {}) }));
     if (needs.itemPhotos) items = items.filter(item => item.photo);
+    // Meat House live 2026-11-07 («pon texto moviéndose que diga pedidos con 24 hrs de anticipación»): one dictated phrase runs on
+    // its own, repeated so the band fills (the strip each store already has draws two words or more). Pieces that together are the
+    // merchant's own phrase («Pedidos» ✦ «con 24 hrs» ✦ «de anticipación», the same day) run whole; a list of single words stays.
+    const whole = items.map(item => item.title).join(' ');
+    if (section.id === 'strip-marquee' && items.length > 1 && whole.split(/\s+/).length > items.length && merchantWords.includes(fold(whole))) items = [{ title: whole }];
+    if (section.id === 'strip-marquee' && items.length && items.length < 3) items = Array.from({ length: items.length === 1 ? 3 : 4 }, (_, at) => ({ ...items[at % items.length] }));
     if (section.id === 'strip-services') items = facts.services.slice(0, 4);
-    if (section.id === 'visit-store' && facts.location) items = [{ title: 'Dirección', text: facts.location.address, icon: 'pin' }, ...(facts.location.hours ? [{ title: 'Horario', text: facts.location.hours, icon: 'clock' }] : [])];
+    if (section.id === 'visit-store' && (facts.location || facts.delivery?.length)) items = visitRows(facts);
     if (items.length) block.items = items;
     // Products by exact name; the spotlight by id (or a name the model gave instead).
     if (needs.products) {
       const names = [...new Set((raw.products ?? []).map(name => productByName.get(fold(String(name)))?.name).filter((name): name is string => Boolean(name)))].slice(0, needs.products[1]);
       if (names.length >= needs.products[0]) block.products = names;
     }
+    // Hero kit (owner 2026-11-13): a cover may carry up to 3 real products, by exact name (its hero shop).
+    if (options.heroShop && HERO_SHOP_COVERS.has(section.id) && !needs.products) {
+      const names = [...new Set((raw.products ?? []).map(name => productByName.get(fold(String(name)))?.name).filter((name): name is string => Boolean(name)))].slice(0, 3);
+      if (names.length) block.products = names;
+    }
     if (needs.product || raw.template?.product) { const found = productById.get(String(raw.product ?? '')) ?? productByName.get(fold(String(raw.product ?? ''))); if (found) block.product = found.id; }
     // The colour cards always draw the store's own product (premium landing 2026-11-03).
     if (section.id === 'variant-cards' && !block.product && facts.products[0]) block.product = facts.products[0].id;
+    // Personalizador (2026-11-09): always the store's product with options, framed only in an art store.
+    if (section.id === 'product-personalizer') { if (facts.optioned) block.product = facts.optioned.id; else delete block.product; block.look = facts.art ? 'frame' : 'stage'; }
     // A one-product home (2026-11-02): the product on top is the store's own even when the answer named none.
     if (section.id === 'product-hero' && !block.product && facts.products[0]) block.product = facts.products[0].id;
     if (needs.code || section.id === 'cover-half') { const code = facts.codes.find(entry => fold(entry.code) === fold(String(raw.code ?? ''))); if (code) block.code = code.code; }
     if (section.id === 'visit-store' && facts.location && !block.title) block.title = facts.location.name;
+    if (section.id === 'visit-store' && facts.mapQuery) block.map = facts.mapQuery;
     if (needs.social && facts.social) { block.handle = facts.social.handle; block.social = facts.social.url; }
     if (needs.date) { const ends = libraryOfferEnd(raw.endsAt, merchantWords, now); if (ends) block.endsAt = ends; }
     // Needs met, or the block goes (and gives its photos back).
@@ -413,11 +544,18 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     }
     // Owner rule (no dark band of words alone): accent and deep only behind a photo or products.
     // Product cards are drawn for a light ground (Oh Belly live 2026-10-31: names and prices vanished on a deep grid band).
-    if ((block.band === 'deep' || block.band === 'accent') && ['products-grid', 'products-tabs', 'products-cards', 'products-spotlight', 'products-lookbook'].includes(section.id)) delete block.band;
+    if ((block.band === 'deep' || block.band === 'accent') && ['products-grid', 'products-tabs', 'products-cards', 'products-spotlight', 'products-lookbook', 'product-personalizer'].includes(section.id)) delete block.band;
     if ((block.band === 'deep' || block.band === 'accent') && !block.photo && !block.products && !block.product && !(block.items ?? []).some(item => item.photo) && section.id !== 'categories-tiles' && !section.decor) delete block.band;
     blocks.push(block);
   }
-  return fixedMode ? blocks : frameLayout(blocks, facts, used);
+  // Live 2026-11-10 (Perra Please on Neón, one category): each category's four products under one campaign only; a later campaign
+  // of the same (or no) category keeps its photo and words and sends to the catalogue.
+  const campaigns = new Set<string>();
+  for (const block of blocks) if (block.type === 'campaign-strip') {
+    if (block.link?.startsWith('category:') && !campaigns.has(block.link)) campaigns.add(block.link);
+    else block.link = 'products';
+  }
+  return fixedMode ? blocks : frameLayout(blocks, facts, used, composed?.opener);
 }
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -461,14 +599,15 @@ export function withoutDemoWords(filled: LayoutBlock[], template: LayoutBlock[],
   return out;
 }
 
-/** The frame every page keeps: a cover first, the main grid early, a closing last; no two neighbours on the same band. */
-function frameLayout(blocks: LayoutBlock[], facts: LibraryFacts, used: Set<number>): LayoutBlock[] {
+/** The frame every page keeps: a cover first, the main grid early, a closing last; no two neighbours on the same band.
+ *  `opener`: a composed home on a template that opens without a cover (owner 2026-11-11) keeps that section first instead. */
+function frameLayout(blocks: LayoutBlock[], facts: LibraryFacts, used: Set<number>, opener?: string): LayoutBlock[] {
   const free = () => { const at = facts.photos.findIndex((_, index) => !used.has(index)); if (at < 0) return undefined; used.add(at); return facts.photos[at].url; };
   let out = blocks.filter(block => BY_ID.get(block.type)?.role !== 'closing');
   const closing = blocks.find(block => BY_ID.get(block.type)?.role === 'closing');
-  const coverAt = out.findIndex(block => BY_ID.get(block.type)?.role === 'cover');
+  const coverAt = out.findIndex(block => (opener ? block.type === opener : BY_ID.get(block.type)?.role === 'cover'));
   if (coverAt > 0) out = [out[coverAt], ...out.filter((_, index) => index !== coverAt)];
-  if (coverAt < 0) { const photo = free(); out = [{ type: photo ? 'cover-split' : 'cover-centered', title: facts.storeName, ...(facts.what ? { text: clip(facts.what, TEXT_CAPS.text) } : {}), cta: 'Ver productos', link: 'products', ...(photo ? { photo } : {}) }, ...out]; }
+  if (coverAt < 0 && !opener) { const photo = free(); out = [{ type: photo ? 'cover-split' : 'cover-centered', title: facts.storeName, ...(facts.what ? { text: clip(facts.what, TEXT_CAPS.text) } : {}), cta: 'Ver productos', link: 'products', ...(photo ? { photo } : {}) }, ...out]; }
   // The moving words belong under the cover (the catalogue says so); anywhere else they read as a stray band.
   const marqueeAt = out.findIndex(block => block.type === 'strip-marquee');
   if (marqueeAt > 1) out.splice(1, 0, out.splice(marqueeAt, 1)[0]);
@@ -489,7 +628,8 @@ function frameLayout(blocks: LayoutBlock[], facts: LibraryFacts, used: Set<numbe
 /** The catalogue and settings the composer reads, as the store has them now. */
 export type LibraryStoreInput = {
   storeName: string; what: string; story: string; city: string; request: string; tone: 'calm' | 'bold';
-  items: Array<{ id: string; name: string; categoryId?: string | null; amount?: unknown; imageUrls?: string[]; description?: string | null }>;
+  items: Array<{ id: string; name: string; categoryId?: string | null; amount?: unknown; imageUrls?: string[]; description?: string | null;
+    variants?: Array<{ options?: Array<{ name?: string; value?: string }>; imageUrl?: string | null; imageUrls?: string[] }> | null }>;
   categories: Array<{ id: string; name: string }>;
   locations?: Array<{ name: string; address?: string; pickupEnabled?: boolean; openingHours?: Array<{ day: number; open: string; close: string; closed: boolean }> }>;
   shippingEnabled?: boolean; shippingPickupEnabled?: boolean; contactPhone?: string | null;
@@ -551,17 +691,36 @@ export function buildLibraryFacts(input: LibraryStoreInput, maxPhotos = 14): Lib
     { title: 'Pago seguro', text: 'Pagas en línea con pagosYa', icon: 'lock' },
     ...(input.contactPhone ? [{ title: 'Te atendemos', text: 'Escríbenos por WhatsApp', icon: 'message' }] : []),
   ];
-  const offer = (code: LibraryStoreInput['codes'][number]) => code.discountType === 'PERCENT' ? `${code.discountValue}% de descuento` : `Bs ${code.discountValue} de descuento`;
+  // Personalizador (2026-11-09): the product with real options — at least two variants that name their option — the one with the
+  // most photographed variants first; an art store by its own words or its categories.
+  const optioned = input.items.map((item, at) => {
+    const variants = (item.variants ?? []).filter(variant => (variant.options ?? []).some(option => option?.name && option?.value));
+    const groups = [...new Set(variants.flatMap(variant => (variant.options ?? []).map(option => String(option?.name ?? '').trim()).filter(Boolean)))];
+    return { item, at, groups, count: variants.length, photos: variants.filter(variant => variant.imageUrl || variant.imageUrls?.length).length };
+  }).filter(entry => entry.count >= 2 && entry.groups.length).sort((a, b) => b.photos - a.photos || a.at - b.at)[0];
+  const art = ART_WORDS.test(fold(`${input.what} ${input.story} ${input.categories.map(category => category.name).join(' ')}`));
+  // A fixed discount is in cents, like every amount (BATIDO20 is 2000).
+  const offer = (code: LibraryStoreInput['codes'][number]) => code.discountType === 'PERCENT' ? `${code.discountValue}% de descuento` : `${money(code.discountValue)} de descuento`;
   return {
     storeName: input.storeName, what: input.what.slice(0, 1500), story: input.story.slice(0, 1500), city: input.city, request: input.request.slice(0, 3000), tone: input.tone,
     products, categories: input.categories.filter(category => used.has(category.id)).map(category => category.name), photos,
+    ...(optioned ? { optioned: { id: optioned.item.id, name: optioned.item.name, groups: optioned.groups } } : {}), art,
     codes: input.codes.slice(0, 3).map(code => ({ code: code.code, offer: offer(code) })),
     services: services.length >= 2 ? services : [],
     ...(located?.address ? { location: { name: located.name, address: located.address, ...(libraryHours(located.openingHours) ? { hours: libraryHours(located.openingHours) } : {}) } } : {}),
+    ...(located?.address ? { mapQuery: fold(located.address).includes(fold(input.city)) || !input.city ? located.address : `${located.address}, ${input.city}` } : {}),
+    ...(input.shippingEnabled !== false && input.zones?.length ? { delivery: libraryDelivery(input.zones) } : {}),
     reviews: input.reviews,
     ...(librarySocial(input.links) ? { social: librarySocial(input.links)! } : {}),
     ...(libraryNotes(input) ? { notes: libraryNotes(input) } : {}),
   };
+}
+
+/** «Centro» · «Bs 10 · gratis desde Bs 200 · en unos 45 minutos»: the zones the store delivers to, cheapest first, at most four. */
+export function libraryDelivery(zones: NonNullable<LibraryStoreInput['zones']>): Array<{ title: string; text: string }> {
+  const time = (minutes: number | null) => !minutes ? '' : minutes < 120 ? `en unos ${minutes} min` : minutes < 2880 ? `en ${Math.round(minutes / 60)} horas` : `en ${Math.round(minutes / 1440)} días`;
+  return [...zones].filter(zone => zone.name?.trim()).sort((a, b) => a.fee - b.fee).slice(0, 4)
+    .map(zone => ({ title: zone.name.trim(), text: [zone.fee ? money(zone.fee) : 'Gratis', zone.freeAbove ? `gratis desde ${money(zone.freeAbove)}` : '', time(zone.estimatedMinutes)].filter(Boolean).join(' · ') }));
 }
 
 const money = (cents: number) => `Bs ${Number.isInteger(cents / 100) ? cents / 100 : (cents / 100).toFixed(2).replace('.', ',')}`;
@@ -613,6 +772,152 @@ export function withTopUp<T extends { type: string }>(layout: readonly T[], adde
   return closing ? [...layout.slice(0, -1), ...added, last] : [...layout, ...added];
 }
 
+/** Personalizador (spec 2026-11-09, owner «Personalizador para todos»): every home of a store with an optioned product gets it once —
+ *  after the main product grid, else before the closing section. Words stay the template's: the kit draws the product's own. */
+/** Owner 2026-11-11 (Pawby showed its five products in three rows): besides the main grid, a store with fewer than 8 products shows
+ *  one row of its catalogue, with 8 or more two; later rows go, and the top-up fills the page with other sections. One featured
+ *  product, categories and the main grid are not rows. */
+const CATALOGUE_ROWS = new Set(['products-slider', 'products-cards', 'products-lookbook', 'products-rows', 'products-words', 'products-nicknames']);
+/** Owner 2026-11-11 («no blurry cover photos»: Oh Belly's 736 px photos filled a 1280 px cover): a full-width cover takes the widest
+ *  photo of SHARP_COVER px or more (the section that had it gets the cover's photo); a store with none gets the framed cover, with the
+ *  same words and photo. A photo of unknown size is left alone. */
+/** Owner 2026-11-14 («vestido cala appears twice», composed NOA: the steps section took the photo its category list shows): a section's
+ *  own photo (photo, photo2) that the home already shows elsewhere — an earlier section's, or any list's item (a category or product
+ *  keeps its photo) — becomes a store photo the home does not show yet, while one is left. The first section keeps its own. */
+export function withFreshPhotos<T extends LayoutBlock>(layout: readonly T[], facts: Pick<LibraryFacts, 'photos'>): T[] {
+  const shown = new Set<string>(layout.flatMap(block => (block.items ?? []).map(item => item.photo).filter((photo): photo is string => Boolean(photo))));
+  const free = () => facts.photos.map(photo => photo.url).find(url => !shown.has(url) && !layout.some(block => block.photo === url || block.photo2 === url));
+  return layout.map((block, at) => {
+    let next = block;
+    for (const key of ['photo', 'photo2'] as const) {
+      const photo = next[key];
+      if (!photo) continue;
+      if (at > 0 && shown.has(photo)) { const other = free(); if (other) { next = { ...next, [key]: other }; shown.add(other); continue; } }
+      shown.add(photo);
+    }
+    return next;
+  });
+}
+
+const FULL_WIDTH_COVERS = new Set(['cover-full', 'cover-stage', 'cover-shoppable']);
+export const SHARP_COVER = 1100;
+export function withSharpCover<T extends LayoutBlock>(layout: readonly T[], facts: LibraryFacts): T[] {
+  const at = layout.findIndex(block => BY_ID.get(block.type)?.role === 'cover');
+  const cover = layout[at];
+  if (!cover || !FULL_WIDTH_COVERS.has(cover.type) || !cover.photo) return [...layout];
+  const width = facts.photos.find(photo => photo.url === cover.photo)?.width;
+  if (!width || width >= SHARP_COVER) return [...layout];
+  const wide = facts.photos.filter(photo => (photo.width ?? 0) >= SHARP_COVER).sort((a, b) => b.width! - a.width!)[0];
+  if (wide) return layout.map((block, index) => index === at ? { ...block, photo: wide.url } : block.photo === wide.url ? { ...block, photo: cover.photo } : block);
+  const { eyebrow, title, text, cta, link, photo } = cover;
+  const framed = { type: 'cover-split', look: 'frame', ...(eyebrow ? { eyebrow } : {}), ...(title ? { title } : {}), ...(text ? { text } : {}), ...(cta ? { cta } : {}), ...(link ? { link } : {}), photo } as unknown as T;
+  return layout.map((block, index) => index === at ? framed : block);
+}
+
+export function withoutRepeatedProductRows<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  const keep = facts.products.length >= 8 ? 2 : 1;
+  let rows = 0;
+  return layout.filter(block => !CATALOGUE_ROWS.has(block.type) || ++rows <= keep);
+}
+
+/** Owner 2026-11-13 («discounts everything like full kits»): a store with active packs shows them right after its product grid. */
+export function withPacks<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  if (!facts.packs || layout.some(block => block.type === 'packs-kits')) return layout as T[];
+  const block = { type: 'packs-kits', eyebrow: 'Packs', title: 'Llévalo en pack', text: 'Los packs de la tienda, con su ahorro.' } as unknown as T;
+  const grid = layout.findIndex(entry => entry.type === 'products-grid' || entry.type === 'products-tabs');
+  if (grid >= 0) return [...layout.slice(0, grid + 1), block, ...layout.slice(grid + 1)];
+  return withTopUp(layout, [block]);
+}
+
+/** Owner 2026-11-13 («discounts»): a store with a public code shows it — its real offer, the copy button and an unused store photo —
+ *  after its ways to pay, packs or grid, unless a section already carries the code. */
+export function withPromoCode<T extends { type: string; code?: string; photo?: string; photo2?: string; items?: Array<{ photo?: string }> }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  const first = facts.codes[0];
+  if (!first || layout.some(block => block.code || block.type.startsWith('promo-code'))) return layout as T[];
+  const used = new Set(layout.flatMap(block => [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)].filter(Boolean)));
+  const photo = facts.photos.map(entry => entry.url).find(url => !used.has(url));
+  if (!photo) return layout as T[];
+  const block = { type: 'promo-code', eyebrow: 'Código de descuento', title: first.offer ? `*${first.offer}* en tu compra` : 'Un descuento para tu compra', text: 'Escríbelo al pagar.', code: first.code, cta: 'Comprar ahora', link: 'products', photo } as unknown as T;
+  const after = [layout.findIndex(entry => entry.type === 'pay-ways'), layout.findIndex(entry => entry.type === 'packs-kits'), layout.findIndex(entry => entry.type === 'products-grid' || entry.type === 'products-tabs')].find(at => at >= 0);
+  if (after !== undefined) return [...layout.slice(0, after + 1), block, ...layout.slice(after + 1)];
+  return withTopUp(layout, [block]);
+}
+
+/** Owner 2026-11-13 (ways to pay): a store that takes payment online shows how, after its packs or its product grid. */
+/** The Visítanos card's rows: where and when (address, hours), then each delivery zone with its price and time. */
+function visitRows(facts: LibraryFacts): Array<{ title: string; text: string; icon: string }> {
+  return [
+    ...(facts.location ? [{ title: 'Dirección', text: facts.location.address, icon: 'pin' }, ...(facts.location.hours ? [{ title: 'Horario', text: facts.location.hours, icon: 'clock' }] : [])] : []),
+    ...(facts.delivery ?? []).map(zone => ({ ...zone, icon: 'truck' })),
+  ];
+}
+
+/** Owner 2026-11-13 (Boosterpack «Visit us»): a store with an address or delivery zones gets the Visítanos card — address, hours, its
+ *  zones with price and time, «Cómo llegar», WhatsApp and a map that loads on tap — near the end, before its questions and closing. */
+export function withVisit<T extends { type: string; photo?: string; photo2?: string; items?: Array<{ photo?: string }> }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  if (!facts.location && !facts.delivery?.length) return layout as T[];
+  const at = layout.findIndex(block => block.type === 'visit-store');
+  // The template's own card gets the zones and the map too.
+  if (at >= 0) return layout.map((block, index) => index === at ? { ...block, items: visitRows(facts), ...(facts.mapQuery ? { map: facts.mapQuery } : {}) } : block);
+  // Zones only, and the template already lists them (its delivery columns): nothing to add.
+  const zone = facts.delivery?.[0]?.title;
+  if (!facts.location && zone && layout.some(block => (block.items as Array<{ title?: string }> | undefined)?.some(item => item.title === zone))) return layout as T[];
+  const used = new Set(layout.flatMap(block => [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)].filter(Boolean)));
+  // Never a text-only card (owner 2026-10-29): an unused store photo, else the last one.
+  const photo = facts.photos.map(entry => entry.url).find(url => !used.has(url)) ?? facts.photos.at(-1)?.url;
+  const block = { type: 'visit-store', eyebrow: facts.location ? 'Visítanos' : 'Envíos', title: facts.location?.name || 'Te lo llevamos a casa',
+    items: visitRows(facts), ...(facts.mapQuery ? { map: facts.mapQuery } : {}), ...(photo ? { photo } : {}) } as unknown as T;
+  const end = layout.findIndex((entry, index) => index > 0 && /^(faq|closing|newsletter|social)/.test(entry.type));
+  return end >= 0 ? [...layout.slice(0, end), block, ...layout.slice(end)] : [...layout, block];
+}
+
+/** Owner 2026-11-13 (Clyro's «(01) Application»): on the «duo» product page the steps come first under the buy box, as panels —
+ *  the template's own steps, or new ones YAPI writes for every product (a store that cannot back them simply has none). */
+export function withStepPanels(template: readonly LayoutBlock[]): LayoutBlock[] {
+  const at = template.findIndex(block => block.type === 'steps-howto');
+  const steps: LayoutBlock = at >= 0 ? { ...template[at], look: 'panels' } : { type: 'steps-howto', look: 'panels', eyebrow: 'Modo de uso', title: 'Cómo se usa',
+    items: [{ title: 'Elige', text: 'Escoge el que va contigo.' }, { title: 'Prepara', text: 'Tenlo listo en pocos pasos.' }, { title: 'Disfruta', text: 'Y repite cuando quieras.' }] };
+  return [steps, ...template.filter((_, index) => index !== at)];
+}
+
+/** Owner 2026-11-13 («i want a clean site like this one»: Aesop, Mirror Water, Moment): one idea per section on one ground — no
+ *  moving strips, stickers or motion sections, no colour bands, and at most `max` sections: the hero, the products, then what the
+ *  store really has (packs, its code, its place), one story, its questions and ways to pay. The kept ones keep their order. */
+const CLEAN_NOISE = /^(strip-|statement-rotate$|story-carousel$|cover-kinetic$|closing-wordmark$)/;
+const CLEAN_PRIORITY: ReadonlyArray<RegExp> = [/^products-(grid|tabs|slider)$/, /^packs-kits$/, /^promo-code$/, /^visit-store$/,
+  /^(story-|statement-inline$|image-columns$|usecases|benefits-|icon-columns$|steps-howto$)/, /^faq-/, /^pay-ways$/, /^closing-/];
+export function withCleanHome<T extends { type: string; band?: string; look?: string }>(layout: readonly T[], max = 7): T[] {
+  const calm = layout.map((block, index) => {
+    if (index === 0) return block;
+    const { band: _band, ...rest } = block as T & Record<string, unknown>;
+    return (rest.look === 'sticker' ? { ...rest, look: undefined } : rest) as unknown as T;
+  }).filter((block, index) => index === 0 || !CLEAN_NOISE.test(block.type));
+  const chosen = new Set<number>([0]);
+  for (const rule of CLEAN_PRIORITY) {
+    const at = calm.findIndex((block, index) => !chosen.has(index) && rule.test(block.type));
+    if (at >= 0 && chosen.size < max) chosen.add(at);
+  }
+  return calm.filter((_, index) => chosen.has(index));
+}
+
+export function withPayWays<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  if (facts.checkoutMode !== 'payment' || layout.some(block => block.type === 'pay-ways')) return layout as T[];
+  const block = { type: 'pay-ways', title: 'Paga como prefieras' } as unknown as T;
+  const after = [layout.findIndex(entry => entry.type === 'packs-kits'), layout.findIndex(entry => entry.type === 'products-grid' || entry.type === 'products-tabs')].find(at => at >= 0);
+  if (after !== undefined) return [...layout.slice(0, after + 1), block, ...layout.slice(after + 1)];
+  return withTopUp(layout, [block]);
+}
+
+export function withPersonalizer<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  if (!facts.optioned || layout.some(block => block.type === 'product-personalizer')) return layout as T[];
+  // Owner 2026-11-14 («vestido cala appears twice»): a home that already spotlights that product does not show it again to personalise.
+  if (layout.some(block => block.type === 'products-spotlight' && (block as { product?: string }).product === facts.optioned!.id)) return layout as T[];
+  const block = { type: 'product-personalizer', product: facts.optioned.id, look: facts.art ? 'frame' : 'stage' } as unknown as T;
+  const grid = layout.findIndex(entry => entry.type === 'products-grid' || entry.type === 'products-tabs');
+  if (grid >= 0) return [...layout.slice(0, grid + 1), block, ...layout.slice(grid + 1)];
+  return withTopUp(layout, [block]);
+}
+
 export function librarySectionBlocker(type: string, facts: LibraryFacts): string | null {
   const section = BY_ID.get(type);
   if (!section) return 'esa sección no está en mi biblioteca';
@@ -624,9 +929,18 @@ export function librarySectionBlocker(type: string, facts: LibraryFacts): string
   if (needs.categories && facts.categories.length < needs.categories) return `necesita al menos ${needs.categories} categorías con productos`;
   if (needs.services && facts.services.length < 2) return 'aún no tienes envío ni recojo configurados';
   if (needs.mood === 'bold' && facts.tone !== 'bold') return 'va solo con marcas atrevidas';
+  const said = fold(`${facts.what} ${facts.story} ${facts.request}`);
+  // Live test 2026-11-11: Oh Belly got press quotes nobody gave; the press comes only from the merchant's words. A medium alone is
+  // not press (NOA 2026-11-12: «una tienda elegante, de revista»): it has to have said or published something about the brand.
+  const medium = /\b(revista|periodico|diario|radio|television|tv|podcast|prensa|canal)\b/.test(said);
+  const mention = /\b(dijo|dijeron|escribio|escribieron|publico|publicaron|nombro|entrevist\w*|salimos|aparecimos|nota sobre)\b/.test(said);
+  if (needs.press && !(medium && mention) && !/\b(salimos en|aparecimos en|nos entrevist\w*)\b/.test(said)) return 'necesito que me cuentes en qué medio salió tu marca (diario, revista, radio o entrevista) y qué dijo';
+  // Oh Belly 2026-11-12: a countdown with no end date in the merchant's words is dropped after writing; it is not offered at all.
+  if (needs.date && !new RegExp(`\\b\\d{1,2}\\s*(de\\s+)?(${MONTHS.join('|')})|\\b\\d{1,2}/\\d{1,2}\\b`).test(said)) return libraryDropReason(type);
   if (needs.pair && !/\bantes\b/.test(fold(`${facts.what} ${facts.story} ${facts.request}`))) return 'necesito que me cuentes qué cambia antes y después, y las dos fotos';
   if (needs.products && facts.products.length < needs.products[0]) return `necesita al menos ${needs.products[0]} productos`;
   if (needs.product && !facts.products.length) return 'aún no tienes productos';
+  if (needs.options && !facts.optioned) return 'ninguno de tus productos tiene opciones (colores, tallas o sabores)';
   if ((needs.photos ?? 0) + (needs.itemPhotos ?? 0) > facts.photos.length) return 'no me alcanzan las fotos de tu tienda';
   return null;
 }

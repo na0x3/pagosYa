@@ -1,0 +1,887 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.meritbeauty.com/",
+    "title": "MERIT Clean Beauty & Minimalist Makeup | MERIT Official Site – MERIT Beauty",
+    "width": 1440,
+    "pageHeight": 5709,
+    "fonts": {
+      "h1": {
+        "family": "adobe-caslon-pro",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Fragrance Collection"
+      },
+      "h2": {
+        "family": "adobe-caslon-pro",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Beauty With Intention"
+      },
+      "body": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "The Sale is coming soon. Sign up now for early access"
+      },
+      "button": {
+        "family": "akzidenz-grotesk-std",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.52px",
+        "text": "Shop Now"
+      },
+      "nav": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "Sign up now for early access"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Sign up now for early ac",
+        "Shop",
+        "Makeup",
+        "Skincare",
+        "Fragrance",
+        "Find My Shade",
+        "Gift Guide",
+        "Account",
+        "0 items in cart"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 40,
+        "h": 862,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Fragrance Collection"
+        },
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 902,
+        "h": 172,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Beauty With Intention"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1074,
+        "h": 982,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Sale"
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2056,
+        "h": 710,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Makeup"
+        },
+        "words": 23,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2766,
+        "h": 710,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Skincare"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3476,
+        "h": 982,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Signature Bag"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4458,
+        "h": 640,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Sets"
+        },
+        "words": 75,
+        "perRow": 7,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 13,
+      "columns": 7,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.meritbeauty.com/",
+    "title": "MERIT Clean Beauty & Minimalist Makeup | MERIT Official Site – MERIT Beauty",
+    "width": 390,
+    "pageHeight": 4818,
+    "fonts": {
+      "h1": {
+        "family": "adobe-caslon-pro",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Fragrance Collection"
+      },
+      "h2": {
+        "family": "adobe-caslon-pro",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Beauty With Intention"
+      },
+      "body": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "The Sale is coming soon. Sign up now for early access"
+      },
+      "button": {
+        "family": "akzidenz-grotesk-std",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.52px",
+        "text": "Shop Now"
+      },
+      "nav": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "Sign up now for early access"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Sign up now for early ac",
+        "0 items in cart"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 40,
+        "h": 778,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Fragrance Collection"
+        },
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 818,
+        "h": 166,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Beauty With Intention"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 984,
+        "h": 608,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Sale"
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1592,
+        "h": 727,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Makeup"
+        },
+        "words": 23,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2318,
+        "h": 744,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Skincare"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3062,
+        "h": 594,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Signature Bag"
+        },
+        "words": 20,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3656,
+        "h": 364,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Sets"
+        },
+        "words": 75,
+        "perRow": 7,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 13,
+      "columns": 7,
+      "photoRatio": 0,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.meritbeauty.com/collections/all",
+    "title": "Products – MERIT Beauty",
+    "width": 1440,
+    "pageHeight": 9049,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "akzidenz-grotesk-std",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.64px",
+        "text": "Aesha's Favorites"
+      },
+      "body": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "The Sale is coming soon. Sign up now for early access"
+      },
+      "button": null,
+      "nav": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "Sign up now for early access"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Sign up now for early ac",
+        "Shop",
+        "Makeup",
+        "Skincare",
+        "Fragrance",
+        "Find My Shade",
+        "Gift Guide",
+        "Account",
+        "0 items in cart"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 148,
+        "h": 8229,
+        "bg": "rgb(255, 255, 255)",
+        "images": 97,
+        "video": false,
+        "heading": {
+          "family": "akzidenz-grotesk-std",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.64px",
+          "text": "Aesha's Favorites"
+        },
+        "words": 257,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 50,
+      "columns": 3,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.meritbeauty.com/collections/all?_su_rec=U3WWWBu4CUMXE0BfRQUa0q9Tw16WnnQdByq4tuTFo49MM9EtEN3JcPy3QnR0TQ8etFWI9spErwkED98CWhNY5ovGpiXxRWUDRbG344MniR05bmKlKTYhvnrzaDC2e_0KzQ4Tw3UV2JPwz132vOmY2ilHgRr28LDDAqKb6F63fD-q-nJlfwLrJTp2VpYhU7Nppk1vzxR2w4lbYSJRnAUMmc3N2tm6Lqt1fIYxFlJtCmEmK-TaGhqRkUeHRnGFqrvqcuf7gGQCgVyjdMo2gyxgVSwvjBdN0bbLFgGUmCXmNI0znAmOpRL07LTI9YI0GGVyYUiA7O4ZU2ruHA_0HHrIInl5nRvSKYdiQ-Up5LzIjHDS604&_su_rec_id=bdc81e39-90ad-481f-af2e-075edfff04c3-1794667156",
+    "title": "Products – MERIT Beauty",
+    "width": 390,
+    "pageHeight": 9092,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "akzidenz-grotesk-std",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.64px",
+        "text": "Aesha's Favorites"
+      },
+      "body": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "The Sale is coming soon. Sign up now for early access"
+      },
+      "button": null,
+      "nav": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "Sign up now for early access"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Sign up now for early ac",
+        "0 items in cart"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 148,
+        "h": 8086,
+        "bg": "rgb(255, 255, 255)",
+        "images": 97,
+        "video": false,
+        "heading": {
+          "family": "akzidenz-grotesk-std",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.64px",
+          "text": "Aesha's Favorites"
+        },
+        "words": 257,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 50,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.meritbeauty.com/products/the-compact-merit-x-completedworks",
+    "title": "The Compact – MERIT Beauty",
+    "width": 1440,
+    "pageHeight": 2314,
+    "fonts": {
+      "h1": {
+        "family": "adobe-caslon-pro",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Compact"
+      },
+      "h2": {
+        "family": "adobe-caslon-pro",
+        "size": "25px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Signature Bag"
+      },
+      "body": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "The Sale is coming soon. Sign up now for early access"
+      },
+      "button": {
+        "family": "akzidenz-grotesk-std",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "Sign up now for early access"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Sign up now for early ac",
+        "Shop",
+        "Makeup",
+        "Skincare",
+        "Fragrance",
+        "Find My Shade",
+        "Gift Guide",
+        "Account",
+        "0 items in cart"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 100,
+        "h": 1090,
+        "bg": "rgb(255, 255, 255)",
+        "images": 19,
+        "video": true,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Compact"
+        },
+        "words": 117,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1190,
+        "h": 512,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "akzidenz-grotesk-std",
+          "size": "14px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.96px",
+          "text": "Our Standards"
+        },
+        "words": 41,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart | $38",
+      "aboveFold": true,
+      "top": 393,
+      "x": 889,
+      "width": 461,
+      "bg": "rgb(91, 33, 40)"
+    },
+    "price": null,
+    "galleryImages": 14,
+    "swatches": 7,
+    "selects": 0,
+    "accordions": 14
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.meritbeauty.com/products/the-compact-merit-x-completedworks",
+    "title": "The Compact – MERIT Beauty",
+    "width": 390,
+    "pageHeight": 3030,
+    "fonts": {
+      "h1": {
+        "family": "adobe-caslon-pro",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Compact"
+      },
+      "h2": {
+        "family": "adobe-caslon-pro",
+        "size": "25px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Signature Bag"
+      },
+      "body": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "The Sale is coming soon. Sign up now for early access"
+      },
+      "button": {
+        "family": "akzidenz-grotesk-std-med",
+        "size": "11px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "1.32px",
+        "text": "Add to Cart | $38"
+      },
+      "nav": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "Sign up now for early access"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Sign up now for early ac",
+        "0 items in cart"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 100,
+        "h": 1337,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": true,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Compact"
+        },
+        "words": 117,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1437,
+        "h": 795,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "akzidenz-grotesk-std",
+          "size": "14px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "1.96px",
+          "text": "Our Standards"
+        },
+        "words": 41,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart | $38",
+      "aboveFold": true,
+      "top": 747,
+      "x": 20,
+      "width": 350,
+      "bg": "rgb(91, 33, 40)"
+    },
+    "price": null,
+    "galleryImages": 6,
+    "swatches": 7,
+    "selects": 0,
+    "accordions": 14
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.meritbeauty.com/cart",
+    "title": "Your Shopping Cart – MERIT Beauty",
+    "width": 1440,
+    "pageHeight": 1685,
+    "fonts": {
+      "h1": {
+        "family": "adobe-caslon-pro",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "h2": {
+        "family": "adobe-caslon-pro",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Order summary"
+      },
+      "body": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "The Sale is coming soon. Sign up now for early access"
+      },
+      "button": {
+        "family": "akzidenz-grotesk-std",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Decrement"
+      },
+      "nav": {
+        "family": "akzidenz-grotesk-std",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.48px",
+        "text": "Sign up now for early access"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Sign up now for early ac",
+        "Shop",
+        "Makeup",
+        "Skincare",
+        "Fragrance",
+        "Find My Shade",
+        "Gift Guide",
+        "Account",
+        "1 items in cart"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 100,
+        "h": 974,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "adobe-caslon-pro",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Your Cart"
+        },
+        "words": 90,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "host": "topicals.com",
+  "name": "Topicals",
+  "at": "2026-11-14T14:54:25.526Z",
+  "mood": "No evaluable: tanto en escritorio como en teléfono solo aparece una verificación de seguridad ajena a la dirección de arte de Topicals.",
+  "idea": "No se puede identificar la idea visual de la tienda porque el bloqueo impide ver cualquier contenido comercial o de marca.",
+  "header": "No visible. La captura no muestra logo, navegación, acciones, barra de anuncio ni comportamiento fijo; únicamente la interfaz del control de acceso. Tampoco puede determinarse su adaptación al teléfono.",
+  "hero": "No visible. No hay fotografía, titular comercial, llamada a la acción ni composición de primera pantalla que pueda atribuirse a Topicals.",
+  "catalog": "Sin captura y sin mediciones de catálogo. No es posible documentar cabecera, número de columnas, filtros, ordenación ni adaptación entre escritorio y teléfono.",
+  "card": "Sin captura. No pueden determinarse proporción de imagen, jerarquía de nombre y precio, muestras de color, compra rápida ni cambio de fotografía al pasar el cursor.",
+  "product": "Sin captura. No se puede estudiar la relación entre galería y caja de compra, contenido sobre el pliegue, variantes, botones, acordeones o módulos posteriores.",
+  "cart": "Sin captura. No puede saberse si funciona como cajón o página, ni cómo organiza filas, totales, promociones o ventas adicionales.",
+  "type": "La única tipografía medida es -apple-system, cuerpo de 13 px, peso 400, caja normal y tracking normal; pertenece a la verificación de seguridad y no debe tomarse como sistema tipográfico de Topicals. No hay datos fiables de titulares, navegación o botones de la tienda.",
+  "colour": "El único color medido es el fondo gris azulado rgb(241, 245, 249) de la página de verificación. El panel blanco, la tinta oscura y el naranja del escudo también pertenecen al proveedor de seguridad, no a la identidad de la tienda. La paleta de Topicals no es evaluable.",
+  "photos": "No hay fotografías de marca o producto visibles. No se puede analizar iluminación, recorte, fondo, escala, bodegón ni uso de personas.",
+  "motion": "No se observa movimiento de la tienda: las mediciones registran cero vídeos y ninguna marquesina, pero corresponden a la pantalla bloqueada. No puede concluirse que la web real carezca de carruseles, vídeo o interacciones hover.",
+  "phone": "En 390 × 844 px solo se ve la verificación: una tarjeta blanca casi a todo el ancho, con aproximadamente 26 px de margen lateral, colocada en la mitad superior. Esta recomposición pertenece al bloqueo y no permite estudiar menú móvil, orden de secciones, rejilla ni compra fija de Topicals.",
+  "signature": "No identificable: ningún gesto de la interfaz comercial de Topicals llegó a mostrarse.",
+  "home": [
+    {
+      "role": "Estado de la captura",
+      "composition": "La portada real está completamente sustituida por una verificación humana. En escritorio, sobre un lienzo de 1440 × 900 px, aparece una tarjeta blanca pequeña centrada; en teléfono, sobre 390 × 844 px, la misma tarjeta aumenta hasta ocupar casi todo el ancho. Debe ignorarse como referencia de marca."
+    },
+    {
+      "role": "Secciones de portada",
+      "composition": "No hay secciones visibles ni detectadas: cero módulos, cero tarjetas, cero columnas y cero vídeos. Por tanto, no puede reconstruirse el orden narrativo de la portada."
+    },
+    {
+      "role": "Limitación del estudio",
+      "composition": "Faltan capturas válidas de portada, catálogo, producto y carrito. Se necesitan nuevas capturas después de superar la verificación —de arriba abajo y en ambos anchos— para producir una ficha reproducible con medidas reales."
+    }
+  ],
+  "lessons": [
+    "No atribuir al diseño de una marca la interfaz de un proveedor de seguridad, cookies o control de acceso.",
+    "No deducir una identidad visual a partir del color de fondo o la tipografía de una página bloqueada.",
+    "Antes de estudiar una tienda, comprobar que las capturas contienen logo, navegación y contenido comercial real.",
+    "Para una ficha reproducible, capturar portada completa, catálogo, producto y carrito en escritorio y teléfono, incluyendo estados hover, filtros, variantes y carrito abierto.",
+    "Registrar medidas solo después de acceder a la tienda; los 13 px y rgb(241, 245, 249) disponibles aquí describen el bloqueo, no Topicals."
+  ]
+}

@@ -1,3 +1,4 @@
+import { PlansService } from '../plans/plans.service';
 import { HttpException, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AssistantConversation, Store, StoreAssistant } from '@prisma/client';
@@ -38,6 +39,7 @@ export class StoreAssistantService {
     private readonly usage: AssistantUsage,
     @Inject(ASSISTANT_MODEL_FACTORY) private readonly modelFactory: AssistantModelFactory,
     @Optional() private readonly metering?: AiUsageService,
+    @Optional() private readonly plans?: PlansService,
   ) {}
 
   async loadTurnStore(storeId: string): Promise<TurnStore | null> {
@@ -58,7 +60,7 @@ export class StoreAssistantService {
       ? await this.prisma.assistantConversation.findFirst({ where: { id: dto.conversationId, storeId: base.id, preview: false } })
       : null;
     if (conversation && now.getTime() - conversation.lastMessageAt.getTime() > IDLE_MS) conversation = null;
-    if (!conversation && await this.usage.startGate(base.id, assistant.monthlyCap, now) !== 'ok') return fallback;
+    if (!conversation && await this.usage.startGate(base.id, await this.plans?.assistantCap(base.id, assistant.monthlyCap) ?? assistant.monthlyCap, now) !== 'ok') return fallback;
     if (!(await this.usage.spendOk(now))) return fallback;
     const categories = await this.prisma.category.findMany({ where: { storeId: base.id }, orderBy: { sortOrder: 'asc' }, select: { name: true } });
     return this.converse({

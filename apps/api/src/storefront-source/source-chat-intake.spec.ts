@@ -13,7 +13,7 @@ beforeEach(() => {
   messages = [];
   prisma = {
     store: { findFirst: jest.fn().mockResolvedValue({ name: 'Láminas Lu', logoUrl: null, contactPhone: null, locations: [], onboarding: { what: 'laminas de arte' }, _count: { paymentLinks: 0 },
-      paymentLinks: [{ name: 'Café', imageUrls: [] }], promoCodes: [], links: [] }), update: jest.fn() },
+      paymentLinks: [{ name: 'Café', imageUrls: [] }], promoCodes: [], links: [] }), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     deliveryZone: { count: jest.fn().mockResolvedValue(0) },
     storeAgentThread: { findUnique: jest.fn().mockImplementation(async () => ({ id: 't1', messages: [...messages].reverse() })), upsert: jest.fn().mockResolvedValue({ id: 't1' }) },
     storeAgentMessage: { create: jest.fn().mockImplementation(async ({ data }) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }), update: jest.fn(), delete: jest.fn().mockResolvedValue({}),
@@ -56,6 +56,18 @@ it('a chip answer (no setupAction) goes back to the questions, then builds with 
   // The section library's follow-up and the request check read the first words with every answer.
   expect(out.followUp).toMatchObject({ sectionLibrary: true });
   expect(out.followUp.checklistWords).toContain('Respuestas del comercio:\n- ¿Cómo quieres que se vea tu tienda? → Colorida');
+});
+
+it('after an earlier question the build still reads the store\'s first words (live 2026-11-12: Remolino studio3, Pawby «Usa la plantilla Mimo»)', async () => {
+  messages.push({ threadId: 't1', role: 'USER', content: 'Crea la tienda de Remolino: licuadoras para batidos, cremas y hielo picado. Quiero muchas secciones.', id: 'a', createdAt: new Date() },
+    { threadId: 't1', role: 'ASSISTANT', content: '¿Qué cadencia quieres para el pack semanal?', id: 'b', createdAt: new Date() });
+  intakeStep.mockResolvedValueOnce(question('look', '¿Cómo quieres que se vea tu tienda?')).mockResolvedValueOnce(ready);
+  settle();
+  await first('Usa el catálogo tal como está. Arma la tienda ya.');
+  const out = await reply('Colorida');
+  expect(applyMaster).toHaveBeenCalledTimes(1);
+  expect(out.followUp.checklistWords).toContain('licuadoras para batidos, cremas y hielo picado');
+  expect(out.followUp.checklistWords).toContain('- ¿Cómo quieres que se vea tu tienda? → Colorida');
 });
 
 it('«Créala ya» builds without asking again', async () => {
@@ -152,5 +164,25 @@ it('a product-link first build is never interrupted (review focus 4)', async () 
   const userMessage = { id: 'u', threadId: 't1', content: 'https://example.com/producto', metadata: {} };
   await (chat as any).firstBuild('m1', 's1', 't1', userMessage, workflow, { answers: {} }, 0, [], userMessage.content, undefined, '', undefined, false);
   expect(intakeStep).not.toHaveBeenCalled();
+  expect(applyMaster).toHaveBeenCalledTimes(1);
+});
+
+// Live check 2026-11-09 (Miga, Bruma, Pawby): the WhatsApp given as an answer was only words for the designer — the store kept no
+// number and YAPI's checklist said WhatsApp was missing.
+it('the WhatsApp given as an answer becomes the store number before the build, never over one already set', async () => {
+  intakeStep.mockResolvedValueOnce(question('musts', '¿Quieres incluir un WhatsApp para pedidos?', ['Sí', 'No'])).mockResolvedValueOnce(ready);
+  settle();
+  await first('hola quiero mi tienda para vender laminas');
+  await reply('Sí, al 71234567');
+  expect(prisma.store.updateMany).toHaveBeenCalledWith({ where: { id: 's1', OR: [{ contactPhone: null }, { contactPhone: '' }] }, data: { contactPhone: '71234567' } });
+  expect(prisma.store.updateMany.mock.invocationCallOrder[0]).toBeLessThan(applyMaster.mock.invocationCallOrder[0]);
+});
+
+it('no number in the answers changes nothing', async () => {
+  intakeStep.mockResolvedValueOnce(question('look', '¿Cómo quieres que se vea tu tienda?')).mockResolvedValueOnce(ready);
+  settle();
+  await first('hola quiero mi tienda para vender laminas');
+  await reply('Colorida');
+  expect(prisma.store.updateMany).not.toHaveBeenCalled();
   expect(applyMaster).toHaveBeenCalledTimes(1);
 });

@@ -1,0 +1,46 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwgwn1df00011nivs6ycxsc3",
+  "slug": "11ur0stm",
+  "photos": {
+    "2de83472-image-0d93fca317d0.jpg": "/v1/uploads/e2f01fc2-94ae-4961-b5a8-5443c130c545.jpg",
+    "40e39ba3-image-bef10428c561.jpg": "/v1/uploads/36ec6673-fc3f-460a-a763-de6bedde9d74.jpg",
+    "2486be9a-image-5bc2dfb71b59.jpg": "/v1/uploads/586ce975-b996-4b17-bb91-6bcfa38bc82e.jpg",
+    "e1d87002-image-5fa0e8b5ac42.jpg": "/v1/uploads/b29db50d-f7f2-4deb-b21b-84e3a2eae52a.jpg",
+    "c51d8205-image-5c5b99dd8ce3.jpg": "/v1/uploads/06f87605-2b3b-4c50-9169-e453c05a6fce.jpg",
+    "c03a8f34-image-0cbf6cd5b13f.jpg": "/v1/uploads/f934688a-274c-4700-ab84-07897878edb4.jpg",
+    "0f601df5-image-9a4dd6f8adf5.jpg": "/v1/uploads/d52d0f93-6067-4a82-98be-e361e0bd20f7.jpg",
+    "930736c3-image-cdbab0ba8397.jpg": "/v1/uploads/32d584aa-b375-4790-892d-11a7028a974a.jpg",
+    "48ac3e71-image-d3d340fe916f.jpg": "/v1/uploads/5925c077-2280-4c9b-abd8-b4c9c511e76a.jpg",
+    "8b491418-image-eb0942fc9f46.jpg": "/v1/uploads/fbc67b74-6cdd-4d83-bfe4-37ea9bcd0f91.jpg",
+    "20170cfa-image-c96f55c7a782.jpg": "/v1/uploads/865ca922-0d69-4c54-9ec5-51dcfc2a9ba2.jpg"
+  },
+  "categories": {
+    "Novias": "cmwgwn1dr00031niv3wfy3xvm",
+    "Noche": "cmwgwn1dt00051nivec6ro1rr",
+    "Piezas": "cmwgwn1du00071nivmux55orb",
+    "Accesorios": "cmwgwn1du00091nivradb1x7n"
+  },
+  "products": {
+    "Vestido Cala": "cmwgwn1e1000d1niv8f7nytm1",
+    "Vestido Escultura": "cmwgwn1e8000h1nivvlfufbq4",
+    "Vestido Ciudad": "cmwgwn1ec000l1niva0y6vr1o",
+    "Vestido Halter Civil": "cmwgwn1ez000r1niv35soembh",
+    "Vestido Espalda Luna": "cmwgwn1f2000v1nivy2gy38cq",
+    "Corsé Anturio": "cmwgwn1f6000z1nivjdknsoox",
+    "Falda Globo de Seda": "cmwgwn1fb00131niv9zf3otao",
+    "Collar de Calas": "cmwgwn1ff00171nivhw9gzxur",
+    "Antifaz de Encaje": "cmwgwn1fi001b1nivypp86f7y",
+    "Set de Seda para Dormir": "cmwgwn1fk001f1nivp9xsgrfj"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwgwn1gc001p1nivrvi3wrv2"
+}

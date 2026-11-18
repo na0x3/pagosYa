@@ -1,0 +1,23 @@
+{
+  "from": "cmwbj4jox0001bod58xeo3r30",
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmweh9x24000112mojsvl3beu",
+  "slug": "aga5qoq3",
+  "categories": {
+    "cmwbj4jq4000hbod56eaam83n": "cmweh9x29000312mowq3ap6aj",
+    "cmwbj4jq5000jbod5o3ypk4ly": "cmweh9x2a000512moapdrv3w2",
+    "cmwbj4jq5000lbod5fdudv1s6": "cmweh9x2b000712mos5zqzha3",
+    "cmwbj4jq5000nbod5jfpm9n3u": "cmweh9x2b000912moz2wgyctf"
+  },
+  "products": {
+    "cmwbj4jq9000rbod58z0jl9oc": "cmweh9x2l000d12mojfs2d5zu",
+    "cmwbj4jqe000vbod54xfy9t4d": "cmweh9x2r000h12mobgn8g46w",
+    "cmwbj4jqk000zbod55o9bqi01": "cmweh9x2v000l12mog959f7vq",
+    "cmwbj4jqo0013bod5ljno0hdl": "cmweh9x2z000p12mo8sm99209",
+    "cmwbj4jqr0017bod5x7fq762a": "cmweh9x34000t12mompcip31e",
+    "cmwbj4jqt001bbod575gyot8q": "cmweh9x3a000x12mo0gkjk0q9"
+  },
+  "assetUrls": [
+    "/v1/uploads/a1a5df4b-9206-4c0c-b0aa-b80bd6ae671a.jpg"
+  ]
+}

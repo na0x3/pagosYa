@@ -10,6 +10,22 @@ const embedded = new URLSearchParams(location.search).get("embedded") === "1" &&
 export const API_BASE_URL: string = embedded || ["browser", "thumbnail", "library", "productGuide"].some(key => new URLSearchParams(location.search).has(key))
   ? sessionStorage.getItem("pagosya_merchant_api_base") || import.meta.env.VITE_API_BASE_URL || "/api/v1"
   : import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+/** Owner 2026-11-17 (product videos): the upload folder a preview may stream videos from (photos are copied into the page). */
+/** Speed (owner 2026-11-18: Graza's preview took ~8 s): a saved version's design photos, fonts and videos load from the API by
+ *  address instead of being pasted into the preview page as text (21 MB → about 2 MB). The address carries the version's
+ *  fingerprint, like a published store's. A file only an unsaved draft has (or changed) stays embedded. */
+export function withSavedAssetUrls<S extends { files: Array<{ path: string; content: string; encoding?: string }> }>(snapshot: S, storeId: string, saved?: { revision: number; digest: string; snapshot?: { files: Array<{ path: string; content: string }> } } | null): { snapshot: S; assetSources: string[] } {
+  if (!saved?.digest || !/^[a-f0-9]{12}/.test(saved.digest)) return { snapshot, assetSources: [] };
+  let base: string;
+  try { base = new URL(`stores/draft/${encodeURIComponent(storeId)}/source-site/assets/${saved.revision}-${saved.digest.slice(0, 12)}/`, new URL(API_BASE_URL.replace(/\/?$/, '/'), location.href)).href; }
+  catch { return { snapshot, assetSources: [] }; }
+  const kept = new Map((saved.snapshot?.files ?? snapshot.files).map(file => [file.path, file.content]));
+  const files = snapshot.files.map(file => file.encoding === 'base64' && /^assets\/[\w./-]+\.(?:png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(file.path) && !file.path.includes('..') && kept.get(file.path) === file.content
+    ? { ...file, encoding: 'url', content: base + file.path.split('/').map(encodeURIComponent).join('/') } : file);
+  return { snapshot: { ...snapshot, files }, assetSources: [base] };
+}
+
+export function previewUploadSources(): string[] { try { return [new URL('uploads/', new URL(API_BASE_URL.replace(/\/?$/, '/'), location.href)).href]; } catch { return []; } }
 export { CHECKOUT_ORIGIN };
 
 export type SourceChatResult = { setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision };
@@ -138,10 +154,14 @@ export interface LoginResponse {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  /** `code`: PLAN_REQUIRED / CREDITS_EXHAUSTED (plans 2026-11-07) open the plans instead of a plain error. */
+  constructor(message: string, readonly status: number, readonly code?: string) {
     super(message);
   }
 }
+
+export type StudioPlan = { id: 'FREE' | 'EMPRENDEDOR' | 'PRO'; name: string; monthlyCredits: number; canPublish: boolean; customDomain: boolean; emailsPerMonth: number; assistantConversations: number; perks: string[]; priceBob?: number; yearlyPriceBob?: number };
+export type StudioPlanSummary = { plan: StudioPlan; monthlyCredits: number; extraCredits: number; usedCredits: number; remainingCredits: number; enforced: boolean; renewsAt: string; plans: StudioPlan[] };
 
 export class MerchantStudioApi {
   constructor(private token = "") {}
@@ -157,13 +177,15 @@ export class MerchantStudioApi {
     const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
     if (!response.ok) {
       let message = `La solicitud falló (${response.status}).`;
+      let code: string | undefined;
       try {
-        const body = await response.json() as { message?: string | string[] };
+        const body = await response.json() as { message?: string | string[]; code?: unknown };
         message = Array.isArray(body.message) ? body.message.join(" ") : body.message || message;
+        if (typeof body.code === "string") code = body.code;
       } catch {
         // Keep the status-based fallback when the server did not return JSON.
       }
-      throw new ApiError(message, response.status);
+      throw new ApiError(message, response.status, code);
     }
     if (response.status === 204) return undefined as T;
     return response.json() as Promise<T>;
@@ -200,6 +222,13 @@ export class MerchantStudioApi {
   deleteIntegrationMapping(storeId: string, connectionId: string, mappingId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations/${encodeURIComponent(connectionId)}/mappings/${encodeURIComponent(mappingId)}`, { method: 'DELETE' }); }
   createIntegrationConnection(storeId: string, input: {kind:string;name:string}): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations`, {method:'POST',body:JSON.stringify(input)}); }
   retention(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention`); }
+  popupGame(storeId: string, body: Record<string, unknown>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention/game`, { method: 'PUT', body: JSON.stringify(body) }); }
+  /** YAPI store tour (spec 2026-11-09): a step button's answer. */
+  tourAnswer(storeId: string, tourId: string, action: string): Promise<unknown> { return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/tour/answer`, { method: 'POST', body: JSON.stringify({ tourId, action }) }); }
+  /** Spec 2026-11-09 A/B tests: a card button; a design launch comes back as `needsChecks`, «Ver otra opción» as `resend`. */
+  abAnswer(storeId: string, proposalId: string, action: string): Promise<{ needsChecks?: { revision: number; request: string }; resend?: string }> { return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/ab/answer`, { method: 'POST', body: JSON.stringify({ proposalId, action }) }); }
+  abNote(storeId: string): Promise<{ message: unknown }> { return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/ab/note`, { method: 'POST' }); }
+  popupPreview(storeId: string): Promise<{ slug: string; storeName: string; settings: Record<string, unknown> }> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention/popup-preview`); }
   /** The store's promo codes; «Tu comunidad» offers the active ones as the popup's welcome code. */
   promoCodes(storeId: string): Promise<Array<{ id: string; code: string; isActive: boolean }>> { return this.request(`/stores/${encodeURIComponent(storeId)}/promo-codes`); }
   writeRetention(storeId: string, path: string, method: string, body: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention${path ? '/' + path : ''}`, { method, body: JSON.stringify(body) }); }
@@ -325,6 +354,14 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/product-scenes`, { method: 'POST', body: JSON.stringify(input) });
   }
 
+  plan(): Promise<StudioPlanSummary> {
+    return this.request("/dashboard/plan");
+  }
+
+  requestPlan(plan: StudioPlan["id"]): Promise<{ requested: string }> {
+    return this.request("/dashboard/plan/request", { method: "POST", body: JSON.stringify({ plan }) });
+  }
+
   updateProduct(storeId: string, productId: string, input: Partial<Parameters<MerchantStudioApi['createProduct']>[1]>): Promise<{ id: string; name: string }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links/${encodeURIComponent(productId)}`, { method: 'PATCH', body: JSON.stringify(input) });
   }
@@ -420,8 +457,8 @@ export class MerchantStudioApi {
   publishSource(storeId: string, revision: number, publicationVersion: number): Promise<SourcePublication> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/publish`, { method: 'POST', body: JSON.stringify({ revision, publicationVersion }) });
   }
-  startSourceTest(storeId: string, revision: number, publicationVersion: number): Promise<SourcePublication> {
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/experiments`, { method: 'POST', body: JSON.stringify({ revision, publicationVersion }) });
+  startSourceTest(storeId: string, revision: number, publicationVersion: number, request?: string): Promise<SourcePublication> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/experiments`, { method: 'POST', body: JSON.stringify({ revision, publicationVersion, ...(request ? { request } : {}) }) });
   }
   finishSourceTest(storeId: string, experimentId: string, publicationVersion: number, apply: boolean): Promise<SourcePublication> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/experiments/finish`, { method: 'POST', body: JSON.stringify({ experimentId, publicationVersion, apply }) });
@@ -563,7 +600,7 @@ export interface SourceRevision { revision: number; label: string; digest: strin
 export interface SourcePublication {
   payments?: 'live' | 'test' | 'contact';
   contactFormEnabled?: boolean; revision: number | null; version: number; publishedAt: string | null; active: boolean; slug: string;
-  experiment: null | { id: string; status: string; startedAt: string; controlRevision: number; variantRevision: number; winner: string | null; evidence: { winner: string | null; reason: string }; variants: Array<{ variant: string; revision: number; visitors: number; buyers: number; paidOrders: number; conversionRate: number; revenue: Array<{ currency: string; amount: number }> }> };
+  experiment: null | { id: string; status: string; startedAt: string; controlRevision: number; variantRevision: number; winner: string | null; kind?: 'design' | 'popup'; request?: string | null; days?: number; stale?: boolean; evidence: { winner: string | null; reason: string }; variants: Array<{ variant: string; revision: number; visitors: number; buyers: number; signups?: number; paidOrders: number; conversionRate: number; revenue: Array<{ currency: string; amount: number }> }> };
 }
 export interface SourceState { publication?: SourcePublication; revision: number; versions: SourceRevision[]; nextBefore: number | null; /** YAPI is polishing this revision in the background (spec 2026-10-12). */ reviewPending?: boolean }
 export interface SourceVersion extends SourceRevision { snapshot: import("@pagosya/storefront-preview").SourceSnapshot }

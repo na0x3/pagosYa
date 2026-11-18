@@ -1,0 +1,44 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw5hta8y0001100u5k55xrff",
+  "slug": "knvm3w2i",
+  "photos": {
+    "ramo-flores-azules-rojas.jpg": "/v1/uploads/28a386a8-53b7-405b-9a05-39881df0c66d.jpg",
+    "ventana-mediterranea-limones.jpg": "/v1/uploads/59181638-f997-41f7-9773-07874aa6498b.jpg",
+    "cafe-good-news.jpg": "/v1/uploads/9435c022-6871-4a80-88d9-fd5257582e01.jpg",
+    "tienda-discos-vintage.jpg": "/v1/uploads/4e5af5ba-f68f-43e7-854f-70cee1bb1a88.jpg",
+    "casa-jardin-soleado.jpg": "/v1/uploads/ee710b64-61f4-4a10-9886-ae43cc40fb86.jpg",
+    "mercado-mediterraneo.jpg": "/v1/uploads/640b2266-f159-47eb-9f69-6c608009b100.jpg",
+    "cafe-azulejos-talavera.jpg": "/v1/uploads/1db12726-1067-4831-ac2f-bfe73bb66ffc.jpg",
+    "te-libros-bodegon.jpg": "/v1/uploads/19b22fb7-1a6d-4619-910f-086438ff94dd.jpg",
+    "retrato-caballero-clasico.jpg": "/v1/uploads/2747660b-dda1-45d2-84a5-b3cc44865a3e.jpg",
+    "cafe-jardin-impresionista.jpg": "/v1/uploads/794ea4ed-b526-4e1d-ab73-1bdb24a8b569.jpg"
+  },
+  "categories": {
+    "Flores y retratos": "cmw5hta920003100ujqmqzz75",
+    "Lugares": "cmw5hta930005100uzitble0i",
+    "Cafés y mesas": "cmw5hta940007100utnp10zng"
+  },
+  "products": {
+    "Ramo de Flores Azules y Rojas": "cmw5hta98000b100u051tumta",
+    "Ventana Mediterránea con Limones": "cmw5hta9g000f100u3gc42vqc",
+    "Café Good News": "cmw5hta9m000j100upk8syt98",
+    "Tienda de Discos Vintage": "cmw5hta9q000n100uzy8urtty",
+    "Casa en Jardín Soleado": "cmw5hta9u000r100ulxx1go5m",
+    "Mercado Mediterráneo": "cmw5hta9y000v100u79z8ul57",
+    "Café sobre Azulejos": "cmw5htaa1000z100uhn6z4c9y",
+    "Té y Libros": "cmw5htaa40013100urhu69wdq",
+    "Retrato de Caballero Clásico": "cmw5htaa80017100ukk0xoqyx",
+    "Café en el Jardín": "cmw5htaab001b100utzrw4q9r"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw5htaaz001l100ulze9rh4u"
+}

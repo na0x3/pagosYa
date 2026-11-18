@@ -82,7 +82,8 @@ const ADDABLE = LIBRARY_CATALOG.filter(section => section.role !== 'cover' && !M
 const ADDABLE_IDS = new Set(ADDABLE.map(section => section.id));
 const MAX_ADDS = 2;
 // A menu page may also start with a cover: «Nosotros» built from nothing reads like the template's home (spec 2026-11-05).
-const PAGE_ADDABLE = LIBRARY_CATALOG.filter(section => !MAIN_GRIDS.has(section.id) && !section.decor && section.id !== 'bar-note');
+// Owner 2026-11-13 («i like more normal heroes»): the moving cover is never added; stores that have it keep it.
+const PAGE_ADDABLE = LIBRARY_CATALOG.filter(section => !MAIN_GRIDS.has(section.id) && !section.decor && section.id !== 'bar-note' && section.id !== 'cover-kinetic');
 const PAGE_ADDABLE_IDS = new Set(PAGE_ADDABLE.map(section => section.id));
 const MAX_PAGE_ADDS = 5;
 // However many requests build it, a menu page stays a page, not a second home (minor 2026-11-05).
@@ -94,6 +95,12 @@ const FIELD_NAME: Record<LayoutTextField, string> = { eyebrow: 'la línea peque�
 const ITEM_CAP = { title: TEXT_CAPS.itemTitle, text: TEXT_CAPS.itemText } as const;
 const clip = (value: unknown, cap: number) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, cap).trim();
 const isCover = (block: LayoutBlock) => ROLE.get(block.type) === 'cover';
+/** Meat House 2026-11-07 («después del header pon texto moviéndose»): a new band the merchant places under the menu goes there,
+ *  above the cover, whatever number the model gave it. */
+export function bandUnderMenu(type: string, request: string): boolean {
+  const said = request.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return ROLE.get(type) === 'strip' && /\b(despues|debajo|abajo|bajo|luego)\s+(del?\s+)?(header|encabezado|menu|barra)\b|arriba de todo|hasta arriba/.test(said);
+}
 const kindOf = (block: LayoutBlock) => ROLE_NAME[ROLE.get(block.type) ?? 'story'];
 const nameIn = (block: LayoutBlock) => block.title ? `«${block.title}»` : kindOf(block);
 // Where a words change happened: the cover by its kind (its old title would read as the new one), any other section by its title.
@@ -138,6 +145,8 @@ Operaciones de «ops» (todos los campos van siempre; los que no se usan: field 
   comparación, una oferta, su historia, reseñas…). type = el id de «nuevas» que mejor lo muestra; to = el número de la sección
   ANTES de la cual va (-1 = al final, antes del cierre); value = en una frase, qué debe mostrar según el pedido (sus temas, sus
   palabras). at = -1. Sus textos y fotos se escriben después con los datos de la tienda. Como mucho 2 secciones nuevas por pedido.
+  Texto que se mueve («una franja», «texto moviéndose») = strip-marquee con value = la frase exacta del comercio; «después del
+  header», «bajo el menú», «arriba de todo» = to 0 (va bajo el menú, encima de la portada).
   Si la portada ya tiene una sección que hace eso, cambia sus textos en vez de agregar otra.
 
 Páginas nuevas: «paginas» trae también las páginas que el comercio te pidió (por su dirección, con su «nombre»). «Crea una página
@@ -162,7 +171,8 @@ Reglas:
   sin más = el cta de la portada.
 - Una sección se reconoce por su título actual o por lo que muestra (preguntas, reseñas, productos, beneficios…).
 - Escribe en español natural, con la voz de la tienda, del largo de los textos que ya tiene.
-- rest: lo que el comercio pidió y no se hace con estas operaciones — colores, letras, el menú, cómo se ve una sección, una sección
+- rest: lo que el comercio pidió y no se hace con estas operaciones — colores (salvo el color o el estilo del encabezado, la cinta y
+  el pie de página: esos van en «store»), letras, el menú, cómo se ve una sección, una sección
   que ninguna de «nuevas» puede mostrar, una página nueva, direcciones de locales, formas de pago, una foto que no mandó; nunca productos, categorías ni códigos —, con sus
   propias palabras. "" si todo se hizo con ops y store.
 - Si nada del pedido se hace con ops, store ni catalogo: ops = [], store = [], catalogo = [] y rest = el pedido entero.
@@ -340,8 +350,8 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
     let place = without.indexOf(op.to);
     if (place < 0) continue;
     if (op.at < op.to) place += 1;
-    // Nothing goes above the cover.
-    place = Math.max(place, cover + 1);
+    // Nothing goes above the cover but a band, which then sits right under the menu (Meat House 2026-11-07).
+    place = ROLE.get(block.type) === 'strip' && place <= cover ? cover : Math.max(place, cover + 1);
     const next = [...without.slice(0, place), op.at, ...without.slice(place)];
     if (next.join() === order.join()) continue;
     order = next;
@@ -355,7 +365,10 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
     const closing = order.length && ROLE.get(blocks[order.at(-1)!].type) === 'closing' ? order.length - 1 : order.length;
     let place = to >= 0 && order.includes(to) ? order.indexOf(to) : closing;
     // A menu page's new cover (the only place one can be added) goes on top.
-    place = isCover(block) ? 0 : Math.max(place, order.findIndex(index => isCover(blocks[index])) + 1);
+    // A band asked for above the cover («después del header», Meat House 2026-11-07) sits right under the menu.
+    const coverAt = order.findIndex(index => isCover(blocks[index]));
+    const underMenu = ROLE.get(block.type) === 'strip' && to >= 0 && place <= coverAt;
+    place = isCover(block) ? 0 : underMenu ? coverAt : Math.max(place, coverAt + 1);
     order = [...order.slice(0, place), at, ...order.slice(place)];
     const name = block.title ? `la sección «${block.title}»` : kindOf(block);
     if (ownPage(page)) { pageAdds.push(name); continue; }

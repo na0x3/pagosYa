@@ -48,6 +48,7 @@ allowBuilds:
   '@scarf/scarf': false
   argon2: true
   esbuild: true
+  onnxruntime-node: false
   prisma: true
   sharp: true
   workerd: true

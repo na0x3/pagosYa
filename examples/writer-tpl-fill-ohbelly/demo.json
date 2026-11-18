@@ -1,0 +1,26 @@
+{
+  "from": "cmvul2f8k0001l64td1bc3mfp",
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw33fa870001vty2r4i6ilii",
+  "slug": "g90ysnpz",
+  "categories": {
+    "cmvul2f8p0003l64tpftvvjc0": "cmw33fa8c0003vty2f150cb3b",
+    "cmvul2f8q0005l64tf947n5lr": "cmw33fa8d0005vty2yaa3wtal",
+    "cmvul2f8q0007l64tm5n40u5k": "cmw33fa8e0007vty20ongupt7"
+  },
+  "products": {
+    "cmvul2f9i000dl64tqfd1qyjp": "cmw33fa99000dvty29seb05uh",
+    "cmvul2f9p000hl64tcavzudkk": "cmw33fa9h000hvty27k40jf9r",
+    "cmvul2fad000nl64tu3vobx13": "cmw33faab000nvty2pc73yk9l",
+    "cmvul2fai000rl64t2g5l2j1x": "cmw33faai000rvty2m54pt72r",
+    "cmvul2fan000vl64teyi9bieb": "cmw33faam000vvty2x4vkvyvc"
+  },
+  "assetUrls": [
+    "/v1/uploads/1276f0fc-cafb-4035-a709-5e21b62e9797.jpg",
+    "/v1/uploads/a238466f-905f-4f85-b5a5-b6154eadd2dc.jpg",
+    "/v1/uploads/7ab35646-1810-4431-aa7a-72962a815ced.jpg",
+    "/v1/uploads/66177c39-065c-4c26-baed-16d85703c274.jpg",
+    "/v1/uploads/c715477b-2956-497a-9575-8ff4ed8f4f0d.jpg",
+    "/v1/uploads/a06899d1-cf49-43ad-84c2-2c2f83d906c4.mp4"
+  ]
+}

@@ -509,3 +509,28 @@ describe('international payments switch', () => {
     expect(dlocalChargesAllowed({ enabled: false, internationalPaymentsEnabled: true }, 'development')).toBe(true);
   });
 });
+
+describe('store composer settings (spec 2026-11-11)', () => {
+  const keys = ['YAPI_COMPOSER', 'YAPI_COMPOSER_MODEL', 'YAPI_COMPOSER_EFFORT', 'YAPI_COMPOSER_MAX_USD'];
+  let original: Record<string, string | undefined>;
+  beforeEach(() => { original = Object.fromEntries(keys.map(key => [key, process.env[key]])); for (const key of keys) delete process.env[key]; });
+  afterEach(() => { for (const key of keys) { if (original[key] === undefined) delete process.env[key]; else process.env[key] = original[key]; } });
+  it('the store composer is off unless YAPI_COMPOSER=1, on sol, medium effort, a $10 cap', () => {
+    expect(configuration().app).toMatchObject({ yapiComposer: false, yapiComposerModel: 'gpt-5.6-sol', yapiComposerEffort: 'medium', yapiComposerMaxUsd: 10 });
+    Object.assign(process.env, { YAPI_COMPOSER: '1', YAPI_COMPOSER_MAX_USD: '8', YAPI_COMPOSER_EFFORT: 'high' });
+    expect(configuration().app).toMatchObject({ yapiComposer: true, yapiComposerMaxUsd: 8, yapiComposerEffort: 'high' });
+  });
+});
+
+describe('studio spike image key (2026-11-12: dev:chatgpt blanks OPENAI_API_KEY)', () => {
+  const keys = ['YAPI_STUDIO', 'YAPI_STUDIO_IMAGE_KEY', 'OPENAI_API_KEY'];
+  let original: Record<string, string | undefined>;
+  beforeEach(() => { original = Object.fromEntries(keys.map(key => [key, process.env[key]])); for (const key of keys) delete process.env[key]; });
+  afterEach(() => { for (const key of keys) { if (original[key] === undefined) delete process.env[key]; else process.env[key] = original[key]; } });
+  it('uses its own key even when the plan blanks the OpenAI one, and only with the studio on', () => {
+    Object.assign(process.env, { YAPI_STUDIO_IMAGE_KEY: 'sk-own', OPENAI_API_KEY: '' });
+    expect(configuration().app.yapiStudioImageKey).toBe('');
+    process.env.YAPI_STUDIO = '1';
+    expect(configuration().app.yapiStudioImageKey).toBe('sk-own');
+  });
+});

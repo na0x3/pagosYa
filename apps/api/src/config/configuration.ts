@@ -161,7 +161,9 @@ export interface AppConfig {
   yapiTemplatePick: boolean;
   /** Owner 2026-11-04: YAPI_TEMPLATE_RANDOM=pick draws one of YAPI's three templates, =all any store template; unset keeps the least used (read at API start: restart after changing it). */
   yapiTemplateRandom: string;
-  /** Spec 2026-11-04 writer on templates §1: the owner's chosen templates (YAPI_TEMPLATE_POOL, comma list); empty = every template. */
+  /** Spec 2026-11-04 writer on templates §1: the owner's chosen templates (YAPI_TEMPLATE_POOL, comma list); empty = every template.
+   *  Owner 2026-11-11/12 took Gumdrop and Shrine Pro out of the dev pool, then Oliva, Joya, Morada, Ramo, Neón, Estudio and Pulso
+   *  (15 left; backups in .superpowers/benchmarks). */
   yapiTemplatePool: string[];
   /** Spec 2026-11-04 §7: only the owner/dev sees the Studio's model select (YAPI_MODEL_PICKER=1). */
   yapiModelPicker: boolean;
@@ -174,6 +176,38 @@ export interface AppConfig {
   /** Owner 2026-11-06 («no podemos dejar nada a la suerte»): a dev JSONL file where the quick edit writes what it read and did. */
   yapiTraceFile: string;
   yapiSectionLibraryModel: string;
+  /** Spec 2026-11-11 store composer: a template store's first home composed for the brand (YAPI_COMPOSER=1), its model, effort and cap.
+   *  Turned on in dev 2026-11-11 late (owner: «intenta poner el compositor»); off again by removing the line from apps/api/.env. */
+  yapiComposer: boolean;
+  /** Owner 2026-11-13: a template store's home may swap a cover, the strip and one story for the kit's rich sections (YAPI_RICH_SECTIONS=1, fill mode only). */
+  yapiRichSections: boolean;
+  /** Owner 2026-11-13: a new template store's «Nosotros» page is built with library sections only with YAPI_ABOUT_SECTIONS=1 (off: the merchant asks later). */
+  yapiAboutSections: boolean;
+  /** Owner 2026-11-13 («custom letters, custom icons»): a template store's first design picks its font pair, lettered logo and icon style (YAPI_BRAND_STYLE=1, first design only). */
+  yapiBrandStyle: boolean;
+  /** Owner 2026-11-13 (hero kit, after Amboras): a template home's cover carries up to 3 real products and a place label (YAPI_HERO_KIT=1, template homes; also cover ground and plain backgrounds). */
+  yapiHeroKit: boolean;
+  /** Owner 2026-11-13 («a clean site like Aesop»): one ground, no bands or moving strips, at most 7 sections, quiet type. */
+  yapiClean: boolean;
+  /** Spike 2026-11-12 (owner: «find how they operate and replicate it»): Lovable's way on template stores (YAPI_STUDIO=1). */
+  yapiStudio: boolean;
+  /** Store chassis (spec 2026-11-12): a studio store also writes its own header, card, cart and product page (YAPI_CHASSIS=1). */
+  yapiChassis: boolean;
+  /** Spike 2026-11-12: the studio's brand images keep the OpenAI key the ChatGPT plan blanks for everything else. */
+  yapiStudioImageKey: string;
+  yapiComposerModel: string;
+  yapiComposerEffort: 'low' | 'medium' | 'high';
+  yapiComposerMaxUsd: number;
+  /** Spec 2026-11-13 fill review: a template home is looked at on a desktop and a phone after section fill and corrected as data
+   *  (off unless YAPI_FILL_REVIEW=1; YAPI_FILL_REVIEW_MAX_USD caps the review, default 1). */
+  yapiFillReview: boolean;
+  yapiFillReviewMaxUsd: number;
+  /** Spec 2026-11-14 V2 prototype: AI-written home + product page built in a sandbox, a dev-only route (off unless YAPI_V2_PROTO=1). */
+  yapiV2Proto: boolean;
+  yapiV2Model: string;
+  /** Owner 2026-11-14 («the freer path, like v0, Lovable or Amboras»): V2 writes the whole home — no library quota, its own sections
+   *  styled freely, only real breakage blocks (YAPI_V2_FREE=1). */
+  yapiV2Free: boolean;
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
   yapiAgentContinueCalls: number;
   /** The capped edit that builds what the check found missing. Off by default (Remolino 2026-10-27: the agent drew giant combo
@@ -578,6 +612,24 @@ export default (): { app: AppConfig } => {
     yapiTemplateQa: process.env.YAPI_TEMPLATE_QA !== '0' && process.env.NODE_ENV !== 'test',
     yapiTraceFile: process.env.YAPI_TRACE_FILE?.trim() ?? '',
     yapiSectionLibraryModel: process.env.YAPI_SECTION_LIBRARY_MODEL || 'gpt-5.6-terra',
+    yapiComposer: process.env.YAPI_COMPOSER === '1',
+    yapiRichSections: process.env.YAPI_RICH_SECTIONS === '1',
+    yapiAboutSections: process.env.YAPI_ABOUT_SECTIONS === '1',
+    yapiBrandStyle: process.env.YAPI_BRAND_STYLE === '1',
+    yapiHeroKit: process.env.YAPI_HERO_KIT === '1',
+    yapiClean: process.env.YAPI_CLEAN === '1',
+    // On in dev since 2026-11-12 for the owner's test; off by removing YAPI_STUDIO from apps/api/.env.
+    yapiStudio: process.env.YAPI_STUDIO === '1',
+    yapiChassis: process.env.YAPI_CHASSIS === '1',
+    yapiStudioImageKey: process.env.YAPI_STUDIO === '1' ? process.env.YAPI_STUDIO_IMAGE_KEY || process.env.OPENAI_API_KEY || '' : '',
+    yapiComposerModel: process.env.YAPI_COMPOSER_MODEL || 'gpt-5.6-sol',
+    yapiComposerEffort: (['low', 'medium', 'high'] as const).find(effort => effort === process.env.YAPI_COMPOSER_EFFORT) ?? 'medium',
+    yapiComposerMaxUsd: Number(process.env.YAPI_COMPOSER_MAX_USD) > 0 ? Number(process.env.YAPI_COMPOSER_MAX_USD) : 10,
+    yapiFillReview: process.env.YAPI_FILL_REVIEW === '1',
+    yapiFillReviewMaxUsd: Number(process.env.YAPI_FILL_REVIEW_MAX_USD) > 0 ? Number(process.env.YAPI_FILL_REVIEW_MAX_USD) : 1,
+    yapiV2Proto: process.env.YAPI_V2_PROTO === '1' && process.env.NODE_ENV !== 'production',
+    yapiV2Model: process.env.YAPI_V2_MODEL || 'gpt-5.6-sol',
+    yapiV2Free: process.env.YAPI_V2_FREE === '1',
     yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
     yapiChecklistModel: process.env.YAPI_CHECKLIST_MODEL || 'gpt-5.6-terra',

@@ -1,0 +1,1495 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.puravidabracelets.com/",
+    "title": "Pura Vida Bracelets®: Jewelry Made of Friendship Material",
+    "width": 1440,
+    "pageHeight": 8456,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.2px",
+        "text": "Shop by Category"
+      },
+      "body": {
+        "family": "Causten",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free shipping on all orders $50+"
+      },
+      "button": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "1.2px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Causten",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 120,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop By",
+        "Bracelets",
+        "Necklaces",
+        "Rings",
+        "Create Your Own",
+        "Bracelet Club",
+        "Gifts ✨",
+        "Up to 75% OFF Sale"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 120,
+        "h": 550,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 670,
+        "h": 521,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Shop by Category"
+        },
+        "words": 13,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1191,
+        "h": 560,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Up to 75% Sale View All"
+        },
+        "words": 98,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1751,
+        "h": 656,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Our Top Gifts Shop gifts worth celebrating! View All"
+        },
+        "words": 108,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 2407,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "Stocking Stuffers"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3127,
+        "h": 600,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Gifts $10 & Under View All"
+        },
+        "words": 92,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 3727,
+        "h": 619,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Personalized Gifts"
+        },
+        "words": 6,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 4346,
+        "h": 626,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Picked Just for You View All"
+        },
+        "words": 117,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 4971,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "The Gift That Keeps Giving"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5691,
+        "h": 653,
+        "bg": "rgb(255, 255, 255)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Holiday Looks"
+        },
+        "words": 142,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 6345,
+        "h": 471,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.9px",
+          "text": "What People Are Saying"
+        },
+        "words": 249,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6816,
+        "h": 224,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Featured In"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7040,
+        "h": 531,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Get Inspired Shop Insta"
+        },
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 64,
+      "columns": 12,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.puravidabracelets.com/",
+    "title": "Pura Vida Bracelets®: Jewelry Made of Friendship Material",
+    "width": 390,
+    "pageHeight": 8867,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Up to 75% OFF Sale"
+      },
+      "body": {
+        "family": "Causten",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Limited Edition Advent BoxesUnlimited holiday magic ✨ Shop N"
+      },
+      "button": {
+        "family": "Causten",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.4px",
+        "text": "Shop All"
+      },
+      "nav": {
+        "family": "Causten",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 104,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "Back",
+        "75% OFF Bracelets",
+        "$10 & Under",
+        "65% OFF Rings",
+        "50% OFF Charms",
+        "Shop All",
+        "Sale Bracelets",
+        "Sale Rings",
+        "Sale Necklaces",
+        "Sale Anklets",
+        "Sale Charms",
+        "Sale Earrings",
+        "Sale Demi-Fine",
+        "Sale Apparel",
+        "Shop All"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 104,
+        "h": 358,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 462,
+        "h": 376,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Shop by Category"
+        },
+        "words": 13,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 838,
+        "h": 473,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Up to 75% Sale View All"
+        },
+        "words": 98,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1311,
+        "h": 1056,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Our Top Gifts Shop gifts worth celebrating! View All"
+        },
+        "words": 108,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 2367,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "30px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.75px",
+          "text": "Stocking Stuffers"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3017,
+        "h": 491,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Gifts $10 & Under View All"
+        },
+        "words": 92,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 3509,
+        "h": 625,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "30px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Personalized Gifts"
+        },
+        "words": 6,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 4133,
+        "h": 517,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Picked Just for You View All"
+        },
+        "words": 117,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 4650,
+        "h": 686,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "30px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.75px",
+          "text": "The Gift That Keeps Giving"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5336,
+        "h": 1288,
+        "bg": "rgb(255, 255, 255)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "30px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Holiday Looks"
+        },
+        "words": 142,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 6624,
+        "h": 426,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "30px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.75px",
+          "text": "What People Are Saying"
+        },
+        "words": 249,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7050,
+        "h": 172,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Featured In"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7222,
+        "h": 437,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Get Inspired Shop Insta"
+        },
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 16,
+      "columns": 6,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.puravidabracelets.com/collections/all",
+    "title": "All Products",
+    "width": 1440,
+    "pageHeight": 6663,
+    "fonts": {
+      "h1": {
+        "family": "Causten",
+        "size": "36px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "All Products"
+      },
+      "h2": {
+        "family": "Causten",
+        "size": "18px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.9px",
+        "text": "Get 15% OFF your first order when you sign up for email!"
+      },
+      "body": {
+        "family": "Causten",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Limited Edition Advent BoxesUnlimited holiday magic ✨ Shop N"
+      },
+      "button": {
+        "family": "Causten",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.4px",
+        "text": "Filter / sort"
+      },
+      "nav": {
+        "family": "Causten",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 120,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "Shop By",
+        "Bracelets",
+        "Necklaces",
+        "Rings",
+        "Create Your Own",
+        "Bracelet Club",
+        "Gifts ✨",
+        "Up to 75% OFF Sale"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 120,
+        "h": 104,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "36px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "All Products"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 224,
+        "h": 5490,
+        "bg": "rgb(255, 255, 255)",
+        "images": 51,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Sort"
+        },
+        "words": 528,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 46,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.puravidabracelets.com/collections/all?_su_rec=HCnq12lPaT_o2DOnJK8MkB0-4vRFiR9IlQ4nWP2nSg5J_XAiZnbkbFglSbhmr_blAKYT_N-wGpDmNjCOGeFuGE3KGo8_hDawlxwWL4O03hhaSKSoXdlE7vFrAv0eLsD6ojEAUfU-Z1hsJQYgL3HEabAU85ydCXcbj2BZjwCVvkIb7gu8oqqw1oXw8qSyQdcu5QmY8R7O64__C-n0JZmDpigYlZARkomSMoJkfYfWkIqhK7XHjY1IsbTF_lVcRgH_ZuWAW-jReTFsG2yQCkCsNnKaY4izEr2MRRyATUW8Ul41uGxpJHPWTYXGYv5e6ETemUSxq0bRVbdmxdbsskNL8GMsw8hyuet1IweFoxXOwzFiX8813CFc&_su_rec_id=2bb77d42-d3b5-4212-85e3-d297e6d7b071-1794667724",
+    "title": "All Products",
+    "width": 390,
+    "pageHeight": 8222,
+    "fonts": {
+      "h1": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "All Products"
+      },
+      "h2": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Up to 75% OFF Sale"
+      },
+      "body": {
+        "family": "Causten",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday ExclusiveUp to 75% OFF Sale Shop Now"
+      },
+      "button": {
+        "family": "Causten",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.4px",
+        "text": "Shop All"
+      },
+      "nav": {
+        "family": "Causten",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 104,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "Back",
+        "75% OFF Bracelets",
+        "$10 & Under",
+        "65% OFF Rings",
+        "50% OFF Charms",
+        "Shop All",
+        "Sale Bracelets",
+        "Sale Rings",
+        "Sale Necklaces",
+        "Sale Anklets",
+        "Sale Charms",
+        "Sale Earrings",
+        "Sale Demi-Fine",
+        "Sale Apparel",
+        "Shop All"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 166,
+        "h": 6785,
+        "bg": "rgb(255, 255, 255)",
+        "images": 48,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Sort"
+        },
+        "words": 528,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 46,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.puravidabracelets.com/products/silver-harper-textured-heart-charm",
+    "title": "Silver Harper Textured Heart Charm",
+    "width": 1440,
+    "pageHeight": 4969,
+    "fonts": {
+      "h1": {
+        "family": "Causten",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Silver Harper Textured Heart Charm"
+      },
+      "h2": {
+        "family": "Causten",
+        "size": "18px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Details +-"
+      },
+      "body": {
+        "family": "Causten",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Limited Edition Advent BoxesUnlimited holiday magic ✨ Shop N"
+      },
+      "button": {
+        "family": "Causten",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "−"
+      },
+      "nav": {
+        "family": "Causten",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 120,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "Shop By",
+        "Bracelets",
+        "Necklaces",
+        "Rings",
+        "Create Your Own",
+        "Bracelet Club",
+        "Gifts ✨",
+        "Up to 75% OFF Sale"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 5,
+    "sections": [
+      {
+        "y": 120,
+        "h": 1215,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Silver Harper Textured Heart Charm"
+        },
+        "words": 179,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1335,
+        "h": 623,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Shop the Collection View All"
+        },
+        "words": 115,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1958,
+        "h": 742,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": true,
+        "heading": {
+          "family": "Causten",
+          "size": "30px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "@puravida"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2699,
+        "h": 512,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Why Shop With Us?"
+        },
+        "words": 90,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3211,
+        "h": 577,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "More Looks You'll Love View All"
+        },
+        "words": 197,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 3789,
+        "h": 295,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 276,
+      "x": 1056,
+      "width": 336,
+      "bg": "rgb(250, 151, 255)"
+    },
+    "price": null,
+    "galleryImages": 30,
+    "swatches": 248,
+    "selects": 1,
+    "accordions": 20
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.puravidabracelets.com/products/silver-harper-textured-heart-charm",
+    "title": "Silver Harper Textured Heart Charm",
+    "width": 390,
+    "pageHeight": 6048,
+    "fonts": {
+      "h1": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Silver Harper Textured Heart Charm"
+      },
+      "h2": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Up to 75% OFF Sale"
+      },
+      "body": {
+        "family": "Causten",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Limited Edition Advent BoxesUnlimited holiday magic ✨ Shop N"
+      },
+      "button": {
+        "family": "Causten",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.4px",
+        "text": "Shop All"
+      },
+      "nav": {
+        "family": "Causten",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 104,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "Back",
+        "75% OFF Bracelets",
+        "$10 & Under",
+        "65% OFF Rings",
+        "50% OFF Charms",
+        "Shop All",
+        "Sale Bracelets",
+        "Sale Rings",
+        "Sale Necklaces",
+        "Sale Anklets",
+        "Sale Charms",
+        "Sale Earrings",
+        "Sale Demi-Fine",
+        "Sale Apparel",
+        "Shop All"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 5,
+    "sections": [
+      {
+        "y": 104,
+        "h": 1536,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Silver Harper Textured Heart Charm"
+        },
+        "words": 179,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1672,
+        "h": 537,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "Shop the Collection View All"
+        },
+        "words": 115,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 2209,
+        "h": 659,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": true,
+        "heading": {
+          "family": "Causten",
+          "size": "20px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "@puravida"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2868,
+        "h": 867,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "30px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Why Shop With Us?"
+        },
+        "words": 90,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3735,
+        "h": 859,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "0.9px",
+          "text": "More Looks You'll Love View All"
+        },
+        "words": 197,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 4594,
+        "h": 247,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart",
+      "aboveFold": true,
+      "top": 589,
+      "x": 124,
+      "width": 250,
+      "bg": "rgb(250, 151, 255)"
+    },
+    "price": null,
+    "galleryImages": 30,
+    "swatches": 248,
+    "selects": 1,
+    "accordions": 20
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.puravidabracelets.com/",
+    "title": "Pura Vida Bracelets®: Jewelry Made of Friendship Material",
+    "width": 1440,
+    "pageHeight": 8455,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.2px",
+        "text": "Shop by Category"
+      },
+      "body": {
+        "family": "Causten",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holiday ExclusiveUp to 75% OFF Sale Shop Now"
+      },
+      "button": {
+        "family": "Causten",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "1.2px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Causten",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 120,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now",
+        "Shop By",
+        "Bracelets",
+        "Necklaces",
+        "Rings",
+        "Create Your Own",
+        "Bracelet Club",
+        "Gifts ✨",
+        "Up to 75% OFF Sale",
+        "1"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 120,
+        "h": 550,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 670,
+        "h": 521,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Shop by Category"
+        },
+        "words": 13,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1191,
+        "h": 560,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Up to 75% Sale View All"
+        },
+        "words": 98,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 1751,
+        "h": 656,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Our Top Gifts Shop gifts worth celebrating! View All"
+        },
+        "words": 108,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 2407,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "Stocking Stuffers"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3127,
+        "h": 600,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Gifts $10 & Under View All"
+        },
+        "words": 92,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 3727,
+        "h": 619,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Personalized Gifts"
+        },
+        "words": 6,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 4346,
+        "h": 626,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Picked Just for You View All"
+        },
+        "words": 117,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 4971,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "The Gift That Keeps Giving"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5691,
+        "h": 653,
+        "bg": "rgb(255, 255, 255)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Holiday Looks"
+        },
+        "words": 142,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 6344,
+        "h": 471,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.9px",
+          "text": "What People Are Saying"
+        },
+        "words": 249,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6815,
+        "h": 224,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Featured In"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7039,
+        "h": 531,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Causten",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Get Inspired Shop Insta"
+        },
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

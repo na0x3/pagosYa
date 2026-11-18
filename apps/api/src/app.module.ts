@@ -21,6 +21,7 @@ import { InvoicingModule } from "./invoicing/invoicing.module";
 import { PayoutsModule } from "./payouts/payouts.module";
 import { OpsModule } from "./ops/ops.module";
 import { LimitsModule } from "./limits/limits.module";
+import { PlansModule } from "./plans/plans.module";
 import { SettlementModule } from "./settlement/settlement.module";
 import { ComplaintsModule } from "./complaints/complaints.module";
 import { PayoutAccountsModule } from "./payout-accounts/payout-accounts.module";
@@ -35,6 +36,7 @@ import { ProductContentModule } from "./product-content/product-content.module";
 import { StoreGrowthModule } from "./store-growth/store-growth.module";
 import { StoreAssistantModule } from "./store-assistant/store-assistant.module";
 import { StoreAnalyticsModule } from "./store-analytics/store-analytics.module";
+import { SellingModule } from "./selling/selling.module";
 import { StoreSeoModule } from "./store-seo/store-seo.module";
 import { RetentionModule } from "./retention/retention.module";
 import { StoreCustomersModule } from "./store-customers/store-customers.module";
@@ -99,6 +101,7 @@ import { RewardsModule } from "./rewards/rewards.module";
     PayoutsModule,
     OpsModule,
     LimitsModule,
+    PlansModule,
     SettlementModule,
     ComplaintsModule,
     PayoutAccountsModule,
@@ -113,6 +116,7 @@ import { RewardsModule } from "./rewards/rewards.module";
     StoreGrowthModule,
     StoreAssistantModule,
     StoreAnalyticsModule,
+    SellingModule,
     StoreSeoModule,
     RetentionModule,
     StoreCustomersModule,

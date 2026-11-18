@@ -1,5 +1,5 @@
 import { SourceRequestBudget } from '../source-request-budget';
-import { anthropicAgentModel, anthropicMessages } from './agent-model-anthropic';
+import { anthropicAgentModel, anthropicMessages, fitClaudeImages } from './agent-model-anthropic';
 
 describe('Claude as the agent model', () => {
   it('turns the agent transcript into alternating Claude messages with tool use, tool results and images', () => {
@@ -51,4 +51,16 @@ describe('Claude as the agent model', () => {
     for (let index = 0; index < 3; index++) await expect(model({ instructions: 'x', transcript: [], tools: [] as any })).rejects.toThrow('respondió 529 (overloaded_error)');
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
+});
+
+it('live 2026-11-17 (NOA): a screenshot part taller than 2000 px is scaled to fit before it goes to Claude', async () => {
+  const sharp = (await import('sharp')).default;
+  const tall = (await sharp({ create: { width: 200, height: 3500, channels: 3, background: '#fff' } }).png().toBuffer()).toString('base64');
+  const small = (await sharp({ create: { width: 40, height: 40, channels: 3, background: '#000' } }).png().toBuffer()).toString('base64');
+  const messages = [{ role: 'user' as const, content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: tall } }, { type: 'image', source: { type: 'base64', media_type: 'image/png', data: small } }] }];
+  await fitClaudeImages(messages);
+  const [first, second] = messages[0].content.map(block => (block.source as { data: string; media_type: string }));
+  const meta = await sharp(Buffer.from(first.data, 'base64')).metadata();
+  expect(Math.max(meta.width!, meta.height!)).toBeLessThanOrEqual(2000);
+  expect(second).toEqual({ type: 'base64', media_type: 'image/png', data: small });
 });

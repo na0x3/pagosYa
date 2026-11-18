@@ -1,0 +1,245 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.vitamix.com/vr/en_us/",
+    "title": "High Performance Blenders - Blending Machines | Vitamix International",
+    "width": 1440,
+    "pageHeight": 4575,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "sentinel",
+        "size": "45px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Trusted By Chefs. Chosen by Home Cooks."
+      },
+      "body": {
+        "family": "gotham-narrow",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Vitamix"
+      },
+      "button": {
+        "family": "gotham-narrow",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "gotham-narrow",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Vitamix"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 84,
+      "position": "sticky",
+      "bg": "rgb(250, 250, 250)",
+      "links": [
+        "Vitamix",
+        "Household Products",
+        "Why Vitamix",
+        "Recipes",
+        "Support",
+        "Commercial",
+        "Search Search",
+        "International English (U",
+        "Find Find Dealer"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 84,
+        "h": 1063,
+        "bg": "rgb(250, 250, 250)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "sentinel",
+          "size": "45px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Trusted By Chefs. Chosen by Home Cooks."
+        },
+        "words": 78,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1211,
+        "h": 1104,
+        "bg": "rgb(243, 241, 235)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "sentinel",
+          "size": "45px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Vitamix Throughout the Years"
+        },
+        "words": 565,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2379,
+        "h": 1681,
+        "bg": "rgb(250, 250, 250)",
+        "images": 14,
+        "video": true,
+        "heading": {
+          "family": "sentinel",
+          "size": "45px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The one and never done."
+        },
+        "words": 153,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 1,
+      "columns": 1,
+      "photoRatio": 0.75,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.vitamix.com/vr/en_us/",
+    "title": "High Performance Blenders - Blending Machines | Vitamix International",
+    "width": 390,
+    "pageHeight": 5239,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "sentinel",
+        "size": "30px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Trusted By Chefs. Chosen by Home Cooks."
+      },
+      "body": {
+        "family": "gotham-narrow",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Vitamix"
+      },
+      "button": {
+        "family": "gotham-narrow",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "gotham-narrow",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Vitamix"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 68,
+      "position": "sticky",
+      "bg": "rgb(250, 250, 250)",
+      "links": [
+        "Open navigation",
+        "Vitamix"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 68,
+        "h": 1121,
+        "bg": "rgb(250, 250, 250)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "sentinel",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Trusted By Chefs. Chosen by Home Cooks."
+        },
+        "words": 78,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1221,
+        "h": 840,
+        "bg": "rgb(243, 241, 235)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "sentinel",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Vitamix Throughout the Years"
+        },
+        "words": 565,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2093,
+        "h": 2444,
+        "bg": "rgb(250, 250, 250)",
+        "images": 15,
+        "video": true,
+        "heading": {
+          "family": "sentinel",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The one and never done."
+        },
+        "words": 153,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  }
+}

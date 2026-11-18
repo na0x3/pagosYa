@@ -92,6 +92,36 @@
     .order-item__unit{white-space:nowrap}.order-item__unit s{margin-left:4px}
     .order-items .order-item .quantity{margin-top:10px}
     .order-savings{display:flex;justify-content:space-between;gap:16px;margin:16px 0 0;font-size:15px}
+    /* Spec 2026-11-09 Merman cart: the free-shipping bar, the saving, the frequency choice and the guarantee — in the store's accent. */
+    .cart-free{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--store-accent,var(--brand-accent,var(--accent,#111))) 8%,transparent)}
+    .cart-free p{margin:0 0 10px;font-size:14px;line-height:1.4}
+    .cart-free__track{position:relative;height:6px;margin-right:26px;border-radius:999px;background:color-mix(in srgb,currentColor 14%,transparent)}
+    .cart-free__track span{display:block;height:100%;border-radius:inherit;background:var(--store-accent,var(--brand-accent,var(--accent,#111)));transition:width .4s ease}
+    .cart-free__truck{position:absolute;right:-26px;top:50%;transform:translateY(-50%);color:var(--store-accent,var(--brand-accent,var(--accent,currentColor)))}
+    .cart-free[data-done] p{font-weight:600}
+    .order-item__body>.order-item__save{opacity:1;font-weight:600;font-size:13px;color:var(--store-accent,var(--brand-accent,var(--accent,#0a7a3d)))}
+    .order-item__cadence{display:block;margin-top:8px}
+    .order-item__cadence select{width:100%;min-height:36px;padding:6px 10px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px}
+    .cart-guarantee{display:flex;align-items:center;justify-content:center;gap:8px;margin:12px 0 0;font-size:13px;line-height:1.4;text-align:center;opacity:.8}
+    .cart-guarantee svg{flex:none}
+    .cart-drawer .order-recommendations ul{grid-auto-flow:column;grid-auto-columns:minmax(128px,36%);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+    .cart-drawer .order-recommendations li,.cart-drawer .order-recommendations li:not(:has(img)){grid-template-columns:1fr;align-items:start;scroll-snap-align:start;padding:10px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:12px}
+    .cart-drawer .order-recommendations li img{width:72px;height:72px;object-fit:cover;border-radius:8px}
+    .cart-drawer .order-recommendations li{gap:6px;font-size:13px}.cart-drawer .order-recommendations li :is(button,a){min-height:36px;padding:6px 12px;font-size:13px}
+    /* Owner 2026-11-09 (Remolino): «Añadir» was plain text beside a filled «Elegir»; both are pills in the pay button's colour.
+       Live Vórtice: a template's Tailwind reset (unlayered) beat this layer, so the pill's colours and shape are !important. */
+    .cart-drawer .order-recommendations li :is(button,a){justify-content:center;border:0!important;border-radius:999px!important;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))))!important;color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)))!important;font-weight:600;text-decoration:none;cursor:pointer}
+    /* «¿Prefieres terminar después?» under the guarantee line: a quiet divider, a small title and an outlined pill — never a second «Pagar». */
+    .cart-drawer [data-retention-recovery]{width:auto;margin:20px 0 0;padding:18px 0 0;border:0;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);background:none;color:inherit;font:inherit}
+    .cart-drawer [data-retention-recovery] h3{margin:0 0 6px;font:inherit;font-size:15px;font-weight:600;line-height:1.3}
+    .cart-drawer [data-retention-recovery] p{margin:0;font-size:13px;line-height:1.45;opacity:.75;max-width:none}
+    .cart-drawer [data-retention-recovery] form{display:grid;gap:10px;max-width:none;margin-top:10px}
+    .cart-drawer [data-retention-recovery] .retention-email{gap:6px;font-size:13px}
+    .cart-drawer [data-retention-recovery] input[type=email]{min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,currentColor 22%,transparent)!important;border-radius:999px!important;background:transparent;color:inherit;font-size:14px}
+    .cart-drawer [data-retention-recovery] .retention-consent{gap:8px;font-size:12.5px;line-height:1.45;opacity:.8}
+    .cart-drawer [data-retention-recovery] input[type=checkbox]{width:16px;height:16px;flex:0 0 16px;margin:1px 0 0}
+    .cart-drawer [data-retention-recovery] button{width:100%;min-height:46px;padding:0 20px;border:1px solid currentColor!important;border-radius:999px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:15px;font-weight:600}
+    .cart-drawer .checkout-button[data-busy]{opacity:.7;cursor:progress}
     .checkout-review__summary>.checkout-review__count{margin:4px 0 8px;font-size:14px;line-height:1.4;opacity:.7}
     .order-recommendations{margin:20px 0 0}
     .order-recommendations h3{margin:0 0 10px;font-size:15px}
@@ -151,11 +181,11 @@
     // The calm checkout covers the whole page, an authored checkout page too: what is around it leaves the tab order.
     if (checkoutPage.hidden) { checkoutOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden"; inertAround(checkoutPage, inertBeforeCheckout); }
     checkoutPage.hidden = false;
-    checkoutPage.classList.add('pya-checkout');
+    checkoutPage.classList.add('pya-checkout', 'pya-co--kit');
     const back = fullCheckoutPage && mode === 'review' ? `<a class="pya-co__back" href="index.html">${BACK_ICON} Seguir comprando</a>` : `<button class="pya-co__back" type="button" ${mode === 'done' ? 'data-shell-close' : 'data-checkout-back'}>${BACK_ICON} ${mode === 'payment' ? 'Volver a la entrega' : 'Seguir comprando'}</button>`;
     const heading = mode === 'payment' ? 'Pago de prueba' : mode === 'done' ? '¡Gracias por tu compra!' : 'Revisa tu pedido';
     const note = mode === 'payment' ? 'Puedes completar el recorrido de prueba. No se realizará ningún cobro ni se creará un pedido real.' : preview || config.demo ? 'Vista previa · Sin cobros' : '';
-    checkoutPage.innerHTML = `<header class="pya-co__bar">${back}${shellBrand()}<span class="pya-co__secure">${LOCK_ICON} Pago seguro</span></header><button type="button" class="pya-co__summary-toggle" aria-expanded="false" aria-controls="pya-co-summary" data-shell-summary><span data-shell-summary-label>Ver resumen del pedido</span><strong data-shell-total></strong></button><div class="pya-co__frame"><div class="pya-co__lead">${shellSteps(mode)}<h1 tabindex="-1">${heading}</h1>${note ? `<p class="pya-co__note order-note">${note}</p>` : ''}<p class="pya-co__status" data-pagosya-status role="status" aria-live="polite"></p></div><div data-pagosya-cart data-checkout-review="${mode}"></div></div>`;
+    checkoutPage.innerHTML = `${checkoutBand()}<header class="pya-co__bar">${back}<span class="pya-co__secure">${LOCK_ICON} Pago seguro</span></header><button type="button" class="pya-co__summary-toggle" aria-expanded="false" aria-controls="pya-co-summary" data-shell-summary><span data-shell-summary-label>Ver resumen del pedido</span><strong data-shell-total></strong></button><div class="pya-co__frame"><div class="pya-co__lead">${shellSteps(mode)}<h1 tabindex="-1">${heading}</h1>${note ? `<p class="pya-co__note order-note">${note}</p>` : ''}<p class="pya-co__status" data-pagosya-status role="status" aria-live="polite"></p></div><div data-pagosya-cart data-checkout-review="${mode}"></div></div>`;
     shellAccent(checkoutPage);
     renderCart();
     // Moving focus is for the overlay, which opens over the page. A full checkout page is simply loaded, and

@@ -58,6 +58,12 @@ export class PromoCodesService {
     const code = rawCode.trim().toUpperCase();
     const promo = await this.prisma.promoCode.findFirst({ where: { storeId, code, isActive: true } });
     if (!promo) throw new BadRequestException("El código no existe o está desactivado");
+    // Spec 2026-11-09 popup games: a winner's own code is usable once — paid orders that used it are counted.
+    if (promo.maxUses) {
+      const store = await this.prisma.store.findUnique({ where: { id: storeId }, select: { merchantId: true } });
+      const used = store ? await this.prisma.paymentIntent.count({ where: { merchantId: store.merchantId, status: "SUCCEEDED", metadata: { path: ["promoCode"], equals: promo.code } } }) : 0;
+      if (used >= promo.maxUses) throw new BadRequestException("Este código ya se usó");
+    }
     return promo;
   }
 

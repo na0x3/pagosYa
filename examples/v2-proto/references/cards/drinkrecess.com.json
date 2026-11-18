@@ -1,0 +1,77 @@
+{
+  "host": "drinkrecess.com",
+  "name": "Recess",
+  "at": "2026-11-14T14:38:49.494Z",
+  "mood": "Calma juguetona, bienestar sin solemnidad y color de refresco.",
+  "idea": "Convertir la promesa de calma en un recorrido luminoso donde fondos celestes y amarillos, latas muy grandes y pequeños rótulos funcionales hacen que bienestar y diversión parezcan la misma cosa.",
+  "header": "Es fijo y se superpone al contenido. En escritorio mide 171–173 px en total: arriba hay una banda de anuncio de unos 26 px, amarillo neón, con «Free shipping on all orders» repetido horizontalmente; debajo queda una zona de navegación de unos 145 px. El logotipo manuscrito está a la izquierda, aproximadamente a 60 px del borde. Los cuatro enlaces —Shop, Subscribe, Where to Buy y About— viven dentro de una cápsula celeste translúcida centrada, con sombra suave, unos 490 px de ancho y 66 px de alto. A la derecha aparecen cuenta, búsqueda y carrito con contador. Aunque la medición registra fondo blanco, visualmente la navegación funciona como una capa transparente o teñida por el fondo de cada sección. En teléfono el conjunto baja a 105 px: 26 px de anuncio y unos 79 px de navegación; desaparecen los enlaces, entra una hamburguesa a la izquierda, el logo se centra y queda solo el contador del carrito a la derecha.",
+  "hero": "Primera pantalla a sangre completa, de 811 px de alto en escritorio y 780 px en teléfono, construida sobre vídeo. En escritorio, un hombre con una lata ocupa el centro y la mitad derecha sobre cielo azul; el bloque verbal se ancla abajo a la izquierda con ceja en mayúsculas, titular de 58 px «calm in a can», texto de apoyo y botón contorneado. En la esquina inferior derecha se superpone una tarjeta horizontal de producto con borde blanco redondeado: imagen del sampler a la izquierda y nombre más CTA a la derecha. En móvil se conserva el vídeo, pero con recorte vertical agresivo: rostro, brazo y lata entran desde la derecha. El texto se apila desde aproximadamente la mitad de la pantalla; el titular sigue en 58 px y rompe en tres líneas. La tarjeta del sampler pasa debajo del texto, casi a todo el ancho, y se divide en dos columnas. El botón principal de «best sellers» no aparece en el recorte móvil mostrado, de modo que la tarjeta promocional asume la conversión.",
+  "catalog": "La cabecera editorial empieza a unos 233 px en escritorio: titular centrado de 58 px, en dos líneas, y debajo cuatro accesos de categoría con imágenes cuadradas redondeadas —All, Mood, Zero Proof y Mood Powder— en una fila centrada. A continuación hay filtros tipográficos en línea: All, Variety Packs y Single Flavors; no se ve control de ordenación. La rejilla contiene 41 productos, tres columnas en 1440 px y dos en 390 px. Las imágenes son casi cuadradas, con relación medida de 1,04 en escritorio y 0,95 en móvil. En teléfono el título baja a 30 px, los accesos de categoría forman un carrusel horizontal que deja el siguiente elemento cortado y los filtros se mantienen en una sola línea, pequeños, antes de la rejilla. La página es muy larga —11.334 px en escritorio y 8.619 px en móvil— y evita paginación visible en las capturas.",
+  "card": "Cada tarjeta separa con claridad imagen y ficha. La foto ocupa un rectángulo casi 1:1 con esquinas redondeadas y fondos pastel que cambian por familia; el pack o la lata se presenta centrado y a gran escala. Una píldora amarillo neón «BEST SELLER» se coloca dentro de la imagen, arriba a la izquierda. Debajo aparecen una categoría en mayúsculas pequeñas, el nombre en minúsculas o frase corta y el precio; en móvil estos textos rondan 12–16 px y quedan alineados a la izquierda. No se ve botón de compra rápida ni selector de color en las tarjetas mostradas. Tampoco puede confirmarse una segunda imagen al pasar el cursor: las capturas son estáticas y no muestran el estado hover.",
+  "product": "En escritorio la apertura usa dos columnas: galería grande a la izquierda y ficha a la derecha. La imagen principal es casi cuadrada, con una lata enorme sobre macrofotografía de manzana verde con burbujas. La ficha comienza con categoría, nombre de 44 px, formato «12 pack · 12 fl oz», descripción y una matriz de ocho sabores en cuatro columnas por dos filas; cada variante es una mini tarjeta con lata y nombre. La compra no queda sobre el primer pliegue según la medición: el botón aparece hacia y=1346. Antes se ofrecen canales externos mediante buscador por código postal y filas de Amazon e Instacart. La compra directa incluye modalidad «One Time Purchase», precio, stepper de cantidad y botón azul oscuro «ADD TO CART» de unos 364 px. La galería secundaria combina mosaicos de lifestyle, infografías, ingredientes y producto; el documento registra numerosas imágenes y 13 acordeones. Más abajo aparecen beneficios e ingredientes sobre una banda amarillo pálido, preguntas frecuentes, comparación «how our products differ» en tres columnas y un carrusel «explore more». En teléfono se altera el orden: categoría, título de 30 px y formato aparecen antes de la imagen principal; después hay una fila de píldoras de atributos como «5G SUGAR», «35 CAL», «0% ABV» y «5G SUG…», descripción y acciones. Los sabores siguen en cuatro columnas muy compactas, luego retailers y finalmente la caja de compra directa. El CTA medido queda en y=1633 y ocupa unos 247 px junto al control de cantidad.",
+  "cart": "Es un cajón lateral derecho, no una página independiente. En escritorio mide aproximadamente 400 px de ancho y cubre casi toda la altura visible, mientras el resto de la portada queda desenfocado y oscurecido. La cabecera dice «Cart (1)» y tiene cierre circular. Cada fila reúne miniatura, categoría, nombre, formato, precio, stepper de cantidad y papelera. Debajo aparece «YOU MAY ALSO LIKE» con dos ventas adicionales en tarjetas pequeñas y botones «ADD TO CART». El pie queda fijado al fondo del cajón con subtotal y un botón azul oscuro a todo el ancho: «CHECK OUT — $37.99»; bajo él aparece el mensaje de envío gratuito. No se proporcionó captura del carrito en teléfono.",
+  "type": "La base es la fuente del sistema de Apple, una sans neutra, en peso 400; el logo es una marca manuscrita independiente. En escritorio, H1 a 58 px con tracking −1,16 px; H2 y títulos de producto a 44 px con tracking −0,88 px; cuerpo y navegación a 16 px. En teléfono, los títulos de sección bajan normalmente a 30 px con tracking −0,6 px, pero el H1 del hero conserva 58 px para mantener impacto. Los botones usan peso 700, mayúsculas y tracking positivo: 19 px/0,76 px en escritorio y 16 px/0,64 px en móvil. Categorías, cejas, filtros y beneficios se componen en 12–14 px, mayúsculas y mayor espaciado. La jerarquía se obtiene casi enteramente por escala, caja y tracking, no por mezclar varias familias tipográficas.",
+  "colour": "El blanco es el fondo estructural registrado, pero grandes zonas se tiñen con degradados pastel. El azul marino funciona como tinta universal para textos, iconos, contornos y botones de compra. El celeste ocupa hero, cabecera, fondos de catálogo y paneles de producto. El amarillo ácido de la banda de envío y de las etiquetas «BEST SELLER» actúa como señal de atención; también se expande hacia amarillo pálido en secciones informativas. Rosa, melocotón, verde lima y naranja se asignan a sabores y categorías. El sistema no reserva el color solo al CTA: deja que cada producto coloree su entorno, mientras el azul marino mantiene constante la interfaz.",
+  "photos": "Se alternan tres tratamientos. Primero, vídeo y lifestyle recortados a sangre con personas, manos y bebidas bajo luz solar. Segundo, producto aislado y frontal, centrado sobre fondos pastel, con suficiente escala para leer el envase. Tercero, macros sensoriales —burbujas, fruta, hielo y líquidos— usados como fondo de una lata flotante. El catálogo mantiene recortes consistentes y casi cuadrados; la página de producto rompe esa regularidad con un mosaico de cuadrados editoriales, diagramas y escenas de consumo. La saturación es alta y las sombras son mínimas: la separación se consigue principalmente por contraste cromático.",
+  "motion": "Hay movimiento confirmado: la portada registra cuatro vídeos y el hero mostrado es vídeo. La banda de envío funciona como marquesina repetida y muestra control de pausa. Varias filas —logos de distribuidores, productos, categorías y prensa— se comportan como carruseles horizontales; en teléfono los elementos cortados en los bordes hacen explícito el desplazamiento. Es probable que la galería y «explore more» también deslicen. No hay evidencia suficiente para afirmar cambio de imagen de tarjeta al pasar el cursor.",
+  "phone": "La adaptación no se limita a encoger. La navegación se reduce a tres puntos —hamburguesa, logo y carrito— dentro de 105 px. El hero conserva el H1 de 58 px y cambia el encuadre del vídeo para que sujeto y lata entren desde la derecha; el contenido comercial pasa a una tarjeta de dos columnas casi a todo el ancho. Las secciones de producto se convierten en carruseles de una tarjeta central o filas horizontales recortadas. La portada usa títulos de 30 px, bloques de texto centrados y mucho espacio vertical. El catálogo pasa de tres a dos columnas y mantiene los filtros en línea. En producto, el título antecede a la foto, los atributos se vuelven chips, las ocho variantes caben en cuatro columnas y los botones «ADD TO CART» y «BROWSE RETAILERS» comparten una fila. Los módulos comparativos de escritorio se apilan o se vuelven carruseles, preservando imágenes grandes en lugar de reducirlas demasiado.",
+  "signature": "La cápsula flotante de navegación, centrada sobre fondos que cambian de color, hace que el menú parezca una burbuja del propio refresco y no una barra convencional.",
+  "home": [
+    {
+      "role": "Presentar la promesa y llevar a un producto concreto.",
+      "composition": "Hero de vídeo a sangre, 811 px en escritorio/780 px en móvil, con texto abajo a la izquierda y una tarjeta de sampler superpuesta abajo a la derecha; en teléfono todo se apila y la tarjeta ocupa casi todo el ancho."
+    },
+    {
+      "role": "Aportar distribución y prueba de disponibilidad inmediata.",
+      "composition": "Banda celeste de logos de retailers —H‑E‑B, Kroger, Publix, Sam’s Club, Target, Trader Joe’s y Walmart— en una fila horizontal tipo marquesina."
+    },
+    {
+      "role": "Explicar el portafolio por ocasión de uso, no solo por formato.",
+      "composition": "Titular centrado de 44 px en escritorio y 30 px en móvil; debajo, tres grandes tarjetas de producto para «Social Boost», «Anytime Reset» y «Calm On-The-Go». Cada tarjeta contiene etiqueta amarilla, envase centrado, nombre, descripción breve y dos iconos de beneficios. En teléfono se muestra una tarjeta principal y fragmentos laterales para indicar carrusel."
+    },
+    {
+      "role": "Construir una razón emocional y funcional para elegir la marca.",
+      "composition": "Bloque «why people choose Recess» con pequeñas frases y pictogramas —ingredientes funcionales, ritual diario, baseline más calmado— alrededor de una lata inclinada o flotante. Mucho vacío central; una frase de contexto se coloca aislada a la derecha. En teléfono los mensajes se distribuyen en distintos niveles verticales en vez de comprimirse."
+    },
+    {
+      "role": "Convertir por familia o momento de consumo.",
+      "composition": "Título centrado «take a Recess», pestañas horizontales —Anytime Reset, Social Boost, Calm On-The-Go y Shop All— y carrusel de producto. En escritorio se ven unas cuatro tarjetas con fotografía de líquidos y latas; en móvil quedan recortadas en los bordes."
+    },
+    {
+      "role": "Dar rutas alternativas de compra y sumar prueba externa.",
+      "composition": "Tres módulos horizontales para Amazon, entrega mediante Instacart/DoorDash/Gopuff y compra directa, seguidos por una marquesina de cabeceras de prensa. Fondo en degradado amarillo que transiciona hacia rosa."
+    },
+    {
+      "role": "Humanizar la promesa mediante testimonio.",
+      "composition": "Franja rosa degradada con cita centrada y dos fotografías instantáneas inclinadas en los extremos; pequeñas flechas bajo el texto controlan el carrusel."
+    },
+    {
+      "role": "Resolver la compra física.",
+      "composition": "Localizador «find recess products near you» dentro de un panel azul muy pálido de unos 832 px de alto en escritorio y 848 px en móvil. En la captura el contenido interior aparece vacío o no cargado; se ignora ese vacío como posible bloqueo del widget."
+    },
+    {
+      "role": "Contar el origen de la marca.",
+      "composition": "Módulo editorial «why we made recess» en dos columnas: fotografía muy saturada a la izquierda y texto, puntuación o cita a la derecha. En móvil se apila."
+    },
+    {
+      "role": "Captar comunidad y contenido social.",
+      "composition": "Sección de unos 725–789 px con título «join thecool collective», vídeo y mosaico de nueve imágenes; combina llamada de comunidad con prueba visual de uso."
+    },
+    {
+      "role": "Cerrar con una escena aspiracional.",
+      "composition": "Una imagen o vídeo panorámico a sangre, de unos 660–760 px, con poco texto superpuesto para recuperar ritmo visual antes del cierre comercial."
+    },
+    {
+      "role": "Reunir canales finales de compra.",
+      "composition": "Bloque «ways to buy» de 303 px en escritorio y 500 px en móvil, con logos o accesos en dos grupos y una fila horizontal de imágenes de retailers."
+    }
+  ],
+  "lessons": [
+    "Mantén una constante de interfaz —aquí, tinta azul marino y botones contorneados o sólidos— aunque cada categoría cambie radicalmente de color; así el catálogo puede ser exuberante sin perder orientación.",
+    "Usa el recorte móvil como una composición nueva: conserva el tamaño del titular y mueve el sujeto de la imagen, en vez de reducir proporcionalmente todo el hero.",
+    "Clasifica productos por necesidad o momento de uso antes de mostrar la rejilla completa; las tarjetas «Social Boost», «Anytime Reset» y «Calm On-The-Go» traducen ingredientes abstractos en decisiones cotidianas.",
+    "Combina venta propia y retailers dentro de la misma ficha. Dar buscador local, Amazon, Instacart y compra directa reduce fricción para un producto de consumo frecuente.",
+    "Haz visibles los carruseles dejando una tarjeta cortada en el borde; es una pista de interacción más clara que depender solo de puntos o flechas pequeñas.",
+    "Reserva el amarillo neón para mensajes operativos y etiquetas de decisión —envío gratis, best seller, ocasión—, de modo que un color expresivo también cumpla una función consistente."
+  ]
+}

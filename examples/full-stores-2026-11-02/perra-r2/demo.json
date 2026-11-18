@@ -1,0 +1,38 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwatk0wo000112s8jo8ph0m0",
+  "slug": "g23nkxi4",
+  "photos": {
+    "brand:183a817839131ffdf80e6f887ae1a0de.jpg": "/v1/uploads/60076bb6-e15c-409c-85a6-04ea5fdb05f8.jpg",
+    "brand:38605cb7738cdc7a35885d2ccf1e0da4.jpg": "/v1/uploads/0111af69-582a-43a1-bf3a-f61227f783c3.jpg",
+    "brand:647a2ffb60b4d4a3c9c8f84cc5434481.jpg": "/v1/uploads/f981934e-4282-4799-ad98-54fd802bfa88.jpg",
+    "brand:74e5ccead57d74ee0a2a674e45f391c8.jpg": "/v1/uploads/dc7d9253-cad7-4e28-b5e2-ea6f44ab7918.jpg",
+    "brand:b8d5713ab84ec0099394276e5035ddac.jpg": "/v1/uploads/735e7de1-1c95-401e-8393-3c440a48fc7c.jpg",
+    "brand:c70e292a5af4972283800da8a41f14f8.jpg": "/v1/uploads/32cd22cf-28cf-40f0-aac1-0a4d94ff2727.jpg",
+    "brand:d9b96be096501284d6c4379ac15b1f73.jpg": "/v1/uploads/ac2c706a-6193-4201-b747-79cceae6112a.jpg",
+    "647a2ffb60b4d4a3c9c8f84cc5434481.jpg": "/v1/uploads/9385c520-2e05-44c5-a337-8b9e422d610c.jpg",
+    "c70e292a5af4972283800da8a41f14f8.jpg": "/v1/uploads/66c27cb4-e248-4d79-bfa5-75b4d577daf7.jpg",
+    "38605cb7738cdc7a35885d2ccf1e0da4.jpg": "/v1/uploads/8142f929-c4ae-4eec-808a-5c00ad9d24e2.jpg",
+    "183a817839131ffdf80e6f887ae1a0de.jpg": "/v1/uploads/3ae7cfa1-ccca-4261-bb4f-50aaa494ad64.jpg"
+  },
+  "categories": {
+    "Salsas": "cmwatk0x5000h12s8csqj59dx",
+    "Packs": "cmwatk0x6000j12s88kizmrqz"
+  },
+  "products": {
+    "Salsa Red Pepper Heat 250 ml": "cmwatk0x8000n12s863un1srw",
+    "Salsa Garlic Heat 250 ml": "cmwatk0xb000r12s82a0wqhxr",
+    "Salsa Smoke Heat 250 ml": "cmwatk0xd000v12s8ojcdeek5",
+    "Pack las tres salsas": "cmwatk0xf000z12s8izl7oybt"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwatk0xu001712s8qtx63sfc"
+}

@@ -16,18 +16,19 @@ import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from '
 import { searchIllustrations } from './agent-illustrations';
 import { chosenMotifPack, listMotifPacks, loadMotifPack, snapshotWithMotifPack } from '../source-motif-packs';
 import { AGENT_POLICY_KINDS, policyTextProblem, snapshotWithPolicies, type AgentPolicyKind, type PendingPolicies } from '../source-agent-policies';
+import { isProductVideo, productMediaProblem, type AgentProductMedia } from '../source-agent-product-media';
 import { SOURCE_DNA_ENUMS } from '../source-dna';
 import { ASSURANCE_ICONS } from '../product-theme';
 import { PRESET_IDS } from '../source-product-card-presets';
 import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput, type ProductThemeResult } from '../product-theme';
 
-export type AgentToolName = 'inspect_asset' | 'find_products' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'delete_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy'
+export type AgentToolName = 'inspect_asset' | 'find_products' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'delete_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy' | 'add_product_media'
   /* Spec 2026-10-29 home page writer */ | 'read_chassis' | 'write_home' | 'set_tokens' | 'check';
 export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbnail?: string };
 export type AgentCompositionFinding = { id: string; page: string; section: string; severity: 'major' | 'minor'; observation: string; correction: string };
 export type AgentCompositionReview = { findings: AgentCompositionFinding[]; summary: string };
 export type AgentCompositionReviewInput = { snapshot: Awaited<ReturnType<typeof agentPreviewSnapshot>>; captures: Array<{ page: string; width: number; image: string }>; signal?: AbortSignal };
-export type AgentToolboxContext = { /** Spec 2026-10-28: a new store's first design; its header and footer must keep their parts. */ lockedShell?: boolean; workspace: AgentWorkspace; previous: SourceProjectFileDto[]; base: AgentPreviewBase; instruction: string; merchantInstruction?: string; purpose: SourceSitePurpose; maxScreenshots: number; signal?: AbortSignal; sectionScope?: Parameters<typeof verifyAgentDraft>[0]['sectionScope']; /** A new store or a redesign: photos may move (spec 2026-10-28 §4). */ redesign?: boolean; gate?: (files: SourceProjectFileDto[]) => Promise<string | null>; lenientGate?: (files: SourceProjectFileDto[]) => Promise<string | null>; onPreview?: (files: SourceProjectFileDto[]) => void;
+export type AgentToolboxContext = { /** Spec 2026-10-28: a new store's first design; its header and footer must keep their parts. */ lockedShell?: boolean; /** Owner 2026-11-17: this request's attached uploads (photos and MP4), for add_product_media. */ attachedMedia?: string[]; workspace: AgentWorkspace; previous: SourceProjectFileDto[]; base: AgentPreviewBase; instruction: string; merchantInstruction?: string; purpose: SourceSitePurpose; maxScreenshots: number; signal?: AbortSignal; sectionScope?: Parameters<typeof verifyAgentDraft>[0]['sectionScope']; /** A new store or a redesign: photos may move (spec 2026-10-28 §4). */ redesign?: boolean; gate?: (files: SourceProjectFileDto[]) => Promise<string | null>; lenientGate?: (files: SourceProjectFileDto[]) => Promise<string | null>; onPreview?: (files: SourceProjectFileDto[]) => void;
   /** Independent visual review for whole-site design, configured by the caller; at most two calls per run. */
   reviewComposition?: (input: AgentCompositionReviewInput) => Promise<AgentCompositionReview>;
   /** False when the merchant's request does not concern the product page (a local edit elsewhere); the theme tool then refuses. */
@@ -70,6 +71,8 @@ export const AGENT_TOOLS = [
   tool('set_account_theme', 'Diseña las páginas de cuenta (ingresar, registro, pedidos, perfil): layout card|split|minimal|panel, photo (una ruta assets/ de la tienda, solo para split) y CSS opcional sobre [data-part=…] (account, card, media, title, lead, form, field, label, input, hint, submit, link, error, notice, nav, nav-item, list, order, order-status, address, empty, danger). En una edición se conserva el tema actual: null mantiene cada valor y tu CSS se añade después del CSS de la tienda (gana el tuyo; para quitar un borde o una sombra, sobrescríbelos con border:0 o box-shadow:none). Para una sola página empieza el selector con [data-account-gate="register"] (login, register, forgot-password, reset-password, orders, addresses, profile, subscriptions); sin él vale para todas. Dibuja la página entera, foto del split incluida: nunca envuelvas AccountGatePage en columnas, rejillas o fotos propias. Los campos, el botón, los errores y los enlaces nunca se pueden ocultar. null conserva el valor.', { layout: { type: ['string','null'] }, photo: { type: ['string','null'] }, css: { type: ['string','null'] } }),
   tool('set_motif_pack', `Activa para toda la tienda un paquete de motivos dibujados por pagosYa (botones, separadores, patrón, estados vacíos), pintados con la paleta de la tienda, o null para quitarlo. Solo si el tema de la tienda coincide con el paquete y la identidad es lúdica; nunca en una identidad seria o minimalista. Paquetes: ${listMotifPacks().map(pack => `${pack.id} (${pack.name})`).join(', ')}.`, { id: nullableEnum(listMotifPacks().map(pack => pack.id)) }),
   tool('set_store_policy', 'Reescribe una política de la tienda guardada en Ajustes (returns: Cambios y devoluciones, delivery: Envíos y entregas, privacy: Privacidad, terms: Términos), que las páginas estándar muestran. Se guarda en Ajustes al terminar. Solo cuando el comercio lo pide; usa sus datos y no inventes plazos, costos ni condiciones. Texto simple; text null o vacío la quita.', { kind: { type: 'string', enum: [...AGENT_POLICY_KINDS] }, text: { type: ['string', 'null'] } }),
+  // Owner 2026-11-17 («add more pictures to a certain product or add videos»): catalogue media, saved when the run saves.
+  tool('add_product_media', 'Agrega una foto o un video MP4 a un producto real (id de find_products): entra a la galería de su página; un video se ve bajo sus fotos y se reproduce sobre la foto de su tarjeta. media = una de las direcciones /v1/uploads/… que el comercio adjuntó a este pedido o una foto que ya tiene otro producto. Llámala sin media para ver cuáles hay. Se guarda en el catálogo al terminar; no toques el código de la tienda para esto.', { productId: text, media: text }),
   tool('create_page', 'Crea una página independiente con URL propia. Reutiliza el Shell real de la tienda en content; después añade su enlace al menú compartido. No crea secciones de inicio.', { slug: text, content: text }),
   tool('list_files', 'Lista los archivos editables de la tienda.', {}),
   tool('read_file', 'Lee un archivo editable completo.', { path: text }),
@@ -114,6 +117,8 @@ export class AgentToolbox {
   pendingMotifPack: string | null | undefined = undefined;
   /** Shopper policies YAPI rewrote this run (null removes one); written to Ajustes when the run saves. */
   pendingPolicies: PendingPolicies = {};
+  /** Photos and videos YAPI added to products this run; written to the catalogue when the run saves. */
+  pendingProductMedia: AgentProductMedia[] = [];
   private shots = 0;
   private compositionCalls = 0;
   private compositionCache = new Map<string, AgentCompositionReview>();
@@ -283,7 +288,7 @@ export class AgentToolbox {
     if (!args || typeof args !== 'object') return { output: 'Herramienta o argumentos inválidos: se esperaba un objeto.' };
     const ws = this.workspace;
     const step = (kind: AgentToolName, label: string, thumbnail?: string) => { this.steps.push({ kind, label, at: Date.now(), ...(thumbnail ? { thumbnail } : {}) }); };
-    if (this.ctx.taskRequired && !this.requirements.length && ['create_page','edit_file','edit_file_batch','write_file','delete_file','set_account_theme','set_product_card_theme','set_motif_pack','set_store_policy'].includes(name)) return { output: 'Primero llama plan_task con todos los requisitos del pedido.' };
+    if (this.ctx.taskRequired && !this.requirements.length && ['create_page','edit_file','edit_file_batch','write_file','delete_file','set_account_theme','set_product_card_theme','set_motif_pack','set_store_policy','add_product_media'].includes(name)) return { output: 'Primero llama plan_task con todos los requisitos del pedido.' };
     switch (name) {
       case 'find_products': {
         const found = findProducts(configCatalog(this.ctx.base.files.find(file => file.path === 'config.js')?.content), String(args.query || ''));
@@ -327,7 +332,7 @@ export class AgentToolbox {
         const planned = validateTaskRequirements(args.requirements, ws.files());
         assertTaskFeasibility(planned, this.ctx.base.files);
         assertMerchantTaskCoverage(planned, this.ctx.merchantInstruction || this.ctx.instruction);
-        if (this.requirements.length && (ws.changedPaths().length || this.pendingTheme || this.pendingMotifPack !== undefined || Object.keys(this.pendingPolicies).length)) {
+        if (this.requirements.length && (ws.changedPaths().length || this.pendingTheme || this.pendingMotifPack !== undefined || Object.keys(this.pendingPolicies).length || this.pendingProductMedia.length)) {
           // A generated selector can become stale. Repair its binding, never the promised outcome.
           const unchangedIntent = planned.length === this.requirements.length && planned.every(next => {
             const original = this.requirements.find(r => r.id === next.id);
@@ -484,6 +489,24 @@ export class AgentToolbox {
         this.lastVerify = null;
         step('set_motif_pack', pack ? `Activó el paquete de motivos ${pack.id}` : 'Quitó el paquete de motivos');
         return { output: pack ? `Paquete ${pack.id} activado para toda la tienda: ${pack.motifs.map(motif => motif.placement).join(', ')}. Míralo con screenshot antes de terminar.` : 'Paquete de motivos quitado de la tienda.' };
+      }
+      case 'add_product_media': {
+        const catalog = configCatalog(this.ctx.base.files.find(file => file.path === 'config.js')?.content);
+        const product = catalog.items.find(item => item.id === String(args.productId || ''));
+        if (!product) return { output: 'Ese producto no existe: usa un id de find_products.' };
+        const own = (item: { imageUrls?: unknown }) => (Array.isArray(item.imageUrls) ? item.imageUrls : []).filter((url): url is string => typeof url === 'string');
+        const offered = [...new Set([...(this.ctx.attachedMedia ?? []), ...catalog.items.flatMap(item => own(item as { imageUrls?: unknown }))])];
+        const media = String(args.media || '').trim();
+        if (!media) return { output: JSON.stringify({ adjuntos: this.ctx.attachedMedia ?? [], fotos_de_productos: catalog.items.map(item => ({ producto: item.name, fotos: own(item as { imageUrls?: unknown }) })) }) };
+        if (!offered.includes(media)) return { output: 'Usa un archivo que el comercio adjuntó o una foto que ya tiene un producto (llama sin media para verlos).' };
+        const queued = this.pendingProductMedia.filter(item => item.productId === product.id).map(item => item.url);
+        const problem = productMediaProblem(media, own(product as { imageUrls?: unknown }), queued);
+        if (problem) return { output: problem };
+        this.pendingProductMedia = [...this.pendingProductMedia, { productId: product.id, url: media }];
+        this.lastVerify = null;
+        const kind = isProductVideo(media) ? 'un video' : 'una foto';
+        step('add_product_media', `Agregó ${kind} a ${String(product.name).slice(0, 40)}`);
+        return { output: `Listo: ${kind} para «${product.name}»; se guarda en el catálogo al terminar.` };
       }
       case 'set_store_policy': {
         const kind = args.kind as AgentPolicyKind;

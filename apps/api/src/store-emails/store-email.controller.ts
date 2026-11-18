@@ -1,4 +1,5 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, Logger, NotFoundException, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { PlansService } from '../plans/plans.service';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Inject, Logger, NotFoundException, Param, Post, Put, Query, Req, UseGuards, Optional } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
@@ -36,7 +37,8 @@ const MAX_PRODUCT_PHOTOS = 12;
 export class StoreEmailController {
   private readonly logger = new Logger(StoreEmailController.name);
   constructor(private readonly emails: StoreEmailService, private readonly designer: EmailKitService, private readonly kits: EmailKitStore, private readonly content: EmailContentStore,
-    private readonly prisma: PrismaService, @Inject(EMAIL_PROVIDER) private readonly mail: EmailProvider, private readonly config: ConfigService) {}
+    private readonly prisma: PrismaService, @Inject(EMAIL_PROVIDER) private readonly mail: EmailProvider, private readonly config: ConfigService,
+    @Optional() private readonly plans?: PlansService) {}
 
   private async owned(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true, publishedSourceRevision: true, bannerUrl: true } });
@@ -88,6 +90,7 @@ export class StoreEmailController {
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   async designKit(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: { mode?: string }) {
     await this.owned(merchant.id, storeId);
+    await this.plans?.assertCredits(storeId, merchant.id);
     return this.designer.design(storeId, body?.mode === 'bold' ? 'bold' : 'twin', (await this.kits.active(storeId)) ? 'candidate' : 'first');
   }
 

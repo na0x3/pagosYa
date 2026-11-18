@@ -1,0 +1,1163 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://takearecess.com/",
+    "title": "Recess | Calm Cool Collected",
+    "width": 1440,
+    "pageHeight": 8502,
+    "fonts": {
+      "h1": {
+        "family": "-apple-system",
+        "size": "58px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.16px",
+        "text": "calm in a can"
+      },
+      "h2": {
+        "family": "-apple-system",
+        "size": "44px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.88px",
+        "text": "thoughtful formulas with ingredients to relax, unwind, & inv"
+      },
+      "body": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "button": {
+        "family": "-apple-system",
+        "size": "19px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.76px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 171,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "Subscribe",
+        "Where to Buy",
+        "About",
+        "Search",
+        "mood",
+        "zero proof",
+        "mood powders",
+        "pink lemonade",
+        "margarita party pack",
+        "raspberry lemon",
+        "The Original Mood Sample",
+        "'Tini Duo",
+        "The New Mood Sampler",
+        "Apple 'Tini",
+        "Strawberry Rose"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 26,
+        "h": 811,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "-apple-system",
+          "size": "58px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.16px",
+          "text": "calm in a can"
+        },
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 837,
+        "h": 2478,
+        "bg": "rgb(255, 255, 255)",
+        "images": 44,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.88px",
+          "text": "thoughtful formulas with ingredients to relax, unwind, & inv"
+        },
+        "words": 184,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 3409,
+        "h": 830,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 81,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4239,
+        "h": 832,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.88px",
+          "text": "find recess products near you"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5071,
+        "h": 750,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5821,
+        "h": 725,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": true,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.88px",
+          "text": "join thecool collective"
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6546,
+        "h": 760,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7306,
+        "h": 303,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.88px",
+          "text": "ways to buy"
+        },
+        "words": 18,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 13,
+      "columns": 13,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://takearecess.com/",
+    "title": "Recess | Calm Cool Collected",
+    "width": 390,
+    "pageHeight": 8396,
+    "fonts": {
+      "h1": {
+        "family": "-apple-system",
+        "size": "58px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.16px",
+        "text": "calm in a can"
+      },
+      "h2": {
+        "family": "-apple-system",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.6px",
+        "text": "thoughtful formulas with ingredients to relax, unwind, & inv"
+      },
+      "body": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.8px",
+        "text": "RECESS MOOD"
+      },
+      "button": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.64px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 105,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 26,
+        "h": 780,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "-apple-system",
+          "size": "58px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.16px",
+          "text": "calm in a can"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 806,
+        "h": 2452,
+        "bg": "rgb(255, 255, 255)",
+        "images": 41,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.6px",
+          "text": "thoughtful formulas with ingredients to relax, unwind, & inv"
+        },
+        "words": 173,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 3321,
+        "h": 680,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 81,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4001,
+        "h": 848,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "30px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.6px",
+          "text": "find recess products near you"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4849,
+        "h": 740,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5589,
+        "h": 789,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": true,
+        "heading": {
+          "family": "-apple-system",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.72px",
+          "text": "join thecool collective"
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6378,
+        "h": 660,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7038,
+        "h": 500,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "30px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.6px",
+          "text": "ways to buy"
+        },
+        "words": 18,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://takearecess.com/collections/all",
+    "title": "all | Recess",
+    "width": 1440,
+    "pageHeight": 11334,
+    "fonts": {
+      "h1": {
+        "family": "-apple-system",
+        "size": "58px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.16px",
+        "text": "the many paths to calm cool collected"
+      },
+      "h2": null,
+      "body": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "button": {
+        "family": "-apple-system",
+        "size": "19px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.76px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 173,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "Subscribe",
+        "Where to Buy",
+        "About",
+        "Search",
+        "mood",
+        "zero proof",
+        "mood powders",
+        "pink lemonade",
+        "margarita party pack",
+        "raspberry lemon",
+        "The Original Mood Sample",
+        "'Tini Duo",
+        "The New Mood Sampler",
+        "Apple 'Tini",
+        "Strawberry Rose"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 233,
+        "h": 1121,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "58px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.16px",
+          "text": "the many paths to calm cool collected"
+        },
+        "words": 50,
+        "perRow": 4,
+        "fullBleed": false
+      },
+      {
+        "y": 1444,
+        "h": 8838,
+        "bg": "rgb(255, 255, 255)",
+        "images": 38,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "22px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.44px",
+          "text": "Zero Proof Sampler"
+        },
+        "words": 277,
+        "perRow": 3,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 41,
+      "columns": 3,
+      "photoRatio": 1.04,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://takearecess.com/collections/all?_su_rec=eIv1g3bmZ97XX5VmuEV2hzD012FLaZtG7Kq28wWxm54cAeZVRnbapUkZNQjtLq8nXatkEntDJ-013U2u9NQ2aGxKfqYOjIO5KFNv38peOUGwnXpVAPUU5-yB2CJKKhMGSRF65VMsaPWRnXI7FNqO9RJXsRpefcmC5-SQSu-q3YO4kIp-B1HWgHV0gE_UtWMkpQ_3qvdK2Hx1I06FCdZsR-3LZ6dRFtAsk1icsJVbUMIcRDookE8a1kr1ztDCCAQe6De-hWHU-w-9gbucDt1lZm9wOx_7WQ7GsO7ebjfids3gN7_sf098ODbaD6PH6G_d6_Kzau5C1rgGHeY3GVvvgPOIDsDbkwD666qGDkhyO_Q&_su_rec_id=1542bb48-2cc7-4fae-b3fe-360d0ddaa06b-1794666712",
+    "title": "all | Recess",
+    "width": 390,
+    "pageHeight": 8619,
+    "fonts": {
+      "h1": {
+        "family": "-apple-system",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.6px",
+        "text": "the many paths to calm cool collected"
+      },
+      "h2": null,
+      "body": {
+        "family": "-apple-system",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.6px",
+        "text": "Recess"
+      },
+      "button": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.64px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 105,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 165,
+        "h": 677,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.6px",
+          "text": "the many paths to calm cool collected"
+        },
+        "words": 33,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 882,
+        "h": 6798,
+        "bg": "rgb(255, 255, 255)",
+        "images": 39,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "16px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.32px",
+          "text": "The New Mood Sampler"
+        },
+        "words": 208,
+        "perRow": 2,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 41,
+      "columns": 2,
+      "photoRatio": 0.95,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://takearecess.com/products/recess-zero-proof-apple-tini",
+    "title": "Apple 'Tini | Recess",
+    "width": 1440,
+    "pageHeight": 6765,
+    "fonts": {
+      "h1": {
+        "family": "-apple-system",
+        "size": "44px",
+        "weight": "400",
+        "case": "lowercase",
+        "tracking": "-0.88px",
+        "text": "Apple 'Tini"
+      },
+      "h2": {
+        "family": "-apple-system",
+        "size": "44px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.88px",
+        "text": "frequently asked questions"
+      },
+      "body": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "button": {
+        "family": "-apple-system",
+        "size": "19px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.76px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 173,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "Subscribe",
+        "Where to Buy",
+        "About",
+        "Search",
+        "mood",
+        "zero proof",
+        "mood powders",
+        "pink lemonade",
+        "margarita party pack",
+        "raspberry lemon",
+        "The Original Mood Sample",
+        "'Tini Duo",
+        "The New Mood Sampler",
+        "Apple 'Tini",
+        "Strawberry Rose"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 2705,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.88px",
+          "text": "Apple 'Tini"
+        },
+        "words": 192,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2799,
+        "h": 670,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 34,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3469,
+        "h": 792,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.88px",
+          "text": "frequently asked questions"
+        },
+        "words": 425,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4261,
+        "h": 902,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.88px",
+          "text": "how our products differ"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 5163,
+        "h": 710,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.88px",
+          "text": "explore more"
+        },
+        "words": 74,
+        "perRow": 11,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": false,
+      "top": 1346,
+      "x": 932,
+      "width": 364,
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    "price": {
+      "family": "-apple-system",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "-0.32px",
+      "text": "$28.44"
+    },
+    "galleryImages": 40,
+    "swatches": 31,
+    "selects": 1,
+    "accordions": 13
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://takearecess.com/products/recess-zero-proof-apple-tini",
+    "title": "Apple 'Tini | Recess",
+    "width": 390,
+    "pageHeight": 6619,
+    "fonts": {
+      "h1": {
+        "family": "-apple-system",
+        "size": "30px",
+        "weight": "400",
+        "case": "lowercase",
+        "tracking": "-0.6px",
+        "text": "Apple 'Tini"
+      },
+      "h2": {
+        "family": "-apple-system",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.6px",
+        "text": "frequently asked questions"
+      },
+      "body": {
+        "family": "-apple-system",
+        "size": "14px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.7px",
+        "text": "Zero Proof"
+      },
+      "button": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.64px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 105,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 3043,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "30px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.6px",
+          "text": "Apple 'Tini"
+        },
+        "words": 197,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3106,
+        "h": 600,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 34,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3706,
+        "h": 890,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.6px",
+          "text": "frequently asked questions"
+        },
+        "words": 425,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4596,
+        "h": 728,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "30px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.6px",
+          "text": "how our products differ"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 5324,
+        "h": 437,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.6px",
+          "text": "explore more"
+        },
+        "words": 63,
+        "perRow": 11,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": false,
+      "top": 1633,
+      "x": 123,
+      "width": 247,
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    "price": {
+      "family": "-apple-system",
+      "size": "12px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "-0.24px",
+      "text": "$28.44"
+    },
+    "galleryImages": 32,
+    "swatches": 31,
+    "selects": 1,
+    "accordions": 13
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://takearecess.com/?cart=open",
+    "title": "Recess | Calm Cool Collected",
+    "width": 1440,
+    "pageHeight": 8502,
+    "fonts": {
+      "h1": {
+        "family": "-apple-system",
+        "size": "58px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.16px",
+        "text": "calm in a can"
+      },
+      "h2": {
+        "family": "-apple-system",
+        "size": "44px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.88px",
+        "text": "thoughtful formulas with ingredients to relax, unwind, & inv"
+      },
+      "body": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "button": {
+        "family": "-apple-system",
+        "size": "19px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.76px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "-apple-system",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 173,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "Subscribe",
+        "Where to Buy",
+        "About",
+        "Search",
+        "mood",
+        "zero proof",
+        "mood powders",
+        "pink lemonade",
+        "margarita party pack",
+        "raspberry lemon",
+        "The Original Mood Sample",
+        "'Tini Duo",
+        "The New Mood Sampler",
+        "Apple 'Tini",
+        "Strawberry Rose"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 26,
+        "h": 811,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "-apple-system",
+          "size": "58px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.16px",
+          "text": "calm in a can"
+        },
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 837,
+        "h": 2478,
+        "bg": "rgb(255, 255, 255)",
+        "images": 45,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.88px",
+          "text": "thoughtful formulas with ingredients to relax, unwind, & inv"
+        },
+        "words": 183,
+        "perRow": 13,
+        "fullBleed": true
+      },
+      {
+        "y": 3409,
+        "h": 830,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 81,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4239,
+        "h": 832,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.88px",
+          "text": "find recess products near you"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5071,
+        "h": 750,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5821,
+        "h": 725,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": true,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.88px",
+          "text": "join thecool collective"
+        },
+        "words": 51,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6546,
+        "h": 760,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7306,
+        "h": 303,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "-apple-system",
+          "size": "44px",
+          "weight": "400",
+          "case": "lowercase",
+          "tracking": "-0.88px",
+          "text": "ways to buy"
+        },
+        "words": 18,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ]
+  }
+}

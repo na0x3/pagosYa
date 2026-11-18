@@ -1,0 +1,149 @@
+{
+  "sector": "panaderia",
+  "label": "Panadería y pastelería",
+  "keywords": [
+    "panaderia",
+    "pasteleria",
+    "pan",
+    "panes",
+    "galletas",
+    "cookies",
+    "rolls",
+    "croissant",
+    "horno",
+    "masa",
+    "tortas",
+    "postres",
+    "medialunas",
+    "reposteria",
+    "bakery"
+  ],
+  "photos": [
+    {
+      "file": "bolitas-de-masa-rodillo.jpg",
+      "subject": "bolitas de masa rodillo",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcHgxMjI2MzI4LWltYWdlLWt3dnkwcTlwLmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "ingredientes-sobre-mesa.jpg",
+      "subject": "ingredientes sobre mesa",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcHgxNDUzMjc3LWltYWdlLWt3dnh1ZGl5LmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "local-ladrillo-mesas.jpg",
+      "subject": "local ladrillo mesas",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvdXB3azYxNzE4MTAxLXdpa2ltZWRpYS1pbWFnZS1rb3diaXRoNC5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "mesa-junto-a-la-ventana.jpg",
+      "subject": "mesa junto a la ventana",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvdXB3azYxNzEzODcwLXdpa2ltZWRpYS1pbWFnZS1rb3dyMDlkby5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "cookies-enfriando-rejilla.jpg",
+      "subject": "cookies enfriando rejilla",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvdXB3azYyMDU0NDA0LXdpa2ltZWRpYS1pbWFnZS1rb3dmbHhrbS5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "mostrador-de-masas.jpg",
+      "subject": "mostrador de masas",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvYTAxOS1qYWt1YmstMDg5OC1jcm9pc3NhbnRzLWluLWEtY2FmZS5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "cortando-pan-de-masa-madre.jpg",
+      "subject": "cortando pan de masa madre",
+      "shape": "tall",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvZmY2Njg4LWltYWdlLWt3dnlrNmdiLmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "manos-desmigando-masa.jpg",
+      "subject": "manos desmigando masa",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvZnJkb3VnaF9mbG9vcl9iYWtpbmdfa2l0Y2hlbi1pbWFnZS1reWJkczFmZS5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "cookies-en-bolsa-de-tela.jpg",
+      "subject": "cookies en bolsa de tela",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvc3YyMjI4NjEtaW1hZ2Uta3d2dWJ0Ym0uanBn.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "pain-au-chocolat-vitrina.jpg",
+      "subject": "pain au chocolat vitrina",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/image_1300/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvZmw1MDkyOTU5ODg2Ni1pbWFnZS1rcHdmdTNmaS5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "manos-harina-oscuro.jpg",
+      "subject": "manos harina oscuro",
+      "shape": "tall",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTA1L2ZmNDUxMi1pbWFnZS1rd3Z5anFyNi5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "bandeja-saliendo-del-horno.jpg",
+      "subject": "bandeja saliendo del horno",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9zdGF0aWMvaW1hZ2Uvd2Vic2l0ZS8yMDIyLTA0L2xyL2ZmNTk5Ny1pbWFnZS1rd3Z5anRmay5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "mostrador-cafe-gente.jpg",
+      "subject": "mostrador cafe gente",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9zdGF0aWMvaW1hZ2Uvd2Vic2l0ZS8yMDIyLTA0L2xyL2ZydW5zcGxhc2gwNDE2OC1pbWFnZS1rejJlNzZ3Zi5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "vitrina-panaderia-calida.jpg",
+      "subject": "vitrina panaderia calida",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9zdGF0aWMvaW1hZ2Uvd2Vic2l0ZS8yMDIyLTA0L2xyL2ZyZWVyYW5nZXBleGVsczAwOTU3LWltYWdlLWt3dngweGx0LmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "manos-amasando-harina.jpg",
+      "subject": "manos amasando harina",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9zdGF0aWMvaW1hZ2Uvd2Vic2l0ZS8yMDIyLTA0L2xyL3B4MTE5MzIwMC1pbWFnZS1rd3Z3ODJkbi5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "latte-con-pan-dulce.jpg",
+      "subject": "latte con pan dulce",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvaXM5MzQxLWltYWdlLWt3eXM1OWc1LmpwZw.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "capuchino-y-canasta.jpg",
+      "subject": "capuchino y canasta",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvaXMxMjI3MC1pbWFnZS1rd3lzZHdtZC5qcGc.jpg",
+      "license": "CC0"
+    },
+    {
+      "file": "torre-de-cookies-mesa.jpg",
+      "subject": "torre de cookies mesa",
+      "shape": "wide",
+      "source": "https://images.rawpixel.com/editor_1024/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvaXMxMTI2Ni1pbWFnZS1rd3Z3dXRhcS5qcGc.jpg",
+      "license": "CC0"
+    }
+  ]
+}

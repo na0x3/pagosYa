@@ -29,6 +29,9 @@ async function open({ menu, data = DATA, host = HOST, extra = {} }: { menu?: unk
   const dom = new JSDOM(`<html><head></head><body>${host}<section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole });
   const w = dom.window; windows.push(w); opened = w;
   w.HTMLElement.prototype.scrollIntoView = () => {};
+  // jsdom has no animation frames; the runtime's other parts (carousel, whatsapp bubble, fit-headlines…) now ask for them.
+  w.requestAnimationFrame = (cb: (t: number) => void) => w.setTimeout(() => cb(Date.now()), 16);
+  w.cancelAnimationFrame = (id: number) => w.clearTimeout(id);
   w.matchMedia = (query: string) => ({ matches: /min-width/.test(query), addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   w.PAGOSYA_PREVIEW = true;
   w.PAGOSYA_PREVIEW_CART = [];
@@ -282,5 +285,143 @@ describe('store menu', () => {
   it('the side rail places the panel beside the rail, not under it (final review 2026-10-21)', async () => {
     const { q } = await open({ menu: { style: 'panel' } });
     expect(q('style[data-pagosya-store-menu-style]').textContent).toMatch(/\.pyh--side-rail \.pym-panel\{position:fixed;top:0;left:88px/);
+  });
+  it('reads the menu model and falls back to tabs for an unknown one (spec 2026-11-15 menu models)', async () => {
+    const overlay = await open({ menu: { model: 'overlay', groups: [] } });
+    expect(overlay.q('.pym-panel').getAttribute('data-model')).toBe('overlay');
+    expect(overlay.q('header').getAttribute('data-store-menu-model')).toBe('overlay');
+    const legacy = await open({ menu: { style: 'dropdowns' } });
+    expect(legacy.q('.pym-panel').getAttribute('data-model')).toBe('dropdown');
+    const odd = await open({ menu: { model: 'hologram' } });
+    expect(odd.q('.pym-panel').getAttribute('data-model')).toBe('tabs');
+  });
+  it('draws each look model with its own parts (mega, overlay, index)', async () => {
+    const groups = [{ label: 'Tienda', links: [{ to: 'category:C1' }, { to: 'category:c2', note: 'Hechas a mano' }], tiles: [{ to: 'category:C1', image: 'https://api.test/a.jpg', title: 'Vestidos' }] }];
+    const mega = await open({ menu: { model: 'mega', groups } });
+    expect(mega.q('.pym-tile-title').textContent).toBe('Vestidos');
+    const overlay = await open({ menu: { model: 'overlay', groups } });
+    expect(overlay.q('.pym-hero-photo')).not.toBeNull();
+    expect(overlay.q('.pym-links a[data-photo-for]')).not.toBeNull();
+    const index = await open({ menu: { model: 'index', groups } });
+    expect(index.all('.pym-count').map((el: any) => el.textContent)).toEqual(['1 producto', '1 producto']);
+    expect(index.q('.pym-note').textContent).toBe('Hechas a mano');
+    expect(index.q('.pym-tiles')).toBeNull();
+  });
+  it('every look model closes on Escape and gives focus back to ☰', async () => {
+    for (const model of ['mega', 'overlay', 'dropdown', 'drawer', 'split', 'index']) {
+      const { w, q, key } = await open({ menu: { model } });
+      const toggle = q('[data-store-menu-toggle]');
+      toggle.click();
+      expect(q('.pym-panel').hidden).toBe(false);
+      key(w.document, 'Escape');
+      expect(q('.pym-panel').hidden).toBe(true);
+      expect(w.document.activeElement).toBe(toggle);
+    }
+  });
+  it('bestsellers show three real products with price and Agregar; with no badge the title says Destacados', async () => {
+    const { all, q } = await open({ menu: { model: 'bestsellers', groups: [{ label: 'Tienda', links: [{ to: 'category:C1' }] }] } });
+    expect(all('.pym-best [data-add]').length).toBe(3);
+    expect(q('.pym-best-title').textContent).toBe('Destacados');
+  });
+  it('offer shows only a real offer; with none the tile is the first best seller', async () => {
+    const none = await open({ menu: { model: 'offer' } });
+    expect(none.q('.pym-offer').getAttribute('data-kind')).toBe('product');
+    const real = await open({ menu: { model: 'offer' }, data: { ...DATA, freeShippingFrom: 25000 } });
+    expect(real.q('.pym-offer').textContent).toMatch(/Envío gratis desde Bs\s?250/);
+  });
+  it('search opens on a search field with Populares chips, never «Lo más buscado»', async () => {
+    const { q, w } = await open({ menu: { model: 'search' } });
+    expect(q('.pym-search input[type=search]')).not.toBeNull();
+    expect(w.document.body.textContent).toMatch(/Populares/);
+    expect(w.document.body.textContent).not.toMatch(/más buscado/i);
+  });
+  it('need groups show their live starting price', async () => {
+    const { q } = await open({ menu: { model: 'need', groups: [{ label: 'Dormir mejor', note: 'Tés para la noche', links: [{ to: 'category:C1' }] }] } });
+    expect(q('.pym-need-from').textContent).toMatch(/^desde Bs\s?10/);
+  });
+  it('the thumb bar has the cart count and lifts the page and floating buttons above it on a phone', async () => {
+    const { q, w } = await open({ menu: { model: 'thumb' } });
+    expect(q('.pym-thumbbar [data-cart-count]')).not.toBeNull();
+    expect(w.document.documentElement.style.getPropertyValue('--pym-bottom-bar')).toBe('64px');
+  });
+  it('circles put one round photo per category under the header and never on checkout', async () => {
+    const shop = await open({ menu: { model: 'circles' } });
+    expect(shop.all('header + .pym-circles a img').length).toBe(4);
+    const checkout = await open({ menu: { model: 'circles' }, host: HOST + '<main data-pagosya-checkout-page></main>' });
+    expect(checkout.q('.pym-circles')).toBeNull();
+  });
+  it('rail is a left column on wide screens and a drawer below 1280 px', async () => {
+    const { q } = await open({ menu: { model: 'rail' } });
+    expect(q('.pym-rail a')).not.toBeNull();
+    expect(q('.pym-panel').getAttribute('data-model')).toBe('drawer');
+  });
+  it('stickers give each link a round photo; dock opens its group as a sheet from the bottom pill', async () => {
+    const stickers = await open({ menu: { model: 'stickers', groups: [{ label: 'Tienda', links: [{ to: 'category:C1' }, { to: 'category:c2' }] }] } });
+    expect(stickers.all('.pym-links a .pym-sticker-photo').length).toBe(2);
+    const dock = await open({ menu: { model: 'dock', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }, { label: 'Telas', links: [{ to: 'category:c3' }] }] } });
+    const pills = dock.all('.pym-dock button');
+    expect(pills.map((b: any) => b.textContent)).toEqual(['Tienda', 'Telas']);
+    pills[1].click();
+    expect(dock.q('.pym-panel').hidden).toBe(false);
+    expect(dock.all('.pym-group').filter((g: any) => !g.hidden)[0].textContent).toContain('Seda');
+  });
+  it('takes the store’s own assets/ photos for menu tiles (V2 stores bundle their photos)', async () => {
+    const { q } = await open({ menu: { model: 'mega', groups: [{ label: 'Tienda', links: [{ to: 'all' }], tiles: [{ to: 'category:C1', image: 'assets/image-aaaaaaaaaaaa.jpg', title: 'Vestidos' }] }] } });
+    expect(q('.pym-tiles img').getAttribute('src')).toMatch(/assets\/image-aaaaaaaaaaaa\.jpg$/);
+  });
+  it('final review: keeps up to 7 groups (the direction may write 7)', async () => {
+    const groups = ['C1', 'c2', 'c3', 'c4'].flatMap((c, i) => [{ label: `G${i}a`, links: [{ to: `category:${c}` }] }, { label: `G${i}b`, links: [{ to: 'all' }] }]).slice(0, 6);
+    const { all } = await open({ menu: { model: 'tabs', groups } });
+    expect(all('.pym-group').length).toBe(6);
+  });
+  it('final review: dock and search hide their tabs from the keyboard and focus a visible item', async () => {
+    const dock = await open({ menu: { model: 'dock', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }, { label: 'Telas', links: [{ to: 'category:c3' }] }] } });
+    expect(dock.q('.pym-tabs').hidden).toBe(true);
+    dock.all('.pym-dock button')[0].click();
+    expect(dock.w.document.activeElement.classList.contains('pym-tab')).toBe(false);
+    const search = await open({ menu: { model: 'search' } });
+    search.q('[data-store-menu-toggle]').click();
+    expect(search.w.document.activeElement).toBe(search.q('.pym-search input'));
+  });
+  it('final review: the thumb bar shows the cart count the page already has', async () => {
+    const { q, w } = await open({ menu: { model: 'thumb' }, host: HOST + '<a data-cart-open>Bolsa <span data-cart-count id="page-count">0</span></a>' });
+    q('#page-count').textContent = '3';   // a returning shopper's cart, counted by the page before the menu draws
+    w.pagosyaStoreMenu.render();
+    expect(q('.pym-thumbbar [data-cart-count]').textContent).toBe('3');
+  });
+  it('final review: on a phone the bars lift the WhatsApp bubble, the assistant and the product buy bar', async () => {
+    const { q } = await open({ menu: { model: 'thumb' } });
+    const css = q('style[data-pagosya-store-menu-style]').textContent;
+    expect(css).toMatch(/\.pya-wa/); expect(css).toMatch(/\[data-pagosya-assistant\]/); expect(css).toMatch(/\.product-detail__sticky/);
+  });
+  it('live 2026-11-16: a category link written by name finds the category', async () => {
+    const { all } = await open({ menu: { model: 'tabs', groups: [{ label: 'Tienda', links: [{ to: 'category:Vestidos' }, { to: 'section:historia', label: 'Nuestra historia' }] }] } });
+    expect(all('.pym-links a').map((a: any) => a.textContent)).toEqual(['Vestidos', 'Nuestra historia']);
+  });
+  it('final minors M4–M6: dock buttons say when they are open; a menu turned off takes its bars with it; no «Populares» over nothing', async () => {
+    const dock = await open({ menu: { model: 'dock', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }, { label: 'Telas', links: [{ to: 'category:c3' }] }] } });
+    const button = dock.q('.pym-dock [data-dock="1"]');
+    button.click();
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(dock.q('.pym-dock [data-dock="0"]').getAttribute('aria-expanded')).toBe('false');
+    delete dock.w.PAGOSYA_CONFIG.header;
+    dock.w.pagosyaStoreMenu.render();
+    expect(dock.all('.pym-dock,.pym-thumbbar,.pym-rail,.pym-circles')).toHaveLength(0);
+    const empty = await open({ menu: { model: 'search' }, data: { ...DATA, items: [], categories: [] } });
+    expect(empty.all('.pym-tiles-title').map((el: any) => el.textContent)).not.toContain('Populares');
+  });
+  it('live 2026-11-16 (DooBoo r11): a menu that covers the page closes with its own visible button', async () => {
+    const { q } = await open({ menu: { model: 'overlay', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }] } });
+    q('[data-store-menu-toggle]').click();
+    expect(q('.pym-panel').hidden).toBe(false);
+    const close = q('.pym-panel [data-store-menu-close]');
+    expect(close.getAttribute('aria-label')).toBe('Cerrar menú');
+    close.click();
+    expect(q('.pym-panel').hidden).toBe(true);
+  });
+  it('live 2026-11-16 (DooBoo r12 phone): the full-screen menu takes the store ink, its links stay readable and the close button has room', async () => {
+    expect(commerce).toMatch(/\.pym-panel\[data-model=overlay\]\{background:var\(--store-accent,var\(--es-ink/);
+    expect(commerce).toMatch(/\.pym-panel\[data-model=overlay\] \.pym-links a\{color:inherit/);
+    expect(commerce).toMatch(/\.pym-panel:is\(\[data-model=overlay\],\[data-model=split\],\[data-model=drawer\]\)\{padding-top:72px/);
   });
 });

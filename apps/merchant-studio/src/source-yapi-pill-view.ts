@@ -4,13 +4,14 @@ import { suggestionCards } from './source-suggestions';
 /** YAPI in design mode (spec 2026-10-22 v2): the pill, the exit and the conversation sheet. */
 const esc = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-export function renderPill(o: { busy: boolean; spin: 'spin' | 'pulse' | 'idle'; selectionLabel?: string; attachments: string; menuOpen: boolean; logo: string; instruction?: string }): string {
+/** stop: YAPI is working on a request — the send button becomes Detener (bound by the Studio's #source-cancel-job). */
+export function renderPill(o: { busy: boolean; stop?: boolean; spin: 'spin' | 'pulse' | 'idle'; selectionLabel?: string; /** Owner 2026-11-17: the selection is a photo the merchant can swap directly. */ photoAction?: boolean; attachments: string; menuOpen: boolean; logo: string; instruction?: string }): string {
   const off = o.busy ? ' disabled' : '';
   return `<form class="yapi-pill" data-composer data-yapi-pill aria-label="Habla con YAPI">
     ${o.attachments ? `<div class="yapi-pill__files">${o.attachments}</div>` : ''}
     <div class="yapi-pill__row">
       <img class="yapi-pill__star ${o.spin === 'spin' ? 'is-spin' : o.spin === 'pulse' ? 'is-pulse' : ''}" data-yapi-star tabindex="0" src="${esc(o.logo)}" alt="Mover a YAPI" width="34" height="34" draggable="false" title="Arrastra para mover · doble clic para volver al centro">
-      ${o.selectionLabel ? `<span class="yapi-pill__chip">Sobre: ${esc(o.selectionLabel)}</span>` : ''}
+      ${o.selectionLabel ? `<span class="yapi-pill__chip">Sobre: ${esc(o.selectionLabel)}</span>` : ''}${o.selectionLabel && o.photoAction ? `<button type="button" class="yapi-pill__chip yapi-pill__chip-action" data-selection-change-photo${off}>Cambiar foto</button>` : ''}
       <label for="agent-command" class="sr-only">Indicación para YAPI</label>
       <textarea id="agent-command" name="command" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar?"${off}>${esc(o.instruction ?? '')}</textarea>
       <div class="yapi-pill__plus">
@@ -21,7 +22,7 @@ export function renderPill(o: { busy: boolean; spin: 'spin' | 'pulse' | 'idle'; 
         </div>
       </div>
       <button type="button" class="yapi-pill__icon" data-yapi-history-open aria-label="Ver la conversación"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></button>
-      <button type="submit" class="yapi-pill__send"${off}>Enviar ↗</button>
+      ${o.stop ? '<button type="button" class="yapi-pill__send yapi-pill__stop" id="source-cancel-job" aria-label="Detener el pedido de YAPI">Detener</button>' : `<button type="submit" class="yapi-pill__send"${off}>Enviar ↗</button>`}
     </div>
     <input class="sr-only" type="file" accept="image/png,image/jpeg,image/webp,video/mp4,.mp4" multiple data-image-input aria-label="Seleccionar hasta 24 imágenes o videos MP4">
   </form>`;

@@ -1,0 +1,73 @@
+{
+  "host": "maxbone.com",
+  "name": "Maxbone",
+  "at": "2026-11-14T15:29:04.927Z",
+  "mood": "Moda editorial para personas, aplicada al cuidado del perro; cálida, urbana y con momentos técnicos de venta.",
+  "idea": "Presentar los productos caninos como accesorios de estilo de vida: grandes escenas humanas abren la experiencia y, al avanzar, la tienda alterna producto, prueba social y explicación funcional.",
+  "header": "En escritorio mide 132 px en total y se mantiene sticky en portada y catálogo; en la ficha de producto aparece como relativo. Arriba lleva una barra de anuncio melocotón de unos 41 px: mensaje centrado y, en el extremo derecho, Sign In, Rewards y Blog. Debajo hay una navegación blanca de unos 91 px organizada en tres zonas: a la izquierda SHOP ALL, SUPPLIES y FOOD, todos con chevrón; logotipo tipográfico centrado; a la derecha ABOUT US con chevrón, búsqueda y bolsa con contador circular rosa. Aunque la medición automática clasifica el logo como izquierdo, visualmente está centrado en la ventana. En teléfono el conjunto mide 98 px: anuncio de aproximadamente 48 px en dos líneas y barra blanca de unos 50 px con menú hamburguesa a la izquierda, marca centrada y búsqueda más bolsa a la derecha. Desaparecen todos los enlaces textuales. Hay una sombra o línea gris muy tenue bajo la navegación.",
+  "hero": "Carrusel a sangre inmediatamente bajo el header. En escritorio ocupa 736 px de alto, casi una pantalla completa; usa vídeo o fotografía horizontal recortada con object-fit: cover y el sujeto a escala monumental. El titular blanco, centrado, combina una serif editorial en torno a 70–78 px y dos líneas: una palabra en cursiva arriba y la frase principal debajo. El botón inferior mide aproximadamente 219 × 44 px, es transparente, con borde blanco de 1 px, texto blanco y flecha. Flechas del carrusel se colocan a mitad de los laterales y dos indicadores lineales aparecen abajo. En teléfono el hero mide unos 639 px bajo el header, usa un recorte vertical mucho más cerrado y conserva el texto sobre la imagen, alrededor de 48–54 px; el botón crece a unos 218 × 58 px y queda cerca del borde inferior. No se reduce simplemente la imagen de escritorio: se cambia el encuadre para mantener rostro, correa y abrigo dentro del formato.",
+  "catalog": "La colección usa fondo blanco y una retícula de tres columnas en escritorio, dentro de un contenedor aproximado de 1170 px; cada imagen ronda 350 px de ancho y las calles están entre 55 y 60 px. La captura muestra un espacio superior anormalmente grande antes de la primera fila, probablemente causado por carga diferida o un bloque que no terminó de renderizar; no conviene reproducirlo como decisión de composición. En teléfono aparece el título Products a unos 26–28 px, alineado a la izquierda con 15 px de margen, seguido de dos columnas con una calle de 7–8 px. No se ven controles de filtro ni orden en las capturas, aunque la medición detecta lógica de filtros en la página; por tanto, su presentación concreta no puede verificarse. La cuadrícula móvil mantiene dos productos por fila en vez de pasar a una sola columna.",
+  "card": "La tarjeta se construye alrededor de una fotografía casi cuadrada sobre fondos beige, gris azulado o rosa muy pálido. Debajo aparecen nombre y precio; en móvil el nombre se centra y el precio puede integrarse dentro de un botón negro More Info de esquinas ligeramente redondeadas. Al tocar o apuntar sobre la foto aparece una franja inferior crema con Quick View subrayado. Algunas tarjetas añaden una etiqueta blanca pequeña en la esquina superior, por ejemplo una colaboración. El producto suele ocupar entre 60% y 80% del encuadre, aislado y sin sombra fuerte; las prendas también pueden mostrarse sobre un perro. No hay evidencia suficiente para asegurar un intercambio sistemático por segunda foto al pasar. El gesto de hover confirmado es Quick View.",
+  "product": "La ficha se apoya sobre un fondo cálido rgb(247, 244, 241). En escritorio, el primer bloque forma dos columnas amplias: a la izquierda una galería casi cuadrada de unos 640 × 640 px con el envase centrado, flechas circulares y sello promocional; a la derecha una caja de compra de anchura similar. Sobre el pliegue se ven el nombre en Newsreader de 40 px, subtítulo de receta, tres beneficios con checks coral, enlace Feeding Guidelines, variantes de receta en píldoras, tamaño y el comienzo del módulo de suscripción. Las opciones seleccionadas se rellenan en coral y las inactivas quedan blancas con borde negro. La suscripción se presenta como una tarjeta melocotón con radio, precio actual y anterior, beneficios, descuento verde y frecuencias de entrega; debajo queda la compra única. Hay selector de cantidad y un botón negro en forma de píldora. Seis acordeones reúnen Recipe Details, Guaranteed Analysis, Ingredients, Feeding Guidelines, AAFCO Statement y Storage. Una barra negra fija al pie repite nombre, cantidad y Subscribe — $24.00. Más abajo aparece una sección comparativa Three recipes. One smarter bowl. con tres tarjetas verticales, cada receta identificada por un color. En teléfono todo se apila: galería de unos 360 px de ancho, tira de cinco miniaturas, título de 28 px, beneficios, variantes y módulos de compra. La barra de compra inferior permanece fija y deja visibles cantidad y CTA mientras se recorre una página de más de 10.000 px.",
+  "cart": "No hay una captura válida del carrito. La imagen y la URL entregadas como cart corresponden en realidad a la página Collections/Shop All: hero de tres escenas, título Shop All de 72 px y sección New Arrivals. Por ello no se puede determinar si Maxbone usa cajón o página, ni verificar filas, totales o ventas adicionales; esa captura se ignora para este campo.",
+  "type": "El sistema combina tres registros. GoodSans lleva navegación, titulares comerciales, botones y pies: H1 de portada medido en 50 px/500, títulos de sección de 44–50 px y 34 px en teléfono, botones de 14 px/500 y navegación de 14 px en escritorio o 12 px en móvil. Oswald se usa para texto pequeño y promocional: 14 px/300 en escritorio, 12 px/400 en teléfono y tracking de 0,32 px; su estrechez permite acumular información sin ensanchar módulos. Newsreader introduce el tono editorial en producto y campañas: nombre de producto a 40 px con tracking -0,4 px en escritorio y 28 px/-0,28 px en móvil, además de titulares comparativos de 32 px. Predomina la caja normal; las mayúsculas se reservan para microetiquetas, beneficios de compra y llamadas funcionales. El contraste no depende solo del tamaño: serif para relato o receta, sans para orientación y compra.",
+  "colour": "El fondo general es blanco rgb(255, 255, 255). La tinta principal es negro o casi negro, aproximadamente #231F20. La barra promocional usa un melocotón pálido cercano a #F2CDBD. La portada introduce un verde marfil rgb(246, 247, 239) para separar Favorites del resto. La ficha de producto emplea beige rosado rgb(247, 244, 241) como superficie continua. Coral apagado, aproximadamente #C76B67, marca selecciones, checks, sellos y bordes de promoción; un verde medio se reserva para descuentos y promesas de ahorro. Los CTA principales son negros con texto blanco, mientras que los CTA editoriales sobre fotografía son transparentes con borde blanco.",
+  "photos": "Hay dos familias deliberadamente distintas. La campaña usa fotografía o vídeo de vida real, a sangre, con personas vestidas y perros integrados como parte del estilismo; los recortes son cerrados y el producto puede aparecer de forma secundaria, como una correa cruzando el plano. La venta usa packshots frontales y objetos aislados sobre fondos pastel uniformes, con abundante aire y escala consistente entre tarjetas. En producto, el envase ocupa aproximadamente 55%–65% del cuadrado y se acompaña de ingredientes fotografiados para explicar sabor. La portada también emplea mosaicos editoriales con modelos y perros, alternados con imágenes de alimento. En teléfono no se encogen los recortes horizontales: se usan encuadres verticales o se reposiciona el punto focal.",
+  "motion": "Está confirmado un carrusel en el hero por flechas e indicadores, además de un vídeo en portada. Las tarjetas muestran Quick View al pasar o tocar. La galería de producto usa flechas, miniaturas y cambio de imagen; la barra de compra queda fija al pie. La medición detecta marquesina, aunque en las capturas el anuncio parece estático y no permite confirmar su velocidad o dirección. Tampoco se puede confirmar el cambio a una segunda foto en las tarjetas. El modal de captación aparece durante el recorrido con el fondo oscurecido; varias capturas de portada están bloqueadas por él y se han ignorado al estudiar las secciones.",
+  "phone": "La navegación se reduce a cuatro elementos visuales: hamburguesa, logo, búsqueda y bolsa. El hero cambia de horizontal a vertical, conserva la superposición tipográfica y acerca el sujeto mediante un recorte específico. Los bloques editoriales de tres columnas pasan a una sola columna de tarjetas grandes, mientras que el catálogo conserva dos columnas para mantener densidad comercial. La ficha de producto apila galería, miniaturas, relato y compra; las opciones pasan a píldoras que saltan de línea y la suscripción ocupa casi todo el ancho con márgenes de unos 15 px. Los tamaños bajan de 44–50 px a 28–34 px, pero botones y controles se mantienen en torno a 44–58 px de alto. La barra fija inferior reduce la decisión a cantidad más CTA. El formulario emergente de descuento ocupa prácticamente todo el ancho móvil y bloquea la lectura; debe tratarse como una interrupción temporal, no como parte de la composición.",
+  "signature": "Superponer una frase de moda en serif —con una palabra cursiva— sobre un primer plano humano, mientras el producto para perro aparece indirectamente como parte del vestuario, por ejemplo la correa cruzando el abrigo.",
+  "home": [
+    {
+      "role": "Campaña y entrada principal",
+      "composition": "Hero de vídeo o carrusel a sangre: 736 px de alto en escritorio y 639 px en teléfono, titular serif blanco centrado, CTA con borde y navegación lateral mediante flechas."
+    },
+    {
+      "role": "Aportar autoridad inmediatamente después de la campaña",
+      "composition": "Banda blanca de unos 135–160 px con logotipos de prensa en negro, como Inc. y Fortune. En teléfono se ven dos marcas grandes por fila o dentro de un carrusel horizontal."
+    },
+    {
+      "role": "Definir a quién sirve la marca",
+      "composition": "Bloque blanco de 238 px en escritorio con el titular centrado For dogs with great taste. a 50 px y un párrafo corto debajo. No usa imagen: funciona como pausa entre campaña y producto."
+    },
+    {
+      "role": "Llevar a productos populares",
+      "composition": "Sección Favorites sobre rgb(246, 247, 239), de unos 1095 px en escritorio y 835 px en móvil. Cabecera centrada con microetiqueta FAN en mayúsculas, título y enlace SHOP NOW subrayado; debajo, carrusel o fila de tarjetas de producto sobre fondos pastel."
+    },
+    {
+      "role": "Separar los grandes territorios de compra",
+      "composition": "Tres paneles fotográficos en escritorio, uno junto a otro y de altura aproximada de 798 px; cada escena lleva una llamada discreta en la zona inferior. En teléfono se apilan como tarjetas verticales con márgenes de 12–15 px, por ejemplo moda con modelo y perro, seguida de alimentación."
+    },
+    {
+      "role": "Convertir reputación en prueba social",
+      "composition": "Bloque alto, cerca de 1106 px en escritorio, con una imagen editorial y el titular Don’t Just Take Our Word For It. de 50 px, acompañado por testimonios o citas. La escala grande hace que la reseña se lea como contenido editorial y no como widget."
+    },
+    {
+      "role": "Explicar la propuesta de alimentación",
+      "composition": "Escena a sangre de unos 890 px con titular blanco Real Nutrition. Real Ingredients. Real Happy Dogs. de 44 px, texto mínimo y enlace Shop Food. La fotografía doméstica ocupa todo el fondo y el texto se alinea hacia un lateral."
+    },
+    {
+      "role": "Reforzar credibilidad y descubrimiento",
+      "composition": "Franja de aproximadamente 393 px con nueve recursos visuales o menciones dispuestos como carrusel horizontal: imágenes pequeñas, citas y logotipos. En móvil mantiene desplazamiento lateral en lugar de apilar todo."
+    },
+    {
+      "role": "Publicar contenido editorial o de prensa",
+      "composition": "Módulo de dos columnas y unos 708 px de alto con imagen y titular de artículo; en las capturas se alcanza a leer una pieza sobre la fundadora y sus esenciales de autocuidado. La imagen y el texto tienen pesos semejantes."
+    },
+    {
+      "role": "Captar correo antes del pie",
+      "composition": "Bloque blanco de 324 px en escritorio y 357 px en móvil con título Let’s stay in touch —44 px o 34 px—, texto corto, campo de correo y acción. Un modal adicional ofrece 15% de descuento con fondo crema y fotografía; al cubrir varias capturas se considera una capa promocional, no una sección."
+    },
+    {
+      "role": "Cerrar con navegación de servicio",
+      "composition": "Footer blanco de 457 px en escritorio y 495 px en móvil. En escritorio distribuye Customer Care y otros grupos en columnas; en teléfono los reduce a bloques o acordeones con títulos de 19 px."
+    }
+  ],
+  "lessons": [
+    "Separar fotografía de deseo y fotografía de compra: escenas a sangre para construir identidad, packshots cuadrados y consistentes para comparar productos.",
+    "Usar una tipografía editorial solo en los momentos narrativos y reservar la sans para navegación, variantes y CTA; así la compra sigue siendo inequívoca aunque la marca parezca una revista.",
+    "En móvil, diseñar un recorte propio del hero en vez de aplicar un simple object-fit al archivo de escritorio; hay que proteger rostro, producto y zona de texto.",
+    "Mantener una acción de compra fija en fichas largas: cuando ingredientes, suscripción y comparativas producen más de 9.000 px de contenido, el CTA no debe desaparecer.",
+    "Codificar las variantes con forma y color a la vez: píldora rellena para la selección, borde para alternativas y un color propio por receta en las comparativas.",
+    "Alternar secciones densas con pausas cortas de texto o logotipos. El ritmo funciona porque no encadena cuadrículas de producto sin interrupción."
+  ]
+}

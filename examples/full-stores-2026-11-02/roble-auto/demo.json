@@ -1,0 +1,49 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwb2vbni0001xvwndzs9769s",
+  "slug": "s4fifu94",
+  "photos": {
+    "brand:dormitorio.jpg": "/v1/uploads/6d60be6a-d40b-4f94-bd09-cf42e2c4e0d6.jpg",
+    "brand:madera.jpg": "/v1/uploads/da2629d1-a3cd-497a-ab86-ef403c95e30b.jpg",
+    "brand:manos.jpg": "/v1/uploads/109e2a83-9265-4c1a-9de3-8d283163a8ea.jpg",
+    "brand:sala.jpg": "/v1/uploads/249e3e6f-ab05-43fe-86a2-5a1836888906.jpg",
+    "brand:taller.jpg": "/v1/uploads/b14f0896-2751-42c0-9aba-b73114a56fd2.jpg",
+    "sillon-lino.jpg": "/v1/uploads/3835b94e-eb3c-4800-8a07-f573004c0d0c.jpg",
+    "sillon-exterior.jpg": "/v1/uploads/2f14fe65-6411-4a34-9600-3a083b31e80c.jpg",
+    "cama-roble.jpg": "/v1/uploads/e589d738-2371-4eb6-8e78-4d019345cb44.jpg",
+    "estante-nogal.jpg": "/v1/uploads/89a0c461-6eef-477b-89f9-50b98df3f1b7.jpg",
+    "repisas-cocina.jpg": "/v1/uploads/328c0c54-e7ed-4e1a-ad1e-3f2edcc8677f.jpg",
+    "cojin-lino.jpg": "/v1/uploads/79b70481-5296-4d9c-9f73-35d29a17f7d3.jpg",
+    "cuenco-madera.jpg": "/v1/uploads/c0922b9a-621f-4c3e-b2bc-114da8bc9b31.jpg",
+    "canasto.jpg": "/v1/uploads/80e85d38-f607-42a2-b29f-f4b3ab389aa3.jpg",
+    "jarra-gres.jpg": "/v1/uploads/4708d7a7-44da-4240-a53b-cb1230fd455b.jpg"
+  },
+  "categories": {
+    "Sala": "cmwb2vbnu000dxvwngdu6qc26",
+    "Exterior": "cmwb2vbnv000fxvwn3y1d709h",
+    "Dormitorio": "cmwb2vbnw000hxvwn1qfy29au",
+    "Cocina": "cmwb2vbnw000jxvwnsgaxsnow",
+    "Deco": "cmwb2vbnx000lxvwnc6k1jngs"
+  },
+  "products": {
+    "Sillón Lino Arena": "cmwb2vbnz000pxvwnvuzn00af",
+    "Sillón de Terraza en Teca": "cmwb2vbo1000txvwnunb7gxw1",
+    "Cama de Roble 2 Plazas": "cmwb2vbo4000xxvwn754wqwgk",
+    "Estante de Nogal": "cmwb2vbo60011xvwnepgpjvrs",
+    "Repisas de Cocina": "cmwb2vbo90015xvwnqbwpgtd5",
+    "Cojín de Lino": "cmwb2vbob0019xvwnjjx57s61",
+    "Cuenco de Madera": "cmwb2vboe001dxvwn4o0q0s02",
+    "Canasto Tejido": "cmwb2vboh001hxvwnloiureaz",
+    "Jarra de Gres": "cmwb2vboj001lxvwnxo8ro5i7"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwb2vbp1001txvwn5fvuck0u"
+}

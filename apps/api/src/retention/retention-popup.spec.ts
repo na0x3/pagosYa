@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
-import { RetentionService, publicRetentionSettings } from './retention.service';
+import { pickPopupLook } from '../store-popups/popup-looks';
+import { RetentionService, favouriteName, favouriteTally, publicRetentionSettings, whatsappShown } from './retention.service';
 import { DEFAULT_RETENTION } from './retention.dto';
 
 // The signup popup (plan 2026-10-20-store-popup): its timing and welcome code live in the store's retention settings,
@@ -59,5 +60,223 @@ describe('public popup settings', () => {
     const out = publicRetentionSettings({ ...DEFAULT_RETENTION, signupEnabled: true, popupTrigger: 'exit', popupDelaySeconds: 5, popupPromoCodeId: 'own' } as any);
     expect(out).toMatchObject({ signupEnabled: true, popupTrigger: 'exit', popupDelaySeconds: 5, popupHasCode: true });
     expect(JSON.stringify(out)).not.toMatch(/own|PEPPA10|popupPromoCodeId/);
+  });
+});
+
+describe('popup looks (spec 2026-11-09)', () => {
+  it('keeps the look, photo and previous look when Ajustes saves without them', async () => {
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupLook: 'postal', popupLookPrevious: 'cartel', popupPhoto: '/v1/uploads/a.jpg' }, revision: 3 } as never);
+    await s.save('m1', 's1', dto({ revision: 3 }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupLook: 'postal', popupLookPrevious: 'cartel', popupPhoto: '/v1/uploads/a.jpg' });
+  });
+  it('records the previous look when Ajustes changes it', async () => {
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupLook: 'postal' }, revision: 3 } as never);
+    await s.save('m1', 's1', dto({ revision: 3, popupLook: 'revista' }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupLook: 'revista', popupLookPrevious: 'postal' });
+  });
+  it('gives the store page a look for every store, and the chosen photo, never the previous look', () => {
+    const saved = publicRetentionSettings({ ...DEFAULT_RETENTION, popupLook: 'etiqueta', popupLookPrevious: 'postal', popupPhoto: '/v1/uploads/a.jpg' } as never, 'miga') as Record<string, unknown>;
+    expect(saved).toMatchObject({ popupLook: 'etiqueta', popupPhoto: '/v1/uploads/a.jpg' });
+    expect(saved).not.toHaveProperty('popupLookPrevious');
+    expect(publicRetentionSettings(DEFAULT_RETENTION as never, 'miga')).toMatchObject({ popupLook: pickPopupLook('miga') });
+    expect(publicRetentionSettings({ ...DEFAULT_RETENTION, popupLook: 'ruleta' } as never, 'miga')).toMatchObject({ popupLook: pickPopupLook('miga') });
+  });
+});
+
+describe('popup looks — Ajustes through the real DTO (review 2026-11-09)', () => {
+  it('keeps the saved look when the Studio form does not send one', async () => {
+    const { plainToInstance } = require('class-transformer');
+    const { RetentionSettingsDto } = require('./retention.dto');
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupLook: 'revista' }, revision: 3 } as never);
+    await s.save('m1', 's1', plainToInstance(RetentionSettingsDto, { ...DEFAULT_RETENTION, revision: 3, signupEnabled: true }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupLook: 'revista' });
+  });
+});
+
+describe('popup games (spec 2026-11-09)', () => {
+  const PRIZES = [{ promoCodeId: 'p5', label: '5 % de descuento', chance: 60 }, { promoCodeId: 'p10', label: '10 % de descuento', chance: 40 }];
+  it('tells the page the game, its prize labels and the question — never the codes', () => {
+    const shown = publicRetentionSettings({ ...DEFAULT_RETENTION, popupGame: 'wheel', popupGamePrizes: PRIZES, popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } } as never, 'miga') as Record<string, unknown>;
+    expect(shown).toMatchObject({ popupGame: 'wheel', popupGameSlices: ['5 % de descuento', '10 % de descuento'], popupQuestion: { text: '¿Para quién?' } });
+    expect(JSON.stringify(shown)).not.toMatch(/p5|p10|popupGamePrizes/);
+    expect(publicRetentionSettings({ ...DEFAULT_RETENTION, popupGame: 'wheel', popupGamePrizes: PRIZES.slice(0, 1) } as never, 'miga')).not.toHaveProperty('popupGame');
+  });
+  it('keeps the game when Ajustes saves', async () => {
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupGame: 'scratch', popupGamePrizes: PRIZES, popupQuestion: null }, revision: 3 } as never);
+    await s.save('m1', 's1', dto({ revision: 3 }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupGame: 'scratch', popupGamePrizes: PRIZES });
+  });
+  it('a game signup returns the prize code and stores a valid answer', async () => {
+    const { s, prisma, tx } = service({ popupGame: 'scratch', popupGamePrizes: PRIZES, popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } });
+    (s as any).games = { validPrize: jest.fn(async () => true), claim: jest.fn(async () => ({ code: 'RASCA10' })) };
+    (prisma as any).storeNewsletterSubscriber = { findUnique: jest.fn(async () => null) };
+    expect(await s.subscribe(store, 'ana@example.com', { source: 'popup', gameToken: 't', answer: 'Para regalar' } as never)).toEqual({ subscribed: true, code: 'RASCA10' });
+    expect((s as any).games.claim).toHaveBeenCalledWith('s1', 't', false);
+    expect((tx.storeNewsletterSubscriber.upsert.mock.calls[0] as any)[0].create.interests).toEqual(['Para regalar']);
+  });
+});
+
+describe('popup games — claims (review 2026-11-09)', () => {
+  const PRIZES = [{ promoCodeId: 'p5', label: '5 % de descuento', chance: 60 }, { promoCodeId: 'p10', label: '10 % de descuento', chance: 40 }];
+  it('an expired or dead prize subscribes nobody, so playing again still works', async () => {
+    const { s, prisma, tx } = service({ popupGame: 'scratch', popupGamePrizes: PRIZES });
+    (s as any).games = { validPrize: jest.fn(async () => false), claim: jest.fn() };
+    (prisma as any).storeNewsletterSubscriber = { findUnique: jest.fn(async () => null) };
+    await expect(s.subscribe(store, 'ana@example.com', { source: 'popup', gameToken: 'old' } as never)).rejects.toThrow('Tu premio venció; vuelve a jugar.');
+    expect(tx.storeNewsletterSubscriber.upsert).not.toHaveBeenCalled();
+  });
+  it('an email that only saved a cart (inactive) still gets its prize', async () => {
+    const { s, prisma } = service({ popupGame: 'scratch', popupGamePrizes: PRIZES });
+    (s as any).games = { validPrize: jest.fn(async () => true), claim: jest.fn(async () => ({ code: 'RASCA5' })) };
+    (prisma as any).storeNewsletterSubscriber = { findUnique: jest.fn(async () => ({ id: 'x', isActive: false })) };
+    await s.subscribe(store, 'ana@example.com', { source: 'popup', gameToken: 't' } as never);
+    expect((s as any).games.claim).toHaveBeenCalledWith('s1', 't', false);
+  });
+});
+
+// Spec 2026-11-09 YAPI A/B tests: a B visitor of a running popup test sees B's popup and gets B's code; a new signup carries its visit.
+describe('popup A/B tests', () => {
+  const visits: Record<string, any> = {
+    tokB: { id: 'vB', variant: 'B', experiment: { kind: 'popup', variantSettings: { discount: 15, percentA: 10, look: 'revista' }, variantPromoCodeId: 'codeB' } },
+    tokA: { id: 'vA', variant: 'A', experiment: { kind: 'popup', variantSettings: { discount: 15, percentA: 10, look: 'revista' }, variantPromoCodeId: 'codeB' } },
+  };
+  function abService() {
+    const built = service({ popupPromoCodeId: 'own', popupLook: 'postal', signupBody: 'Recetas y un 10 % de bienvenida.' });
+    (built.prisma as any).storeSourceVisit = { findFirst: jest.fn(async ({ where }: any) => visits[where.token] ?? null) };
+    CODES.push({ id: 'codeB', storeId: 's1', code: 'BIENVENIDA15-AB12', isActive: true });
+    return built;
+  }
+  const upsertArg = (tx: any) => (tx.storeNewsletterSubscriber.upsert.mock.calls as any[])[0][0];
+  afterEach(() => { const at = CODES.findIndex(c => c.id === 'codeB'); if (at >= 0) CODES.splice(at, 1); });
+
+  it('a B visitor sees B look and B percent; an A visitor, no visitor or a stranger token sees A', async () => {
+    const { s } = abService();
+    const b = publicRetentionSettings((await s.settingsFor('s1', 'tokB')).settings, 'peppa');
+    expect(b).toMatchObject({ popupLook: 'revista', signupBody: 'Recetas y un 15 % de bienvenida.', popupHasCode: true });
+    for (const token of ['tokA', undefined, 'nope']) {
+      const a = publicRetentionSettings((await s.settingsFor('s1', token)).settings, 'peppa');
+      expect(a).toMatchObject({ popupLook: 'postal', signupBody: 'Recetas y un 10 % de bienvenida.' });
+    }
+  });
+
+  it('only a running popup test of this store counts: the visit is read with those conditions', async () => {
+    const { s, prisma } = abService();
+    await s.settingsFor('s1', 'tokB');
+    expect((prisma as any).storeSourceVisit.findFirst.mock.calls[0][0].where).toMatchObject({ token: 'tokB', experiment: { storeId: 's1', status: 'RUNNING', kind: 'popup' }, createdAt: { gte: expect.any(Date) } });
+  });
+
+  it('a B popup signup gets B code and its new row carries the visit', async () => {
+    const { s, tx } = abService();
+    expect(await s.subscribe(store, 'ana@example.com', { source: 'popup', sourceVisitToken: 'tokB' })).toEqual({ subscribed: true, code: 'BIENVENIDA15-AB12' });
+    expect(upsertArg(tx).create).toMatchObject({ sourceVisitId: 'vB' });
+    expect(upsertArg(tx).update.sourceVisitId).toBeUndefined();
+  });
+
+  it('an existing subscriber is not a new B signup, and an A signup keeps A code', async () => {
+    const { s, tx } = abService();
+    await s.subscribe(store, 'ana@example.com', { source: 'popup', sourceVisitToken: 'tokB' });
+    expect(Object.keys(upsertArg(tx).update)).not.toContain('sourceVisitId');
+    const a = abService();
+    expect(await a.s.subscribe(store, 'eva@example.com', { source: 'popup', sourceVisitToken: 'tokA' })).toEqual({ subscribed: true, code: 'PEPPA10' });
+    expect(upsertArg(a.tx).create).toMatchObject({ sourceVisitId: 'vA' });
+  });
+});
+
+describe('rasca y elige public settings (spec 2026-11-10)', () => {
+  const GAME = { popupGame: 'scratch', popupGamePrizes: [{ percent: 5, label: '5 %', chance: 60 }, { percent: 10, label: '10 %', chance: 40 }] };
+  const INTERESTS = { text: '¿Qué te interesa?', answers: [{ label: 'Para mí', icon: '🙋' }, { label: 'Para regalar', icon: '🎁' }] };
+  it('hands the page the shape, interests, favourite question and contact while a game is on', () => {
+    const out = publicRetentionSettings({ ...DEFAULT_RETENTION, ...GAME, popupShape: 'can', popupInterests: INTERESTS, popupFavourite: { text: '¿Cuál es tu sabor favorito?' }, popupContact: 'email' } as never) as Record<string, unknown>;
+    expect(out).toMatchObject({ popupShape: 'can', popupInterests: INTERESTS, popupFavourite: { text: '¿Cuál es tu sabor favorito?' }, popupContact: 'email' });
+    const off = publicRetentionSettings({ ...DEFAULT_RETENTION, popupShape: 'can', popupInterests: INTERESTS } as never) as Record<string, unknown>;
+    expect(off.popupShape).toBeUndefined();
+    expect(off.popupInterests).toBeUndefined();
+  });
+  it('reads an old text question as interests, an unknown shape as none, and an old game keeps the email (review M4)', () => {
+    const out = publicRetentionSettings({ ...DEFAULT_RETENTION, ...GAME, popupShape: 'rocket', popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } } as never) as Record<string, unknown>;
+    expect(out).toMatchObject({ popupShape: null, popupContact: 'email', popupInterests: { text: '¿Para quién?', answers: [{ label: 'Para mí', icon: '' }, { label: 'Para regalar', icon: '' }] } });
+  });
+  it('keeps them when Ajustes saves without them', async () => {
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupShape: 'cookie', popupInterests: INTERESTS, popupFavourite: { text: 'x' }, popupContact: 'email' }, revision: 3 } as never);
+    await s.save('m1', 's1', dto({ revision: 3 }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupShape: 'cookie', popupInterests: INTERESTS, popupFavourite: { text: 'x' }, popupContact: 'email' });
+  });
+});
+
+describe('rasca y elige signups (spec 2026-11-10)', () => {
+  const INTERESTS = { text: '¿Qué te interesa?', answers: [{ label: 'Para regalar', icon: '🎁' }, { label: 'Desayunos', icon: '☕' }] };
+  const setup = (saved: Record<string, unknown> = {}, existing: Record<string, unknown> | null = null) => {
+    const made = service({ popupGame: 'scratch', popupInterests: INTERESTS, popupContact: 'whatsapp', ...saved });
+    const whatsapp = { findUnique: jest.fn(async () => existing), upsert: jest.fn(async ({ create }: any) => ({ id: 'w1', ...create })) };
+    (made.prisma as any).storeWhatsappSubscriber = whatsapp; (made.tx as any).storeWhatsappSubscriber = whatsapp;
+    (made.prisma as any).paymentLink = { findMany: jest.fn(async ({ where }: any) => [{ id: 'p1', variants: [] }, { id: 'soda', variants: [{ options: [{ name: 'Sabor', value: 'Sandía y menta' }] }] }].filter(p => p.id === where.id)) };
+    made.s.games = { validPrize: jest.fn(async () => true), claim: jest.fn(async (_s: string, _t: string, existed: boolean, by?: string) => existed ? { message: by === 'phone' ? 'Este número ya recibió su premio.' : 'Este correo ya recibió su premio.' } : { code: 'RASCA10-ABCDEF' }) };
+    return { ...made, whatsapp };
+  };
+  it('a WhatsApp signup keeps the number, the store own answers and a real favourite, and gets the prize', async () => {
+    const { s, whatsapp } = setup();
+    const out = await s.subscribe(store, null, { phone: '7123 4567', answers: ['Para regalar', 'Inventado'], favourite: 'p1', gameToken: 't', consent: true, source: 'popup' });
+    expect(out).toEqual({ subscribed: true, code: 'RASCA10-ABCDEF' });
+    expect(whatsapp.upsert.mock.calls[0][0].create).toMatchObject({ storeId: 's1', phone: '59171234567', interests: ['Para regalar'], favourite: 'p1' });
+  });
+  it('a flavour of a one-product store is a favourite; anything else is dropped', async () => {
+    const { s, whatsapp } = setup();
+    await s.subscribe(store, null, { phone: '71234567', favourite: 'soda:Sandía y menta', consent: true });
+    expect(whatsapp.upsert.mock.calls[0][0].create.favourite).toBe('soda:Sandía y menta');
+    await s.subscribe(store, null, { phone: '71234567', favourite: 'other-store-product', consent: true });
+    expect(whatsapp.upsert.mock.calls[1][0].create.favourite).toBeNull();
+  });
+  it('the same number gets no second prize; a wrong number is refused in plain words', async () => {
+    const { s } = setup({}, { isActive: true });
+    await expect(s.subscribe(store, null, { phone: '71234567', gameToken: 't', consent: true })).resolves.toEqual({ subscribed: true, message: 'Este número ya recibió su premio.' });
+    await expect(s.subscribe(store, null, { phone: '123', consent: true })).rejects.toThrow('Escribe tu WhatsApp con 8 números, como 71234567.');
+  });
+  it('an email store keeps the favourite and the answers on the email subscriber', async () => {
+    const { s, tx } = setup({ popupContact: 'email' });
+    await s.subscribe(store, 'Ana@Mail.com', { favourite: 'p1', answers: ['Desayunos'], consent: true });
+    expect((tx.storeNewsletterSubscriber.upsert.mock.calls[0] as any)[0].create).toMatchObject({ email: 'ana@mail.com', favourite: 'p1', interests: ['Desayunos'] });
+  });
+});
+
+describe('rasca y elige panel (spec 2026-11-10)', () => {
+  const products = [{ id: 'p1', name: 'Torre de cookies' }, { id: 'soda', name: 'Oh Belly soda' }];
+  it('names each favourite (a flavour as «Producto · Sabor») and counts the most chosen, deleted products left out', () => {
+    expect(favouriteName('soda:Sandía y menta', products)).toBe('Oh Belly soda · Sandía y menta');
+    expect(favouriteName('p1', products)).toBe('Torre de cookies');
+    expect(favouriteName('gone', products)).toBeNull();
+    expect(favouriteTally(['p1', 'soda:Sandía y menta', 'p1', 'gone', null], products)).toEqual([{ name: 'Torre de cookies', count: 2 }, { name: 'Oh Belly soda · Sandía y menta', count: 1 }]);
+  });
+  it('shows a WhatsApp number the way people write it', () => {
+    expect(whatsappShown('59171234567')).toBe('+591 7123 4567');
+  });
+});
+
+describe('rasca y elige review fixes (2026-11-10)', () => {
+  it('validates any email sent, with or without a phone; a cart always needs one (review I1)', async () => {
+    const { plainToInstance } = await import('class-transformer');
+    const { validate } = await import('class-validator');
+    const { RetentionSubscribeDto, RetentionCartDto } = await import('./retention.dto');
+    const errors = async (cls: any, body: object) => (await validate(plainToInstance(cls, body) as object)).map(e => e.property);
+    expect(await errors(RetentionSubscribeDto, { phone: '71234567', email: 'not-an-email', consent: true })).toContain('email');
+    expect(await errors(RetentionSubscribeDto, { phone: '71234567', email: {}, consent: true })).toContain('email');
+    expect(await errors(RetentionSubscribeDto, { phone: '71234567', consent: true })).toEqual([]);
+    expect(await errors(RetentionSubscribeDto, { consent: true })).toContain('email');
+    expect(await errors(RetentionCartDto, { phone: '71234567', consent: true, items: [{ paymentLinkId: 'p1', quantity: 1 }] })).toContain('email');
+    // Review I2: an older question's answers reach 40 characters.
+    expect(await errors(RetentionSubscribeDto, { email: 'ana@mail.com', consent: true, answers: ['x'.repeat(40)] })).toEqual([]);
+  });
+  it('a number goes to the WhatsApp list only when the store game asks for WhatsApp (review M1)', async () => {
+    const made = service({ popupGame: 'scratch', popupContact: 'email' });
+    (made.prisma as any).paymentLink = { findMany: jest.fn(async () => []) };
+    (made.prisma as any).storeWhatsappSubscriber = { findUnique: jest.fn(), upsert: jest.fn() };
+    await expect(made.s.subscribe(store, null, { phone: '71234567', consent: true })).rejects.toThrow('Escribe tu correo.');
+    const plain = service({});
+    (plain.prisma as any).paymentLink = { findMany: jest.fn(async () => []) };
+    await expect(plain.s.subscribe(store, null, { phone: '71234567', consent: true })).rejects.toThrow('Escribe tu correo.');
   });
 });

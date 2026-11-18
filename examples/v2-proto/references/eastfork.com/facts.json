@@ -1,0 +1,1227 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://eastfork.com/",
+    "title": "East Fork | Pottery & Home Goods | Made in Asheville, NC",
+    "width": 1440,
+    "pageHeight": 5788,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Galano Classic",
+        "size": "38px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "New Arrivals"
+      },
+      "body": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Ready the kitchen for prime baking season. New bakeware, ess"
+      },
+      "button": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 111,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search",
+        "Account",
+        "Cart (0)",
+        "Gifts",
+        "New & Noteworthy",
+        "Pottery",
+        "Table",
+        "Kitchen",
+        "Drinkware",
+        "Home & Garden",
+        "About"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 147,
+        "h": 753,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "New Arrivals"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 121,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1021,
+        "h": 438,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Quincy CF",
+          "size": "18px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Mug"
+        },
+        "words": 89,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1459,
+        "h": 638,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Behold! East Fork's 2026 Gift Guide"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2097,
+        "h": 538,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "24px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Dinnerware Sets"
+        },
+        "words": 5,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2634,
+        "h": 620,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Founder's Collection"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3254,
+        "h": 488,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "40px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Palette"
+        },
+        "words": 118,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3742,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "15 Years of East Fork"
+        },
+        "words": 45,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4462,
+        "h": 735,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Quincy CF",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "From the East Fork Journal"
+        },
+        "words": 82,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 10,
+      "columns": 10,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://eastfork.com/",
+    "title": "East Fork | Pottery & Home Goods | Made in Asheville, NC",
+    "width": 390,
+    "pageHeight": 6367,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Galano Classic",
+        "size": "30px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "New Arrivals"
+      },
+      "body": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Ready the kitchen for prime baking season. New bakeware, ess"
+      },
+      "button": {
+        "family": "Toma",
+        "size": "14px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Shop Now"
+      },
+      "nav": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 63,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Toggle Menu",
+        "0 items in cart"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 745,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "30px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "New Arrivals"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 844,
+        "h": 223,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1067,
+        "h": 341,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Quincy CF",
+          "size": "16px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Mug"
+        },
+        "words": 152,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1408,
+        "h": 602,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Behold! East Fork's 2026 Gift Guide"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2010,
+        "h": 567,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "24px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Dinnerware Sets"
+        },
+        "words": 5,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2577,
+        "h": 584,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Founder's Collection"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3161,
+        "h": 771,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Palette"
+        },
+        "words": 118,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3933,
+        "h": 624,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "30px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "15 Years of East Fork"
+        },
+        "words": 45,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4557,
+        "h": 693,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Quincy CF",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "From the East Fork Journal"
+        },
+        "words": 82,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://eastfork.com/collections/all",
+    "title": "Shop All – East Fork",
+    "width": 1440,
+    "pageHeight": 1760,
+    "fonts": {
+      "h1": {
+        "family": "Galano Classic",
+        "size": "58px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "Galano Classic",
+        "size": "40px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "Looking for something else?"
+      },
+      "body": {
+        "family": "Galano Classic",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "2 Products"
+      },
+      "button": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 111,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search",
+        "Account",
+        "Cart (0)",
+        "Gifts",
+        "New & Noteworthy",
+        "Pottery",
+        "Table",
+        "Kitchen",
+        "Drinkware",
+        "Home & Garden",
+        "About"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 147,
+        "h": 147,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "58px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Shop All"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 409,
+        "h": 759,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "40px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Looking for something else?"
+        },
+        "words": 22,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://eastfork.com/collections/all?_su_rec=g1pgeo9JZrZ-EBjsEuraIjHrw0Qi8xMW-6R9IRqC1zH5JOJYtZRhZzcP2ROLqiG6x1rF-9dptlW7lq-gEVjoywmTM15Mjc0NpvsUjuJeZEDcJS909kgnRBehWoxNWai_SbQwak5DJG8MpToaP-zuZhnKFQhZ7xuLzwkO8nh1TbBDEFwxeonYPapbxaJ1atNvWY1bJWSQlC51m5xvOB13qztsKXGrkd6ZASMp7YwOnpL-qYb1bw8vXkbEaX01YD49GuoLkXvOqHUF-nEIkJ1ZJ7dTXF11oQQNwQq2A1CE2w44L_diU6TfW35y9iDw_V6GfTlSfq6e1QPppJpL-LAywNjNXR1qi5mM9tkR&_su_rec_id=87a380f6-4599-41f6-90e9-afb46c70c288-1794667949",
+    "title": "Shop All – East Fork",
+    "width": 390,
+    "pageHeight": 3164,
+    "fonts": {
+      "h1": {
+        "family": "Galano Classic",
+        "size": "48px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "Galano Classic",
+        "size": "38px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "Looking for something else?"
+      },
+      "body": {
+        "family": "Galano Classic",
+        "size": "11px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "2 Products"
+      },
+      "button": {
+        "family": "Galano Classic",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter"
+      },
+      "nav": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 63,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Toggle Menu",
+        "0 items in cart"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 117,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "48px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Shop All"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 288,
+        "h": 1610,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Looking for something else?"
+        },
+        "words": 22,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://eastfork.com/products/cake-plate-set-la-sirene-sb",
+    "title": "Cake Plate Set in La Sirène – East Fork",
+    "width": 1440,
+    "pageHeight": 4377,
+    "fonts": {
+      "h1": {
+        "family": "Quincy CF",
+        "size": "36px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cake Plate Set in La Sirène"
+      },
+      "h2": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "Build Your Collection"
+      },
+      "body": {
+        "family": "Galano Classic",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.0994px",
+        "text": "The Cake Plate Set in La Sirène honors Matisse's iconic blue"
+      },
+      "button": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 111,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search",
+        "Account",
+        "Cart (0)",
+        "Gifts",
+        "New & Noteworthy",
+        "Pottery",
+        "Table",
+        "Kitchen",
+        "Drinkware",
+        "Home & Garden",
+        "About"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 147,
+        "h": 1508,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Quincy CF",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cake Plate Set in La Sirène"
+        },
+        "words": 340,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1655,
+        "h": 593,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "40px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-1px",
+          "text": "Explore More La Sirène"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2248,
+        "h": 541,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "40px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Discover the Full Collection"
+        },
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2789,
+        "h": 689,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "40px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-1px",
+          "text": "Explore More East Fork"
+        },
+        "words": 67,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3477,
+        "h": 308,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart\n      \n        \n          So",
+      "aboveFold": true,
+      "top": 386,
+      "x": 1058,
+      "width": 342,
+      "bg": "rgb(0, 71, 187)"
+    },
+    "price": null,
+    "galleryImages": 13,
+    "swatches": 16,
+    "selects": 0,
+    "accordions": 3
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://eastfork.com/products/cake-plate-set-la-sirene-sb",
+    "title": "Cake Plate Set in La Sirène – East Fork",
+    "width": 390,
+    "pageHeight": 5252,
+    "fonts": {
+      "h1": {
+        "family": "Quincy CF",
+        "size": "36px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cake Plate Set in La Sirène"
+      },
+      "h2": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "Build Your Collection"
+      },
+      "body": {
+        "family": "Galano Classic",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.0994px",
+        "text": "The Cake Plate Set in La Sirène honors Matisse's iconic blue"
+      },
+      "button": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 63,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Toggle Menu",
+        "0 items in cart"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 1884,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Quincy CF",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cake Plate Set in La Sirène"
+        },
+        "words": 340,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 1983,
+        "h": 448,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "24px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore More La Sirène"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2431,
+        "h": 662,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Discover the Full Collection"
+        },
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3093,
+        "h": 748,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "24px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore More East Fork"
+        },
+        "words": 91,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3841,
+        "h": 261,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart\n      \n        \n          So",
+      "aboveFold": true,
+      "top": 830,
+      "x": 170,
+      "width": 200,
+      "bg": "rgb(0, 71, 187)"
+    },
+    "price": null,
+    "galleryImages": 13,
+    "swatches": 16,
+    "selects": 0,
+    "accordions": 3
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://eastfork.com/?open_cart",
+    "title": "East Fork | Pottery & Home Goods | Made in Asheville, NC",
+    "width": 1440,
+    "pageHeight": 5759,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Galano Classic",
+        "size": "38px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "-0.1px",
+        "text": "New Arrivals"
+      },
+      "body": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Ready the kitchen for prime baking season. New bakeware, ess"
+      },
+      "button": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Search"
+      },
+      "nav": {
+        "family": "Galano Classic",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 111,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search",
+        "Account",
+        "Cart (1)",
+        "Gifts",
+        "New & Noteworthy",
+        "Pottery",
+        "Table",
+        "Kitchen",
+        "Drinkware",
+        "Home & Garden",
+        "About"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 147,
+        "h": 753,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "New Arrivals"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 121,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1021,
+        "h": 438,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Quincy CF",
+          "size": "18px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Mug"
+        },
+        "words": 89,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1459,
+        "h": 638,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "Behold! East Fork's 2026 Gift Guide"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2097,
+        "h": 538,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "24px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Dinnerware Sets"
+        },
+        "words": 5,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2634,
+        "h": 620,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Founder's Collection"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3254,
+        "h": 488,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "40px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "The Palette"
+        },
+        "words": 118,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3742,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Galano Classic",
+          "size": "38px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "15 Years of East Fork"
+        },
+        "words": 45,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4462,
+        "h": 735,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Quincy CF",
+          "size": "36px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "From the East Fork Journal"
+        },
+        "words": 82,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ]
+  }
+}

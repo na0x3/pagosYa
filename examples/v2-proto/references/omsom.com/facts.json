@@ -1,0 +1,222 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://omsom.com/",
+    "title": "Omsom",
+    "width": 1440,
+    "pageHeight": 900,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "YAD4imOwJ8U_0",
+        "size": "42px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "PROUD + LOUDASIAN FLAVORS"
+      },
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 768,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 19,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 767,
+        "h": 768,
+        "bg": "rgb(247, 243, 218)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1534,
+        "h": 768,
+        "bg": "rgb(247, 243, 218)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2301,
+        "h": 768,
+        "bg": "rgb(172, 235, 159)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3068,
+        "h": 768,
+        "bg": "rgb(240, 195, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3835,
+        "h": 768,
+        "bg": "rgb(172, 235, 159)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 91,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4602,
+        "h": 768,
+        "bg": "rgb(168, 10, 68)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://omsom.com/",
+    "title": "Omsom",
+    "width": 390,
+    "pageHeight": 844,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "YAD4imOwJ8U_0",
+        "size": "42px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "PROUD + LOUDASIAN FLAVORS"
+      },
+      "button": null,
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 219,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 19,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 218,
+        "h": 219,
+        "bg": "rgb(247, 243, 218)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 437,
+        "h": 219,
+        "bg": "rgb(247, 243, 218)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 655,
+        "h": 219,
+        "bg": "rgb(172, 235, 159)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 873,
+        "h": 219,
+        "bg": "rgb(240, 195, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1091,
+        "h": 219,
+        "bg": "rgb(172, 235, 159)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 91,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1310,
+        "h": 219,
+        "bg": "rgb(168, 10, 68)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  }
+}

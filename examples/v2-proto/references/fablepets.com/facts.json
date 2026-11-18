@@ -1,0 +1,1071 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://fablepets.com/",
+    "title": "Fable | Fable Pets | Innovative Pet Gear That Solves Real Problems",
+    "width": 1440,
+    "pageHeight": 6682,
+    "fonts": {
+      "h1": {
+        "family": "Gelica",
+        "size": "60px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.6px",
+        "text": "BLACK FRIDAY SALE"
+      },
+      "h2": {
+        "family": "Gelica",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "Gelica",
+        "size": "32px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026"
+      },
+      "button": {
+        "family": "Moderat",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Add to Cart"
+      },
+      "nav": {
+        "family": "Moderat",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026 | Shop Now"
+      }
+    },
+    "page": "rgb(254, 253, 253)",
+    "header": {
+      "height": 99,
+      "position": "relative",
+      "bg": "rgba(0, 0, 0, 0.5)",
+      "links": [
+        "Up to 35% OFF with code ",
+        "Close announcement",
+        "Shop All",
+        "Rest",
+        "Play",
+        "Walk",
+        "Eat",
+        "Cats",
+        "Gifting",
+        "Clearance",
+        "Sets",
+        "Pet Gear Quiz",
+        "Our Story",
+        "Real Pets",
+        "Blog",
+        "Wholesale"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 600,
+        "bg": "rgb(254, 253, 253)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "60px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.6px",
+          "text": "BLACK FRIDAY SALE"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 600,
+        "h": 1130,
+        "bg": "rgb(254, 253, 253)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Moderat",
+          "size": "16px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "Crate"
+        },
+        "words": 68,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 1730,
+        "h": 300,
+        "bg": "rgb(254, 253, 253)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2029,
+        "h": 400,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2429,
+        "h": 657,
+        "bg": "rgb(254, 253, 253)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "60px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.6px",
+          "text": "The new way to feed and exercise your dog."
+        },
+        "words": 19,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3086,
+        "h": 818,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "Get the rest of the story"
+        },
+        "words": 100,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3905,
+        "h": 2238,
+        "bg": "rgb(254, 253, 253)",
+        "images": 11,
+        "video": false,
+        "heading": null,
+        "words": 92,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6143,
+        "h": 540,
+        "bg": "rgb(254, 253, 253)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 143,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://fablepets.com/",
+    "title": "Fable | Fable Pets | Innovative Pet Gear That Solves Real Problems",
+    "width": 390,
+    "pageHeight": 5181,
+    "fonts": {
+      "h1": {
+        "family": "Gelica",
+        "size": "28px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.28px",
+        "text": "BLACK FRIDAY SALE"
+      },
+      "h2": {
+        "family": "Gelica",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "Gelica",
+        "size": "20px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026"
+      },
+      "button": {
+        "family": "Moderat",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Moderat",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026 | Shop Now"
+      }
+    },
+    "page": "rgb(254, 253, 253)",
+    "header": {
+      "height": 114,
+      "position": "relative",
+      "bg": "rgba(0, 0, 0, 0.5)",
+      "links": [
+        "Up to 35% OFF with code ",
+        "Close announcement",
+        "Close main menu",
+        "Shop All",
+        "Rest",
+        "Play",
+        "Walk",
+        "Eat",
+        "Cats",
+        "Gifting",
+        "Clearance",
+        "Sets",
+        "Pet Gear Quiz",
+        "Our Story",
+        "Real Pets",
+        "Blog"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 738,
+        "bg": "rgb(254, 253, 253)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "BLACK FRIDAY SALE"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 738,
+        "h": 1183,
+        "bg": "rgb(254, 253, 253)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Moderat",
+          "size": "13px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "Crate"
+        },
+        "words": 53,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 1921,
+        "h": 313,
+        "bg": "rgb(254, 253, 253)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2234,
+        "h": 416,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2650,
+        "h": 451,
+        "bg": "rgb(254, 253, 253)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The new way to feed and exercise your dog."
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3101,
+        "h": 797,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "32px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "Get the rest of the story"
+        },
+        "words": 100,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3898,
+        "h": 837,
+        "bg": "rgb(254, 253, 253)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 74,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4783,
+        "h": 398,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 79,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://fablepets.com/collections/all",
+    "title": "Fable | Shop All",
+    "width": 1440,
+    "pageHeight": 4176,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Gelica",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "Moderat",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "The hunt is on"
+      },
+      "button": {
+        "family": "Moderat",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Age range"
+      },
+      "nav": {
+        "family": "Moderat",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026 | Shop Now"
+      }
+    },
+    "page": "rgb(254, 253, 253)",
+    "header": {
+      "height": 99,
+      "position": "relative",
+      "bg": "rgba(0, 0, 0, 0.5)",
+      "links": [
+        "Up to 35% OFF with code ",
+        "Close announcement",
+        "Shop All",
+        "Rest",
+        "Play",
+        "Walk",
+        "Eat",
+        "Cats",
+        "Gifting",
+        "Clearance",
+        "Sets",
+        "Pet Gear Quiz",
+        "Our Story",
+        "Real Pets",
+        "Blog",
+        "Wholesale"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 3537,
+        "bg": "rgb(254, 253, 253)",
+        "images": 54,
+        "video": false,
+        "heading": {
+          "family": "Moderat",
+          "size": "14px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "The Puffin™ Game"
+        },
+        "words": 266,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3636,
+        "h": 540,
+        "bg": "rgb(254, 253, 253)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 143,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 18,
+      "columns": 3,
+      "photoRatio": 0.7,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://fablepets.com/collections/all?_su_rec=P8sRnLP9pEDNWHknECiNzEthCQ2sI04GA5l3gUoTNH3ztW3TEGDB1UQaQyqacj99XuLW3enEYZqpRNuFG0nI1tmbnxL3U1xqGUfc6DnW6yEGUsC6E8Uzeoje_xRHqr5Y4o28XO1loAHXpDGQMa1rrtDw2wXZ9D1ua0dvoL_4dHehmkhr-ANpNG3W-PcdFU1cF51JVgexoWN2Vvg9HxQoz3hR8cyt0oHSC7laAs1l3ZULYj4LCmA-X3UX12a47vtnFYrt5QlqFKnJ_ctwYYv8HNDC_RUll4UPacsxm_O_Vg_GmZPHaNSylnTZ52YjHMATDL_nJIF454HPHryBMekvqDRrH_24YrPL2TSzoA&_su_rec_id=bcb106b7-b439-4c20-b29c-8ad868e2055d-1794667809",
+    "title": "Fable | Shop All",
+    "width": 390,
+    "pageHeight": 3185,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Gelica",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "Moderat",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "$69"
+      },
+      "button": {
+        "family": "Moderat",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Sign me up"
+      },
+      "nav": {
+        "family": "Moderat",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026 | Shop Now"
+      }
+    },
+    "page": "rgb(254, 253, 253)",
+    "header": {
+      "height": 114,
+      "position": "relative",
+      "bg": "rgba(0, 0, 0, 0.5)",
+      "links": [
+        "Up to 35% OFF with code ",
+        "Close announcement",
+        "Close main menu",
+        "Shop All",
+        "Rest",
+        "Play",
+        "Walk",
+        "Eat",
+        "Cats",
+        "Gifting",
+        "Clearance",
+        "Sets",
+        "Pet Gear Quiz",
+        "Our Story",
+        "Real Pets",
+        "Blog"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 114,
+        "h": 2673,
+        "bg": "rgb(254, 253, 253)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "Moderat",
+          "size": "13px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "The Puffin™ Game"
+        },
+        "words": 127,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2787,
+        "h": 398,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 79,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 18,
+      "columns": 2,
+      "photoRatio": 0.53,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://fablepets.com/products/reggie-raccoon-huggleflatties%E2%84%A2-durable-plush-dog-toy",
+    "title": "Fable | Reggie Raccoon HuggleFlatties™ Durable Plush Dog Toy",
+    "width": 1440,
+    "pageHeight": 2365,
+    "fonts": {
+      "h1": {
+        "family": "Gelica",
+        "size": "32px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Reggie Raccoon HuggleFlatties™ Durable Plush Dog Toy"
+      },
+      "h2": {
+        "family": "Moderat",
+        "size": "21.6px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Frequently bought together"
+      },
+      "body": {
+        "family": "Moderat",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": ""
+      },
+      "button": {
+        "family": "Moderat",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Add To Cart"
+      },
+      "nav": {
+        "family": "Moderat",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026 | Shop Now"
+      }
+    },
+    "page": "rgb(254, 253, 253)",
+    "header": {
+      "height": 99,
+      "position": "relative",
+      "bg": "rgba(0, 0, 0, 0.5)",
+      "links": [
+        "Up to 35% OFF with code ",
+        "Close announcement",
+        "Shop All",
+        "Rest",
+        "Play",
+        "Walk",
+        "Eat",
+        "Cats",
+        "Gifting",
+        "Clearance",
+        "Sets",
+        "Pet Gear Quiz",
+        "Our Story",
+        "Real Pets",
+        "Blog",
+        "Wholesale"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 1726,
+        "bg": "rgb(254, 253, 253)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "32px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "Reggie Raccoon HuggleFlatties™ Durable Plush Dog Toy"
+        },
+        "words": 302,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1825,
+        "h": 540,
+        "bg": "rgb(254, 253, 253)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 143,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add To Cart",
+      "aboveFold": true,
+      "top": 379,
+      "x": 980,
+      "width": 344,
+      "bg": "rgb(176, 199, 250)"
+    },
+    "price": {
+      "family": "Moderat",
+      "size": "16px",
+      "weight": "500",
+      "case": "none",
+      "tracking": "0.16px",
+      "text": "$17"
+    },
+    "galleryImages": 7,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 2
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://fablepets.com/products/reggie-raccoon-huggleflatties%E2%84%A2-durable-plush-dog-toy",
+    "title": "Fable | Reggie Raccoon HuggleFlatties™ Durable Plush Dog Toy",
+    "width": 390,
+    "pageHeight": 2444,
+    "fonts": {
+      "h1": {
+        "family": "Gelica",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Reggie Raccoon HuggleFlatties™ Durable Plush Dog Toy"
+      },
+      "h2": {
+        "family": "Moderat",
+        "size": "21.6px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Frequently bought together"
+      },
+      "body": {
+        "family": "Moderat",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": ""
+      },
+      "button": {
+        "family": "Moderat",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Add To Cart"
+      },
+      "nav": {
+        "family": "Moderat",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026 | Shop Now"
+      }
+    },
+    "page": "rgb(254, 253, 253)",
+    "header": {
+      "height": 114,
+      "position": "relative",
+      "bg": "rgba(0, 0, 0, 0.5)",
+      "links": [
+        "Up to 35% OFF with code ",
+        "Close announcement",
+        "Close main menu",
+        "Shop All",
+        "Rest",
+        "Play",
+        "Walk",
+        "Eat",
+        "Cats",
+        "Gifting",
+        "Clearance",
+        "Sets",
+        "Pet Gear Quiz",
+        "Our Story",
+        "Real Pets",
+        "Blog"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 114,
+        "h": 1933,
+        "bg": "rgb(254, 253, 253)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "Reggie Raccoon HuggleFlatties™ Durable Plush Dog Toy"
+        },
+        "words": 309,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2047,
+        "h": 398,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 79,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add To Cart",
+      "aboveFold": true,
+      "top": 707,
+      "x": 16,
+      "width": 358,
+      "bg": "rgb(176, 199, 250)"
+    },
+    "price": {
+      "family": "Moderat",
+      "size": "16px",
+      "weight": "500",
+      "case": "none",
+      "tracking": "0.16px",
+      "text": "$17"
+    },
+    "galleryImages": 2,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 2
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://fablepets.com/#drawer-opened",
+    "title": "Fable | Fable Pets | Innovative Pet Gear That Solves Real Problems",
+    "width": 1440,
+    "pageHeight": 6682,
+    "fonts": {
+      "h1": {
+        "family": "Gelica",
+        "size": "60px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.6px",
+        "text": "BLACK FRIDAY SALE"
+      },
+      "h2": {
+        "family": "Gelica",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "Gelica",
+        "size": "32px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026"
+      },
+      "button": {
+        "family": "Moderat",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Add to Cart"
+      },
+      "nav": {
+        "family": "Moderat",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.16px",
+        "text": "Up to 35% OFF with code BLACKFRIDAY2026 | Shop Now"
+      }
+    },
+    "page": "rgb(254, 253, 253)",
+    "header": {
+      "height": 99,
+      "position": "relative",
+      "bg": "rgba(0, 0, 0, 0.5)",
+      "links": [
+        "Up to 35% OFF with code ",
+        "Close announcement",
+        "Shop All",
+        "Rest",
+        "Play",
+        "Walk",
+        "Eat",
+        "Cats",
+        "Gifting",
+        "Clearance",
+        "Sets",
+        "Pet Gear Quiz",
+        "Our Story",
+        "Real Pets",
+        "Blog",
+        "Wholesale"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 600,
+        "bg": "rgb(254, 253, 253)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "60px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.6px",
+          "text": "BLACK FRIDAY SALE"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 600,
+        "h": 1130,
+        "bg": "rgb(254, 253, 253)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Moderat",
+          "size": "16px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "Crate"
+        },
+        "words": 68,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 1730,
+        "h": 300,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2029,
+        "h": 400,
+        "bg": "rgb(254, 253, 253)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2429,
+        "h": 657,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "60px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.6px",
+          "text": "The new way to feed and exercise your dog."
+        },
+        "words": 19,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3086,
+        "h": 818,
+        "bg": "rgb(254, 253, 253)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gelica",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.16px",
+          "text": "Get the rest of the story"
+        },
+        "words": 100,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3905,
+        "h": 2238,
+        "bg": "rgb(254, 253, 253)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 92,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6143,
+        "h": 540,
+        "bg": "rgb(254, 253, 253)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 143,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ]
+  }
+}

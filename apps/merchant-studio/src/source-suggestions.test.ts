@@ -30,6 +30,12 @@ describe('suggestion cards', () => {
     expect(send.mock.calls.map(c => c[0])).toEqual([cards[0].instruction, cards[2].instruction]);
     expect(api.writeRetention).not.toHaveBeenCalled();
   });
+  it('never sends the keys only the server keeps (review 2026-11-09: they made the save fail with 400)', async () => {
+    const send = vi.fn();
+    const api = { retention: vi.fn().mockResolvedValue({ settings: { revision: 3, startedAt: 'x', signupEnabled: false, popupLook: 'postal', popupLookPrevious: 'cartel', popupPhoto: '/v1/uploads/a.jpg', emailWorkspace: {}, suggestionsDismissedAt: 'y', popupKit: {} } }), writeRetention: vi.fn().mockResolvedValue({}) };
+    await applySuggestion(cards[1] as any, { send, api, storeId: 'st' });
+    expect(api.writeRetention).toHaveBeenCalledWith('st', '', 'PUT', { revision: 3, signupEnabled: true, popupLook: 'postal', popupTrigger: 'both' });
+  });
   it('turns signup and the popup on for a popup card, keeping the other settings', async () => {
     const send = vi.fn();
     const api = { retention: vi.fn().mockResolvedValue({ settings: { revision: 3, startedAt: '2026-10-20', signupEnabled: false, signupTitle: 'Club', popupTrigger: 'load' } }), writeRetention: vi.fn().mockResolvedValue({ saved: true }) };

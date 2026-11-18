@@ -19,8 +19,8 @@ describe('merchant-facing failure gate', () => {
   it('replaces a diagnostic that was never written for a merchant', () => {
     const leaked = new BadGatewayException('requested images are absent from the design: assets/image-9eb40d2cb55e.jpg');
     const shown = merchantFacingSourceFailure(leaked) as Error;
-    expect(shown.message).toBe(GENERIC_MERCHANT_FAILURE);
-    expect(shown.message).not.toMatch(/assets\/|image-|design/i);
+    expect(shown.message).toBe('YAPI no pudo terminar este cambio: una foto no quedó bien puesta en el diseño nuevo. Tu tienda sigue como estaba; puedes reintentar.');
+    expect(shown.message).not.toMatch(/assets\/|image-/i);
   });
 
   it('passes merchant copy through unchanged, preserving the exception type', () => {
@@ -35,15 +35,21 @@ describe('merchant-facing failure gate', () => {
     expect(merchantFacingSourceFailure(abort)).toBe(abort);
   });
 
-  it('defaults an un-authored validator to generic copy rather than English', () => {
-    for (const message of [
-      'components/home.tsx: an image is missing alt text',
-      'homepage: missing a primary h1',
-      'styles.css: do not mask page-wide horizontal overflow',
-      'sections[2] must declare data-pagosya-cart',
-    ]) {
-      expect((merchantFacingSourceFailure(new BadGatewayException(message)) as Error).message).toBe(GENERIC_MERCHANT_FAILURE);
-    }
+  // Owner 2026-11-09 («ni siquiera se puede ver qué pasó»): an un-authored validator says what kind of problem it was, in plain words.
+  it('says in plain Spanish what kind of check failed, never the English', () => {
+    const shown = (message: string) => (merchantFacingSourceFailure(new BadGatewayException(message)) as Error).message;
+    expect(shown('components/home.tsx: an image is missing alt text')).toContain('una foto no quedó bien puesta');
+    expect(shown('homepage: missing a primary h1')).toContain('a la página le faltaba su título principal');
+    expect(shown('styles.css: do not mask page-wide horizontal overflow')).toContain('no se veía bien en el celular o en la computadora');
+    expect(shown('sections[2] must declare data-pagosya-cart')).toContain('el carrito o la compra de prueba no funcionó');
+    expect(shown('No se pudo compilar Inicio: Unexpected token (12:4)')).toContain('el código del diseño nuevo tenía un error');
+    expect(shown('Hay errores de ejecución en la página.')).toBe('Hay errores de ejecución en la página.');
+    for (const text of ['components/home.tsx: an image is missing alt text', 'sections[2] must declare data-pagosya-cart']) expect(shown(text)).not.toMatch(/components\/|tsx|data-pagosya|sections\[/);
+    expect(shown('Something odd: {"x":1}')).toBe(GENERIC_MERCHANT_FAILURE);
+  });
+
+  it('a validator without merchant copy says its kind too', () => {
+    expect(new SourceValidationError('The shared vendor script failed to compile: Unexpected token').merchantMessage).toContain('el código del diseño nuevo tenía un error');
   });
 });
 

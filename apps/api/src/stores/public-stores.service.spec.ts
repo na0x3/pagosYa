@@ -182,3 +182,27 @@ describe('showcase labels (2026-10-19)', () => {
     expect(prisma.paymentLink.findMany.mock.calls[0][0].include.subscriptionOptions.select).toEqual(expect.objectContaining({ label: true }));
   });
 });
+
+// Spec 2026-11-09 Merman cart + checkout: the free-shipping amount and the one real review the checkout shows.
+describe('checkout data (spec 2026-11-09 Merman cart + checkout)', () => {
+  const { checkoutReviewOf, freeShippingZoneWhere } = require('./public-stores.service') as typeof import('./public-stores.service');
+  const items = [{ id: 'p1', name: 'Licuadora Nube' }, { id: 'p2', name: 'Pack batidos' }];
+  const long = 'La licuadora es silenciosa y pica el hielo en segundos, la uso todos los días.';
+  it('takes the newest review of 4 stars or more with at least 40 characters, naming its product', () => {
+    expect(checkoutReviewOf([
+      { displayName: 'Ana', rating: 3, body: long, productId: 'p1' },
+      { displayName: 'Luis', rating: 5, body: 'Muy buena', productId: 'p1' },
+      { displayName: 'Sofía', rating: 4, body: long, productId: 'p2' },
+      { displayName: 'Mara', rating: 5, body: long, productId: 'p1' },
+    ], items)).toEqual({ name: 'Sofía', rating: 4, body: long, productName: 'Pack batidos' });
+  });
+  it('none qualifying → no review, never an invented one', () => {
+    expect(checkoutReviewOf([{ displayName: 'Luis', rating: 5, body: 'Muy buena', productId: 'p1' }], items)).toBeUndefined();
+    expect(checkoutReviewOf([], items)).toBeUndefined();
+  });
+  it('free shipping is only shown for a store that ships, counting carrier zones only when carriers are on (final review 2026-11-09)', () => {
+    expect(freeShippingZoneWhere({ id: 's', shippingEnabled: false, shippingCarriersEnabled: true })).toBeNull();
+    expect(freeShippingZoneWhere({ id: 's', shippingEnabled: true, shippingCarriersEnabled: false })).toEqual({ storeId: 's', isActive: true, freeAbove: { gt: 0 }, carrierId: null });
+    expect(freeShippingZoneWhere({ id: 's', shippingEnabled: true, shippingCarriersEnabled: true })).toEqual({ storeId: 's', isActive: true, freeAbove: { gt: 0 } });
+  });
+});

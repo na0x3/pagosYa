@@ -173,3 +173,19 @@ describe('StoreAnalyticsService.ingest session hash', () => {
     expect(await hashOf('analytics_' + 'g'.repeat(48))).not.toBe(hash);
   });
 });
+
+describe('StoreAnalyticsService.ingest — A/B side (spec 2026-11-16 la tienda que vende sola)', () => {
+  const TOKEN = 'abcdefghijklmnopqrstuvwxyz012345';
+  it('tags events with the running test and side of the visit token, and nothing for a stale or foreign token', async () => {
+    const prisma: any = fakePrisma();
+    prisma.storeSourceVisit = { findUnique: jest.fn().mockResolvedValue({ variant: 'B', experiment: { id: 'e1', storeId: 's1', status: 'RUNNING' } }) };
+    await new StoreAnalyticsService(prisma as never).ingest('shop', { sessionId: SESSION, visitToken: TOKEN, events: [{ type: 'page_view' }] });
+    expect(prisma.storeSourceVisit.findUnique).toHaveBeenCalledWith({ where: { token: TOKEN }, select: { variant: true, experiment: { select: { id: true, storeId: true, status: true } } } });
+    expect(prisma.storeAnalyticsEvent.createMany.mock.calls[0][0].data[0]).toMatchObject({ experimentId: 'e1', variant: 'B' });
+    for (const visit of [{ variant: 'A', experiment: { id: 'e0', storeId: 's1', status: 'COMPLETED' } }, { variant: 'A', experiment: { id: 'e2', storeId: 'other', status: 'RUNNING' } }, null]) {
+      prisma.storeAnalyticsEvent.createMany.mockClear(); prisma.storeSourceVisit.findUnique.mockResolvedValue(visit);
+      await new StoreAnalyticsService(prisma as never).ingest('shop', { sessionId: SESSION, visitToken: TOKEN, events: [{ type: 'page_view' }] });
+      expect(prisma.storeAnalyticsEvent.createMany.mock.calls[0][0].data[0].experimentId).toBeUndefined();
+    }
+  });
+});

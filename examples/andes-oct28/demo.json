@@ -1,0 +1,27 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvshms420001ptp0bwky0gw6",
+  "slug": "tii952ap",
+  "categories": {
+    "Trajes": "cmvshms4f0003ptp06l81xazw",
+    "Blazers": "cmvshms5u000dptp0zosvhs86",
+    "Camisas": "cmvshms68000nptp01wsctoxe",
+    "Hoodies": "cmvshms6h000xptp0gylpxkb1",
+    "Estampados": "cmvshms6r0017ptp0lcwrjrz4",
+    "Gorras": "cmvshms76001nptp0t1e7grwc"
+  },
+  "products": {
+    "M01": "cmvshms4w0007ptp0wfijbbqx",
+    "M02": "cmvshms5t000bptp0se4fiqex",
+    "M03": "cmvshms60000hptp0u02p8dcp",
+    "M04": "cmvshms67000lptp0on1p8nz6",
+    "M05": "cmvshms6c000rptp0u7pml4fi",
+    "M06": "cmvshms6g000vptp0lmug1cec",
+    "H01": "cmvshms6q0015ptp0tl9o0vrp",
+    "H02": "cmvshms6u001bptp0wqnddpeq",
+    "H03": "cmvshms70001hptp070kv8hzv",
+    "H04": "cmvshms75001lptp0wey1vos4",
+    "H05": "cmvshms79001rptp039mppcwd",
+    "U01": "cmvshms7c001vptp0yfdn871l"
+  }
+}

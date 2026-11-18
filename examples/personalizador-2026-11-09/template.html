@@ -1,0 +1,275 @@
+<title>Personalizador · ejemplos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Cormorant+Garamond:wght@500;600&family=Archivo:wght@500;700;800&family=Archivo+Black&display=swap">
+<style>
+/* Layout: a calm review sheet — short intro, then one full-width store panel per example, each in that store's own colours. */
+:root{
+  --bg:#f6f5f1; --fg:#1d1c19; --muted:#6b675e; --line:#dedbd2; --card:#ffffff; --accent:#2d55c8;
+  --display:'Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif; --body:'Figtree',ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#151513;--fg:#efede6;--muted:#a19d92;--line:#33322d;--card:#1e1e1b;--accent:#8aa6ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#151513;--fg:#efede6;--muted:#a19d92;--line:#33322d;--card:#1e1e1b;--accent:#8aa6ff;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body)}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:clamp(16px,4vw,40px);padding-block:40px 80px;display:grid;gap:56px}
+header.intro{display:grid;gap:14px;max-width:760px}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font:700 clamp(32px,5vw,52px)/1.02 var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.intro p{margin:0;color:var(--muted);max-width:65ch}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:6px 0 0;padding:0;list-style:none}
+.rules li{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--fg)}
+.rules b{display:block;font-weight:700;margin-bottom:2px}
+.example{display:grid;gap:14px}
+.ex-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px}
+.ex-head h2{font:700 24px/1.15 var(--display);margin:0}
+.ex-head .tag{font:600 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.note{margin:0;font-size:14px;color:var(--muted);max-width:80ch}
+.note b{color:var(--fg)}
+figure.orig{margin:0;display:grid;gap:8px}
+figure.orig img{border-radius:12px;border:1px solid var(--line);display:block}
+figure.orig figcaption{font-size:14px;color:var(--muted)}
+
+/* The personalizador itself (store side). Every colour comes from the store's own tokens set on .pz */
+.pz{--paper:#fff;--ink:#111;--stage:#eee;--btn:#111;--btn-ink:#fff;--shadow:#000;--head:var(--body);--txt:var(--body);
+  background:var(--paper);color:var(--ink);border-radius:18px;padding:clamp(18px,3.5vw,44px);display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(20px,4vw,56px);align-items:center;font-family:var(--txt);overflow:hidden}
+.pz__stage{position:relative;display:grid;place-items:center;min-height:clamp(320px,42vw,520px);border-radius:16px;background:var(--stage);padding:clamp(18px,3vw,40px);overflow:hidden}
+.pz__photo{width:100%;max-width:440px;aspect-ratio:4/5;object-fit:cover;border-radius:12px;display:block;transition:opacity .25s ease}
+.pz__photo.is-swap{opacity:0}
+.pz__frame{border:18px solid #b98a5a;background:#fff;box-shadow:0 18px 40px rgba(0,0,0,.28),inset 0 0 0 10px #fff;transition:border-color .3s ease,width .35s ease;width:52%}
+.pz__frame[data-size="1"]{width:66%}.pz__frame[data-size="2"]{width:84%}
+.pz__frame img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;padding:10px;background:#fff;transition:opacity .25s ease}
+.pz__frame img.is-swap{opacity:0}
+.pz__badge{position:absolute;left:16px;top:16px;background:var(--paper);color:var(--ink);font:700 12px/1 var(--txt);letter-spacing:.06em;text-transform:uppercase;padding:8px 12px;border-radius:999px}
+.pz__main{display:grid;gap:20px;min-width:0}
+.pz__kicker{margin:0;font:700 12px/1 var(--txt);letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+.pz__title{margin:0;font:700 clamp(26px,3.4vw,40px)/1.05 var(--head);text-wrap:balance}
+.pz__price{margin:0;font:700 22px/1 var(--txt);font-variant-numeric:tabular-nums}
+.pz__field{display:grid;gap:10px}
+.pz__label{font:700 12px/1 var(--txt);letter-spacing:.14em;text-transform:uppercase}
+.pz__label span{font-weight:500;letter-spacing:0;text-transform:none;opacity:.75;margin-left:6px}
+.pz__select{appearance:none;width:100%;font:500 17px/1.2 var(--txt);color:var(--ink);background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2.4'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 16px center;border:2px solid var(--ink);border-radius:12px;padding:14px 44px 14px 16px;box-shadow:3px 4px 0 var(--shadow)}
+.pz__swatches{display:flex;flex-wrap:wrap;gap:12px}
+.pz__swatch{width:44px;height:44px;border-radius:50%;border:3px solid var(--paper);box-shadow:0 0 0 1px color-mix(in srgb,var(--ink) 28%,transparent);cursor:pointer;padding:0}
+.pz__swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.pz__chips{display:flex;flex-wrap:wrap;gap:8px}
+.pz__chip{font:600 15px/1 var(--txt);padding:12px 18px;border-radius:999px;border:1px solid color-mix(in srgb,var(--ink) 25%,transparent);background:var(--paper);color:var(--ink);cursor:pointer;min-width:52px}
+.pz__chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.pz__stock{margin:-8px 0 0;font-size:14px;opacity:.8;min-height:1.2em}
+.pz__buy{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.pz__qty{display:inline-flex;align-items:center;border:2px solid var(--ink);border-radius:999px;overflow:hidden;background:var(--paper)}
+.pz__qty button{width:42px;height:48px;border:0;background:none;color:var(--ink);font:700 18px/1 var(--txt);cursor:pointer}
+.pz__qty output{min-width:28px;text-align:center;font:700 16px/1 var(--txt);font-variant-numeric:tabular-nums}
+.pz__btn{display:inline-flex;align-items:center;gap:10px;font:700 15px/1 var(--txt);letter-spacing:.1em;text-transform:uppercase;padding:17px 28px;border-radius:999px;border:2px solid var(--ink);background:var(--btn);color:var(--btn-ink);box-shadow:4px 5px 0 var(--shadow);cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.pz__btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 var(--shadow)}
+.pz__btn:focus-visible,.pz__chip:focus-visible,.pz__swatch:focus-visible,.pz__select:focus-visible,.pz__qty button:focus-visible,.thumbs button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.pz__done{margin:0;font-size:14px;font-weight:600;min-height:1.4em}
+.pz__wa{margin:0;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--ink) 7%,var(--paper));font-size:14px;white-space:pre-line}
+.mode{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--card)}
+.mode button{font:600 13px/1 var(--body);padding:9px 14px;border-radius:999px;border:0;background:none;color:var(--muted);cursor:pointer}
+.mode button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+
+/* Store looks */
+.pz--lam{--paper:#f5efe6;--ink:#2b2420;--stage:linear-gradient(180deg,#e9dfd0 0%,#d9cbb6 100%);--btn:#2b2420;--btn-ink:#f5efe6;--shadow:#a8875b;--head:'Cormorant Garamond',Georgia,serif}
+.pz--lam .pz__title{font-weight:600;font-size:clamp(30px,3.8vw,46px)}
+.pz--oh{--paper:#fff7dd;--ink:#14204a;--stage:#fbe46b;--btn:#2d55c8;--btn-ink:#fff;--shadow:#14204a;--head:'Fraunces',Georgia,serif}
+.pz--vx{--paper:#fff1f3;--ink:#2a1720;--stage:#f7d5dc;--btn:#e2456f;--btn-ink:#fff;--shadow:#2a1720;--head:'Archivo',ui-sans-serif,sans-serif;--txt:'Archivo',ui-sans-serif,sans-serif}
+.pz--vx .pz__title{font-weight:800;letter-spacing:-.02em}
+.pz--bx{--paper:#f2f2ee;--ink:#0f1a33;--stage:#dfe3ea;--btn:#0f1a33;--btn-ink:#f2f2ee;--shadow:#9aa6bd;--head:'Archivo Black',ui-sans-serif,sans-serif;--txt:'Archivo',ui-sans-serif,sans-serif}
+.pz--bx .pz__title{font-weight:400;text-transform:uppercase;letter-spacing:-.01em}
+.thumbs{position:absolute;right:16px;bottom:16px;display:flex;gap:8px}
+.thumbs button{width:54px;height:66px;border-radius:8px;overflow:hidden;border:2px solid transparent;padding:0;cursor:pointer;background:none}
+.thumbs button[aria-pressed="true"]{border-color:var(--ink)}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+
+@media (max-width:760px){.pz{grid-template-columns:minmax(0,1fr)}.pz__stage{min-height:300px}}
+@media (prefers-reduced-motion:reduce){.pz__photo,.pz__frame,.pz__frame img,.pz__btn{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <span class="eyebrow">pagosYa · YAPI · para revisar antes de construir</span>
+    <h1>El personalizador, en cuatro tiendas reales</h1>
+    <p>Es el look del cuadro de Oh Belly que te gustó: panel de color grande con la foto en escena y, al lado, las elecciones en círculos y pastillas, y un botón grande. La diferencia es que ahora lee <b>las opciones reales del producto</b> (sus colores, tallas o sabores, con su foto, precio y stock) y <b>añade al carrito</b>. Tócalos: todos funcionan.</p>
+    <ul class="rules">
+      <li><b>Cuándo sale</b>YAPI lo pone solo si la tienda tiene un producto con opciones (color, talla, sabor). Una vez por tienda.</li>
+      <li><b>Qué muestra</b>Lo que el producto ya tiene, sin inventar nada. Sin opciones reales, no aparece.</li>
+      <li><b>El marco</b>Solo en tiendas de arte o láminas. Las demás muestran la foto sola.</li>
+      <li><b>El botón</b>«Añadir al carrito». Si la tienda vende por WhatsApp, «Pedir por WhatsApp» con el mensaje ya escrito.</li>
+    </ul>
+  </header>
+
+  <section class="example" aria-labelledby="ex0">
+    <div class="ex-head"><h2 id="ex0">El que te gustó</h2><span class="tag">Oh Belly · 27 de octubre</span></div>
+    <figure class="orig"><img src="{{sm-original.jpg}}" alt="Captura del módulo de marcos en la tienda Oh Belly, con Obra, Marco y Tamaño"><figcaption>Era el módulo «Marco» de las plantillas de entonces. Estaba pensado para láminas: por eso en una tienda de sodas decía «Obra» y «Marco» y solo pedía por WhatsApp.</figcaption></figure>
+  </section>
+
+  <section class="example" aria-labelledby="ex1">
+    <div class="ex-head"><h2 id="ex1">1 · Láminas Lu, con marco</h2><span class="tag">tienda de arte · el más parecido al original</span></div>
+    <div class="pz pz--lam" data-pz="lam">
+      <div class="pz__stage"><div class="pz__frame" data-size="0" data-frame><img alt="" src="{{sm-60ba150d-a3fd-463a-bf3f-f5e60bacfc83.jpg}}"></div></div>
+      <div class="pz__main">
+        <p class="pz__kicker">Elige tu lámina</p>
+        <h3 class="pz__title">Ponla en tu pared antes de pedirla</h3>
+        <label class="pz__field" for="lam-obra"><span class="pz__label">Obra</span>
+          <select class="pz__select" id="lam-obra" data-obra>
+            <option value="0" data-img="{{sm-60ba150d-a3fd-463a-bf3f-f5e60bacfc83.jpg}}" data-price="28090">Ramo de Flores Azules y Rojas</option>
+            <option value="1" data-img="{{sm-b73c1eec-db14-4b8b-8d5d-5142222e5f8a.jpg}}" data-price="32590">Ventana Mediterránea con Limones</option>
+            <option value="2" data-img="{{sm-69de96cd-551f-4a21-8fb4-58e0e273b8e3.jpg}}" data-price="13090">Café Good News</option>
+            <option value="3" data-img="{{sm-7370471a-5c21-448f-a272-cba5a346c324.jpg}}" data-price="38590">Tienda de Discos Vintage</option>
+          </select></label>
+        <div class="pz__field"><span class="pz__label">Marco <span data-frame-name>Madera natural</span></span>
+          <div class="pz__swatches" data-frames>
+            <button type="button" class="pz__swatch" aria-pressed="true" aria-label="Madera natural" data-name="Madera natural" data-colour="#b98a5a" style="background:#b98a5a"></button>
+            <button type="button" class="pz__swatch" aria-pressed="false" aria-label="Negro" data-name="Negro" data-colour="#1b1b1b" style="background:#1b1b1b"></button>
+            <button type="button" class="pz__swatch" aria-pressed="false" aria-label="Blanco" data-name="Blanco" data-colour="#f4f2ee" style="background:#f4f2ee"></button>
+            <button type="button" class="pz__swatch" aria-pressed="false" aria-label="Dorado" data-name="Dorado" data-colour="#b8963e" style="background:#b8963e"></button>
+          </div></div>
+        <div class="pz__field"><span class="pz__label">Tamaño</span>
+          <div class="pz__chips" data-sizes>
+            <button type="button" class="pz__chip" aria-pressed="true">30 × 40 cm</button>
+            <button type="button" class="pz__chip" aria-pressed="false">40 × 50 cm</button>
+            <button type="button" class="pz__chip" aria-pressed="false">50 × 70 cm</button>
+          </div></div>
+        <p class="pz__price" data-price>Bs 280,90</p>
+        <div class="pz__buy"><button type="button" class="pz__btn" data-add>Añadir al carrito</button></div>
+        <p class="pz__done" data-done role="status"></p>
+      </div>
+    </div>
+    <p class="note"><b>Ojo:</b> hoy las láminas de Láminas Lu no tienen las opciones «Marco» y «Tamaño», así que en esa tienda real todavía no saldría. Saldría cuando el comercio agregue esas opciones (con su precio por tamaño), o cuando se lo pida a YAPI por chat. Las 4 láminas, sus fotos y sus precios sí son los de la tienda.</p>
+  </section>
+
+  <section class="example" aria-labelledby="ex2">
+    <div class="ex-head"><h2 id="ex2">2 · Oh Belly, sabores</h2><span class="tag">bebidas · cada sabor con su foto</span></div>
+    <div class="pz pz--oh" data-pz="oh">
+      <div class="pz__stage"><span class="pz__badge">Prebiótica · 350 ml</span><img class="pz__photo" data-photo alt="Lata de Oh Belly" src="{{sm-e0738e26-e3fc-4fde-a34f-022623cb7735.jpg}}"></div>
+      <div class="pz__main">
+        <p class="pz__kicker">Arma tu pedido</p>
+        <h3 class="pz__title">Oh Belly soda prebiótica</h3>
+        <div class="pz__field"><span class="pz__label">Sabor <span data-chosen>Limón y jengibre</span></span>
+          <div class="pz__chips" data-variants>
+            <button type="button" class="pz__chip" aria-pressed="true" data-name="Limón y jengibre" data-stock="40" data-img="{{sm-e0738e26-e3fc-4fde-a34f-022623cb7735.jpg}}">Limón y jengibre</button>
+            <button type="button" class="pz__chip" aria-pressed="false" data-name="Pera e hinojo" data-stock="32" data-img="{{sm-d7603282-dfb2-49f5-baf7-20329cc98fa6.jpg}}">Pera e hinojo</button>
+            <button type="button" class="pz__chip" aria-pressed="false" data-name="Sandía y menta" data-stock="4" data-img="{{sm-157613f7-29ae-4e0a-a398-d4b8715c166d.jpg}}">Sandía y menta</button>
+            <button type="button" class="pz__chip" aria-pressed="false" data-name="Naranja y cúrcuma" data-stock="36" data-img="{{sm-402e9917-9111-46f9-9e12-24a717fe6878.jpg}}">Naranja y cúrcuma</button>
+            <button type="button" class="pz__chip" aria-pressed="false" data-name="Arándano y manzanilla" data-stock="28" data-img="{{sm-778ae7d1-7918-4b51-a63f-3a939ae88158.jpg}}">Arándano y manzanilla</button>
+          </div></div>
+        <p class="pz__stock" data-stock-line></p>
+        <p class="pz__price">Bs 18,00 <span style="font-weight:500;font-size:15px;opacity:.7">la lata</span></p>
+        <div class="pz__buy">
+          <div class="pz__qty"><button type="button" data-minus aria-label="Una menos">−</button><output data-qty>1</output><button type="button" data-plus aria-label="Una más">+</button></div>
+          <button type="button" class="pz__btn" data-add>Añadir al carrito</button>
+        </div>
+        <p class="pz__done" data-done role="status"></p>
+      </div>
+    </div>
+    <p class="note">Producto, sabores, fotos, precio y stock reales de la tienda Oh Belly. Cuando quedan pocas, lo avisa (en Sandía y menta quedan 4).</p>
+  </section>
+
+  <section class="example" aria-labelledby="ex3">
+    <div class="ex-head"><h2 id="ex3">3 · Vórtice, colores</h2><span class="tag">electro · el círculo cambia la foto</span></div>
+    <div class="pz pz--vx" data-pz="vx">
+      <div class="pz__stage"><img class="pz__photo" data-photo alt="Licuadora personal Vórtice" src="{{sm-9c3a3ad0-2ca4-4822-b643-10e87a6edb66.jpg}}"></div>
+      <div class="pz__main">
+        <p class="pz__kicker">Elige la tuya</p>
+        <h3 class="pz__title">Licuadora personal 600 W</h3>
+        <div class="pz__field"><span class="pz__label">Color <span data-chosen>Negro</span></span>
+          <div class="pz__swatches" data-variants>
+            <button type="button" class="pz__swatch" aria-pressed="true" aria-label="Negro" data-name="Negro" data-stock="8" data-img="{{sm-9c3a3ad0-2ca4-4822-b643-10e87a6edb66.jpg}}" style="background:#1d1d1d"></button>
+            <button type="button" class="pz__swatch" aria-pressed="false" aria-label="Arena" data-name="Arena" data-stock="7" data-img="{{sm-c8ea12bc-c089-457b-a073-1a3298aa8522.jpg}}" style="background:#d8c3a5"></button>
+            <button type="button" class="pz__swatch" aria-pressed="false" aria-label="Rosa" data-name="Rosa" data-stock="5" data-img="{{sm-1b14b711-0a0e-43f5-91a5-f4bb331f44ce.jpg}}" style="background:#f2b8c4"></button>
+          </div></div>
+        <p class="pz__stock" data-stock-line></p>
+        <p class="pz__price">Bs 450,00</p>
+        <div class="pz__buy"><button type="button" class="pz__btn" data-add>Añadir al carrito</button></div>
+        <p class="pz__done" data-done role="status"></p>
+      </div>
+    </div>
+    <p class="note">El color del círculo sale del nombre de la opción (Negro, Arena, Rosa). Si el nombre no es un color conocido, el círculo lleva la foto de esa opción.</p>
+  </section>
+
+  <section class="example" aria-labelledby="ex4">
+    <div class="ex-head"><h2 id="ex4">4 · BOXY, tallas</h2>
+      <div class="mode" role="group" aria-label="Cómo vende la tienda"><button type="button" aria-pressed="true" data-mode="cart">Con carrito</button><button type="button" aria-pressed="false" data-mode="wa">Por WhatsApp</button></div></div>
+    <div class="pz pz--bx" data-pz="bx">
+      <div class="pz__stage"><img class="pz__photo" data-photo alt="Hoodie Marino Oversize" src="{{sm-05d383c5-c43c-4f9d-9a7d-947f568d804a.jpg}}">
+        <div class="thumbs" data-thumbs>
+          <button type="button" aria-pressed="true" aria-label="Foto 1" data-img="{{sm-05d383c5-c43c-4f9d-9a7d-947f568d804a.jpg}}"><img alt="" src="{{sm-05d383c5-c43c-4f9d-9a7d-947f568d804a.jpg}}"></button>
+          <button type="button" aria-pressed="false" aria-label="Foto 2" data-img="{{sm-7ce63936-7c38-4d61-9234-fa52e9e2b31e.jpg}}"><img alt="" src="{{sm-7ce63936-7c38-4d61-9234-fa52e9e2b31e.jpg}}"></button>
+        </div></div>
+      <div class="pz__main">
+        <p class="pz__kicker">Tu talla</p>
+        <h3 class="pz__title">Hoodie Marino Oversize</h3>
+        <div class="pz__field"><span class="pz__label">Talla <span data-chosen>M</span></span>
+          <div class="pz__chips" data-variants>
+            <button type="button" class="pz__chip" aria-pressed="false" data-name="S">S</button>
+            <button type="button" class="pz__chip" aria-pressed="true" data-name="M">M</button>
+            <button type="button" class="pz__chip" aria-pressed="false" data-name="L">L</button>
+            <button type="button" class="pz__chip" aria-pressed="false" data-name="XL">XL</button>
+          </div></div>
+        <p class="pz__price">Bs 340,00</p>
+        <div class="pz__buy"><button type="button" class="pz__btn" data-add>Añadir al carrito</button></div>
+        <p class="pz__wa" data-wa hidden></p>
+        <p class="pz__done" data-done role="status"></p>
+      </div>
+    </div>
+    <p class="note">Con el selector de arriba ves la misma sección en una tienda que vende por WhatsApp: cambia el botón y el mensaje se escribe solo con lo elegido.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  const money = c => 'Bs ' + (c/100).toLocaleString('es-BO',{minimumFractionDigits:2,maximumFractionDigits:2});
+  function swapPhoto(img, src){ if(!img || img.getAttribute('src')===src) return; img.classList.add('is-swap'); setTimeout(()=>{ img.src=src; img.classList.remove('is-swap'); },180); }
+  function pressOne(group, btn){ group.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', String(b===btn))); }
+  function flash(card, text){ const d=card.querySelector('[data-done]'); d.textContent=text; clearTimeout(d._t); d._t=setTimeout(()=>{d.textContent=''},2600); }
+
+  document.querySelectorAll('[data-pz]').forEach(card=>{
+    const photo = card.querySelector('[data-photo]');
+    const chosen = card.querySelector('[data-chosen]');
+    const stockLine = card.querySelector('[data-stock-line]');
+    const variants = card.querySelector('[data-variants]');
+    const qtyOut = card.querySelector('[data-qty]');
+    const wa = card.querySelector('[data-wa]');
+    let qty = 1;
+    const current = () => variants && variants.querySelector('[aria-pressed="true"]');
+    const showStock = () => { if(!stockLine) return; const s=Number(current() && current().dataset.stock); stockLine.textContent = s && s<=5 ? `¡Quedan ${s}!` : s ? 'Disponible' : ''; };
+    const updateWa = () => { if(wa) wa.textContent = `Mensaje que se envía:\nHola BOXY, quiero «Hoodie Marino Oversize», talla ${current().dataset.name}. ¿Está disponible?`; };
+    if(variants) variants.addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; pressOne(variants,b); if(chosen) chosen.textContent=b.dataset.name; if(b.dataset.img) swapPhoto(photo,b.dataset.img); showStock(); updateWa(); });
+    const minus = card.querySelector('[data-minus]'), plus = card.querySelector('[data-plus]');
+    if(minus) minus.addEventListener('click',()=>{ qty=Math.max(1,qty-1); qtyOut.textContent=qty; });
+    if(plus) plus.addEventListener('click',()=>{ qty=Math.min(99,qty+1); qtyOut.textContent=qty; });
+    const thumbs = card.querySelector('[data-thumbs]');
+    if(thumbs) thumbs.addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; pressOne(thumbs,b); swapPhoto(photo,b.dataset.img); });
+    showStock(); updateWa();
+
+    const frame = card.querySelector('[data-frame]');
+    const obra = card.querySelector('[data-obra]');
+    if(frame){
+      const fimg = frame.querySelector('img');
+      obra.addEventListener('change',()=>{ const o=obra.selectedOptions[0]; swapPhoto(fimg,o.dataset.img); card.querySelector('[data-price]').textContent=money(Number(o.dataset.price)); });
+      const frames = card.querySelector('[data-frames]');
+      frames.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; pressOne(frames,b); frame.style.borderColor=b.dataset.colour; card.querySelector('[data-frame-name]').textContent=b.dataset.name; });
+      const sizes = card.querySelector('[data-sizes]');
+      sizes.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; pressOne(sizes,b); frame.dataset.size=String([...sizes.children].indexOf(b)); });
+    }
+
+    card.querySelector('[data-add]').addEventListener('click',()=>{
+      if(card.dataset.mode==='wa'){ flash(card,'Aquí se abriría WhatsApp con ese mensaje (ejemplo).'); return; }
+      const parts = obra
+        ? [obra.selectedOptions[0].textContent, 'marco ' + card.querySelector('[data-frame-name]').textContent.toLowerCase(), card.querySelector('[data-sizes] [aria-pressed="true"]').textContent]
+        : [card.querySelector('.pz__title').textContent, current() && current().dataset.name];
+      flash(card, `Añadido al carrito: ${qty>1 ? qty+' × ' : ''}${parts.filter(Boolean).join(' · ')} (ejemplo)`);
+    });
+  });
+
+  const modeGroup = document.querySelector('.mode');
+  const bx = document.querySelector('[data-pz="bx"]');
+  modeGroup.addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return; pressOne(modeGroup,b);
+    bx.dataset.mode=b.dataset.mode;
+    const add=bx.querySelector('[data-add]'), wa=bx.querySelector('[data-wa]');
+    if(b.dataset.mode==='wa'){ add.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></svg>Pedir por WhatsApp'; wa.hidden=false; }
+    else { add.textContent='Añadir al carrito'; wa.hidden=true; }
+  });
+})();
+</script>

@@ -1,0 +1,24 @@
+{
+ "390": {
+  "header": "es-header",
+  "logoImgHeader": true,
+  "logoImgFooter": true,
+  "menu": true,
+  "search": true,
+  "account": true,
+  "cart": true,
+  "paper": "rgb(243, 240, 230)",
+  "heading": "\"Familjen Grotesk\", sans-serif"
+ },
+ "1280": {
+  "header": "es-header",
+  "logoImgHeader": true,
+  "logoImgFooter": true,
+  "menu": true,
+  "search": true,
+  "account": true,
+  "cart": true,
+  "paper": "rgb(243, 240, 230)",
+  "heading": "\"Familjen Grotesk\", sans-serif"
+ }
+}

@@ -1,0 +1,50 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwaz4b5a0001o46dgkv9iew6",
+  "slug": "l7njnkio",
+  "photos": {
+    "69c62a28-f877-4279-8d30-eb04aa8459ac.jpg": "/v1/uploads/bd50915f-75b5-46f8-a906-b8eb6e541035.jpg",
+    "43914c22-eee3-4377-8337-4fd5b9adc7ca.jpg": "/v1/uploads/43f61058-6931-4ae4-ad87-d286e3808f2e.jpg",
+    "42969784-e85e-45ee-b49d-09771e628d4b.jpg": "/v1/uploads/0bfa705b-846e-4034-ba6b-bbfa44e83acc.jpg",
+    "a62378de-9c10-475f-b2e0-95aac115d404.jpg": "/v1/uploads/4046ee6d-b60d-488d-993b-af4c733d0511.jpg",
+    "ba5a564d-64a2-4797-b1a4-0eb924320b20.jpg": "/v1/uploads/e70370fb-01c8-4a3c-8281-f2c94bf0323a.jpg",
+    "6242c461-091d-4b57-a751-13369fd0f4f6.jpg": "/v1/uploads/9972c35e-c466-4db9-a7c5-8340ffe5cc08.jpg",
+    "bc671c95-4872-47ed-af10-e193e03eb419.jpg": "/v1/uploads/7d388826-a143-4694-b89b-eee1f12832c7.jpg",
+    "brand:02688f7efeaa355e0738711779f2bdd4.jpg": "/v1/uploads/56197f75-c06d-47d0-9aeb-ac98d7581218.jpg",
+    "brand:112c9902e1bebf0b8a61ef9e7d8f58c0.jpg": "/v1/uploads/7851a84f-b909-4738-9e5e-97a688525153.jpg",
+    "brand:13c0adef197cd5a30ebb20aa4c036767.jpg": "",
+    "brand:56dbc78f06d58c78f08f0ad48ed9a772.jpg": "",
+    "brand:5fca79631e2d107bb59c5a8d434400fc.jpg": "",
+    "brand:6bfb59b06ec40238e756884eb4ee0af5.jpg": "",
+    "brand:8fc422aa300d536524a1fb2b9cc8359e.jpg": "/v1/uploads/804dc5d5-b304-48f4-95cb-d2e9e615d2b6.jpg",
+    "brand:PHOTO-2026-10-23-17-39-00.jpg": "",
+    "brand:c7dfb7871747a37c128a69d9ac931a46.jpg": "",
+    "brand:ce7f3153deaa2d8e416b1c895a03f69d.jpg": "/v1/uploads/f69b9a4e-c45f-4b8f-b892-b19970a18a6c.jpg",
+    "brand:fa86190ce69cd3c328bc32bb15f9f129.jpg": ""
+  },
+  "categories": {
+    "Gelatos": "cmwaz4b5l0003o46dk1vfy4pp",
+    "Copas": "cmwaz4b5l0005o46d0ddshr93",
+    "Para regalar": "cmwaz4b5m0007o46dyyb7nw0j",
+    "Para compartir": "cmwaz4b5m0009o46dq1vpvy5m"
+  },
+  "products": {
+    "Gelato de tofu clásico": "cmwaz4b5r000do46ddhu60prk",
+    "Gelato de tofu con cereal crocante": "cmwaz4b5v000ho46d7aj1rtwv",
+    "Gelato de tofu y chocolate": "cmwaz4b5y000lo46d5dow4r3y",
+    "Gelato con mango y waffle": "cmwaz4b61000po46dmc033e8f",
+    "Copa DooBoo": "cmwaz4b65000to46d3dnynvt9",
+    "Caja DooBoo con capibara": "cmwaz4b68000xo46d42gm58k0",
+    "Caja para compartir (4 vasos)": "cmwaz4b6b0011o46ddg3gtstg"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwaz4b9e001jo46d5kaa07v7"
+}

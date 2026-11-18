@@ -1,0 +1,736 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://khaite.com/",
+    "title": "KHAITE | Womenswear and Leather Goods",
+    "width": 1440,
+    "pageHeight": 5267,
+    "fonts": {
+      "h1": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "KHAITE"
+      },
+      "h2": null,
+      "body": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Complimentary shipping on all orders worldwide.*"
+      },
+      "button": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to main content"
+      },
+      "nav": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Highlights"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 56,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Highlights",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit",
+        "KHAITE x Oliver Peoples",
+        "Exclusives",
+        "Resort 2027",
+        "After Dark",
+        "Highlights",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 0,
+        "h": 1802,
+        "bg": "rgb(0, 0, 0)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1802,
+        "h": 1085,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 6,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2887,
+        "h": 884,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3771,
+        "h": 810,
+        "bg": "rgb(0, 0, 0)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://khaite.com/?_su_rec=cyk2xJx33inDTYicbU8Ll45BEKlX9Sw-x2B7CC2kBUtFidTIGVhSFbxqvK5aZhJvQDA3GISHWj1LZOJ7GDss6pLKR5126Zh8Scj1HcXy12j-j7qrXMNdQh_ZaI2Yc_B1H42mM0Hv-yXIfTt0corf3GcUZYilvIG1htMOe1k1-V4-lS1dcIVce2chgzxW8Z1ZdxtI-S8oKnsbQv21RHvEvxHdWbUNSpUhcMC9AVTliaNdKNilpp1TUpNyQv_cWqESNEw4fUjFf6OKA1RDAX5NMun27wCE9uPQoOLubqjJrlYUFfu_NXl9Oav825DqCLTNwnht8q9rWudO5XnCe6GXKb5Z_vKhndqGgg_3IQ&_su_rec_id=a42f626b-5bc4-42ed-b98d-6bed0fed08f0-1794667277",
+    "title": "KHAITE | Womenswear and Leather Goods",
+    "width": 390,
+    "pageHeight": 2602,
+    "fonts": {
+      "h1": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "KHAITE"
+      },
+      "h2": null,
+      "body": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Complimentary shipping on all orders worldwide.*"
+      },
+      "button": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to main content"
+      },
+      "nav": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "KHAITE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 56,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Menu",
+        "KHAITE",
+        "Close mobile menu",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit",
+        "KHAITE x Oliver Peoples",
+        "Exclusives",
+        "Resort 2027",
+        "After Dark",
+        "View All",
+        "Dresses",
+        "Shirts & Tops",
+        "Knitwear"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 3,
+    "sections": [
+      {
+        "y": 0,
+        "h": 490,
+        "bg": "rgb(0, 0, 0)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 490,
+        "h": 608,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 6,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1098,
+        "h": 288,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1386,
+        "h": 488,
+        "bg": "rgb(0, 0, 0)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://khaite.com/collections/all",
+    "title": "Products – KHAITE",
+    "width": 1440,
+    "pageHeight": 4337,
+    "fonts": {
+      "h1": {
+        "family": "ITC Galliard",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Products"
+      },
+      "h2": null,
+      "body": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Complimentary shipping on all orders worldwide.*"
+      },
+      "button": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to main content"
+      },
+      "nav": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Highlights"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 56,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Highlights",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit",
+        "KHAITE x Oliver Peoples",
+        "Exclusives",
+        "Resort 2027",
+        "After Dark",
+        "Highlights",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 2,
+    "sections": [
+      {
+        "y": 112,
+        "h": 3459,
+        "bg": "rgb(255, 255, 255)",
+        "images": 91,
+        "video": false,
+        "heading": null,
+        "words": 109,
+        "perRow": 12,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://khaite.com/collections/all",
+    "title": "Products – KHAITE",
+    "width": 390,
+    "pageHeight": 5568,
+    "fonts": {
+      "h1": {
+        "family": "ITC Galliard",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Products"
+      },
+      "h2": null,
+      "body": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Complimentary shipping on all orders worldwide.*"
+      },
+      "button": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to main content"
+      },
+      "nav": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "KHAITE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 56,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Menu",
+        "KHAITE",
+        "Close mobile menu",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit",
+        "KHAITE x Oliver Peoples",
+        "Exclusives",
+        "Resort 2027",
+        "After Dark",
+        "View All",
+        "Dresses",
+        "Shirts & Tops",
+        "Knitwear"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 97,
+        "h": 4702,
+        "bg": "rgb(255, 255, 255)",
+        "images": 91,
+        "video": false,
+        "heading": null,
+        "words": 109,
+        "perRow": 6,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://khaite.com/products/soft-blake-small-shoulder-bag-in-natural-python-and-black-suede",
+    "title": "Soft Blake Small Shoulder Bag in Natural Python and Black Suede – KHAITE",
+    "width": 1440,
+    "pageHeight": 7538,
+    "fonts": {
+      "h1": {
+        "family": "ITC Galliard",
+        "size": "16px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Soft Blake Small Shoulder Bag"
+      },
+      "h2": null,
+      "body": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Complimentary shipping on all orders worldwide.*"
+      },
+      "button": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to main content"
+      },
+      "nav": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Highlights"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 56,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Highlights",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit",
+        "KHAITE x Oliver Peoples",
+        "Exclusives",
+        "Resort 2027",
+        "After Dark",
+        "Highlights",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 3,
+    "sections": [
+      {
+        "y": 0,
+        "h": 6050,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": true,
+        "heading": {
+          "family": "ITC Galliard",
+          "size": "16px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Soft Blake Small Shoulder Bag"
+        },
+        "words": 62,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Fakt Pro",
+      "size": "12px",
+      "weight": "350",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Bs46.889"
+    },
+    "galleryImages": 5,
+    "swatches": 22,
+    "selects": 1,
+    "accordions": 42
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://khaite.com/products/soft-blake-small-shoulder-bag-in-natural-python-and-black-suede",
+    "title": "Soft Blake Small Shoulder Bag in Natural Python and Black Suede – KHAITE",
+    "width": 390,
+    "pageHeight": 2442,
+    "fonts": {
+      "h1": {
+        "family": "ITC Galliard",
+        "size": "16px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Soft Blake Small Shoulder Bag"
+      },
+      "h2": null,
+      "body": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Complimentary shipping on all orders worldwide.*"
+      },
+      "button": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to main content"
+      },
+      "nav": {
+        "family": "Fakt Pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "KHAITE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Menu",
+        "KHAITE",
+        "Close mobile menu",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit",
+        "KHAITE x Oliver Peoples",
+        "Exclusives",
+        "Resort 2027",
+        "After Dark",
+        "View All",
+        "Dresses",
+        "Shirts & Tops",
+        "Knitwear"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 2,
+    "sections": [
+      {
+        "y": 56,
+        "h": 1164,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": true,
+        "heading": {
+          "family": "ITC Galliard",
+          "size": "16px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Soft Blake Small Shoulder Bag"
+        },
+        "words": 67,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Fakt Pro",
+      "size": "13px",
+      "weight": "350",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Bs46.889"
+    },
+    "galleryImages": 5,
+    "swatches": 22,
+    "selects": 1,
+    "accordions": 42
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://khaite.com/cart",
+    "title": "Your Shopping Cart – KHAITE",
+    "width": 1440,
+    "pageHeight": 1297,
+    "fonts": {
+      "h1": {
+        "family": "ITC Galliard",
+        "size": "16px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shopping Cart"
+      },
+      "h2": null,
+      "body": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Complimentary shipping on all orders worldwide.*"
+      },
+      "button": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to main content"
+      },
+      "nav": {
+        "family": "Fakt Pro",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Highlights"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 56,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Highlights",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit",
+        "KHAITE x Oliver Peoples",
+        "Exclusives",
+        "Resort 2027",
+        "After Dark",
+        "Highlights",
+        "New Arrivals",
+        "Resort 2027",
+        "Fall/Winter 2026",
+        "After Dark",
+        "The Wardrobe Edit"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 2,
+    "sections": [
+      {
+        "y": 96,
+        "h": 435,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "ITC Galliard",
+          "size": "16px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shopping Cart"
+        },
+        "words": 86,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

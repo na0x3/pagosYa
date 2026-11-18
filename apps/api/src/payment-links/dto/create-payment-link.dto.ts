@@ -30,7 +30,8 @@ export class ProductOptionValueDto {
   @IsString() @IsSafeText() @Length(1, 40)
   name!: string;
 
-  @IsString() @IsSafeText() @Length(1, 40)
+  // Copy a store (2026-11-18): Shopify option values run longer («1 oz California White Sturgeon + 1 oz Osetra», 44 characters).
+  @IsString() @IsSafeText() @Length(1, 80)
   value!: string;
 }
 

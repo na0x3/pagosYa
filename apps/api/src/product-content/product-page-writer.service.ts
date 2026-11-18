@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { AiUsageService } from '../ai-usage/ai-usage.service';
 import { chatgptPlanProvider } from '../ai/chatgpt-plan-provider';
+import { claudeChatProvider } from '../ai/claude-responses-gateway';
 import { autoFillable, mergeWrittenPage, PRODUCT_PAGE_SCHEMA, productPagePrompt, writtenPage, type ProductPageFacts } from './product-page-writer';
 
 const MAX_AUTO_WRITES = 2;
@@ -41,7 +42,8 @@ export class ProductPageWriterService {
     const facts: ProductPageFacts = { store: storeWords || null, name: product.name, description: product.description, specifications: Array.isArray(product.specifications) ? product.specifications as ProductPageFacts['specifications'] : [], tags: product.tags, category: product.category?.name ?? null };
     const photoUrls = (product.imageUrls || []).slice(0, 4);
     const model = this.config.get<string>('app.openAi.inventoryModel') ?? 'gpt-5.6-luna';
-    const plan = chatgptPlanProvider(this.config, model);
+    // Live 2026-11-17 (every product page failed on The Bake Lab and NOA): with YAPI_CHAT_ON_CLAUDE the page is written on Claude.
+    const plan = claudeChatProvider() ?? chatgptPlanProvider(this.config, model);
     const apiKey = plan?.apiKey ?? this.config.get<string>('app.openAi.apiKey');
     if (!apiKey || !plan && this.config.get<boolean>('app.openAi.enabled') === false) throw new ServiceUnavailableException('YAPI no está configurado para escribir páginas de producto.');
     const images = (await Promise.all(photoUrls.map(async (url, index) => {

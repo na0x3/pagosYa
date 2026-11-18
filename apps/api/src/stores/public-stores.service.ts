@@ -13,6 +13,20 @@ import { PAID_STATUSES } from "../store-knowledge/store-knowledge";
 import { publicAssistant } from "../store-assistant/assistant-public-settings";
 import { topSellerId, TOP_SELLER_WINDOW_DAYS } from "./top-seller";
 
+/** Spec 2026-11-09 Merman cart: the zones the free-shipping bar may read — none for a store that ships nothing, and carrier zones only
+ *  when carriers are on (as the checkout quotes them; final review 2026-11-09). */
+export function freeShippingZoneWhere(store: { id: string; shippingEnabled?: boolean | null; shippingCarriersEnabled?: boolean | null }) {
+  if (!store.shippingEnabled) return null;
+  return { storeId: store.id, isActive: true, freeAbove: { gt: 0 }, ...(store.shippingCarriersEnabled ? {} : { carrierId: null }) };
+}
+
+/** Spec 2026-11-09 Merman checkout: the one real review the checkout shows — the newest published one (rows come newest first) of 4 stars
+ *  or more with at least 40 characters, naming its product. None → no card, never an invented quote. */
+export function checkoutReviewOf(reviews: Array<{ displayName: string; rating: number; body: string; productId: string }>, items: Array<{ id: string; name: string }>) {
+  const review = reviews.find(row => row.rating >= 4 && row.body.trim().length >= 40);
+  return review ? { name: review.displayName, rating: review.rating, body: review.body.trim(), productName: items.find(item => item.id === review.productId)?.name ?? '' } : undefined;
+}
+
 /** What shoppers read: a published store with its catalog, the store directory, newsletter sign-ups, and batched view counting. */
 @Injectable()
 export class PublicStoresService implements OnModuleDestroy {
@@ -187,6 +201,11 @@ export class PublicStoresService implements OnModuleDestroy {
     // explicitly disables it for editor previews and browsers marked as the
     // store owner; ordinary shared-link loads continue to count.
     const trackView = !options.ownerMerchantId && options.trackView !== false;
+    // Never in the way of the store: a failed read only leaves the bar and the card out.
+    const mermanData = Promise.all([
+      Promise.resolve().then(() => { const where = freeShippingZoneWhere(store); return where ? this.prisma.deliveryZone.findFirst({ where, orderBy: { freeAbove: "asc" }, select: { freeAbove: true } }) : null; }).catch(() => null),
+      Promise.resolve().then(() => this.prisma.storeReview.findMany({ where: { storeId: store.id, status: "PUBLISHED", rating: { gte: 4 } }, orderBy: { createdAt: "desc" }, take: 20, select: { displayName: true, rating: true, body: true, productId: true } })).catch(() => [] as Array<{ displayName: string; rating: number; body: string; productId: string }>),
+    ]);
     const [items, categories, links, productStats, appointmentOfferings, collections, look, paidOrders] = await Promise.all([
       this.prisma.paymentLink.findMany({
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
@@ -216,6 +235,8 @@ export class PublicStoresService implements OnModuleDestroy {
         select: { items: true }, orderBy: { createdAt: 'desc' }, take: 5000,
       }),
     ]);
+    const [freeZone, mermanReviews] = await mermanData;
+    const merman = { freeZone, review: checkoutReviewOf(mermanReviews, items) };
     if (trackView) this.queueStoreView(store.id);
 
     const soldByProduct = new Map(productStats.map((stat) => [stat.paymentLinkId, stat.quantity]));
@@ -327,6 +348,7 @@ export class PublicStoresService implements OnModuleDestroy {
       cartButtonLabel: store.cartButtonLabel,
       siteDocument: store.siteDocument,
       checkoutMode: store.checkoutMode,
+      whatsappButton: store.whatsappButton,
       leadCaptureUrl: store.leadCaptureUrl,
       cartRecommendationsEnabled: store.cartRecommendationsEnabled,
       cartRecommendationProductIds: readStringArray(store.cartRecommendationProductIds),
@@ -334,6 +356,9 @@ export class PublicStoresService implements OnModuleDestroy {
       topSellerId: topSellerId(paidOrders),
       showLowStockToCustomers: store.showLowStockToCustomers,
       policies: storePolicies(store.policies),
+      // Spec 2026-11-09 Merman cart + checkout: the free-shipping amount (lowest of the active zones) and one real review.
+      ...(merman.freeZone?.freeAbove ? { freeShippingFrom: merman.freeZone.freeAbove } : {}),
+      ...(merman.review ? { checkoutReview: merman.review } : {}),
       // The merchant's own FAQ questions (YAPI edits everything, 2026-11-03), shown first on the FAQ page.
       faq: storeFaq(store.policies),
       assistant,

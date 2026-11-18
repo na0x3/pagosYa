@@ -1,3 +1,4 @@
+import { writeAgentProductMedia, type AgentProductMedia } from './source-agent-product-media';
 import { EmailKitService } from '../store-emails/email-kit.service';
 import { PICK_HERO_WAIT_MS } from './source-style-release';
 import { COMMERCE_TEMPLATES_FILE, SURFACE_LABELS, SURFACE_PARTS, readTemplatesFile, type SurfacePart } from './commerce-surfaces/surface-parts';
@@ -31,6 +32,8 @@ import { merchantAsksForPhotoGroup, sourceMediaPolicy } from './source-media-des
 import { recoverStorePhotos } from './source-redesign-photos';
 import { repairSourcePhotoGroups } from './source-photo-groups';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
+import { publicRetentionSettings } from '../retention/retention.service';
+import { DEFAULT_RETENTION } from '../retention/retention.dto';
 import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, FRAME_CATALOGUE, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { readControls, withControlsConfig, type StoreControls } from './store-controls';
@@ -124,7 +127,7 @@ import type { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source-edits";
 import { AgentToolbox } from './agent/agent-tools';
 import { agentLimits, agentRunHeadroom } from './agent/agent-loop';
-import { sourceDraftRetry, type SourceDraftRetry } from './source-draft-retry';
+import { draftSavedByItsRequest, sourceDraftRetry, type SourceDraftRetry } from './source-draft-retry';
 import { agentPreviewSnapshot } from './agent/agent-capture';
 import { snapshotWithProductTheme } from './product-theme';
 import { CLAUDE_COMPANION_MODEL, brandPalette, completedCredits, fillsProductPagesAfterSave } from './source-generation-run';
@@ -150,6 +153,13 @@ export { sourceMarqueeEditPaths, validateGeneratedSource } from './source-genera
 // The merchant-facing gate lives with the validation error type so every
 // validator shares one default-deny path. Re-exported for existing importers.
 export { merchantFacingSourceFailure } from './source-validation-error';
+
+/** Live 2026-11-17 (NOA vyerqe9q: every chat edit of a V2 store failed «unsupported_on_claude»): with YAPI_CHAT_ON_CLAUDE the
+ *  OpenAI-shaped gateway carries no tools, so the tool-using edit agent runs on that Claude model natively (Anthropic key). */
+function onClaudePlan<T extends { model: string }>(plan: T): T {
+  const model = process.env.YAPI_CHAT_ON_CLAUDE;
+  return model && isClaude(model) && !isClaude(plan.model) ? { ...plan, model } : plan;
+}
 
 @Injectable()
 export class SourceGenerationService {
@@ -231,7 +241,9 @@ export class SourceGenerationService {
     if (!owner) throw new NotFoundException("Store not found");
     const data = await this.publicStores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
     const retention = await this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } });
-    return { retention: retention?.settings || {}, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, shippingCarriersEnabled: data.shippingCarriersEnabled, bundlesEnabled: data.bundlesEnabled, subscriptionsEnabled: data.subscriptionsEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
+    // Owner 2026-11-10: the preview's popup reads what a shopper's store reads (the game's prize labels), not the saved row.
+    const shownRetention = retention?.settings ? publicRetentionSettings({ ...DEFAULT_RETENTION, ...(retention.settings as object) }, owner.slug) : {};
+    return { retention: shownRetention, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, shippingCarriersEnabled: data.shippingCarriersEnabled, bundlesEnabled: data.bundlesEnabled, subscriptionsEnabled: data.subscriptionsEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
       contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
       contactFormEnabled: data.contactFormEnabled, contactTitle: data.contactTitle, contactSubtitle: data.contactSubtitle,
       categories: data.categories, locations: data.locations, items: data.items,
@@ -254,6 +266,8 @@ export class SourceGenerationService {
     const run = await this.prisma.storeSourceGeneration.findFirst({ where: { storeId, baseRevision: current.revision, createdAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) } }, orderBy: { createdAt: 'desc' }, select: { status: true, checkpoint: true, createdAt: true, requestJobId: true } });
     const checkpoint = run?.checkpoint as any;
     if (!run || !['FAILED', 'PARTIAL', 'BLOCKED', 'INTERRUPTED'].includes(run.status) || !Array.isArray(checkpoint?.files)) return { at: null };
+    const job = run.requestJobId ? await this.prisma.storeSourceChatJob.findFirst({ where: { id: run.requestJobId, storeId, merchantId }, select: { input: true, lastCommittedRevision: true } }) : null;
+    if (draftSavedByItsRequest(job, current.revision)) return { at: null };
     const at = run.createdAt.getTime();
     if (since === at) return { at, interrupted: true };
     const base = current.revision
@@ -278,7 +292,6 @@ export class SourceGenerationService {
     const snapshot = await agentPreviewSnapshot({ brief: base.brief, files }, checkpoint.preview?.files ?? checkpoint.files);
     const theme = checkpoint.preview ? checkpoint.preview.theme : checkpoint.theme;
     // The request that built this draft, so "Guardar borrador" can finish it (resumeDraft) instead of starting over.
-    const job = run.requestJobId ? await this.prisma.storeSourceChatJob.findFirst({ where: { id: run.requestJobId, storeId, merchantId }, select: { input: true } }) : null;
     const retry = sourceDraftRetry(job?.input);
     return { at, interrupted: true, files: (theme ? snapshotWithProductTheme(snapshot, theme) : snapshot).files, ...(retry ? { retry } : {}) };
   }
@@ -287,7 +300,7 @@ export class SourceGenerationService {
     const current = await this.projects.current(merchantId, storeId);
     if (current.revision !== dto.revision) throw new ConflictException('El proyecto cambió. Recarga antes de generar.');
     const sourceSize = dto.revision ? await this.projects.authoredSize(merchantId, storeId, dto.revision) : 0;
-    const plan = sourceGenerationPlan(dto.model, dto.revision, dto.instruction);
+    const plan = onClaudePlan(sourceGenerationPlan(dto.model, dto.revision, dto.instruction));
     const estimate = sourceGenerationEstimate(plan, sourceSize, dto.instruction.length, Math.min(6, dto.assetUrls?.length || 0), dto.revision === 0 || sourceRedesignRequested(dto.instruction));
     const maxCredits = dto.maxCredits ?? DEFAULT_MAX_CREDITS;
     const maxOutputTokens = sourceOutputBudget(plan, estimate.estimatedInputTokens, maxCredits);
@@ -331,7 +344,7 @@ export class SourceGenerationService {
     // A new request stops YAPI's background polish of the last store before it takes the lease (spec 2026-10-12): the polish
     // would only be discarded by this run's save. A private visual-repair candidate saves nothing, so it leaves it running.
     if (!execution?.candidate) await this.cancelReview(storeId);
-    const plan = sourceGenerationPlan(dto.model, dto.revision, dto.instruction);
+    const plan = onClaudePlan(sourceGenerationPlan(dto.model, dto.revision, dto.instruction));
     // Claude runs only the tool-using agent; the design planner and any single-call fallback keep an OpenAI companion.
     const claude = isClaude(plan.model);
     const agentProvider = claude ? sourceProvider(this.config, plan.model) : null;
@@ -457,7 +470,7 @@ export class SourceGenerationService {
     await bundleSourceCatalogMedia(data.items, apiUrl, retainedAssets, assets, async pathname => {
       if (!assetBuffers.has(pathname)) assetBuffers.set(pathname, await this.uploads.getBuffer(pathname.split('/').at(-1)!));
       return assetBuffers.get(pathname) || null;
-    }, assetLegend);
+    }, assetLegend, { bytes: Math.max(0, 6 * 1024 * 1024 - 512 * 1024 - [...retainedAssets, ...assets].filter(file => file.encoding === 'base64' && !sourceVideo(file.path)).reduce((total, file) => total + Buffer.byteLength(file.content, 'base64'), 0)) });
     const assetBudget = new Map([...retainedAssets, ...assets].map((file) => [file.path, Buffer.byteLength(file.content, file.encoding === "base64" ? "base64" : "utf8")]));
     if ([...assetBudget].filter(([path]) => sourceVideo(path)).reduce((total, [, size]) => total + size, 0) > MAX_SOURCE_VIDEO_BYTES) throw new BadRequestException("Los videos del proyecto superan 20 MB en total.");
     if ([...assetBudget].filter(([path]) => !sourceVideo(path)).reduce((total, [, size]) => total + size, 0) > 6 * 1024 * 1024) throw new BadRequestException("Las imágenes del proyecto superan 6 MB en total. Reduce su tamaño antes de generar.");
@@ -746,6 +759,7 @@ export class SourceGenerationService {
     let agentAccountTheme: AgentToolbox['pendingAccountTheme'] = null;
     let agentMotifPack: AgentToolbox['pendingMotifPack'] = undefined;
     let agentPolicies: PendingPolicies = {};
+    let agentProductMedia: AgentProductMedia[] = [];
     let unfinishedStatus: 'PARTIAL' | 'BLOCKED' | null = null;
     let compiledNext: SourceProjectFileDto[] = [];
     const editSchema = useNext ? { ...sourceEditSchema, properties: { ...sourceEditSchema.properties, appends: { ...sourceEditSchema.properties.appends, items: { ...sourceEditSchema.properties.appends.items, properties: { ...sourceEditSchema.properties.appends.items.properties, path: { type: 'string', enum: ['styles/globals.css'] } } } } } } : sourceEditSchema;
@@ -908,6 +922,7 @@ export class SourceGenerationService {
         get agentAccountTheme() { return agentAccountTheme; }, set agentAccountTheme(value) { agentAccountTheme = value; },
         get agentMotifPack() { return agentMotifPack; }, set agentMotifPack(value) { agentMotifPack = value; },
         get agentPolicies() { return agentPolicies; }, set agentPolicies(value) { agentPolicies = value; },
+        get agentProductMedia() { return agentProductMedia; }, set agentProductMedia(value) { agentProductMedia = value ?? []; },
         get agentOutcome() { return agentOutcome; }, set agentOutcome(value) { agentOutcome = value; },
         get unfinishedStatus() { return unfinishedStatus; }, set unfinishedStatus(value) { unfinishedStatus = value; },
         get taskPrompt() { return taskPrompt; }, set taskPrompt(value) { taskPrompt = value; },
@@ -1647,6 +1662,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const saved = await this.projects.save(merchantId, storeId, saveInput, { id: run.id, ...(!products.length && !productOperations.length ? { prepared: artifact } : {}), enablePayments: dto.revision === 0, products, productOperations, data: { model, credits, attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: receipt.durationMs, status: 'COMPLETED', activeStoreId: null, revision: dto.revision + 1, completedAt: new Date() } });
     // Written once the revision is saved, so a failed save never changes Ajustes (the owner chose: live when YAPI saves).
     if (agentPolicyChange) await this.prisma.store.update({ where: { id: storeId }, data: { policies: data.policies as Prisma.InputJsonValue } });
+    // Owner 2026-11-17: the photos and videos YAPI added to products, also only once the revision is saved.
+    if (agentProductMedia.length) await writeAgentProductMedia(this.prisma, merchantId, storeId, agentProductMedia);
     // The Sep-5 self-review runs after the store is shown (spec 2026-10-12 faster generation) and lands as N+1 if still wanted.
     if (sep5Review) await this.startSep5Review({ merchantId, storeId, revision: saved.revision, brief: dto.brief, savedFiles: saveInput.files, model, requestedModel: plan.requestedModel, maxCredits, freeRun, review: sep5Review });
     // The ChatGPT bridge serves about two calls at once: YAPI's polish goes first, and the email look and long product pages

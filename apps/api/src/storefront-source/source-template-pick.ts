@@ -115,6 +115,9 @@ export function templateSwitchRequest(instruction: string, templates: readonly P
   const text = fold(instruction);
   const asks = /\b(?:otra|nueva|distinta|diferente)\s+plantilla\b|\bplantilla\s+(?:distinta|diferente|nueva)\b|\b(?:cambia\w*|prueba\w*|usa\w*|pon\w*|aplica\w*|quiero)\b[^.!?\n]{0,30}\bplantilla\b/.test(text);
   if (!asks) return null;
-  const named = templates.find(template => new RegExp(`\\bplantilla\\s+(?:de\\s+|llamada\\s+)?[«"']?${fold(template.name)}\\b|\\b(?:a|la|por)\\s+${fold(template.name)}\\b`).test(text));
+  // Live 2026-11-10 (Salvia, «la botica con su horario… Usa la plantilla Burbuja»): a template named right after «plantilla» wins
+  // over a business word that only happens to be a template's name («la botica»).
+  const named = templates.find(template => new RegExp(`\\bplantilla\\s+(?:de\\s+|llamada\\s+)?[«"']?${fold(template.name)}\\b`).test(text))
+    ?? templates.find(template => new RegExp(`\\b(?:a|la|por)\\s+${fold(template.name)}\\b`).test(text));
   return named ? { id: named.id } : 'other';
 }
