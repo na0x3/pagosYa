@@ -16,9 +16,16 @@ export function compactPreviewImageData(content: string): string {
   return images.length ? `(function(){const __pagosyaImages=[${images.join(',')}];window.PAGOSYA_CONFIG=${compact};})();` : content;
 }
 
+/** Photos the Studio embeds into one preview before the rest stay upload links. */
+export const PREVIEW_EMBED_BYTES = 24 * 1024 * 1024;
+
 /** Fetch only platform uploads in Studio, never give generated code network access. */
 export function createPreviewImageLoader(apiBaseUrl: string) {
   const cache = new Map<string, Promise<string>>();
+  // Copy a store (2026-11-17): Graza's 81 products and 225 photos, each embedded once per place it shows, made a page
+  // bigger than the browser can hold («Invalid string length»). Past this much, a photo stays a link to the upload
+  // folder, which the preview's rules allow, as on a published store.
+  let room = PREVIEW_EMBED_BYTES;
   async function image(value: unknown): Promise<unknown> {
     if (typeof value !== 'string') return value;
     let filename: string | undefined;
@@ -43,6 +50,8 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
         if (!response.ok || !/^image\/(png|jpeg|webp|avif|gif)(?:;|$)/i.test(response.headers.get('content-type') || '')) throw new Error('Imagen no disponible');
         const blob = await response.blob();
         if (blob.size > 10 * 1024 * 1024) throw new Error('Imagen demasiado grande');
+        if (blob.size > room) return url;
+        room -= blob.size;
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result));
@@ -82,9 +91,11 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
       if (!Array.isArray(config?.data?.items)) return snapshot;
     } catch { return snapshot; }
     const tasks: Array<() => Promise<void>> = [];
+    // Every product's cover first, so the embedded room goes to the photos its cards show.
+    for (const item of config.data.items) if (item && Array.isArray(item.imageUrls) && item.imageUrls.length) tasks.push(async () => { item.imageUrls[0] = await image(item.imageUrls[0]); });
     for (const item of config.data.items) {
       if (!item || typeof item !== 'object') continue;
-      if (Array.isArray(item.imageUrls)) item.imageUrls.forEach((value: unknown, index: number) => tasks.push(async () => { item.imageUrls[index] = await image(value); }));
+      if (Array.isArray(item.imageUrls)) item.imageUrls.forEach((value: unknown, index: number) => index && tasks.push(async () => { item.imageUrls[index] = await image(value); }));
       // Normalize both galleries and color photos through the same cache. Mixing
       // embedded gallery images with upload URLs duplicates thumbnails and leaves
       // color selection dependent on network access inside the sandboxed frame.

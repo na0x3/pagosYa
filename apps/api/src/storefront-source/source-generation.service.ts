@@ -470,7 +470,7 @@ export class SourceGenerationService {
     await bundleSourceCatalogMedia(data.items, apiUrl, retainedAssets, assets, async pathname => {
       if (!assetBuffers.has(pathname)) assetBuffers.set(pathname, await this.uploads.getBuffer(pathname.split('/').at(-1)!));
       return assetBuffers.get(pathname) || null;
-    }, assetLegend);
+    }, assetLegend, { bytes: Math.max(0, 6 * 1024 * 1024 - 512 * 1024 - [...retainedAssets, ...assets].filter(file => file.encoding === 'base64' && !sourceVideo(file.path)).reduce((total, file) => total + Buffer.byteLength(file.content, 'base64'), 0)) });
     const assetBudget = new Map([...retainedAssets, ...assets].map((file) => [file.path, Buffer.byteLength(file.content, file.encoding === "base64" ? "base64" : "utf8")]));
     if ([...assetBudget].filter(([path]) => sourceVideo(path)).reduce((total, [, size]) => total + size, 0) > MAX_SOURCE_VIDEO_BYTES) throw new BadRequestException("Los videos del proyecto superan 20 MB en total.");
     if ([...assetBudget].filter(([path]) => !sourceVideo(path)).reduce((total, [, size]) => total + size, 0) > 6 * 1024 * 1024) throw new BadRequestException("Las imágenes del proyecto superan 6 MB en total. Reduce su tamaño antes de generar.");
