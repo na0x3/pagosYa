@@ -159,4 +159,7 @@ describe('agentContinuationTask', () => {
   it('asks for verify first when no check failed yet', () => {
     expect(agentContinuationTask('Rediseña', [])).toContain('Run verify first');
   });
+  it('asks edits to keep the brand brief when the store has one (spec 2026-11-18)', () => {
+    expect(agentInstructions('CONTRATOS', 'shop', false)).toContain('brand-brief.json');
+  });
 });

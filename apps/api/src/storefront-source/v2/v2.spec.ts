@@ -1144,3 +1144,22 @@ describe('V2 on an imported plain-page store (copy a store, 2026-11-17)', () => 
     expect(withV2Scaffold(files)).toBe(files);
   });
 });
+
+describe('V2 with a brand brief (spec 2026-11-18)', () => {
+  const { briefFacts } = require('./v2-prompts') as typeof import('./v2-prompts');
+  const { briefForRun } = require('./v2-prototype.service') as typeof import('./v2-prototype.service');
+  const { BRIEF } = require('../brand/brand-fixtures') as typeof import('../brand/brand-fixtures');
+
+  it('tells the designer the exact palette, fonts, voice and what converts, references as not-to-copy', () => {
+    const text = briefFacts(BRIEF);
+    for (const value of ['#B4400A', '#F8F1E4', 'Oswald', 'Instrument Sans', 'de tú', 'Receta junto al producto', 'Heinz']) expect(text).toContain(value);
+    expect(text).toMatch(/no las copies/i);
+  });
+
+  it('a run builds from the brief it was given, or the one saved on the store (a retry keeps it)', () => {
+    expect(briefForRun(BRIEF, null)).toBe(BRIEF);
+    expect(briefForRun(undefined, { brandBrief: BRIEF })).toBe(BRIEF);
+    expect(briefForRun(undefined, { brandBrief: { version: 9 } })).toBeUndefined();
+    expect(briefForRun(undefined, null)).toBeUndefined();
+  });
+});

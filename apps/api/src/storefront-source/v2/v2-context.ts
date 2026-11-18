@@ -14,10 +14,12 @@ import { V2_LIBRARY_FILE, v2LibraryCss, v2LibrarySources } from './v2-library';
  *  the kit draws them at runtime; the design never writes them. */
 /** A product's photo without its background (owner 2026-11-15, the showcase pieces), bundled as assets/image-<hash>.webp. */
 /** what: what YAPI saw in it («lata Lemon · Ginger»), so a stage screen is named after what it shows. */
+import type { BrandBrief, BrandShotKind } from '../brand/brand-brief-types';
 export type V2Cutout = { path: string; product: string; name: string; width: number; height: number; what?: string };
 /** product: the photo is a copy of that product's own photo (same picture, another file), so it already shows in its card. */
 export type V2Header = { over: boolean; tone: 'light' | 'dark'; links: 'plain' | 'pills'; announce: string[] };
-export type V2Photo = { path: string; width: number; height: number; shape: 'wide' | 'tall' | 'square'; product?: string; /** Shows words, a logo or packaging text: never cropped (2026-11-15). */ words?: boolean };
+export type V2Photo = { path: string; width: number; height: number; shape: 'wide' | 'tall' | 'square'; product?: string; /** Shows words, a logo or packaging text: never cropped (2026-11-15). */ words?: boolean;
+  /** «Mejorar mi marca» campaign photo and its shot (spec 2026-11-18). */ campaign?: BrandShotKind };
 export type V2Product = { id: string; name: string; category: string; about: string; photos: number };
 export type V2Context = {
   storeName: string; tagline: string; about: string; request: string; checkoutMode: string;
@@ -56,6 +58,8 @@ export type V2Context = {
   animated?: boolean;
   /** Product cut-outs for the showcase pieces (ProductStage, HangingRail), when the build made them. */
   cutouts?: V2Cutout[];
+  /** «Mejorar mi marca» (spec 2026-11-18): the brief the store is built from. */
+  brief?: BrandBrief;
 };
 
 /** A request that asks for the header icons themselves to change («cambia los íconos», «otro ícono del carrito»). */
