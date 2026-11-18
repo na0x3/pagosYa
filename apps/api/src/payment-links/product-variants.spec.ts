@@ -69,3 +69,12 @@ it('lets a legacy imageUrl edit win over a stale set, and imageUrl:null clears b
   expect(gone[0].imageUrl).toBeUndefined();
   expect(gone[0].imageUrls).toBeUndefined();
 });
+
+describe('long option values (copy a store, 2026-11-18)', () => {
+  it('keeps a Shopify value up to 80 characters and still refuses longer ones', () => {
+    const variant = (value: string, amount: number) => ({ name: value, amount, options: [{ name: 'Size', value }] });
+    const long = '1 oz California White Sturgeon + 1 oz Osetra';
+    expect(normalizeProductVariants([variant('1 oz Osetra', 1000), variant(long, 2000)] as never).map(item => item.name)).toEqual(['1 oz Osetra', long]);
+    expect(() => normalizeProductVariants([variant('1 oz Osetra', 1000), variant('x'.repeat(81), 2000)] as never)).toThrow(/grupos únicos y valores completos/);
+  });
+});

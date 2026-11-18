@@ -20,7 +20,7 @@ export function normalizeProductVariants(variants: ProductVariantDto[] | undefin
     const options = variant.options ?? previous?.options;
     const selected = options?.map(option => ({ name: option.name.trim(), value: option.value.trim() }));
     if (selected?.length) {
-      if (selected.length > 6 || selected.some(option => !option.name || !option.value || option.name.length > 40 || option.value.length > 40)
+      if (selected.length > 6 || selected.some(option => !option.name || !option.value || option.name.length > 40 || option.value.length > 80)
         || new Set(selected.map(option => key(option.name))).size !== selected.length) throw new BadRequestException('Cada combinación necesita grupos únicos y valores completos.');
       const groupKey = JSON.stringify(selected.map(option => key(option.name)));
       if (dimensions === undefined) { dimensions = groupKey; dimensionNames = selected.map(option=>option.name); }
