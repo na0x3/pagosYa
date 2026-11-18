@@ -74,9 +74,34 @@ Los productos se muestran SIEMPRE en las tarjetas de la plataforma (<div data-pa
 const CREATIVE_CRAFT = `OFICIO CREATIVO: puedes usar formas, máscaras, clip-path, mix-blend-mode, capas, texto enorme de fondo y movimiento ligado al scroll,
 siempre con prefers-reduced-motion y sin tapar texto que se lee. Las fotos siguen de tamaño medio (nunca enormes).
 `;
-/** The same text with the average-store rules and the craft bans swapped for the creative ones. */
+/** Owner 2026-11-17 («B», after NOA rg-n17: the creative header was still one of NavShell's four structures): the creative setting
+ *  writes its own header bar; NavShell keeps the frame, the menu panel and the platform's pieces the bar places. */
+const CREATIVE_HEADER = `   Header: lo DISEÑAS tú, nada de las cuatro estructuras de siempre. Usa <NavShell structure="free" brand={…} links={[{ label, href }]}
+   menu={…} className="…"> TU BARRA </NavShell> de '@pagosya/ui': los hijos son tu barra entera (tu marcado, tus clases, tu composición:
+   logo gigante, enlaces partidos a los lados, una fila de categorías con fotos, el logo vertical, una barra en dos pisos…) y dentro colocas
+   donde quieras estas piezas de '@pagosya/ui': <NavLogo /> (el logo o nombre con enlace al inicio; sus hijos lo reemplazan),
+   <NavLinks /> (los enlaces; en el teléfono se esconden y viven en el menú), <NavMenuButton /> (abre tu menú, en todas las pantallas)
+   y <NavActions /> (buscar, cuenta y carrito) o solo <NavCart />. Siempre van NavLogo, NavMenuButton y el carrito; no escribas
+   botones de carrito, búsqueda o cuenta propios. NavShell pone la barra fija y el panel del menú: a .ui-nav y al header no les des
+   height, position ni top (se descartan); dentro de tu barra todo es tuyo. En el teléfono tu barra cabe en una fila (menú, logo,
+   carrito) sin salirse. ENLACES A UNA CATEGORÍA: productos.html?f_categoria=<Nombre exacto>; todos los productos: productos.html.`;
+const CREATIVE_HEADER_PIECES = 'NavShell, NavLogo, NavLinks, NavMenuButton, NavActions, NavCart, CommerceSlots';
+/** A creative header is a free bar holding the logo, the menu button and the cart (the kit adds any that is missing, but late). */
+export function creativeHeaderProblems(shell: string): string[] {
+  if (!/<NavShell\b[^]*?\bstructure=(["'{]\s*["']?)free\b/.test(shell)) return ['Tienda creativa: el Header es tuyo. Usa <NavShell structure="free" …>TU BARRA</NavShell> con <NavLogo />, <NavMenuButton /> y <NavActions /> o <NavCart /> donde los quieras.'];
+  const missing = [['<NavLogo', 'NavLogo'], ['<NavMenuButton', 'NavMenuButton'], ['<NavCart|<NavActions', 'NavActions o NavCart']]
+    .filter(([pattern]) => !new RegExp(pattern).test(shell)).map(([, name]) => name);
+  const own = /data-cart-open|data-cart-count|data-pagosya-account|data-nav-toggle/.test(shell);
+  return [
+    ...(missing.length ? [`Tu barra (NavShell structure="free") necesita ${missing.join(', ')}: colócalos donde quieras dentro de ella.`] : []),
+    ...(own ? ['No escribas el carrito, la cuenta ni el botón del menú a mano (data-cart-open, data-pagosya-account, data-nav-toggle): usa <NavActions />, <NavCart /> y <NavMenuButton />.'] : []),
+  ];
+}
+/** The same text with the average-store rules, the craft bans and the fixed header structures swapped for the creative ones. */
 export function creativeText(text: string): string {
-  return text.split(V2_MODERN_RULES).join(V2_CREATIVE_RULES).replace(/MOVIMIENTO \(owner 2026-11-14: tiendas con vida[\s\S]*?(?=NUNCA \(fallas)/, CREATIVE_CRAFT);
+  return text.split(V2_MODERN_RULES).join(V2_CREATIVE_RULES).replace(/MOVIMIENTO \(owner 2026-11-14: tiendas con vida[\s\S]*?(?=NUNCA \(fallas)/, CREATIVE_CRAFT)
+    .replace(/ {3}Header: usa <NavShell[\s\S]*?nunca una barra genérica\./, CREATIVE_HEADER)
+    .replace(/(IMPORTS permitidos: 'react', '@pagosya\/ui' \()NavShell, CommerceSlots/, `$1${CREATIVE_HEADER_PIECES}`);
 }
 export const V2_CONCEPT_PROMPT = `Eres director creativo de tiendas online. Propón 3 conceptos de tienda DISTINTOS y atrevidos para esta marca — lo que ninguna otra
 tienda tendría —, que SUS fotos (míralas) puedan sostener. Cada uno: nombre corto, la idea en una frase, cómo se arma la portada (qué rompe de
@@ -729,7 +754,8 @@ export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'go
   if (header && !header.ownIcons) files = files.map(file => {
     if (!file.path.endsWith('.tsx') || !/<NavShell\b/.test(file.content)) return file;
     let content = file.content.replace(/(<NavShell\b[^]*?)\bactions=(["'])(labels|pill)\2/g, (_, before: string) => { repairs.push(`${file.path}: NavShell con íconos`); return `${before}actions="icons"`; });
-    if (header.goods && !/<NavShell\b[^>]*\bcart=/.test(content)) { content = content.replace(/<NavShell\b/g, `<NavShell cart="${header.goods}"`); repairs.push(`${file.path}: carrito «${header.goods}»`); }
+    // [^]*? (not [^>]*): a brand={<span>…</span>} or a free bar puts a «>» before cart= (it would be written twice).
+    if (header.goods && !/<NavShell\b[^]*?\bcart=/.test(content)) { content = content.replace(/<NavShell\b/g, `<NavShell cart="${header.goods}"`); repairs.push(`${file.path}: carrito «${header.goods}»`); }
     return content === file.content ? file : { ...file, content };
   });
   // Live 2026-11-14 (NOA and Meat House attempt 1 refused: «Falta el hueco obligatorio gallery/title/pricing/buy»): a product page
@@ -925,6 +951,7 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   if (!/export\s+default\s+function\s+Shell\b/.test(shell) || !/export\s+function\s+Header\b/.test(shell) || !/export\s+function\s+Footer\b/.test(shell)) problems.push('Shell.tsx debe exportar default Shell, y Header y Footer con nombre.');
   if (!/<CommerceSlots\s*\/>/.test(shell)) problems.push('Shell debe dibujar <CommerceSlots /> una vez.');
   if (!/<NavShell\b/.test(shell)) problems.push('El Header debe usar <NavShell … /> de @pagosya/ui (trae el carrito, la cuenta, la búsqueda y el menú del teléfono).');
+  else if (context.creative) problems.push(...creativeHeaderProblems(shell));
   const h1s = (home.match(/<h1[\s>]/g) ?? []).length + (hero ? 1 : 0);
   if (h1s !== 1) problems.push(hero ? 'La portada de biblioteca ya pone el <h1>: en home.tsx usa <h2> para tus títulos.' : 'La portada necesita exactamente un <h1>.');
   if (!/data-pagosya-catalog/.test(home)) problems.push('La portada necesita al menos un data-pagosya-catalog.');

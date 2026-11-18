@@ -24,7 +24,7 @@ import { allowedMenus, cleanMenu, menuParts, menuProblems, V2_MENU_MODELS, v2Men
 import { SourceV2PrototypeController } from './v2-prototype.controller';
 import { capHeight, withPhotoCaps } from './v2-settle';
 import { claudeJson, claudeSchema } from './v2-claude';
-import { V2_LOOSE_PROMPT, v2WriterPrompt, creativeText, V2_CREATIVE_RULES, V2_MODERN_RULES } from './v2-prompts';
+import { V2_LOOSE_PROMPT, v2WriterPrompt, creativeText, creativeHeaderProblems, V2_CREATIVE_RULES, V2_MODERN_RULES } from './v2-prompts';
 
 const context: V2Context = {
   storeName: 'Oh Belly', tagline: '', about: '', request: 'sodas', checkoutMode: 'payment', categories: ['Sodas'],
@@ -1089,6 +1089,26 @@ describe('the creative setting (owner 2026-11-17 «very creative and innovative 
     expect(pages).toContain(V2_CREATIVE_RULES);
     expect(writerInput({ ...context, free: true, concept: 'Carnicería de cartel: …' } as never, {} as never, 'pages')).toMatch(/CONCEPTO ELEGIDO[\s\S]*Carnicería de cartel/);
     expect(freeMin({ photos: [], creative: true } as never)).toBe(5);
+  });
+
+  it('owner 2026-11-17 «B»: the header is the design\'s own bar (NavShell structure="free") placing the kit\'s logo, menu button and cart', () => {
+    const writer = creativeText(v2WriterPrompt(true));
+    expect(writer).toMatch(/<NavShell structure="free"[\s\S]*<NavMenuButton \/>/);
+    expect(writer).not.toMatch(/structure="bar\|centered\|split\|drawer"/);
+    expect(writer).toMatch(/IMPORTS permitidos: 'react', '@pagosya\/ui' \(NavShell, NavLogo, NavLinks, NavMenuButton, NavActions, NavCart, CommerceSlots/);
+    expect(v2WriterPrompt(true)).toMatch(/structure="bar\|centered\|split\|drawer"/);
+    for (const piece of ['NavLogo', 'NavLinks', 'NavMenuButton', 'NavActions', 'NavCart']) expect(kitProps().has(piece)).toBe(true);
+    expect(creativeHeaderProblems('<NavShell brand="X" structure="split" />').join()).toMatch(/structure="free"/);
+    const bar = (inside: string) => `<NavShell brand={<b>X</b>} structure="free" menu={<div />}><div className="x-bar">${inside}</div></NavShell>`;
+    expect(creativeHeaderProblems(bar('<NavMenuButton /><NavLogo /><NavLinks /><NavActions />'))).toEqual([]);
+    expect(creativeHeaderProblems(bar('<NavLogo /><NavCart />')).join()).toMatch(/necesita NavMenuButton/);
+    expect(creativeHeaderProblems(bar('<NavMenuButton /><NavLogo /><button data-cart-open>Bolsa</button>')).join()).toMatch(/necesita NavActions o NavCart[\s\S]*No escribas el carrito/);
+    const creative = { ...context, free: true, basic: true, creative: true } as never;
+    expect(v2ContractProblems(good, creative).join()).toMatch(/Tienda creativa: el Header es tuyo/);
+    expect(v2ContractProblems(good, { ...context, free: true, basic: true } as never).join()).not.toMatch(/Tienda creativa/);
+    // A brand with markup before cart= no longer gets a second cart= written (the regex stopped at the first «>»).
+    const shell = { path: 'components/Shell.tsx' as const, content: bar('<NavLogo />').replace('structure="free"', 'structure="free" cart="shirt"') };
+    expect(v2Repairs([shell], { goods: 'gem', ownIcons: false }).files[0].content.match(/\bcart=/g)).toHaveLength(1);
   });
 });
 

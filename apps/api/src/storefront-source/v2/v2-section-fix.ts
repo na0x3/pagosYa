@@ -112,7 +112,7 @@ LAS REGLAS DE LA HOJA QUE USAN ESTAS SECCIONES (y los tokens de :root):\n${cssFo
 }
 
 /** Each kit piece a design may import (prompt «IMPORTS permitidos»). */
-const UI_PARTS = new Set(['NavShell', 'CommerceSlots', 'ProductPageTemplate', 'KitSlot', 'Reveal', 'Parallax', 'Marquee', 'WordRotate', 'KineticHeadline', 'ScrollScale', 'Carousel']);
+const UI_PARTS = new Set(['NavShell', 'NavLogo', 'NavLinks', 'NavMenuButton', 'NavActions', 'NavCart', 'CommerceSlots', 'ProductPageTemplate', 'KitSlot', 'Reveal', 'Parallax', 'Marquee', 'WordRotate', 'KineticHeadline', 'ScrollScale', 'Carousel']);
 
 /** The home with the rewritten sections in place, the new CSS after the sheet and any new kit imports; null when the answer cannot be
  *  placed (an index it was not asked for, or code that is not one element). */

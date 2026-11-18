@@ -10,7 +10,7 @@
  * Styling is self-contained (`ui-` classes + CSS custom properties), never Tailwind, because the
  * Tailwind pass only scans authored components.
  */
-import { Children, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react';
+import { Children, createContext, useCallback, useContext, useEffect, useId, useRef, useState, type CSSProperties, type JSX, type ReactNode, type RefObject } from 'react';
 import { AnimatePresence, motion, useAnimationFrame, useInView, useMotionTemplate, useMotionValue, useScroll, useSpring, useTransform, useVelocity } from 'motion/react';
 
 /* ------------------------------------------------------------------ tokens */
@@ -1797,6 +1797,9 @@ const NAV_CSS = `
 .ui-nav__toggles{display:none;align-items:center}
 .ui-nav[data-structure=drawer] .ui-nav__toggles{display:inline-flex}
 .ui-nav[data-own-menu] .ui-nav__toggles{display:inline-flex}
+/* Owner 2026-11-17 («B»: headers all alike): a free header is the design's own bar; the kit only keeps its pieces working. */
+.ui-nav[data-structure=free] .ui-nav__toggles{display:inline-flex}
+.ui-nav__fallback{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px clamp(16px,4vw,48px)}
 /* Owner 2026-11-17 (BOXY: the menu opened empty): a header with a blur, filter or transform traps its fixed panel in the header's
    own box; while the panel is open the header drops them, so the panel covers the screen. */
 .ui-nav:has(> .ui-nav__panel-wrap:not([hidden])){-webkit-backdrop-filter:none!important;backdrop-filter:none!important;filter:none!important;transform:none!important;contain:none!important}
@@ -1820,10 +1823,10 @@ const NAV_CSS = `
 /* Owner 2026-11-16: a menu the design wrote is laid out wide (its columns, photos, big words); the design's own width still wins. */
 :where(.ui-nav__panel-wrap[data-own-menu] .ui-nav__panel){width:min(1100px,100vw);padding:20px clamp(24px,4vw,56px) 40px}
 @media (max-width:767px){
-  .ui-nav .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:none}
+  .ui-nav:not([data-structure=free]) .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:none}
   .ui-nav .ui-nav__links{display:none!important}
   .ui-nav .ui-nav__toggles{display:inline-flex}
-  .ui-nav .ui-nav__brand{justify-self:start;grid-area:auto}
+  .ui-nav:not([data-structure=free]) .ui-nav__brand{justify-self:start;grid-area:auto}
   .ui-nav .ui-nav__actions{grid-area:auto}
   .ui-nav [data-nav-action=account]{display:none}
   .ui-nav .ui-nav__word{display:none}.ui-nav .ui-nav__icon{display:block}
@@ -1896,14 +1899,79 @@ const NAV_GOODS: Record<string, ReactNode> = {
   palette: navIcon(<><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" /><circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /></>),
 };
 export type NavShellLink = { label: ReactNode; href: string };
+/** What a NavShell shares with the pieces inside it (owner 2026-11-17 «B»: a free header places them where its own bar wants). */
+type NavShellParts = {
+  brand: ReactNode; links: NavShellLink[]; cart?: string; highlight?: string; words: { search: string; account: string; bag: string };
+  open: boolean; setOpen: (open: boolean) => void; toggleRef: RefObject<HTMLButtonElement | null>; panelId: string;
+  brandClassName?: string; linksClassName?: string; actionsClassName?: string; badgeClassName?: string; toggleClassName?: string;
+};
+const NavShellContext = createContext<NavShellParts | null>(null);
+const joinClasses = (...names: Array<string | undefined>) => names.filter(Boolean).join(' ');
+function useNavShell(piece: string): NavShellParts {
+  const parts = useContext(NavShellContext);
+  if (!parts) throw new Error(`${piece} va dentro de <NavShell>.`);
+  return parts;
+}
+/** The store's logo or name, linked to the home (free header piece; children replace NavShell's brand). */
+export function NavLogo({ children, className }: { children?: ReactNode; className?: string }) {
+  const nav = useNavShell('NavLogo');
+  return <a href="index.html" className={joinClasses('ui-nav__brand', nav.brandClassName, className)} data-nav-logo>{children ?? nav.brand}</a>;
+}
+/** A row of links (NavShell's links unless given) with the merchant's store-menu links after them; hidden on the phone, where the
+ *  links live in the menu. */
+export function NavLinks({ links, className, side }: { links?: NavShellLink[]; className?: string; side?: 'left' | 'right' }) {
+  const nav = useNavShell('NavLinks');
+  const items = links ?? nav.links;
+  return <nav className={joinClasses('ui-nav__links', nav.linksClassName, className)} data-nav-links data-side={side} aria-label={side === 'right' ? 'Más secciones' : 'Principal'}>
+    <span className="ui-nav__own" data-store-menu-replaces>{items.map(link => <a key={link.href} href={link.href} data-highlight={nav.highlight && link.href === nav.highlight ? '' : undefined}>{link.label}</a>)}</span>
+    {side === 'right' ? null : <span className="ui-nav__store-links" data-pagosya-store-menu="links" />}
+  </nav>;
+}
+/** The button that opens the menu (and the merchant's store-menu button where that is on). */
+export function NavMenuButton({ className }: { className?: string }) {
+  const nav = useNavShell('NavMenuButton');
+  return <span className="ui-nav__toggles">
+    <span className="ui-nav__store-toggle" data-pagosya-store-menu="toggle" />
+    <button ref={nav.toggleRef} type="button" className={joinClasses('ui-nav__toggle', nav.toggleClassName, className)} data-nav-toggle data-store-menu-replaces aria-expanded={nav.open} aria-controls={nav.panelId} onClick={() => nav.setOpen(true)}><span className="ui-nav__bars" aria-hidden="true" /><span className="ui-nav__sr">Menú</span></button>
+  </span>;
+}
+/** The cart button with its count, drawn as what the store sells. */
+export function NavCart({ className }: { className?: string }) {
+  const nav = useNavShell('NavCart');
+  return <button type="button" className={joinClasses('ui-nav__action', className)} data-nav-action="bag" data-cart-open aria-label={`Abrir ${nav.words.bag.toLowerCase()}`}>{(nav.cart && NAV_GOODS[nav.cart]) || NAV_ICONS.bag}<span className="ui-nav__word">{nav.words.bag}</span><span className={joinClasses('ui-nav__badge', nav.badgeClassName)} data-cart-count>0</span></button>;
+}
+/** The platform's three icons: search, account and the cart. */
+export function NavActions({ className }: { className?: string }) {
+  const nav = useNavShell('NavActions');
+  return <div className={joinClasses('ui-nav__actions', nav.actionsClassName, className)} data-nav-actions>
+    <a href="buscar.html" className="ui-nav__action" data-nav-action="search" aria-label={nav.words.search}>{NAV_ICONS.search}<span className="ui-nav__word">{nav.words.search}</span></a>
+    <a href="acceso-ingresar.html" className="ui-nav__action" data-nav-action="account" data-pagosya-account="login" aria-label={nav.words.account}>{NAV_ICONS.account}<span className="ui-nav__word">{nav.words.account}</span></a>
+    <NavCart />
+  </div>;
+}
+/** A free header's missing pieces, added after its bar so the menu, the cart and the way home never go missing. */
+function NavFreeFallback({ header }: { header: RefObject<HTMLElement | null> }) {
+  const [missing, setMissing] = useState({ toggle: false, cart: false, logo: false });
+  useEffect(() => {
+    const root = header.current;
+    if (!root) return;
+    const has = (selector: string) => Array.from(root.querySelectorAll(selector)).some(node => !node.closest('.ui-nav__fallback, .ui-nav__panel-wrap'));
+    setMissing({ toggle: !has('[data-nav-toggle]'), cart: !has('[data-cart-open]'), logo: !has('[data-nav-logo]') });
+  }, [header]);
+  if (!missing.toggle && !missing.cart && !missing.logo) return null;
+  return <div className="ui-nav__fallback" data-nav-fallback>{missing.toggle ? <NavMenuButton /> : <span />}{missing.logo ? <NavLogo /> : null}{missing.cart ? <NavCart /> : <span />}</div>;
+}
 /** The store header. structure: bar (logo · links · actions), centered (logo centred, links in a row below), split (links ·
- *  centred logo · actions), drawer (logo, menu button and actions only; every link lives in the menu, on a computer too).
+ *  centred logo · actions), drawer (logo, menu button and actions only; every link lives in the menu, on a computer too), free (the
+ *  design's own bar as children, placing NavLogo, NavLinks, NavMenuButton and NavActions or NavCart where it wants; any of the menu
+ *  button, cart or logo it leaves out is added after it).
  *  actions: icons (icons with the cart count on the bag), labels (Buscar · Mi cuenta · Bolsa 2), pill (icons and a filled bag pill).
  *  cart: what the store sells, so the bag is drawn as a shirt, a ring, a cup… (NAV_GOODS).
- *  Below 768 px every structure is menu button · logo · search and bag. Pass looks with className, barClassName, brandClassName,
- *  linksClassName, actionsClassName, badgeClassName, panelClassName and toggleClassName. */
-export function NavShell({ brand, links = [], structure = 'bar', actions = 'icons', cart, labels, over = false, tone = 'dark', linkStyle = 'plain', highlight, className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName, toggleClassName, menu }: {
-  brand: ReactNode; links?: NavShellLink[]; structure?: 'bar' | 'centered' | 'split' | 'drawer'; actions?: 'icons' | 'labels' | 'pill';
+ *  Below 768 px every fixed structure is menu button · logo · search and bag; a free bar lays out its own phone row (its NavLinks hide
+ *  there). Pass looks with className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName
+ *  and toggleClassName. */
+export function NavShell({ brand, links = [], structure = 'bar', actions = 'icons', cart, labels, over = false, tone = 'dark', linkStyle = 'plain', highlight, className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName, toggleClassName, menu, children }: {
+  brand: ReactNode; links?: NavShellLink[]; structure?: 'bar' | 'centered' | 'split' | 'drawer' | 'free'; actions?: 'icons' | 'labels' | 'pill';
   /** What the store sells (gem, shirt, coffee, paw…): the bag is drawn as it; unknown or empty keeps the bag. */
   cart?: string;
   labels?: { search?: string; account?: string; bag?: string };
@@ -1917,6 +1985,8 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
    *  written by the design. NavShell opens and closes it (button on every width, Escape, focus, scroll lock); the design styles it
    *  with panelClassName and its own classes. Without it the panel lists the links. */
   menu?: ReactNode;
+  /** structure="free": the design's own bar. */
+  children?: ReactNode;
   className?: string; barClassName?: string; brandClassName?: string;
   linksClassName?: string; actionsClassName?: string; badgeClassName?: string; panelClassName?: string; toggleClassName?: string;
 }) {
@@ -1942,22 +2012,8 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
     return () => { root.style.overflow = before; document.removeEventListener('keydown', onKey); };
   }, [open]);
   const words = { search: labels?.search || 'Buscar', account: labels?.account || 'Mi cuenta', bag: labels?.bag || 'Bolsa' };
-  const join = (...names: Array<string | undefined>) => names.filter(Boolean).join(' ');
-  const row = (items: NavShellLink[], side?: 'left' | 'right') => <nav className={join('ui-nav__links', linksClassName)} data-nav-links data-side={side} aria-label={side === 'right' ? 'Más secciones' : 'Principal'}>
-    <span className="ui-nav__own" data-store-menu-replaces>{items.map(link => <a key={link.href} href={link.href} data-highlight={highlight && link.href === highlight ? '' : undefined}>{link.label}</a>)}</span>
-    {side === 'right' ? null : <span className="ui-nav__store-links" data-pagosya-store-menu="links" />}
-  </nav>;
+  const parts: NavShellParts = { brand, links, cart, highlight, words, open, setOpen, toggleRef, panelId, brandClassName, linksClassName, actionsClassName, badgeClassName, toggleClassName };
   const half = Math.ceil(links.length / 2);
-  const brandNode = <a href="index.html" className={join('ui-nav__brand', brandClassName)} data-nav-logo>{brand}</a>;
-  const actionNodes = <div className={join('ui-nav__actions', actionsClassName)} data-nav-actions>
-    <a href="buscar.html" className="ui-nav__action" data-nav-action="search" aria-label={words.search}>{NAV_ICONS.search}<span className="ui-nav__word">{words.search}</span></a>
-    <a href="acceso-ingresar.html" className="ui-nav__action" data-nav-action="account" data-pagosya-account="login" aria-label={words.account}>{NAV_ICONS.account}<span className="ui-nav__word">{words.account}</span></a>
-    <button type="button" className="ui-nav__action" data-nav-action="bag" data-cart-open aria-label={`Abrir ${words.bag.toLowerCase()}`}>{(cart && NAV_GOODS[cart]) || NAV_ICONS.bag}<span className="ui-nav__word">{words.bag}</span><span className={join('ui-nav__badge', badgeClassName)} data-cart-count>0</span></button>
-  </div>;
-  const toggles = <span className="ui-nav__toggles">
-    <span className="ui-nav__store-toggle" data-pagosya-store-menu="toggle" />
-    <button ref={toggleRef} type="button" className={join('ui-nav__toggle', toggleClassName)} data-nav-toggle data-store-menu-replaces aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(true)}><span className="ui-nav__bars" aria-hidden="true" /><span className="ui-nav__sr">Menú</span></button>
-  </span>;
   // A floating header measures itself (the page starts under it) and turns solid once the page scrolls or the menu opens.
   const headerRef = useRef<HTMLElement>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -1973,26 +2029,28 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { observer?.disconnect(); window.removeEventListener('scroll', onScroll); };
   }, [over]);
-  return <header ref={headerRef} className={join('ui-nav', className)} data-nav-shell data-structure={structure} data-actions={actions}
-    data-own-menu={menu ? '' : undefined} data-over={over ? '' : undefined} data-tone={over ? tone : undefined} data-scrolled={over && (scrolled || open) ? '' : undefined} data-links={linkStyle === 'pills' ? 'pills' : undefined}>
-    <NavStyles />
-    <div className={join('ui-nav__bar', barClassName)}>
-      {toggles}
-      {structure === 'split' ? <>{row(links.slice(0, half), 'left')}{brandNode}<div className="ui-nav__right">{row(links.slice(half), 'right')}{actionNodes}</div></>
-        : structure === 'drawer' ? <>{brandNode}{actionNodes}</>
-        : structure === 'centered' ? <>{brandNode}{actionNodes}{row(links)}</>
-        : <>{brandNode}{row(links)}{actionNodes}</>}
-    </div>
-    <div id={panelId} className="ui-nav__panel-wrap" data-own-menu={menu ? '' : undefined} hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
-      <div ref={panelRef} className={join('ui-nav__panel', panelClassName)} role="dialog" aria-modal="true" aria-label="Menú" onClick={event => { if ((event.target as HTMLElement).closest('a[href],[data-cart-open]')) setOpen(false); }}>
-        <button type="button" className="ui-nav__close" aria-label="Cerrar menú" onClick={() => { setOpen(false); toggleRef.current?.focus({ preventScroll: true }); }}>×</button>
-        {menu ?? <>
-        <nav className="ui-nav__panel-links" aria-label="Menú">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
-        <div className="ui-nav__panel-tools"><a href="buscar.html">{words.search}</a><a href="acceso-ingresar.html" data-pagosya-account="login">{words.account}</a></div>
-        </>}
+  return <NavShellContext.Provider value={parts}>
+    <header ref={headerRef} className={joinClasses('ui-nav', className)} data-nav-shell data-structure={structure} data-actions={actions}
+      data-own-menu={menu ? '' : undefined} data-over={over ? '' : undefined} data-tone={over ? tone : undefined} data-scrolled={over && (scrolled || open) ? '' : undefined} data-links={linkStyle === 'pills' ? 'pills' : undefined}>
+      <NavStyles />
+      {structure === 'free' ? <>{children}<NavFreeFallback header={headerRef} /></> : <div className={joinClasses('ui-nav__bar', barClassName)}>
+        <NavMenuButton />
+        {structure === 'split' ? <><NavLinks links={links.slice(0, half)} side="left" /><NavLogo /><div className="ui-nav__right"><NavLinks links={links.slice(half)} side="right" /><NavActions /></div></>
+          : structure === 'drawer' ? <><NavLogo /><NavActions /></>
+          : structure === 'centered' ? <><NavLogo /><NavActions /><NavLinks /></>
+          : <><NavLogo /><NavLinks /><NavActions /></>}
+      </div>}
+      <div id={panelId} className="ui-nav__panel-wrap" data-own-menu={menu ? '' : undefined} hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
+        <div ref={panelRef} className={joinClasses('ui-nav__panel', panelClassName)} role="dialog" aria-modal="true" aria-label="Menú" onClick={event => { if ((event.target as HTMLElement).closest('a[href],[data-cart-open]')) setOpen(false); }}>
+          <button type="button" className="ui-nav__close" aria-label="Cerrar menú" onClick={() => { setOpen(false); toggleRef.current?.focus({ preventScroll: true }); }}>×</button>
+          {menu ?? <>
+          <nav className="ui-nav__panel-links" aria-label="Menú">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
+          <div className="ui-nav__panel-tools"><a href="buscar.html">{words.search}</a><a href="acceso-ingresar.html" data-pagosya-account="login">{words.account}</a></div>
+          </>}
+        </div>
       </div>
-    </div>
-  </header>;
+    </header>
+  </NavShellContext.Provider>;
 }
 
 /* ------------------------------------------------------------------ page shells */
