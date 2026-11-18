@@ -9,7 +9,9 @@ type Node = DefaultTreeAdapterMap['node'];
 type Element = DefaultTreeAdapterMap['element'];
 
 const TAGS = new Set(['div', 'section', 'header', 'footer', 'p', 'h1', 'h2', 'h3', 'h4', 'span', 'strong', 'em', 'small', 'br', 'hr', 'img', 'picture', 'source',
-  'button', 'ul', 'ol', 'li', 'figure', 'figcaption', 'label', 'input', 'svg', 'g', 'path', 'circle', 'rect', 'ellipse', 'line', 'polyline', 'polygon']);
+  'button', 'ul', 'ol', 'li', 'figure', 'figcaption', 'label', 'input', 'svg', 'g', 'path', 'circle', 'rect', 'ellipse', 'line', 'polyline', 'polygon',
+  // Harmless text and section tags YAPI reaches for (links stay out: the runtime does every navigation).
+  'b', 'i', 'u', 's', 'mark', 'del', 'ins', 'sup', 'sub', 'blockquote', 'q', 'cite', 'time', 'article', 'aside', 'nav', 'main', 'dl', 'dt', 'dd', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath']);
 const ATTRS = new Set(['class', 'id', 'role', 'alt', 'src', 'srcset', 'width', 'height', 'loading', 'viewbox', 'd', 'fill', 'stroke', 'stroke-width', 'stroke-linecap',
   'stroke-linejoin', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'transform', 'opacity', 'type', 'placeholder', 'autocomplete', 'inputmode', 'for', 'style']);
 const INPUT_TYPES = new Set(['email', 'tel', 'text']);
