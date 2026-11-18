@@ -55,6 +55,7 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
   const squashed: string[] = [];
   const covered: string[] = [];
   const overArt: string[] = [];
+  const nearArt: Element[] = [];
   const artBoxes = Array.from(root?.querySelectorAll('[data-art]') ?? []).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
   // Decoration (data-art) may burst past the edges and is not text: it is left out of the text and edge checks.
   const isArt = (el: Element) => Boolean(el.closest('[data-art]'));
@@ -68,12 +69,33 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
     const top = cx >= 0 && cy >= 0 && cx < innerWidth && cy < innerHeight ? document.elementFromPoint(cx, cy) : null;
     if (top && top !== el && !el.contains(top) && !top.contains(el)) covered.push(words.slice(0, 40));
     const textArea = b.width * b.height;
-    if (textArea > 0 && !el.closest('[data-close]') && words.replace(/\s/g, '').length >= 3 && artBoxes.some(a => Math.max(0, Math.min(a.right, b.x + b.width) - Math.max(a.left, b.x)) * Math.max(0, Math.min(a.bottom, b.y + b.height) - Math.max(a.top, b.y)) > textArea * 0.25)) overArt.push(words.slice(0, 40));
+    if (textArea > 0 && !el.closest('[data-close]') && words.replace(/\s/g, '').length >= 3 && artBoxes.some(a => Math.max(0, Math.min(a.right, b.x + b.width) - Math.max(a.left, b.x)) * Math.max(0, Math.min(a.bottom, b.y + b.height) - Math.max(a.top, b.y)) > textArea * 0.25)) nearArt.push(el);
     const fg = rgb(getComputedStyle(el).color), bg = background(el);
     if (!fg || !bg) continue;
     const [hi, lo] = [lum(fg), lum(bg)].sort((x, y) => y - x);
     if ((hi + 0.05) / (lo + 0.05) < 4.5) contrastFails.push((el.textContent ?? '').trim().slice(0, 40));
   }
+  // Words near a cut-out are a problem only when the art is drawn over them, or they sit straight on it with no solid surface
+  // between (live 2026-11-18: words on a card or button above the art read fine).
+  const arts = Array.from(root?.querySelectorAll('[data-art]') ?? []) as HTMLElement[];
+  arts.forEach(art => art.style.setProperty('pointer-events', 'auto', 'important'));
+  for (const el of nearArt) {
+    const r = el.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+    if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+    const stack = document.elementsFromPoint(x, y);
+    const atText = stack.findIndex(node => node === el || el.contains(node)), atArt = stack.findIndex(node => Boolean(node.closest('[data-art]')));
+    if (atArt < 0) continue;
+    let bare = atText < 0 || atArt < atText;
+    if (!bare) {
+      bare = true;
+      for (const node of stack.slice(atText, atArt)) {
+        const style = getComputedStyle(node), c = rgb(style.backgroundColor);
+        if ((c && c.a > 0.9) || style.backgroundImage !== 'none') { bare = false; break; }
+      }
+    }
+    if (bare) overArt.push((el.textContent ?? '').trim().slice(0, 40));
+  }
+  arts.forEach(art => art.style.removeProperty('pointer-events'));
   const tiles = root?.querySelectorAll('[data-tile]') ?? null;
   const edges = Array.from(root?.querySelectorAll('*') ?? []).filter(el => !el.closest('[data-art]')).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
   // The close belongs in a top corner of the popup (live 2026-11-18: Fishwife's floated mid-left over the art).

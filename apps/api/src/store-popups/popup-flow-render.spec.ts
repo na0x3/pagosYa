@@ -73,5 +73,11 @@ describe('popup design render check', () => {
     const under = await measureFlow(base(`${SHEET}.card{position:relative}.tin{position:absolute;left:0;top:40px;width:100%;height:120px}`, { o: over, c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(under!).join(' ')).toMatch(/encima de un recorte/);
   });
+  // Live 2026-11-18 (Miga, goodProtein): words on a solid card or button above the art are fine; only bare words over art are not.
+  it('accepts words on a solid surface above a cut-out', async () => {
+    const card = '<div class="card"><button data-close aria-label="Cerrar">×</button><img data-art class="tin" src="/v1/uploads/a.png" alt=""><div class="panel"><h2>Hola amigos</h2><button data-next>Ok</button></div></div>';
+    const fine = await measureFlow(base(`${SHEET}.card{position:relative}.tin{position:absolute;left:0;top:40px;width:100%;height:160px;z-index:0}.panel{position:relative;z-index:1;background:#fff}`, { o: card, c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(fine!).join(' ')).not.toMatch(/encima de un recorte/);
+  });
 });
 
