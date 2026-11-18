@@ -17,13 +17,14 @@ export function compactPreviewImageData(content: string): string {
 }
 
 /** Photos the Studio embeds into one preview before the rest stay upload links. */
-export const PREVIEW_EMBED_BYTES = 6 * 1024 * 1024;
+export const PREVIEW_EMBED_BYTES = 1024 * 1024;
 
 /** Fetch only platform uploads in Studio, never give generated code network access. */
 export function createPreviewImageLoader(apiBaseUrl: string) {
   const cache = new Map<string, Promise<string>>();
   // Copy a store (2026-11-17): Graza's 81 products and 225 photos, each embedded once per place it shows, made a page
-  // bigger than the browser can hold («Invalid string length»), and 24 MB still froze the editor ~20 s (a 47 MB srcdoc).
+  // bigger than the browser can hold («Invalid string length»), 24 MB froze the editor ~20 s (a 47 MB srcdoc), and 6 MB still made
+  // an 11 MB config (owner 2026-11-18: «slowness»): the logo and a few covers are embedded, the rest load by address.
   // Past this much, a photo stays a link to the upload
   // folder, which the preview's rules allow, as on a published store.
   let room = PREVIEW_EMBED_BYTES;
@@ -38,6 +39,8 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
     const url = `${apiBaseUrl.replace(/\/$/, '')}/uploads/${filename}`;
     if (!cache.has(url)) {
       const pending = (async () => {
+        // Past the room, a photo is a link without being downloaded first (Graza: 229 downloads only to be dropped).
+        if (room <= 0) return url;
         // The API restarts on every save and stalls during long builds: a refused or failed request is tried again
         // over ~10 s, or the logo stays a blocked upload URL and shows as a broken image (owner 2026-10-24).
         let response: Response | undefined;

@@ -43,7 +43,7 @@ import { openBrandProfile } from './brand-profile';
 import { renderSourcePublication } from './source-publication';
 import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
 import { prepareSourceMedia, validateSourceMediaBatch } from './source-images';
-import { API_BASE_URL, ApiError, MerchantStudioApi, previewUploadSources, SESSION_STORAGE_KEY, type SourceSetup, type SourceChatJob, type SourceDraftRetry, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
+import { API_BASE_URL, ApiError, MerchantStudioApi, previewUploadSources, withSavedAssetUrls, SESSION_STORAGE_KEY, type SourceSetup, type SourceChatJob, type SourceDraftRetry, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
 import { queueStatus } from './source-queue-status';
 import { QUICK_ACTIONS, createSelectionState, createViewingState, matchEditableText, selectionChipLabel, selectionPayload, viewingPayload, type SelectionPayload, type ViewingPayload } from './source-selection';
 import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, receivePreviewViewing, receivePreviewContact, openPreviewContact, type PreviewNavigation, type PreviewSelection, createPreviewImageLoader } from '@pagosya/storefront-preview';
@@ -361,9 +361,10 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const scrollKey = `${storeId}|${selectedPage}|${previewNavigation.query || ''}`;
     const scrollY = !bocetoOpen && !previewNavigation.fragment && previewScroll.key === scrollKey ? previewScroll.y : 0;
     try {
-      const snapshot = await loadPreviewImages(previewSnapshot());
+      const hosted = withSavedAssetUrls(await loadPreviewImages(previewSnapshot()), storeId, version);
+      const snapshot = hosted.snapshot;
       if (frame.isConnected && request === previewRender) {
-        const doc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, imageSources: previewUploadSources(), paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), inlineProducts: plantillasOn ? inlineProducts(liveCatalog) : undefined, scrollY });
+        const doc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, imageSources: previewUploadSources(), assetSources: hosted.assetSources, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), inlineProducts: plantillasOn ? inlineProducts(liveCatalog) : undefined, scrollY });
         // Owner 2026-10-28 («way too many refreshes»): a redraw that would show the same page keeps the one already loaded.
         const key = doc.replace(/var wanted = \d+, restoring/, 'var wanted = 0, restoring');
         // The kept page still takes the current modes (select, boceto, canvas) a fresh load would have applied.

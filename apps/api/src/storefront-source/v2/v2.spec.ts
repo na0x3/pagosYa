@@ -1131,3 +1131,16 @@ it('owner 2026-11-17 («more standard product cards»): a home that builds its o
   expect(at(`<button data-add="p1">A</button><button data-add="p2">B</button><button data-add="p3">C</button>`)).toMatch(/propias tarjetas/);
   expect(at(`{items.map(item => (<article key={item.id}><h3>{item.name}</h3><button data-add={item.id}>+</button></article>))}`)).toMatch(/propias tarjetas/);
 });
+
+describe('V2 on an imported plain-page store (copy a store, 2026-11-17)', () => {
+  it('adds the build runtime and marker for home and product, once', () => {
+    const { withV2Scaffold } = require('./v2-prototype.service');
+    const plain = [{ path: 'index.html', content: '<!doctype html>' }, { path: 'styles.css', content: '' }];
+    const files = withV2Scaffold(plain);
+    const marker = JSON.parse(files.find((file: { path: string }) => file.path === 'storefront-framework.json').content);
+    expect(marker.routes.map((route: { name: string }) => route.name)).toEqual(['home', 'product', 'checkout']);
+    expect(files.find((file: { path: string }) => file.path === 'components/checkout.tsx').content).toContain('data-pagosya-checkout-page');
+    expect(files.map((file: { path: string }) => file.path)).toEqual(expect.arrayContaining(['lib/ui.tsx', 'lib/creative.tsx']));
+    expect(withV2Scaffold(files)).toBe(files);
+  });
+});

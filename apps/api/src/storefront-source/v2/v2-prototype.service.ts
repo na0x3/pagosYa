@@ -14,6 +14,7 @@ import { assertSourceCommerceContract } from '../source-commerce-contract';
 import { preparedSourceArtifact } from '../source-prepared-artifact';
 import { probeSourceShopping, withVisualSandbox } from '../source-visual-capture';
 import { sourceVisualState } from '../source-visual-state';
+import { isNextSource, nextProjectScaffold } from '../source-next';
 import { templateQaFindings } from '../source-template-qa';
 import type { SourceProjectSnapshot } from '../source-project';
 import { assembleV2Files, photoDataUrl, readConfigData, v2Context, type V2Context, type V2Cutout, withStoreSettings } from './v2-context';
@@ -50,6 +51,18 @@ import { layoutSignature, signatureDistance, type SectionShape } from './v2-sign
  *  call it, and nothing is published or migrated. */
 
 export const V2_LABEL = 'Diseño V2 (prototipo)';
+/** Copy a store (2026-11-17, Graza): an imported store starts as plain pages, without the React build. V2 writes components, so
+ *  the store gets the build's runtime and its marker first (home and product, the pages V2 writes, and the platform's checkout); otherwise the design was
+ *  saved but never built, and the checks looked at the old plain page. */
+export function withV2Scaffold<T extends { path: string; content: string }>(files: T[]): T[] {
+  if (isNextSource(files as never)) return files;
+  const known = new Set(files.map(file => file.path));
+  const routes = [{ name: 'home', path: 'index.html' }, { name: 'product', path: 'product.html' }, { name: 'checkout', path: 'checkout.html' }] as const;
+  const runtime = nextProjectScaffold('store', routes).filter(file => ['lib/creative.tsx', 'lib/ui.tsx', 'creative.d.ts', 'storefront-framework.json'].includes(file.path) && !known.has(file.path));
+  // A shop build needs a checkout page (live 2026-11-18: «Falta components/checkout.tsx»): the platform's checkout inside V2's Shell.
+  const checkout = known.has('components/checkout.tsx') ? [] : [{ path: 'components/checkout.tsx', content: "import Shell from './Shell';\n\nexport default function Checkout() {\n  return <Shell>\n    <main id=\"contenido\" className=\"es-page\" data-pagosya-checkout-page />\n    <p data-pagosya-status role=\"status\" aria-live=\"polite\" />\n  </Shell>;\n}\n" }];
+  return [...files, ...runtime as unknown as T[], ...checkout as unknown as T[]];
+}
 /** The study library on disk: <host>/ pictures + facts.json, index.json, cards/<host>.json (scripts/brand-bench/v2-references.cjs). */
 /** The store photos the written home shows itself (the library's blocks take the others first). */
 const ownPhotos = (files: readonly V2File[]) => [...new Set(files.filter(file => file.path === 'components/home.tsx').flatMap(file => [...file.content.matchAll(/assets\/[\w.-]+\.(?:jpe?g|png|webp)/g)].map(match => match[0])))];
@@ -228,7 +241,7 @@ export class SourceV2PrototypeService {
     written.push({ path: 'styles/globals.css', content: own });
     const baseRevision = await this.templateBase(storeId);
     const base = (await this.projects.version(merchantId, storeId, baseRevision)).snapshot as unknown as SourceProjectSnapshot;
-    const files = await this.withSettings(storeId, base.files.filter(file => !file.path.startsWith('_compiled/')));
+    const files = withV2Scaffold(await this.withSettings(storeId, base.files.filter(file => !file.path.startsWith('_compiled/'))));
     // Photos only the design has (its product cut-outs, owner 2026-11-15) come along, or its pages would point at nothing.
     const known = new Set(files.map(file => file.path));
     files.push(...design.files.filter(file => /^assets\/image-[a-f0-9]{12}\.webp$/.test(file.path) && !known.has(file.path)));
@@ -285,7 +298,7 @@ export class SourceV2PrototypeService {
       return value;
     };
     const base = (await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot;
-    const files = await this.withSettings(storeId, base.files.filter(file => !file.path.startsWith('_compiled/')));
+    const files = withV2Scaffold(await this.withSettings(storeId, base.files.filter(file => !file.path.startsWith('_compiled/'))));
     const first = await this.prisma.storeAgentMessage.findFirst({ where: { thread: { storeId }, role: 'USER' }, orderBy: { createdAt: 'asc' }, select: { content: true } });
     const context = await v2Context(files, first?.content ?? '');
     // Product cards are the platform's unless the merchant asked for their own (in words, or the route's restyleCards).

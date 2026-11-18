@@ -1,5 +1,5 @@
 import { mountSourceAccountDemo } from './source-account-demo';
-import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, previewUploadSources } from './api';
+import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, previewUploadSources, withSavedAssetUrls } from './api';
 import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewContact, openPreviewContact, createPreviewImageLoader, type SourceSnapshot } from '@pagosya/storefront-preview';
 import { escapeHtml } from './studio-ui';
 import './source-browser.css';
@@ -25,11 +25,13 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
     const token = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!token) throw new Error(templateId ? 'Abre esta vista desde «Ver» en Plantillas.' : 'Abre esta vista desde «Ver en navegador» en el editor de tu tienda.');
     const api = new MerchantStudioApi(token);
-    const { snapshot, title } = templateId ? await templateSnapshot(api, templateId) : draft ? await draftSnapshot(api, storeId, revision) : await versionSnapshot(api, storeId, revision);
-    const hydrated = await createPreviewImageLoader(API_BASE_URL)(snapshot);
+    const loaded: { snapshot: SourceSnapshot; title: string; saved?: { revision: number; digest: string } } = templateId ? await templateSnapshot(api, templateId) : draft ? await draftSnapshot(api, storeId, revision) : await versionSnapshot(api, storeId, revision);
+    const { snapshot, title, saved } = loaded;
+    const hosted = withSavedAssetUrls(await createPreviewImageLoader(API_BASE_URL)(snapshot), storeId, saved);
+    const hydrated = hosted.snapshot;
     let cart = [];
     try { cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch { /* Start with an empty preview cart. */ }
-    const html = sourcePreviewDocument(hydrated, page, { imageSources: previewUploadSources(), query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true, accountForms: true,
+    const html = sourcePreviewDocument(hydrated, page, { imageSources: previewUploadSources(), assetSources: hosted.assetSources, query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true, accountForms: true,
       // The signup popup shows once, on the first page of this tab, with the signup faked (owner 2026-10-25: «i dont see the
       // popup»); the editor never shows it, and pages opened after this one leave it closed.
       popupDemo: true });
@@ -55,7 +57,7 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
         const tab = window.open(destination.href, '_blank');
         if (tab) { tab.opener = null; return; }
       }
-      frame.srcdoc = sourcePreviewDocument(hydrated, next.page, { ...next, imageSources: previewUploadSources(), paymentForm: true, accountForms: true });
+      frame.srcdoc = sourcePreviewDocument(hydrated, next.page, { ...next, imageSources: previewUploadSources(), assetSources: hosted.assetSources, paymentForm: true, accountForms: true });
       history.replaceState(null, '', destination.href);
     }, { signal: controller.signal });
   } catch (error) {
@@ -78,7 +80,7 @@ async function templateSnapshot(api: MerchantStudioApi, templateId: string): Pro
 }
 
 /** A saved version; the live one shows today's catalog rather than the one it was saved with. */
-async function versionSnapshot(api: MerchantStudioApi, storeId: string, revision: number): Promise<{ snapshot: SourceSnapshot; title: string }> {
+async function versionSnapshot(api: MerchantStudioApi, storeId: string, revision: number): Promise<{ snapshot: SourceSnapshot; title: string; saved?: { revision: number; digest: string } }> {
   if (!storeId || !Number.isSafeInteger(revision) || revision < 1) throw new Error('El enlace de vista previa no es válido. Vuelve a abrirlo desde el editor.');
   const [version, state] = await Promise.all([api.sourceVersion(storeId, revision), api.sourceState(storeId)]);
   let snapshot = version.snapshot;
@@ -94,7 +96,7 @@ async function versionSnapshot(api: MerchantStudioApi, storeId: string, revision
       } catch { return file; }
     }) };
   }
-  return { snapshot, title: `${version.label} · Vista previa` };
+  return { snapshot, title: `${version.label} · Vista previa`, saved: { revision: version.revision, digest: version.digest } };
 }
 
 /** The draft the editor shows, as it composes it: the draft's files over its saved revision, which keeps the photos

@@ -115,29 +115,45 @@ export class SourceSiteController {
   @Throttle({ default: { limit: 600, ttl: 60000 } })
   async asset(@Param('slug') slug: string, @Param('version') version: string, @Param('path') path: string[] | string, @Res({ passthrough: true }) res: Response, @Headers('if-none-match') ifNoneMatch?: string, @Headers('range') range?: string) {
     const file = await this.publishing.publicAsset(slug, version, Array.isArray(path) ? path.join('/') : path);
-    res.set({
-      'Content-Type': file.contentType,
-      'X-Content-Type-Options': 'nosniff',
-      'Cross-Origin-Resource-Policy': 'cross-origin',
-      // The storefront sandbox has an opaque origin; fonts are fetched in CORS mode and need this.
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      // Safari will not play <video> from a server that cannot answer byte ranges.
-      'Accept-Ranges': 'bytes',
-      ETag: file.etag,
-    });
-    if (ifNoneMatch?.split(',').some(value => value.trim().replace(/^W\//, '') === file.etag)) { res.status(304); return undefined; }
-    const size = file.bytes.length;
-    const requested = range ? /^bytes=(\d*)-(\d*)$/.exec(range.trim()) : null;
-    if (range && requested && (requested[1] || requested[2])) {
-      const start = requested[1] ? Number(requested[1]) : Math.max(0, size - Number(requested[2]));
-      const end = requested[1] && requested[2] ? Math.min(Number(requested[2]), size - 1) : size - 1;
-      if (start >= size || start > end) { res.set({ 'Content-Range': `bytes */${size}` }); res.status(416); return undefined; }
-      res.set({ 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) });
-      res.status(206);
-      return new StreamableFile(file.bytes.subarray(start, end + 1));
-    }
-    res.set({ 'Content-Length': String(size) });
-    return new StreamableFile(file.bytes);
+    return sendSourceAsset(file, res, ifNoneMatch, range);
+  }
+}
+
+/** A revision's media file with long caching, CORS for fonts and byte ranges for Safari's video (published and draft alike). */
+function sendSourceAsset(file: { bytes: Buffer; contentType: string; etag: string }, res: Response, ifNoneMatch?: string, range?: string): StreamableFile | undefined {
+  res.set({
+    'Content-Type': file.contentType,
+    'X-Content-Type-Options': 'nosniff',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    // The storefront sandbox has an opaque origin; fonts are fetched in CORS mode and need this.
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    // Safari will not play <video> from a server that cannot answer byte ranges.
+    'Accept-Ranges': 'bytes',
+    ETag: file.etag,
+  });
+  if (ifNoneMatch?.split(',').some(value => value.trim().replace(/^W\//, '') === file.etag)) { res.status(304); return undefined; }
+  const size = file.bytes.length;
+  const requested = range ? /^bytes=(\d*)-(\d*)$/.exec(range.trim()) : null;
+  if (range && requested && (requested[1] || requested[2])) {
+    const start = requested[1] ? Number(requested[1]) : Math.max(0, size - Number(requested[2]));
+    const end = requested[1] && requested[2] ? Math.min(Number(requested[2]), size - 1) : size - 1;
+    if (start >= size || start > end) { res.set({ 'Content-Range': `bytes */${size}` }); res.status(416); return undefined; }
+    res.set({ 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) });
+    res.status(206);
+    return new StreamableFile(file.bytes.subarray(start, end + 1));
+  }
+  res.set({ 'Content-Length': String(size) });
+  return new StreamableFile(file.bytes);
+}
+
+/** Speed (owner 2026-11-18): the Studio's preview loads a saved draft's media by address, keyed by the revision's digest. */
+@Controller('v1/stores/draft/:storeId/source-site')
+export class SourceDraftAssetsController {
+  constructor(private readonly publishing: SourcePublishingService) {}
+  @Get('assets/:version/*path')
+  @Throttle({ default: { limit: 600, ttl: 60000 } })
+  async asset(@Param('storeId') storeId: string, @Param('version') version: string, @Param('path') path: string[] | string, @Res({ passthrough: true }) res: Response, @Headers('if-none-match') ifNoneMatch?: string, @Headers('range') range?: string) {
+    return sendSourceAsset(await this.publishing.draftAsset(storeId, version, Array.isArray(path) ? path.join('/') : path), res, ifNoneMatch, range);
   }
 }

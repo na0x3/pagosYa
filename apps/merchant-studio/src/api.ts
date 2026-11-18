@@ -11,6 +11,20 @@ export const API_BASE_URL: string = embedded || ["browser", "thumbnail", "librar
   ? sessionStorage.getItem("pagosya_merchant_api_base") || import.meta.env.VITE_API_BASE_URL || "/api/v1"
   : import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 /** Owner 2026-11-17 (product videos): the upload folder a preview may stream videos from (photos are copied into the page). */
+/** Speed (owner 2026-11-18: Graza's preview took ~8 s): a saved version's design photos, fonts and videos load from the API by
+ *  address instead of being pasted into the preview page as text (21 MB → about 2 MB). The address carries the version's
+ *  fingerprint, like a published store's. A file only an unsaved draft has (or changed) stays embedded. */
+export function withSavedAssetUrls<S extends { files: Array<{ path: string; content: string; encoding?: string }> }>(snapshot: S, storeId: string, saved?: { revision: number; digest: string; snapshot?: { files: Array<{ path: string; content: string }> } } | null): { snapshot: S; assetSources: string[] } {
+  if (!saved?.digest || !/^[a-f0-9]{12}/.test(saved.digest)) return { snapshot, assetSources: [] };
+  let base: string;
+  try { base = new URL(`stores/draft/${encodeURIComponent(storeId)}/source-site/assets/${saved.revision}-${saved.digest.slice(0, 12)}/`, new URL(API_BASE_URL.replace(/\/?$/, '/'), location.href)).href; }
+  catch { return { snapshot, assetSources: [] }; }
+  const kept = new Map((saved.snapshot?.files ?? snapshot.files).map(file => [file.path, file.content]));
+  const files = snapshot.files.map(file => file.encoding === 'base64' && /^assets\/[\w./-]+\.(?:png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(file.path) && !file.path.includes('..') && kept.get(file.path) === file.content
+    ? { ...file, encoding: 'url', content: base + file.path.split('/').map(encodeURIComponent).join('/') } : file);
+  return { snapshot: { ...snapshot, files }, assetSources: [base] };
+}
+
 export function previewUploadSources(): string[] { try { return [new URL('uploads/', new URL(API_BASE_URL.replace(/\/?$/, '/'), location.href)).href]; } catch { return []; } }
 export { CHECKOUT_ORIGIN };
 

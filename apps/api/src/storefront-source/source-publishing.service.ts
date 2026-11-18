@@ -376,6 +376,31 @@ export class SourcePublishingService {
     return `${revision}-${version.digest.slice(0, 12)}`;
   }
 
+  /** Speed (owner 2026-11-18): a saved draft's media for the Studio's preview, addressed like a published store's. The revision's
+   *  digest in the address is the key: only someone who already has the version (its owner, through the authenticated API)
+   *  can build it. Only media files are served, as for published stores. */
+  async draftAsset(storeId: string, version: string, path: string): Promise<{ bytes: Buffer; contentType: string; etag: string }> {
+    const missing = () => new NotFoundException('Archivo no encontrado');
+    const match = /^(\d+)-([a-f0-9]{12})$/.exec(version);
+    if (!match || !PUBLIC_ASSET.test(path) || path.split('/').some(part => !part || part === '.' || part === '..')) throw missing();
+    const revision = Number(match[1]);
+    const key = `draft:${storeId}:${revision}:${match[2]}`;
+    let load = this.assetCache.get(key);
+    if (load) this.assetCache.delete(key);
+    else load = this.prisma.storeSourceVersion.findUnique({ where: { storeId_revision: { storeId, revision } }, select: { digest: true, snapshot: true } }).then(saved => {
+      if (!saved || saved.digest.slice(0, 12) !== match[2]) throw missing();
+      const files = ((saved.snapshot as unknown as SourceProjectSnapshot).files ?? []).filter(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path));
+      return new Map(files.map(f => { const bytes = Buffer.from(f.content, 'base64'); return [f.path, { bytes, etag: `"${createHash('sha1').update(bytes).digest('base64url')}"` }] as const; }));
+    });
+    this.assetCache.set(key, load);
+    while (this.assetCache.size > ASSET_CACHE_REVISIONS) this.assetCache.delete(this.assetCache.keys().next().value!);
+    let files: Map<string, { bytes: Buffer; etag: string }>;
+    try { files = await load; } catch (error) { if (this.assetCache.get(key) === load) this.assetCache.delete(key); throw error; }
+    const file = files.get(path);
+    if (!file) throw missing();
+    return { bytes: file.bytes, contentType: ASSET_TYPES[path.split('.').pop()!.toLowerCase()], etag: file.etag };
+  }
+
   async publicAsset(slug: string, version: string, path: string): Promise<{ bytes: Buffer; contentType: string; etag: string }> {
     const missing = () => new NotFoundException('Archivo no encontrado');
     const match = /^(\d+)-([a-f0-9]{12})$/.exec(version);

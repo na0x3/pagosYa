@@ -31,7 +31,7 @@ import { SourceDesignEvaluator } from "./source-design-evaluator";
 import { SourceDesignPlanner } from "./source-design-planner";
 import { SourceAssetsController } from "./source-assets.controller";
 import { SourceVisualReviewService } from "./source-visual-review.service";
-import { SourcePublishingController, SourceSiteController } from "./source-publishing.controller";
+import { SourceDraftAssetsController, SourcePublishingController, SourceSiteController } from "./source-publishing.controller";
 import { SourcePublishingService } from "./source-publishing.service";
 import { SourceProjectsController } from "./source-projects.controller";
 import { SourceThumbnailsService } from "./source-thumbnails.service";
@@ -60,7 +60,7 @@ const storePlanParts = new StorePlanParts(
 import { ProductPageModule } from '../product-content/product-page.module';
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, StorePopupModule, ProductPageModule],
-  controllers: [SourceV2PrototypeController, SourceTourController, SourceAbController,SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
+  controllers: [SourceV2PrototypeController, SourceTourController, SourceAbController,SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceDraftAssetsController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
   providers: [SourceV2PrototypeService, SourceTourService, SourceAbService,SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceThumbnailsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, VisualAiService, { provide: StorePlanParts, useValue: storePlanParts }],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],
 })
