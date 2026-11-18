@@ -10,6 +10,8 @@ const embedded = new URLSearchParams(location.search).get("embedded") === "1" &&
 export const API_BASE_URL: string = embedded || ["browser", "thumbnail", "library", "productGuide"].some(key => new URLSearchParams(location.search).has(key))
   ? sessionStorage.getItem("pagosya_merchant_api_base") || import.meta.env.VITE_API_BASE_URL || "/api/v1"
   : import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+/** Owner 2026-11-17 (product videos): the upload folder a preview may stream videos from (photos are copied into the page). */
+export function previewUploadSources(): string[] { try { return [new URL('uploads/', new URL(API_BASE_URL.replace(/\/?$/, '/'), location.href)).href]; } catch { return []; } }
 export { CHECKOUT_ORIGIN };
 
 export type SourceChatResult = { setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision };

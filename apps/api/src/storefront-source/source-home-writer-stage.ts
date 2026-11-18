@@ -237,7 +237,7 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
     images: images.map(image => ({ ...(image as object), detail: 'low' })),
     onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); } });
   if (!out.accepted) throw new BadGatewayException(`YAPI no pudo terminar la portada${out.outcome.reason ? `: ${out.outcome.reason}` : ''}`);
-  live.agentTheme = null; live.agentAccountTheme = null; live.agentMotifPack = undefined; live.agentPolicies = {};
+  live.agentTheme = null; live.agentAccountTheme = null; live.agentMotifPack = undefined; live.agentPolicies = {}; live.agentProductMedia = [];
   live.generated.label = 'Portada de YAPI';
   live.agentOutcome = { summary: out.summary, requirements: [], evidence: [], sections: [], steps: out.steps.map(({ thumbnail: _thumbnail, ...step }) => step) };
 }

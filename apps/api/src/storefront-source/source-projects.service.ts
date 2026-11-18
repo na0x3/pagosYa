@@ -32,6 +32,7 @@ import { savedSourceDesign } from './source-design';
 import { compositionFingerprint } from './source-composition-plan';
 import { dnaFingerprint } from './source-dna';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import { PaymentLinkStatus, Prisma, type PaymentLink } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UploadsService } from "../uploads/uploads.service";
@@ -410,8 +411,23 @@ export class SourceProjectsService {
     if (current.revision !== input.revision) throw new ConflictException('El proyecto cambió. Recarga la revisión antes de editar.');
     const saved = await this.version(merchantId, storeId, input.revision);
     const snapshot = saved.snapshot as unknown as SourceProjectSnapshot;
-    const edit = applySourceVisualEdit(snapshot.files, input.fieldId, input.value);
+    const { files, value } = await this.withUploadedPhoto(merchantId, snapshot.files, input.value);
+    const edit = applySourceVisualEdit(files, input.fieldId, value);
     return this.save(merchantId, storeId, { revision: input.revision, label: edit.label, brief: snapshot.brief, files: edit.files });
+  }
+
+  /** Owner 2026-11-17 («easy picture changing»): «Subir foto nueva» in the Studio's photo picker sends a fresh upload; the merchant's
+   *  own photo becomes a store asset (the Boceto's checks and naming) and the edit points at it. Any other value passes through. */
+  private async withUploadedPhoto(merchantId: string, files: SourceProjectSnapshot['files'], value: string): Promise<{ files: SourceProjectSnapshot['files']; value: string }> {
+    const upload = /^\/v1\/uploads\/([a-f0-9-]+\.(png|jpe?g|webp))$/i.exec(value);
+    if (!upload) return { files, value };
+    const owned = await this.prisma.mediaAsset.findFirst({ where: { merchantId, url: value }, select: { url: true } });
+    if (!owned) throw new BadRequestException('Esa foto no pertenece a tu tienda.');
+    const bytes = await this.uploads?.getBuffer(upload[1]);
+    if (!bytes) throw new BadRequestException('La foto ya no está disponible. Súbela de nuevo.');
+    if (bytes.length > 2_000_000) throw new BadRequestException('Cada foto debe ocupar menos de 2 MB.');
+    const path = `assets/image-${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}.${upload[2].toLowerCase()}`;
+    return { files: files.some(file => file.path === path) ? files : [...files, { path, content: bytes.toString('base64'), encoding: 'base64' as const }], value: path };
   }
 
   private async append(storeId: string, revision: number, label: string, snapshot: SourceProjectSnapshot, restoredFrom: number | null = null, generation?: GenerationSave, contactFormEnabled?: boolean, fence?: (tx: Prisma.TransactionClient) => Promise<void>) {

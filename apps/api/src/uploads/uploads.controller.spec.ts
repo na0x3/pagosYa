@@ -73,6 +73,19 @@ describe("UploadsController public assets", () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
+  it("owner 2026-11-17 (product videos): answers a ranged MP4 request with the slice it asked for", async () => {
+    uploads.getBuffer.mockResolvedValue(Buffer.from("0123456789"));
+    res.req = { headers: { range: "bytes=2-5" } };
+    const file = await (controller.getFile as any)(filename, res, undefined);
+    expect(res.status).toHaveBeenCalledWith(206);
+    expect(res.set).toHaveBeenCalledWith(expect.objectContaining({ "Content-Range": "bytes 2-5/10", "Content-Length": 4, "Accept-Ranges": "bytes" }));
+    expect(uploads.getStream).not.toHaveBeenCalled();
+    expect(file).toBeDefined();
+    res.req = { headers: { range: "bytes=50-" } };
+    await (controller.getFile as any)(filename, res, undefined);
+    expect(res.status).toHaveBeenCalledWith(416);
+  });
+
   it("returns 404 for a missing file even when the ETag matches", async () => {
     uploads.exists.mockResolvedValue(false);
     await expect((controller.getFile as any)(filename, res, etag)).rejects.toMatchObject({ status: 404 });

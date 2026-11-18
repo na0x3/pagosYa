@@ -5,13 +5,13 @@ import { suggestionCards } from './source-suggestions';
 const esc = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 /** stop: YAPI is working on a request — the send button becomes Detener (bound by the Studio's #source-cancel-job). */
-export function renderPill(o: { busy: boolean; stop?: boolean; spin: 'spin' | 'pulse' | 'idle'; selectionLabel?: string; attachments: string; menuOpen: boolean; logo: string; instruction?: string }): string {
+export function renderPill(o: { busy: boolean; stop?: boolean; spin: 'spin' | 'pulse' | 'idle'; selectionLabel?: string; /** Owner 2026-11-17: the selection is a photo the merchant can swap directly. */ photoAction?: boolean; attachments: string; menuOpen: boolean; logo: string; instruction?: string }): string {
   const off = o.busy ? ' disabled' : '';
   return `<form class="yapi-pill" data-composer data-yapi-pill aria-label="Habla con YAPI">
     ${o.attachments ? `<div class="yapi-pill__files">${o.attachments}</div>` : ''}
     <div class="yapi-pill__row">
       <img class="yapi-pill__star ${o.spin === 'spin' ? 'is-spin' : o.spin === 'pulse' ? 'is-pulse' : ''}" data-yapi-star tabindex="0" src="${esc(o.logo)}" alt="Mover a YAPI" width="34" height="34" draggable="false" title="Arrastra para mover · doble clic para volver al centro">
-      ${o.selectionLabel ? `<span class="yapi-pill__chip">Sobre: ${esc(o.selectionLabel)}</span>` : ''}
+      ${o.selectionLabel ? `<span class="yapi-pill__chip">Sobre: ${esc(o.selectionLabel)}</span>` : ''}${o.selectionLabel && o.photoAction ? `<button type="button" class="yapi-pill__chip yapi-pill__chip-action" data-selection-change-photo${off}>Cambiar foto</button>` : ''}
       <label for="agent-command" class="sr-only">Indicación para YAPI</label>
       <textarea id="agent-command" name="command" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar?"${off}>${esc(o.instruction ?? '')}</textarea>
       <div class="yapi-pill__plus">

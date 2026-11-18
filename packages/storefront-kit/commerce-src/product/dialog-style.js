@@ -1,12 +1,18 @@
-  const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(Boolean);
+  // Owner 2026-11-17 («add videos … inside a product card»): a product's media can hold MP4 videos beside its photos. Every photo
+  // place (gallery, cards, cart, share image) keeps reading photos only; the videos are drawn by productVideos' own places.
+  const VIDEO_URL = /\.(?:mp4|webm|m4v|mov)(?:[?#]|$)/i;
+  const isVideoUrl = url => VIDEO_URL.test(String(url || ''));
+  const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(url => url && !isVideoUrl(url));
   const galleryImages = (p) => {
     const sources = [
       ...(Array.isArray(p?.imageUrls) ? p.imageUrls : []),
       ...(typeof p?.imageUrl === "string" ? [p.imageUrl] : []),
       ...(Array.isArray(p?.variants) ? p.variants.flatMap(variantPhotos) : []),
     ];
-    return [...new Set(sources.map(safeUrl).filter(Boolean))];
+    return [...new Set(sources.map(safeUrl).filter(url => url && !isVideoUrl(url)))];
   };
+  /** The product's videos, in the merchant's order (at most three). */
+  const productVideos = (p) => [...new Set((Array.isArray(p?.imageUrls) ? p.imageUrls : []).map(safeUrl).filter(url => url && isVideoUrl(url)))].slice(0, 3);
   const imagePosition = (p, url) => {
     const index = (Array.isArray(p.imageUrls) ? p.imageUrls : []).findIndex(value => safeUrl(value) === url);
     const value = index >= 0 ? p.imagePositions?.[index] : null;
@@ -101,6 +107,9 @@
     [data-pagosya-product][data-style] .product-detail__decor{display:none}
     [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery{position:sticky;top:0}
     [data-pagosya-product][data-style] .product-detail__stage{position:relative;min-width:0}
+    [data-pagosya-product] .product-detail__videos{display:grid;gap:12px;margin-top:12px;min-width:0}
+    [data-pagosya-product] .product-detail__video{display:block;width:100%;max-height:80vh;border-radius:12px;background:#000;object-fit:contain}
+    [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery:has(.product-detail__videos){position:static}
     [data-pagosya-product][data-style] .product-detail__badge{position:absolute;top:14px;left:14px;z-index:2;max-width:calc(100% - 28px);padding:6px 12px;border-radius:999px;background:var(--pd-accent,#111);color:var(--pd-on-accent,#fff);font-size:13px;font-weight:600;line-height:1.2;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
     [data-pagosya-product][data-style] .product-detail__photo{display:block;width:100%;height:min(calc(100dvh - 64px),760px);min-height:420px;max-height:none;margin:0;object-fit:cover;border:0;border-radius:0;background:var(--pd-tint);touch-action:pan-y}
     dialog[data-pagosya-product][data-style] .product-detail__photo{height:min(calc(100dvh - 34px),640px);min-height:360px}

@@ -50,7 +50,11 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
   dialog.setAttribute('aria-labelledby', 'product-create-title');
   let busy = false, completed = false, step = 1, highlightsAsked = false;
   const highlights: ProductHighlightInput[] = [];
-  const photos: Array<{ file?: File; preview: string; url?: string; scene?: boolean }> = [];
+  // Owner 2026-11-17 («add videos … inside a product card»): MP4 videos sit beside the photos; they never become the cover, an
+  // option's photo or a block's photo, and save after the photos.
+  const photos: Array<{ file?: File; preview: string; url?: string; scene?: boolean; video?: boolean }> = [];
+  const isVideoMedia = (url: string) => /\.(?:mp4|webm|m4v|mov)(?:[?#]|$)/i.test(url);
+  const stills = () => photos.filter(photo => !photo.video);
   const sceneSettings = [['auto', 'Automático'], ['studio', 'Estudio'], ['lifestyle', 'En uso'], ['natural', 'Natural'], ['editorial', 'Editorial']] as const;
   const uploadedPreview = (url: string) => /^\/(?:api\/)?v1\/uploads\//.test(url) ? new URL(url, new URL(API_BASE_URL, location.href)).href : url;
   dialog.innerHTML = `<header><span class="product-yapi-badge">✳ YAPI</span><h2 id="product-create-title">Nuevo producto</h2><p data-product-step aria-live="polite">Paso 1 de 8</p><div class="product-step-track" aria-hidden="true">${Array.from({length:8}, () => '<span></span>').join('')}</div></header>
@@ -69,7 +73,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
           <label data-badge-text hidden>Texto de la insignia<input name="badgeText" maxlength="20" pattern=".*\\S.*" title="Escribe al menos una letra" autocomplete="off" placeholder="Ej. Edición limitada"><small data-badge-count aria-live="polite">0/20</small></label>
           <p class="product-step-help">Automática muestra «Más vendido», el descuento o «Nuevo» solo cuando es verdad.</p>
         </fieldset></section>
-      <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos del producto</h3><p id="product-photos-help">Hasta 10 fotos de 8 MB. La portada es la foto que se ve en tu catálogo. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos</span><small>JPG, PNG o WebP</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div><div data-product-content-blocks></div>${initial?.id ? '<p class="product-page-regenerate"><button type="button" data-page-regenerate>Regenerar con YAPI</button> <span data-page-regenerate-status role="status"></span></p>' : ''}</section>
+      <section data-guide-step="5" hidden><h3 id="product-photos-title">Fotos y videos del producto</h3><p id="product-photos-help">Hasta 10 fotos (8 MB) o videos MP4 (20 MB). La portada es la foto que se ve en tu catálogo; un video se reproduce sobre ella y debajo de las fotos del producto. También puedes continuar sin fotos.</p><label class="product-photo-upload"><span>Añadir fotos o videos</span><small>JPG, PNG, WebP o MP4</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp,video/mp4" multiple aria-describedby="product-photos-help"></label><div class="product-create-photos" data-product-photos></div><div class="product-scene" data-product-scene hidden></div><div data-product-content-blocks></div>${initial?.id ? '<p class="product-page-regenerate"><button type="button" data-page-regenerate>Regenerar con YAPI</button> <span data-page-regenerate-status role="status"></span></p>' : ''}</section>
       <section data-guide-step="6" hidden><label class="product-option-toggle"><input type="checkbox" name="hasOptions">El cliente elige opciones (talla, color u otras)</label><div data-product-options hidden></div><p class="product-step-help">Crea tus propias opciones. Cada combinación tiene su precio, foto y stock: azul / S es diferente de blanco / S.</p><label class="product-option-toggle"><input type="checkbox" name="isBox">Es una caja: el cliente elige productos de tu catálogo</label><p class="product-step-help" data-box-locked hidden>Este producto ya tiene extras configurados en el panel de productos; edítalos allí.</p><div class="product-box" data-product-box hidden><div class="product-box-fields"><label>¿Cuántos elige el cliente?<input name="boxPickCount" type="number" min="1" max="24" step="1" inputmode="numeric" placeholder="6"></label><label>Título de la elección<input name="boxGroupName" maxlength="60" placeholder="Sabores" value="Elige tus productos"></label></div><fieldset class="product-box-choices"><legend>Productos que pueden ir en la caja</legend><div data-box-choices><p role="status">Cargando tu catálogo…</p></div></fieldset><p class="product-step-help">Cada elección descuenta una unidad del stock de ese producto. Solo se muestran productos sin opciones propias.</p></div></section>
       <section data-guide-step="7" hidden><label data-stock-label>Stock (opcional)<input name="stock" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="Sin límite"></label><p data-variant-stock hidden>Usaremos el stock que definiste para cada combinación. Cero significa agotado. Vuelve al paso anterior si quieres cambiarlo.</p></section>
       <section data-guide-step="8" hidden><div data-product-review class="product-review"></div>
@@ -243,14 +247,14 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     (form.elements.namedItem('cardEyebrow') as HTMLInputElement).value = initial.cardEyebrow || '';
     stockInput.disabled = optionsToggle.checked; stockInput.closest('label')!.hidden = optionsToggle.checked;
     dialog.querySelector<HTMLElement>('[data-variant-stock]')!.hidden = !optionsToggle.checked;
-    [...new Set([...(initial.imageUrls || []), ...(initial.variants || []).flatMap(v => v.imageUrls?.length ? v.imageUrls : [v.imageUrl]).filter((url): url is string => Boolean(url))])].forEach(url => photos.push({preview: /^\/(?:api\/)?v1\/uploads\//.test(url) ? new URL(url, new URL(API_BASE_URL, location.href)).href : url, url}));
+    [...new Set([...(initial.imageUrls || []), ...(initial.variants || []).flatMap(v => v.imageUrls?.length ? v.imageUrls : [v.imageUrl]).filter((url): url is string => Boolean(url))])].forEach(url => photos.push({preview: /^\/(?:api\/)?v1\/uploads\//.test(url) ? new URL(url, new URL(API_BASE_URL, location.href)).href : url, url, ...(isVideoMedia(url) ? { video: true } : {})}));
     dialog.querySelector('#product-create-title')!.textContent = 'Editar producto';
   }
   syncBadge();
   let optionDrafts: VariantDraft[] = initial?.variants?.map(v => ({ ...v, amount: String(v.amount / 100), stock: v.stock == null ? '' : String(v.stock), imageUrl: v.imageUrl ? uploadedPreview(v.imageUrl) : undefined, imageUrls: (v.imageUrls?.length ? v.imageUrls : v.imageUrl ? [v.imageUrl] : []).map(uploadedPreview) })) || [];
-  const optionEditor = PagosYaProductOptions.mount(optionsHost, { variants: optionDrafts, onChange: rows => { optionDrafts = rows; }, basePrice: () => priceInput.value, photos: () => photos.map(p => p.preview) });
+  const optionEditor = PagosYaProductOptions.mount(optionsHost, { variants: optionDrafts, onChange: rows => { optionDrafts = rows; }, basePrice: () => priceInput.value, photos: () => stills().map(p => p.preview) });
   const mountBlocks = (blocks: ContentBlockInput[]) => mountContentBlocksEditor(dialog.querySelector<HTMLElement>('[data-product-content-blocks]')!, {
-    photos: () => photos,
+    photos: () => stills(),
     initial: blocks.map(block => mapBlockPhotos(block, uploadedPreview)),
   });
   let blockEditor = mountBlocks(initial?.contentBlocks || []);
@@ -380,7 +384,7 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     optionEditor.refreshPhotos();
     blockEditor.refreshPhotos();
     const host = dialog.querySelector<HTMLElement>('[data-product-photos]')!;
-    host.innerHTML = photos.map((photo, index) => `<figure><img src="${escape(photo.preview)}" alt="${escape(photo.file?.name || `Foto ${index + 1}`)}"><figcaption>${index === 0 ? 'Portada' : `Foto ${index + 1}`}${photo.scene ? ' · Escena YAPI' : ''}</figcaption>${index === 0 ? '' : `<button type="button" class="button" data-cover-photo="${index}" aria-label="Usar la foto ${index + 1} como portada">Usar como portada</button>`}${photo.scene ? '' : `<button type="button" class="button" data-scene-photo="${index}" aria-label="Crear escena con la foto ${index + 1}">Crear escena</button>`}<button type="button" class="button" data-remove-photo="${index}" aria-label="Quitar foto ${index + 1}">Quitar</button></figure>`).join('');
+    host.innerHTML = photos.map((photo, index) => photo.video ? `<figure data-video><video src="${escape(photo.preview)}" muted playsinline loop preload="metadata" aria-label="${escape(photo.file?.name || `Video ${index + 1}`)}"></video><figcaption>Video</figcaption><button type="button" class="button" data-remove-photo="${index}" aria-label="Quitar video ${index + 1}">Quitar</button></figure>` : `<figure><img src="${escape(photo.preview)}" alt="${escape(photo.file?.name || `Foto ${index + 1}`)}"><figcaption>${index === 0 ? 'Portada' : `Foto ${index + 1}`}${photo.scene ? ' · Escena YAPI' : ''}</figcaption>${index === 0 ? '' : `<button type="button" class="button" data-cover-photo="${index}" aria-label="Usar la foto ${index + 1} como portada">Usar como portada</button>`}${photo.scene ? '' : `<button type="button" class="button" data-scene-photo="${index}" aria-label="Crear escena con la foto ${index + 1}">Crear escena</button>`}<button type="button" class="button" data-remove-photo="${index}" aria-label="Quitar foto ${index + 1}">Quitar</button></figure>`).join('');
     host.querySelectorAll<HTMLButtonElement>('[data-scene-photo]').forEach(button => button.addEventListener('click', () => { if (!busy) openScene(Number(button.dataset.scenePhoto)); }));
     // The cover is what a storefront card shows, so it is the owner's choice rather than upload order.
     host.querySelectorAll<HTMLButtonElement>('[data-cover-photo]').forEach(button => button.addEventListener('click', () => {
@@ -433,11 +437,16 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     const selected = Array.from(picker.files || []); picker.value = '';
     if (busy || !selected.length) return;
     showError('');
-    if (photos.length + selected.length > 10) { showError('Puedes añadir hasta 10 fotos.'); return; }
-    if (selected.some(file => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024)) { showError('Usa fotos JPG, PNG o WebP de hasta 8 MB cada una.'); return; }
+    if (photos.length + selected.length > 10) { showError('Puedes añadir hasta 10 fotos o videos.'); return; }
+    const video = (file: File) => file.type === 'video/mp4';
+    if (selected.some(file => video(file) ? file.size > 20_000_000 : !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024)) { showError('Usa fotos JPG, PNG o WebP de hasta 8 MB, o videos MP4 de hasta 20 MB.'); return; }
     setBusy(true); status.textContent = 'Preparando fotos…';
-    void Promise.all(selected.map(prepareSourceImage)).then(files => {
-      photos.push(...files.map(file => ({ file, preview: URL.createObjectURL(file) }))); drawPhotos();
+    void Promise.all(selected.map(file => video(file) ? Promise.resolve(file) : prepareSourceImage(file))).then(files => {
+      photos.push(...files.map(file => ({ file, preview: URL.createObjectURL(file), ...(video(file) ? { video: true } : {}) })));
+      // The cover is always a photo: a video picked first moves behind the first photo.
+      const firstPhoto = photos.findIndex(photo => !photo.video);
+      if (firstPhoto > 0) photos.unshift(...photos.splice(firstPhoto, 1));
+      drawPhotos();
     }).catch(cause => showError(cause instanceof Error ? cause.message : 'No se pudieron preparar las fotos.')).finally(() => { setBusy(false); status.textContent = ''; });
   });
   form.addEventListener('submit', event => {
@@ -489,8 +498,10 @@ export function createProductForm(api: MerchantStudioApi, storeId: string, onSav
     const eyebrow = (form.elements.namedItem('cardEyebrow') as HTMLInputElement).value.trim();
     if (eyebrow || initial?.cardEyebrow) Object.assign(input, { cardEyebrow: eyebrow || null });
     setBusy(true); showError(''); status.textContent = photos.length ? 'Subiendo fotos…' : 'Guardando producto…';
+    if (photos.length && !stills().length) { setBusy(false); status.textContent = ''; showError('Agrega al menos una foto: la portada del producto siempre es una foto.'); return; }
     void (async () => {
-      for (const photo of photos) {
+      // Photos first, then videos: the first entry is the cover every card, cart line and share image reads.
+      for (const photo of [...stills(), ...photos.filter(item => item.video)]) {
         if (!photo.url) photo.url = (await api.upload(photo.file!)).url;
         input.imageUrls.push(photo.url);
       }

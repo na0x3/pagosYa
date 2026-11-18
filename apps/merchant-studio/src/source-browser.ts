@@ -1,5 +1,5 @@
 import { mountSourceAccountDemo } from './source-account-demo';
-import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY } from './api';
+import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, previewUploadSources } from './api';
 import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewContact, openPreviewContact, createPreviewImageLoader, type SourceSnapshot } from '@pagosya/storefront-preview';
 import { escapeHtml } from './studio-ui';
 import './source-browser.css';
@@ -29,7 +29,7 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
     const hydrated = await createPreviewImageLoader(API_BASE_URL)(snapshot);
     let cart = [];
     try { cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch { /* Start with an empty preview cart. */ }
-    const html = sourcePreviewDocument(hydrated, page, { query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true, accountForms: true,
+    const html = sourcePreviewDocument(hydrated, page, { imageSources: previewUploadSources(), query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true, accountForms: true,
       // The signup popup shows once, on the first page of this tab, with the signup faked (owner 2026-10-25: «i dont see the
       // popup»); the editor never shows it, and pages opened after this one leave it closed.
       popupDemo: true });
@@ -55,7 +55,7 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
         const tab = window.open(destination.href, '_blank');
         if (tab) { tab.opener = null; return; }
       }
-      frame.srcdoc = sourcePreviewDocument(hydrated, next.page, { ...next, paymentForm: true, accountForms: true });
+      frame.srcdoc = sourcePreviewDocument(hydrated, next.page, { ...next, imageSources: previewUploadSources(), paymentForm: true, accountForms: true });
       history.replaceState(null, '', destination.href);
     }, { signal: controller.signal });
   } catch (error) {

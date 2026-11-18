@@ -79,7 +79,7 @@
         el.hidden = !set.length;
         el.innerHTML = set.map(productCard).join('');
         structureCatalog(el);
-        markCardDesign(el); markFavourite(el);
+        markCardDesign(el); markFavourite(el); markCardVideos(el);
         return;
       }
       const priorities = (el.getAttribute('data-design-product-ids') || '').split(',').filter(Boolean);
@@ -142,7 +142,7 @@
         el.innerHTML = shown.length ? shown.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
-      markCardDesign(el); markFavourite(el);
+      markCardDesign(el); markFavourite(el); markCardVideos(el);
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     renderSpotlights();

@@ -47,7 +47,8 @@ export const POINT_PAGES: readonly PointPage[] = ['home', 'product', 'about', 'c
 export type PointPart = 'header' | 'announcement' | 'footer' | 'menu';
 /** A loop the merchant drew around part of the preview (spec 2026-11-05 point-at), in page coordinates. */
 export interface PointArea { points: number[]; rect: { x: number; y: number; width: number; height: number }; sections: Array<{ page: PointPage; at: number; label: string }>; texts: string[]; photos: string[]; parts: PointPart[]; width: number; height: number; pageQuery: string }
-export interface PreviewSelection { kind: 'section' | 'platform' | 'area'; sectionId: string; label: string; text?: string; at?: number; page?: PointPage; area?: PointArea }
+/** image (owner 2026-11-17): the saved photo a clicked image shows, an assets/ path, for «Cambiar foto». */
+export interface PreviewSelection { kind: 'section' | 'platform' | 'area'; sectionId: string; label: string; text?: string; image?: string; at?: number; page?: PointPage; area?: PointArea }
 const validPage = (value: unknown): value is PointPage => typeof value === 'string' && ((POINT_PAGES as readonly string[]).includes(value) || /^[a-z][a-z0-9-]{0,39}$/.test(value));
 const validAt = (value: unknown) => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 40;
 const POINT_PARTS: readonly PointPart[] = ['header', 'announcement', 'footer', 'menu'];
@@ -98,7 +99,8 @@ export function receivePreviewSelection(event: MessageEvent, frame: HTMLIFrameEl
   // A template section carries its address (page + number), both valid or the message is dropped.
   const addressed = data.kind === 'section' && (data.at !== undefined || data.page !== undefined);
   if (addressed && (!validAt(data.at) || !validPage(data.page))) return null;
-  return { kind: data.kind, sectionId: data.sectionId, label: data.label, ...(text ? { text } : {}), ...(addressed ? { at: data.at, page: data.page } : {}) };
+  const image = typeof data.image === 'string' && /^assets\/[\w./-]{1,200}\.(?:png|jpe?g|webp|avif|gif)$/i.test(data.image) && !data.image.includes('..') ? data.image : '';
+  return { kind: data.kind, sectionId: data.sectionId, label: data.label, ...(text ? { text } : {}), ...(image ? { image } : {}), ...(addressed ? { at: data.at, page: data.page } : {}) };
 }
 
 /** Only the platform's own upload directory may be allowed as an image source, and only over HTTPS
@@ -193,7 +195,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   });
   const assets = assetSources.length ? ' ' + assetSources.join(' ') : '';
   const policy = doc.createElement("meta"); policy.httpEquiv = "Content-Security-Policy";
-  policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:${assets}${imageSources.length ? ' ' + imageSources.join(' ') : ''}; font-src data:${assets}; media-src data: blob:${assets}; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
+  policy.content = `default-src 'none'; script-src 'unsafe-inline' data:; style-src 'unsafe-inline' data:; img-src data: blob:${assets}${imageSources.length ? ' ' + imageSources.join(' ') : ''}; font-src data:${assets}; media-src data: blob:${assets}${imageSources.length ? ' ' + imageSources.join(' ') : ''}; connect-src 'none'; frame-src ${locationSources.length ? locationSources.join(' ') : "'none'"}; worker-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'`;
   doc.head.prepend(policy);
   // CSP does not govern DNS prefetching; turn it off so generated code cannot leak data through lookups.
   const dnsPrefetch = doc.createElement('meta'); dnsPrefetch.httpEquiv = 'x-dns-prefetch-control'; dnsPrefetch.content = 'off';

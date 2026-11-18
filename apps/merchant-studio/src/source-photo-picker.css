@@ -1,0 +1,19 @@
+/* «Cambiar foto» (owner 2026-11-17): the store's photos as a calm grid of thumbnails. */
+.photo-picker { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; width: min(720px, calc(100vw - 32px)); max-height: min(80vh, 720px); padding: 20px; border: 0; border-radius: 16px; background: #fff; color: #18181b; box-shadow: 0 24px 64px rgb(0 0 0 / .2); }
+.photo-picker::backdrop { background: rgb(24 24 27 / .45); }
+.photo-picker header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.photo-picker h2 { margin: 0; font-size: 18px; }
+.photo-picker button, .photo-picker input { font: inherit; }
+.photo-picker__close { width: 36px; height: 36px; border: 0; border-radius: 999px; background: #f4f4f5; font-size: 20px; line-height: 1; cursor: pointer; }
+.photo-picker__help { margin: 6px 0 14px; color: #52525b; font-size: 14px; }
+.photo-picker__upload { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px dashed #d4d4d8; border-radius: 12px; cursor: pointer; font-weight: 600; }
+.photo-picker__upload small { color: #71717a; font-weight: 400; }
+.photo-picker__upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.photo-picker__upload:focus-within { outline: 2px solid #18181b; outline-offset: 2px; }
+.photo-picker__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; margin-top: 14px; }
+.photo-picker__item { padding: 0; border: 2px solid transparent; border-radius: 12px; background: #f4f4f5; overflow: hidden; cursor: pointer; aspect-ratio: 1; }
+.photo-picker__item img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.photo-picker__item:hover, .photo-picker__item:focus-visible { border-color: #18181b; outline: none; }
+.photo-picker__item[aria-current] { border-color: #2563eb; cursor: default; }
+.photo-picker__status { min-height: 1.2em; margin: 12px 0 0; color: #52525b; font-size: 14px; }
+.photo-picker[aria-busy] .photo-picker__grid, .photo-picker[aria-busy] .photo-picker__upload { opacity: .55; pointer-events: none; }

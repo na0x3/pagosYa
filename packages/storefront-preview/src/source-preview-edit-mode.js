@@ -73,10 +73,12 @@
   }
   function schedule() { if (!frame) frame = requestAnimationFrame(draw); }
 
-  function post(target, text) {
+  function post(target, text, image) {
     var message = { type: 'pagosya:source-select', kind: target.kind, sectionId: target.id, label: target.label };
     if (text) message.text = text;
     if (typeof target.at === 'number') { message.at = target.at; message.page = target.page; }
+    // A clicked photo says which saved image it shows, so the Studio can offer «Cambiar foto» (owner 2026-11-17).
+    if (image) message.image = image;
     parent.postMessage(message, '*');
   }
   // A circle (spec 2026-11-05 point-at): a drag of 12 px or more draws a loop; on release, what it covers is the selection.
@@ -195,7 +197,10 @@
     if (!target) return;
     var own = event.target.children && event.target.children.length === 0 ? (event.target.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200) : '';
     selected = target.kind === 'section' ? target.id : ''; selectedEl = target.kind === 'section' ? target.element : null;
-    post(target, own);
+    // The photo under the pointer, even when a link or an overlay layered on the card took the click.
+    var img = typeof window.__pagosyaPhotoAt === 'function' && event.target instanceof Element ? window.__pagosyaPhotoAt(event.target, event.clientX, event.clientY) : null;
+    var image = img && typeof window.__pagosyaAssetPath === 'function' ? window.__pagosyaAssetPath(img.getAttribute('src') || '') : '';
+    post(target, own, image);
     schedule();
   }
   function onKey(event) {

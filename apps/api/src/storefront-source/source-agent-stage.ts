@@ -99,7 +99,7 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
   };
   const lenientGate = async (files: SourceProjectFileDto[]) => { live.lenient = true; try { return await gate(files); } finally { live.lenient = false; } };
   let renderablePreview = resumable ? checkpoint.preview : undefined;
-  const toolbox = new AgentToolbox({ lockedShell: redesign && execution?.firstDesign === true, workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, merchantInstruction: sourceRequestContext.getStore()?.request.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, redesign: isNew || redesign, gate, lenientGate, taskRequired: true,
+  const toolbox = new AgentToolbox({ attachedMedia: (dto.assetUrls ?? []).map(url => { try { return new URL(url, 'https://pagosya.invalid').pathname; } catch { return ''; } }).filter(url => /^\/v1\/uploads\/[a-f0-9-]+\.(?:png|jpe?g|webp|mp4)$/i.test(url)), lockedShell: redesign && execution?.firstDesign === true, workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, merchantInstruction: sourceRequestContext.getStore()?.request.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, redesign: isNew || redesign, gate, lenientGate, taskRequired: true,
     mediaPolicy: sourceMediaPolicy(sitePurpose, isNew || redesign, merchantRequest?.instruction || dto.instruction, live.committedDesign?.concepts[live.committedDesign.selected]?.composition),
     ...((isNew || redesign) ? { reviewComposition: async (input: Parameters<typeof reviewSourceComposition>[0]) => {
       // The existing vision-capable planning provider reviews independently of the writing transcript.
@@ -186,18 +186,19 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
     // Soft checks (palette, visual review, template structure, the model's own requirements) must never discard a draft that builds.
     // A model that stopped answering is not a soft check: Dulce Horno 2026-10-26 lost its ChatGPT plan quota between writing new
     // markup and styling it, and the half-made page was saved as done. That draft stays private for «sigue»; the revision stays.
-    if (!accepted && !outcome.provider && outcome.reason !== 'cancelled' && !signal?.aborted && (workspace.changedPaths().length || toolbox.pendingTheme || toolbox.pendingAccountTheme || toolbox.pendingMotifPack !== undefined || Object.keys(toolbox.pendingPolicies).length)) accepted = await toolbox.acceptIfBuildable();
+    if (!accepted && !outcome.provider && outcome.reason !== 'cancelled' && !signal?.aborted && (workspace.changedPaths().length || toolbox.pendingTheme || toolbox.pendingAccountTheme || toolbox.pendingMotifPack !== undefined || Object.keys(toolbox.pendingPolicies).length || toolbox.pendingProductMedia.length)) accepted = await toolbox.acceptIfBuildable();
     live.unfinishedStatus = toolbox.stopped?.status === 'partial' ? 'PARTIAL' : toolbox.stopped?.status === 'blocked' ? 'BLOCKED' : null;
   } finally { agentDraftPreviews.clear(storeId); }
   if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? (abortedByTimeout(signal) ? ' porque se acabó el tiempo de esta solicitud' : ' porque se canceló') : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : outcome.reason === 'loop' ? ' porque se quedó repitiendo la misma acción' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
   // An account-theme-only edit (PEPPA please 2026-10-20: «quita el borde de la tarjeta») changes the store too.
-  if (editExisting && !workspace.changedPaths().length && !toolbox.pendingTheme && !toolbox.pendingAccountTheme && toolbox.pendingMotifPack === undefined && !Object.keys(toolbox.pendingPolicies).length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
+  if (editExisting && !workspace.changedPaths().length && !toolbox.pendingTheme && !toolbox.pendingAccountTheme && toolbox.pendingMotifPack === undefined && !Object.keys(toolbox.pendingPolicies).length && !toolbox.pendingProductMedia.length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
   autoRepairs.push(...toolbox.repairs);
   if (signatureOn) recordTellsKept(attempts, toolbox.tellsKept);
   live.agentTheme = toolbox.pendingTheme;
   live.agentAccountTheme = toolbox.pendingAccountTheme;
   live.agentMotifPack = toolbox.pendingMotifPack;
   live.agentPolicies = toolbox.pendingPolicies;
+  live.agentProductMedia = toolbox.pendingProductMedia;
   const summary = toolbox.finished?.summary.trim() || 'Cambios de YAPI';
   live.generated.label = agentLabel(summary);
   live.agentOutcome = { summary, requirements: toolbox.requirements, evidence: toolbox.evidence, sections: toolbox.finished?.sections ?? [], steps: toolbox.steps.map(({ thumbnail: _thumbnail, ...step }) => step), ...(outcome.status === 'finished' && toolbox.finished ? {} : { unchecked: true }) };

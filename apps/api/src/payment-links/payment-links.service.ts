@@ -280,6 +280,16 @@ export class PaymentLinksService {
 
   /** Keep focus metadata aligned with its gallery even when an API client
    * updates just one of the two arrays. */
+  /** Owner 2026-11-17 (product videos): a product's MP4 videos sit after its photos, so the first entry — the cover every card,
+   *  cart line, email and share image reads — is always a photo; each photo's crop position moves with it. */
+  private photosFirst(dto: { imageUrls?: string[] | null; imagePositions?: string[] | null }) {
+    if (!Array.isArray(dto.imageUrls) || !dto.imageUrls.some(url => /\.mp4$/i.test(url))) return;
+    const order = dto.imageUrls.map((url, index) => ({ url, index, video: /\.mp4$/i.test(url) })).sort((a, b) => Number(a.video) - Number(b.video) || a.index - b.index);
+    const positions = dto.imagePositions;
+    dto.imageUrls = order.map(entry => entry.url);
+    if (Array.isArray(positions)) dto.imagePositions = order.map(entry => positions[entry.index] ?? ''); // '' falls back to the centre, keeping the indexes aligned
+  }
+
   private normalizeImagePositions(imageUrls: string[], positions?: string[]): string[] {
     return imageUrls.map((_, index) => {
       const position = positions?.[index];
@@ -456,6 +466,7 @@ export class PaymentLinksService {
 
   async create(merchantId: string, storeId: string, dto: CreatePaymentLinkDto) {
     await this.ownedStoreOrThrow(merchantId, storeId);
+    this.photosFirst(dto);
     if (dto.categoryId) await this.ownedCategoryOrThrow(storeId, dto.categoryId);
     if (dto.recommendedProductIds?.length) {
       const recommendationCount = await this.prisma.paymentLink.count({
@@ -912,6 +923,7 @@ export class PaymentLinksService {
 
   async update(merchantId: string, storeId: string, id: string, dto: UpdatePaymentLinkDto) {
     await this.ownedStoreOrThrow(merchantId, storeId);
+    this.photosFirst(dto);
     const link = await this.prisma.paymentLink.findFirst({ where: { id, storeId } });
     if (!link) throw new NotFoundException("Payment link not found");
     const targetType = dto.fulfillmentType ?? link.fulfillmentType;

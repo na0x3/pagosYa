@@ -303,3 +303,43 @@
     // Contrast correction must reach every card, including ones nested inside `sections` groups.
     readableText(el);
   }
+  /* Owner 2026-11-17 («add videos … inside a product card»): a product with a video plays it over its card photo — on hover with a
+   * mouse, while the card is in view on a touch screen — muted and looping, never with reduced motion. The video takes the photo's
+   * own box, whichever card drew it (platform, fashion or the store's own template), and loads only when it first plays. */
+  let cardVideoObserver = null;
+  function markCardVideos(root) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const hover = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!document.querySelector('style[data-pagosya-card-video]')) {
+      const style = document.createElement('style');
+      style.setAttribute('data-pagosya-card-video', '');
+      style.textContent = '.menu-item__video{position:absolute;z-index:1;object-fit:cover;opacity:0;transition:opacity .35s ease;pointer-events:none}.menu-item__video[data-playing]{opacity:1}';
+      document.head.append(style);
+    }
+    root.querySelectorAll('[data-product-id]').forEach(card => {
+      if (card.querySelector('[data-card-video]')) return;
+      const p = products().find(item => item.id === card.getAttribute('data-product-id'));
+      const url = p ? productVideos(p)[0] : '';
+      const photo = url ? card.querySelector('img') : null;
+      const host = photo?.parentElement;
+      if (!host) return;
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      const video = document.createElement('video');
+      video.className = 'menu-item__video';
+      video.muted = true; video.loop = true; video.playsInline = true; video.preload = 'none';
+      ['playsinline', 'muted', 'data-card-video'].forEach(name => video.setAttribute(name, ''));
+      video.setAttribute('aria-hidden', 'true');
+      video.src = url;
+      photo.after(video);
+      const show = () => {
+        Object.assign(video.style, { top: `${photo.offsetTop}px`, left: `${photo.offsetLeft}px`, width: `${photo.offsetWidth}px`, height: `${photo.offsetHeight}px`, borderRadius: getComputedStyle(photo).borderRadius });
+        video.play().then(() => video.setAttribute('data-playing', '')).catch(() => {});
+      };
+      const hide = () => { video.removeAttribute('data-playing'); video.pause(); };
+      if (hover) { card.addEventListener('pointerenter', show); card.addEventListener('pointerleave', hide); return; }
+      if (typeof IntersectionObserver !== 'function') return;
+      cardVideoObserver ||= new IntersectionObserver(entries => entries.forEach(entry => entry.target.dispatchEvent(new Event(entry.isIntersecting ? 'pagosya:card-video-show' : 'pagosya:card-video-hide'))), { threshold: 0.6 });
+      card.addEventListener('pagosya:card-video-show', show); card.addEventListener('pagosya:card-video-hide', hide);
+      cardVideoObserver.observe(card);
+    });
+  }

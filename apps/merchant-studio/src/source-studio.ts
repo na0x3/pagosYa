@@ -12,6 +12,7 @@ import { mountSourceAccountDemo } from './source-account-demo';
 import { codeFileEditable, codeFileForPage, renderCodeBrowser } from './source-code-tree';
 import { composeActionMode } from './source-studio-actions';
 import { createDirectEditor } from './source-direct-editor';
+import { openPhotoPicker, pickerPhotos } from './source-photo-picker';
 import { bocetoRevealY, createBocetoPanel } from './source-boceto';
 import { closeBocetoMenu } from './boceto-menu';
 import { renderInspiration } from './source-inspiration';
@@ -42,7 +43,7 @@ import { openBrandProfile } from './brand-profile';
 import { renderSourcePublication } from './source-publication';
 import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing, type SourceCheck } from './source-checks';
 import { prepareSourceMedia, validateSourceMediaBatch } from './source-images';
-import { API_BASE_URL, ApiError, MerchantStudioApi, SESSION_STORAGE_KEY, type SourceSetup, type SourceChatJob, type SourceDraftRetry, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
+import { API_BASE_URL, ApiError, MerchantStudioApi, previewUploadSources, SESSION_STORAGE_KEY, type SourceSetup, type SourceChatJob, type SourceDraftRetry, type JsonRecord, type AgentMessage, type MerchantStore, type SourceState, type SourceVersion, type SourceGenerationSettings, type SourceGenerationEstimate, type SourceGenerationRun } from './api';
 import { queueStatus } from './source-queue-status';
 import { QUICK_ACTIONS, createSelectionState, createViewingState, matchEditableText, selectionChipLabel, selectionPayload, viewingPayload, type SelectionPayload, type ViewingPayload } from './source-selection';
 import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, receivePreviewViewing, receivePreviewContact, openPreviewContact, type PreviewNavigation, type PreviewSelection, createPreviewImageLoader } from '@pagosya/storefront-preview';
@@ -145,6 +146,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   // Spec 2026-11-05 point-at: the section in the middle of the preview, sent when nothing is selected.
   const viewing = createViewingState();
   let selectMode = false, platformHint = false, editableField: { id: string; value: string } | null = null, selectionRequest = 0;
+  // Owner 2026-11-17 («easy picture changing»): the clicked photo's own field, for «Cambiar foto».
+  let editableImage: { id: string; value: string } | null = null;
   let fieldsCache: { key: string; fields: import('./source-visual-fields').VisualField[] } | null = null;
   function applyCanvas() {
     const wrap = app.querySelector<HTMLElement>('.source-frame-wrap');
@@ -202,7 +205,36 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     else if (event.key === '0') { event.preventDefault(); fitCanvas(); }
   });
   // In the Boceto the panel also forgets the block, so picking it again brings the chip back.
-  function clearSelection() { selection.clear(); platformHint = false; editableField = null; selectionRequest++; if (bocetoOpen) bocetoPanel.forgetSelection(); }
+  function clearSelection() { selection.clear(); platformHint = false; editableField = null; editableImage = null; selectionRequest++; if (bocetoOpen) bocetoPanel.forgetSelection(); }
+  /** «Cambiar foto» (owner 2026-11-17): the picked photo swapped in the code directly, from the store's photos or a new upload. */
+  function changePhoto() {
+    if (!editableImage || !version || busy || dirty()) return;
+    const field = editableImage, revision = version.revision;
+    const swap = async (value: string) => { await api.editSourceVisual(storeId, { revision, fieldId: field.id, value }); clearSelection(); await load(); toast = 'Foto cambiada.'; render(); };
+    openPhotoPicker({ photos: pickerPhotos(version.snapshot.files), current: field.value, choose: swap, upload: async file => swap((await api.upload(file)).url) });
+  }
+  /** Owner 2026-11-17 («double click on an image and the ability to change it»): a photo double-clicked in the preview opens the picker. */
+  async function photoFromPreview(data: { image?: unknown; product?: unknown; region?: unknown; nth?: unknown }) {
+    if (!version || busy || dirty()) return;
+    const image = typeof data.image === 'string' && /^assets\/[\w./-]{1,200}\.(?:png|jpe?g|webp|avif|gif)$/i.test(data.image) && !data.image.includes('..') ? data.image : '';
+    const elsewhere = () => { toast = data.product === true ? 'Esa es una foto del producto: cámbiala en Tienda › Productos, o pídele a YAPI que le agregue otra.' : 'Esa foto no se puede cambiar con doble clic; pídeselo a YAPI.'; render(); };
+    if (!image) { elsewhere(); return; }
+    const key = `${storeId}:${version.revision}`;
+    try { if (fieldsCache?.key !== key) fieldsCache = { key, fields: (await api.sourceVisualFields(storeId, version.revision)).fields }; } catch { return; }
+    // The same photo can sit in several places: the copy in the clicked part (the frame is Shell.tsx), by its place in page order.
+    const same = fieldsCache.fields.filter(field => field.kind === 'image' && field.value.replace(/^\//, '') === image);
+    const part = same.filter(field => (field.path === 'components/Shell.tsx') === (data.region === 'frame'));
+    // A page photo lives in the page's own file first (home.tsx, page-*.tsx); template data files that hold the same photo come last.
+    const rank = (path: string) => path === 'components/home.tsx' || /^components\/page-[\w-]+\.tsx$/.test(path) || path === 'components/Shell.tsx' ? 0 : 1;
+    const ranked = part.length ? part : same;
+    const best = Math.min(...ranked.map(field => rank(field.path)));
+    const pool = ranked.filter(field => rank(field.path) === best);
+    const nth = typeof data.nth === 'number' && Number.isInteger(data.nth) && data.nth >= 0 ? data.nth : 0;
+    const photo = pool[Math.min(nth, pool.length - 1)];
+    if (!photo) { elsewhere(); return; }
+    editableImage = { id: photo.id, value: photo.value };
+    changePhoto();
+  }
   function renderSelection() { if (pillMode) { render(); syncSelectMode(); return; } const host = app.querySelector<HTMLElement>('[data-selection-host]'); if (host) host.innerHTML = selectionMarkup(); syncSelectMode(); }
   function takeSelection(picked: PreviewSelection) {
     if (!selectMode) return;
@@ -219,6 +251,14 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           if (match) { editableField = { id: match.id, value: match.value }; renderSelection(); }
         } catch { /* the shortcut is optional */ }
       })();
+      if (picked.image && version) void (async () => {
+        try {
+          if (fieldsCache?.key !== key) fieldsCache = { key, fields: (await api.sourceVisualFields(storeId, version!.revision)).fields };
+          if (request !== selectionRequest) return;
+          const photo = fieldsCache.fields.find(field => field.kind === 'image' && field.value.replace(/^\//, '') === picked.image);
+          if (photo) { editableImage = { id: photo.id, value: photo.value }; renderSelection(); }
+        } catch { /* the shortcut is optional */ }
+      })();
     }
     renderSelection();
   }
@@ -226,7 +266,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const current = selection.get();
     if (platformHint) return '<p class="selection-hint" data-selection-hint role="status">Esa parte la administra pagosYa.</p>';
     if (!current) return '';
-    return `<div class="selection-panel"><span class="selection-chip" data-selection-chip>Sobre: ${escape(selectionChipLabel(current))} <button type="button" aria-label="Quitar selección" data-selection-clear>×</button></span><div class="selection-actions" role="group" aria-label="Acciones rápidas para esta sección">${QUICK_ACTIONS.map(action => `<button type="button" data-quick-action="${escape(action.id)}">${escape(action.label)}</button>`).join('')}${editableField ? '<button type="button" data-selection-edit-text>Editar texto</button>' : ''}</div></div>`;
+    return `<div class="selection-panel"><span class="selection-chip" data-selection-chip>Sobre: ${escape(selectionChipLabel(current))} <button type="button" aria-label="Quitar selección" data-selection-clear>×</button></span><div class="selection-actions" role="group" aria-label="Acciones rápidas para esta sección">${QUICK_ACTIONS.map(action => `<button type="button" data-quick-action="${escape(action.id)}">${escape(action.label)}</button>`).join('')}${editableField ? '<button type="button" data-selection-edit-text>Editar texto</button>' : ''}${editableImage ? '<button type="button" data-selection-change-photo>Cambiar foto</button>' : ''}</div></div>`;
   }
   let previewNavigation: Partial<PreviewNavigation> = {};
   bindSourcePaymentPreview(() => app.querySelector('iframe'), () => version ? previewSnapshot() : null);
@@ -236,6 +276,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const previewFrame = app.querySelector('iframe');
     // The store's WhatsApp, phone and email links open for the merchant, like on the published store.
     const contact = receivePreviewContact(event, previewFrame); if (contact) { openPreviewContact(contact); return; }
+    if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:photo-dblclick') { void photoFromPreview(event.data); return; }
     if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-ready') { syncBocetoMode(previewFrame as HTMLIFrameElement); if (bocetoOpen) bocetoPanel.resync(); return; }
     if (bocetoOpen && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:boceto-size' && Number.isFinite(event.data.height)) {
       const next = Math.min(20000, Math.max(360, Number(event.data.height)));
@@ -322,7 +363,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
       if (frame.isConnected && request === previewRender) {
-        const doc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), inlineProducts: plantillasOn ? inlineProducts(liveCatalog) : undefined, scrollY });
+        const doc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, imageSources: previewUploadSources(), paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), inlineProducts: plantillasOn ? inlineProducts(liveCatalog) : undefined, scrollY });
         // Owner 2026-10-28 («way too many refreshes»): a redraw that would show the same page keeps the one already loaded.
         const key = doc.replace(/var wanted = \d+, restoring/, 'var wanted = 0, restoring');
         // The kept page still takes the current modes (select, boceto, canvas) a fresh load would have applied.
@@ -1039,7 +1080,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     // From 900px the parts stack in a glass panel fixed at the left (owner 2026-10-23); narrower, the panel is display:contents.
     return `<button type="button" class="yapi-dock-open${waiting ? ' has-news' : ''}" data-yapi-dock-open aria-label="Mostrar a YAPI"><img src="${import.meta.env.BASE_URL}logo-mark.png" alt="" width="22" height="22">YAPI</button><aside class="yapi-dock" aria-label="YAPI"><button type="button" class="yapi-dock-hide" data-yapi-dock-hide aria-label="Ver la tienda en pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>${renderHistory(historyOpen, messages.map(chatMessage).join(''))}${waiting || error ? `<div class="yapi-cards${waiting ? ' is-waiting' : ''}" data-yapi-cards>${waiting ? '<button type="button" class="yapi-cards__hide" data-yapi-cards-hide aria-label="Ocultar">×</button>' : ''}${waiting}${error ? `<p class="auth-error" role="alert">${escape(merchantSafeText(error))}</p>` : ''}</div>` : ''}
       ${productForm ? '<div class="yapi-sheet" data-yapi-product-host></div>' : ''}
-      ${renderPill({ instruction, busy: locked || historical() || !storeId, stop: buildSession.phase === 'running', spin: yapiSpin(), selectionLabel: selection.get() ? selectionChipLabel(selection.get()!) : undefined, attachments: productPhoto ? '' : attachmentBatch(), menuOpen: plusOpen, logo: `${import.meta.env.BASE_URL}logo-mark.png` })}</aside>`;
+      ${renderPill({ instruction, busy: locked || historical() || !storeId, stop: buildSession.phase === 'running', spin: yapiSpin(), selectionLabel: selection.get() ? selectionChipLabel(selection.get()!) : undefined, photoAction: Boolean(editableImage), attachments: productPhoto ? '' : attachmentBatch(), menuOpen: plusOpen, logo: `${import.meta.env.BASE_URL}logo-mark.png` })}</aside>`;
   }
   const docked = () => window.matchMedia?.('(min-width: 900px)').matches ?? false;
   const yapiSpin = () => spinState({ building: building(), followingOwnRequest: false, reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false });
@@ -1088,6 +1129,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     star?.addEventListener('dblclick', () => { if (docked()) return; pillPlace = null; savePlace(safeStorage(), null); placeYapi(); });
     star?.addEventListener('keydown', event => { if (!box || docked()) return; const next = nudge(pillPlace, event.key, { width: box.offsetWidth, height: box.offsetHeight }, { width: innerWidth, height: innerHeight }); if (next !== pillPlace) { event.preventDefault(); pillPlace = next; savePlace(safeStorage(), pillPlace); placeYapi(); } });
     app.querySelector('[data-yapi-plus]')?.addEventListener('click', () => { plusOpen = !plusOpen; render(); });
+    app.querySelector('[data-yapi-pill] [data-selection-change-photo]')?.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); changePhoto(); });
     app.querySelector('[data-yapi-history-open]')?.addEventListener('click', () => { historyOpen = true; render(); });
     app.querySelector('[data-yapi-dock-hide]')?.addEventListener('click', () => { dockHidden = true; saveDockHidden(); render(); });
     app.querySelector('[data-yapi-dock-open]')?.addEventListener('click', () => { dockHidden = false; saveDockHidden(); render(); app.querySelector<HTMLTextAreaElement>('#agent-command')?.focus(); });
@@ -1394,6 +1436,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
         if (action) { instruction = action.instruction; const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); if (field) field.value = instruction; scheduleEstimate(); focusComposer(); }
         return;
       }
+      if (target.closest('[data-selection-change-photo]')) { changePhoto(); return; }
       if (target.closest('[data-selection-edit-text]') && editableField && !busy && !dirty()) {
         if (bocetoPhase()) { app.querySelector<HTMLButtonElement>('#source-boceto-tab')?.click(); return; }
         const wanted = editableField.value;

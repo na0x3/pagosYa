@@ -1,3 +1,4 @@
+import { writeAgentProductMedia, type AgentProductMedia } from './source-agent-product-media';
 import { EmailKitService } from '../store-emails/email-kit.service';
 import { PICK_HERO_WAIT_MS } from './source-style-release';
 import { COMMERCE_TEMPLATES_FILE, SURFACE_LABELS, SURFACE_PARTS, readTemplatesFile, type SurfacePart } from './commerce-surfaces/surface-parts';
@@ -758,6 +759,7 @@ export class SourceGenerationService {
     let agentAccountTheme: AgentToolbox['pendingAccountTheme'] = null;
     let agentMotifPack: AgentToolbox['pendingMotifPack'] = undefined;
     let agentPolicies: PendingPolicies = {};
+    let agentProductMedia: AgentProductMedia[] = [];
     let unfinishedStatus: 'PARTIAL' | 'BLOCKED' | null = null;
     let compiledNext: SourceProjectFileDto[] = [];
     const editSchema = useNext ? { ...sourceEditSchema, properties: { ...sourceEditSchema.properties, appends: { ...sourceEditSchema.properties.appends, items: { ...sourceEditSchema.properties.appends.items, properties: { ...sourceEditSchema.properties.appends.items.properties, path: { type: 'string', enum: ['styles/globals.css'] } } } } } } : sourceEditSchema;
@@ -920,6 +922,7 @@ export class SourceGenerationService {
         get agentAccountTheme() { return agentAccountTheme; }, set agentAccountTheme(value) { agentAccountTheme = value; },
         get agentMotifPack() { return agentMotifPack; }, set agentMotifPack(value) { agentMotifPack = value; },
         get agentPolicies() { return agentPolicies; }, set agentPolicies(value) { agentPolicies = value; },
+        get agentProductMedia() { return agentProductMedia; }, set agentProductMedia(value) { agentProductMedia = value ?? []; },
         get agentOutcome() { return agentOutcome; }, set agentOutcome(value) { agentOutcome = value; },
         get unfinishedStatus() { return unfinishedStatus; }, set unfinishedStatus(value) { unfinishedStatus = value; },
         get taskPrompt() { return taskPrompt; }, set taskPrompt(value) { taskPrompt = value; },
@@ -1659,6 +1662,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const saved = await this.projects.save(merchantId, storeId, saveInput, { id: run.id, ...(!products.length && !productOperations.length ? { prepared: artifact } : {}), enablePayments: dto.revision === 0, products, productOperations, data: { model, credits, attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: receipt.durationMs, status: 'COMPLETED', activeStoreId: null, revision: dto.revision + 1, completedAt: new Date() } });
     // Written once the revision is saved, so a failed save never changes Ajustes (the owner chose: live when YAPI saves).
     if (agentPolicyChange) await this.prisma.store.update({ where: { id: storeId }, data: { policies: data.policies as Prisma.InputJsonValue } });
+    // Owner 2026-11-17: the photos and videos YAPI added to products, also only once the revision is saved.
+    if (agentProductMedia.length) await writeAgentProductMedia(this.prisma, merchantId, storeId, agentProductMedia);
     // The Sep-5 self-review runs after the store is shown (spec 2026-10-12 faster generation) and lands as N+1 if still wanted.
     if (sep5Review) await this.startSep5Review({ merchantId, storeId, revision: saved.revision, brief: dto.brief, savedFiles: saveInput.files, model, requestedModel: plan.requestedModel, maxCredits, freeRun, review: sep5Review });
     // The ChatGPT bridge serves about two calls at once: YAPI's polish goes first, and the email look and long product pages

@@ -40,6 +40,8 @@
 .yapi-pill__stop { background: #fff; color: #1c1a05; box-shadow: inset 0 0 0 1.5px #1c1a05; }
 .yapi-pill__send.yapi-pill__stop:hover:not(:disabled) { background: #f1f0ea; }
 .yapi-pill__chip { padding: 5px 10px; border-radius: 999px; background: rgb(29 27 23 / .07); color: var(--yp-ink); font-size: 12.5px; white-space: nowrap; }
+.yapi-pill__chip-action { border: 0; background: var(--yp-ink); color: #fff; font: inherit; font-size: 12.5px; cursor: pointer; }
+.yapi-pill__chip-action:disabled { opacity: .5; cursor: default; }
 .yapi-pill__plus { position: relative; }
 .yapi-pill__menu { position: absolute; bottom: calc(100% + 12px); right: -8px; display: grid; min-width: 180px; padding: 6px; border: 1px solid var(--yp-edge); border-radius: 16px; background: var(--yp-glass-strong); -webkit-backdrop-filter: var(--yp-blur); backdrop-filter: var(--yp-blur); box-shadow: var(--yp-shadow); }
 .yapi-pill__menu[hidden] { display: none; }

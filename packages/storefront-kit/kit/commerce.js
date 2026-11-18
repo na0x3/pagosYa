@@ -714,15 +714,21 @@
   function cartGuaranteeLine() {
     return `<p class="cart-guarantee" data-part="cart-guarantee">${CART_SHIELD}<span>${escape(cartGuaranteeText())}</span></p>`;
   }
-  const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(Boolean);
+  // Owner 2026-11-17 («add videos … inside a product card»): a product's media can hold MP4 videos beside its photos. Every photo
+  // place (gallery, cards, cart, share image) keeps reading photos only; the videos are drawn by productVideos' own places.
+  const VIDEO_URL = /\.(?:mp4|webm|m4v|mov)(?:[?#]|$)/i;
+  const isVideoUrl = url => VIDEO_URL.test(String(url || ''));
+  const variantPhotos = v => (Array.isArray(v?.imageUrls) && v.imageUrls.length ? v.imageUrls : [v?.imageUrl]).map(safeUrl).filter(url => url && !isVideoUrl(url));
   const galleryImages = (p) => {
     const sources = [
       ...(Array.isArray(p?.imageUrls) ? p.imageUrls : []),
       ...(typeof p?.imageUrl === "string" ? [p.imageUrl] : []),
       ...(Array.isArray(p?.variants) ? p.variants.flatMap(variantPhotos) : []),
     ];
-    return [...new Set(sources.map(safeUrl).filter(Boolean))];
+    return [...new Set(sources.map(safeUrl).filter(url => url && !isVideoUrl(url)))];
   };
+  /** The product's videos, in the merchant's order (at most three). */
+  const productVideos = (p) => [...new Set((Array.isArray(p?.imageUrls) ? p.imageUrls : []).map(safeUrl).filter(url => url && isVideoUrl(url)))].slice(0, 3);
   const imagePosition = (p, url) => {
     const index = (Array.isArray(p.imageUrls) ? p.imageUrls : []).findIndex(value => safeUrl(value) === url);
     const value = index >= 0 ? p.imagePositions?.[index] : null;
@@ -817,6 +823,9 @@
     [data-pagosya-product][data-style] .product-detail__decor{display:none}
     [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery{position:sticky;top:0}
     [data-pagosya-product][data-style] .product-detail__stage{position:relative;min-width:0}
+    [data-pagosya-product] .product-detail__videos{display:grid;gap:12px;margin-top:12px;min-width:0}
+    [data-pagosya-product] .product-detail__video{display:block;width:100%;max-height:80vh;border-radius:12px;background:#000;object-fit:contain}
+    [data-pagosya-product][data-style][data-pagosya-product-page] .product-detail__gallery:has(.product-detail__videos){position:static}
     [data-pagosya-product][data-style] .product-detail__badge{position:absolute;top:14px;left:14px;z-index:2;max-width:calc(100% - 28px);padding:6px 12px;border-radius:999px;background:var(--pd-accent,#111);color:var(--pd-on-accent,#fff);font-size:13px;font-weight:600;line-height:1.2;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
     [data-pagosya-product][data-style] .product-detail__photo{display:block;width:100%;height:min(calc(100dvh - 64px),760px);min-height:420px;max-height:none;margin:0;object-fit:cover;border:0;border-radius:0;background:var(--pd-tint);touch-action:pan-y}
     dialog[data-pagosya-product][data-style] .product-detail__photo{height:min(calc(100dvh - 34px),640px);min-height:360px}
@@ -2824,7 +2833,13 @@
       if (at > -1) html = html.slice(0, at) + `<div class="product-detail__stack" data-part="thumbs">${images.map((url, index) => `<img data-part="thumb" data-photo-zoom="${index}" src="${escape(url)}"${responsiveAttrs(url, "(max-width: 820px) 100vw, 55vw")} alt="${escape(`${p.name} · imagen ${index + 1} de ${images.length}`)}" loading="${index ? 'lazy' : 'eager'}" />`).join('')}</div>`;
     }
     const tiles = productPageStyle() === 'conversion' && images.length ? tilesMarkup(conversionHighlights(p).tiles) : '';
-    return html + tiles + '<span class="product-detail__decor" data-part="decor-a" aria-hidden="true"></span>';
+    return html + tiles + videosMarkup(p) + '<span class="product-detail__decor" data-part="decor-a" aria-hidden="true"></span>';
+  }
+  /* The product's videos under its photos (owner 2026-11-17): with controls, muted until the shopper turns the sound on, loaded
+   * only when asked (preload=metadata shows the first frame). */
+  function videosMarkup(p) {
+    const videos = productVideos(p);
+    return videos.length ? `<div class="product-detail__videos" data-part="videos">${videos.map((url, index) => `<video class="product-detail__video" src="${escape(url)}" controls muted playsinline loop preload="metadata" aria-label="${escape(p.name)} · video ${index + 1} de ${videos.length}"></video>`).join('')}</div>` : '';
   }
   function plainGalleryMarkup(images, p) {
     return images.length ? `<div class="product-detail__stage" data-part="stage"><img class="product-detail__photo" src="${escape(images[0])}"${responsiveAttrs(images[0], "(max-width: 820px) 100vw, 55vw")} alt="${escape(p.name)}" data-photo-zoom="" role="button" tabindex="0" aria-label="${escape(`Ampliar foto de ${p.name}`)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" data-part="thumbs" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-part="thumb" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}"${responsiveAttrs(url, "56px")} alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>';
@@ -4530,6 +4545,46 @@
     // Contrast correction must reach every card, including ones nested inside `sections` groups.
     readableText(el);
   }
+  /* Owner 2026-11-17 («add videos … inside a product card»): a product with a video plays it over its card photo — on hover with a
+   * mouse, while the card is in view on a touch screen — muted and looping, never with reduced motion. The video takes the photo's
+   * own box, whichever card drew it (platform, fashion or the store's own template), and loads only when it first plays. */
+  let cardVideoObserver = null;
+  function markCardVideos(root) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const hover = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!document.querySelector('style[data-pagosya-card-video]')) {
+      const style = document.createElement('style');
+      style.setAttribute('data-pagosya-card-video', '');
+      style.textContent = '.menu-item__video{position:absolute;z-index:1;object-fit:cover;opacity:0;transition:opacity .35s ease;pointer-events:none}.menu-item__video[data-playing]{opacity:1}';
+      document.head.append(style);
+    }
+    root.querySelectorAll('[data-product-id]').forEach(card => {
+      if (card.querySelector('[data-card-video]')) return;
+      const p = products().find(item => item.id === card.getAttribute('data-product-id'));
+      const url = p ? productVideos(p)[0] : '';
+      const photo = url ? card.querySelector('img') : null;
+      const host = photo?.parentElement;
+      if (!host) return;
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      const video = document.createElement('video');
+      video.className = 'menu-item__video';
+      video.muted = true; video.loop = true; video.playsInline = true; video.preload = 'none';
+      ['playsinline', 'muted', 'data-card-video'].forEach(name => video.setAttribute(name, ''));
+      video.setAttribute('aria-hidden', 'true');
+      video.src = url;
+      photo.after(video);
+      const show = () => {
+        Object.assign(video.style, { top: `${photo.offsetTop}px`, left: `${photo.offsetLeft}px`, width: `${photo.offsetWidth}px`, height: `${photo.offsetHeight}px`, borderRadius: getComputedStyle(photo).borderRadius });
+        video.play().then(() => video.setAttribute('data-playing', '')).catch(() => {});
+      };
+      const hide = () => { video.removeAttribute('data-playing'); video.pause(); };
+      if (hover) { card.addEventListener('pointerenter', show); card.addEventListener('pointerleave', hide); return; }
+      if (typeof IntersectionObserver !== 'function') return;
+      cardVideoObserver ||= new IntersectionObserver(entries => entries.forEach(entry => entry.target.dispatchEvent(new Event(entry.isIntersecting ? 'pagosya:card-video-show' : 'pagosya:card-video-hide'))), { threshold: 0.6 });
+      card.addEventListener('pagosya:card-video-show', show); card.addEventListener('pagosya:card-video-hide', hide);
+      cardVideoObserver.observe(card);
+    });
+  }
   // Card text must not disappear into the card: switch to the store's text or background color, whichever reads.
   // WCAG AA guard for runtime-owned text only: 4.5:1 for body text, 3:1 for large text. Text over
   // photographs or gradients is left alone (its real background is unknown); authored markup outside
@@ -5092,7 +5147,7 @@
         el.hidden = !set.length;
         el.innerHTML = set.map(productCard).join('');
         structureCatalog(el);
-        markCardDesign(el); markFavourite(el);
+        markCardDesign(el); markFavourite(el); markCardVideos(el);
         return;
       }
       const priorities = (el.getAttribute('data-design-product-ids') || '').split(',').filter(Boolean);
@@ -5155,7 +5210,7 @@
         el.innerHTML = shown.length ? shown.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
-      markCardDesign(el); markFavourite(el);
+      markCardDesign(el); markFavourite(el); markCardVideos(el);
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     renderSpotlights();
