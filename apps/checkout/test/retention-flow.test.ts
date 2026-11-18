@@ -23,7 +23,7 @@ const items = [
   { id: "p3", name: "Viejo", price: 1, active: false, imageUrls: ["https://cdn.test/c.jpg"] },
 ];
 
-async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: boolean; body: any }; hosted?: boolean; parent?: boolean; design?: Record<string, unknown> } = {}) {
+async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: boolean; body: any }; hosted?: boolean; parent?: boolean; design?: Record<string, unknown>; privacy?: unknown } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", error => { if (!error.message.includes("Could not parse CSS stylesheet")) throw error; });
   const dom = new JSDOM(`<body><main><h1>Calima</h1></main></body>`, { runScripts: "outside-only", virtualConsole, url: "https://tienda.test/" });
@@ -53,13 +53,14 @@ async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: bo
   w.document.addEventListener("pagosya:favourite", (e: any) => events.push(`fav:${e.detail.id}:${e.detail.go}`));
   const messages: any[] = [];
   w.postMessage = (data: any) => messages.push(data);
+  if (o.privacy) w.PAGOSYA_PRIVACY = o.privacy;
   w.eval(retention);
   await w.PAGOSYA_RETENTION_MOUNT({ slug: "calima", apiBaseUrl: "https://api.test/v1", data: { items: o.items ?? items } });
   for (const fn of timers.splice(0)) fn();
   const root = () => w.document.querySelector(`[data-pya-popup="${ID}"]`);
   const click = (selector: string) => root().querySelector(selector).click();
   const flush = () => new Promise(resolve => setTimeout(resolve, 0));
-  return { w, root, click, posts, events, messages, flush };
+  return { w, root, click, posts, events, messages, flush, timers };
 }
 afterEach(() => { windows.splice(0).forEach(dom => dom.window.close()); });
 
@@ -178,6 +179,30 @@ describe("a YAPI popup design", () => {
     (w.document.querySelector("[data-pya-launcher] button") as any).click();
     expect(w.document.querySelector("dialog").open).toBe(true);
     expect(w.document.querySelector("[data-pya-launcher]")).toBeNull();
+  });
+  // Live 2026-11-18 (Remolino, owner «its all buggy»): the cookie banner sat over the popup; answers lost YAPI's layout.
+  it("waits for the cookie answer before opening", async () => {
+    let answered: boolean | null = null;
+    const { w, timers } = await mount({ privacy: { choice: () => answered } });
+    expect(w.document.querySelector("dialog").open).toBe(false);
+    answered = true;
+    w.dispatchEvent(new w.CustomEvent("pagosya:privacy-change", { detail: { slug: "calima", analytics: true } }));
+    for (const fn of timers.splice(0)) fn();
+    expect(w.document.querySelector("dialog").open).toBe(true);
+  });
+  it("writes each answer into YAPI's answer slot, keeping the rest of its button", async () => {
+    const quiz = '<div><button data-close aria-label="Cerrar">×</button><p data-question></p><button data-choice class="ans"><span data-slot="answer">x</span><i class="ico">→</i></button></div>';
+    const { root } = await mount({ design: { flow: [{ id: "q", kind: "quiz", questions: [{ id: "a", text: "¿Picante?", answers: [{ id: "s", text: "Batidos todos los días", products: ["p1"] }, { id: "n", text: "No", products: ["p2"] }] }] }, { id: "c", kind: "capture" }, { id: "r", kind: "reveal" }], steps: { ...steps, q: quiz } } });
+    const first = root().querySelector("[data-choice]");
+    expect(first.querySelector("[data-slot=answer]").textContent).toBe("Batidos todos los días");
+    expect(first.querySelector(".ico")?.textContent).toBe("→");
+  });
+  it("without a slot, replaces the template's own words and keeps its icon", async () => {
+    const quiz = '<div><button data-close aria-label="Cerrar">×</button><p data-question></p><button data-choice><span class="t">Respuesta</span><i class="ico">→</i></button></div>';
+    const { root } = await mount({ design: { flow: [{ id: "q", kind: "quiz", questions: [{ id: "a", text: "¿Picante?", answers: [{ id: "s", text: "Sí", products: ["p1"] }] }] }, { id: "c", kind: "capture" }, { id: "r", kind: "reveal" }], steps: { ...steps, q: quiz } } });
+    const first = root().querySelector("[data-choice]");
+    expect(first.querySelector(".t").textContent).toBe("Sí");
+    expect(first.querySelector(".ico")?.textContent).toBe("→");
   });
 });
 

@@ -40,4 +40,14 @@ describe('popup design render check', () => {
     const faded = await measureFlow(base(`${SHEET}.top{opacity:0}`, { o: '<div class="card"><div class="top"><button data-close aria-label="Cerrar">×</button></div><h2>Hola</h2><button data-next>Ok</button></div>', c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(faded!).join(' ')).toMatch(/paso o a 390px: no se ve/);
   });
+  // Live 2026-11-18 (Remolino): the popup sat at the left on desktop and quiz answers were squeezed one syllable per line.
+  it('keeps a sound design centred at both sizes', async () => {
+    const measures = await measureFlow(base(SHEET, { o: offer, c: capture }, [flow[0], flow[2]]));
+    for (const m of measures!) expect(Math.abs((m.contentLeft + m.contentRight) / 2 - m.size.width / 2)).toBeLessThan(40);
+  });
+  it('finds text squeezed into a sliver', async () => {
+    const squeezed = await measureFlow(base(`${SHEET}.card h2{width:14px}`, { o: offer, c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(squeezed!).join(' ')).toMatch(/aplastado/);
+  });
 });
+

@@ -479,7 +479,10 @@
           root.querySelectorAll('[data-choice-copy]').forEach(el => el.remove());
           for (const answer of question.answers || []) {
             const copy = choice.cloneNode(true); copy.setAttribute('data-choice-copy', answer.id || '');
-            copy.textContent = answer.text || ''; copy.hidden = false;
+            const words = copy.querySelector('[data-slot=answer]') || Array.from(copy.querySelectorAll('*')).find(el => Array.from(el.childNodes).some(node => node.nodeType === 3 && node.textContent.trim())) || copy;
+            if (words === copy && copy.children.length) { const text = Array.from(copy.childNodes).find(node => node.nodeType === 3 && node.textContent.trim()); if (text) text.textContent = answer.text || ''; else copy.prepend(document.createTextNode(answer.text || '')); }
+            else words.textContent = answer.text || '';
+            copy.hidden = false;
             copy.addEventListener('click', () => {
               memory.answers.push(answer.text || '');
               const found = (answer.products || []).filter(product);
@@ -555,7 +558,7 @@
         .pagosya-signup-host{--signup-paper:var(--store-background,#f3eddf);--signup-ink:var(--store-foreground,#26221c);--signup-accent:var(--store-accent,var(--signup-ink));--signup-accent-ink:var(--store-accent-foreground,var(--signup-paper));--signup-heading:var(--store-heading-font,Georgia,serif);--signup-body:var(--store-body-font,system-ui,sans-serif);--signup-radius:min(var(--store-radius,3px),24px);display:block;width:100%;font:inherit;color:inherit}.pagosya-signup-host *{box-sizing:border-box}
         .pagosya-signup-dialog{position:fixed;inset:0;width:min(1000px,calc(100% - 48px));max-width:none;max-height:calc(100dvh - 48px);margin:auto;padding:0;border:0;border-radius:var(--signup-radius);background:var(--signup-paper,#f3eddf);color:var(--signup-ink,#26221c);font:16px/1.6 var(--signup-body);overflow:auto;overscroll-behavior:contain;box-shadow:0 24px 80px #0003}
         .pagosya-signup-dialog::backdrop{background:rgb(24 22 17 / .6)}
-        .pagosya-signup-dialog.pagosya-flow{width:auto;max-width:calc(100% - 24px);background:transparent;box-shadow:none;overflow:visible;border-radius:0}.pagosya-flow-consent{display:block;margin-top:8px;font:12px/1.5 var(--signup-body);opacity:.8}
+        .pagosya-signup-dialog.pagosya-flow{width:100%;max-width:100%;height:100%;max-height:100%;margin:0;padding:12px;box-sizing:border-box;border:0;background:transparent;box-shadow:none;overflow:auto;border-radius:0}.pagosya-signup-dialog.pagosya-flow[open]{display:flex}.pagosya-flow>[data-pya-popup]{margin:auto;max-width:100%;flex:0 1 auto}.pagosya-signup-dialog.pagosya-flow>[data-pya-popup]>*{margin-left:auto;margin-right:auto}.pagosya-flow-consent{display:block;margin-top:8px;font:12px/1.5 var(--signup-body);opacity:.8}
         .pagosya-signup-layout{display:grid;grid-template-columns:1fr 1fr;min-height:580px}
         .pagosya-signup-photo{margin:0;min-height:100%;background:color-mix(in srgb,var(--signup-paper),var(--signup-accent) 22%);position:relative;overflow:hidden}.pagosya-signup-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
         .pagosya-signup-photo .signup-monogram{display:grid;place-items:center;height:100%;min-height:450px;font:clamp(80px,14vw,180px)/1 var(--signup-heading);color:var(--signup-accent);opacity:.85}
@@ -640,12 +643,18 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
     // Closed or answered, the popup stays away 30 days for this visitor and store (plan 2026-10-20-store-popup).
     const popupKey = `pagosya:popup:${config.slug}`;
     const remember = () => { state.signupDismissed = true; try { sessionStorage.setItem(dismissedKey, '1'); } catch {} try { localStorage.setItem(popupKey, String(Date.now())); } catch {} };
-    const open = () => { if (!dialog.isConnected || dialog.open || document.querySelector('dialog[open]')) return; dialog.showModal(); (dialog.querySelector('h2') || dialog.querySelector('[data-pya-popup] button, [data-pya-popup] [tabindex]'))?.focus(); };
+    // The cookie question comes first (live 2026-11-18: its banner covered the popup): open once the shopper has answered it.
+    const privacy = window.PAGOSYA_PRIVACY;
+    const waitingForCookies = () => !demo && typeof privacy?.choice === 'function' && privacy.choice(config.slug) === null;
+    const open = () => {
+      if (waitingForCookies()) { window.addEventListener('pagosya:privacy-change', () => setTimeout(open, 800), { once: true }); return; }
+      if (!dialog.isConnected || dialog.open || document.querySelector('dialog[open]')) return; dialog.showModal(); (dialog.querySelector('h2') || dialog.querySelector('[data-pya-popup] button, [data-pya-popup] [tabindex]'))?.focus(); };
     dialog.addEventListener('close', remember);
     // Popups 2.0: a LIVE YAPI design takes the dialog; timing and the 30-day memory stay the same.
     const flow = settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps
       ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt, apiBaseUrl: config.apiBaseUrl }) : false;
     dialog.querySelector('.signup-close')?.addEventListener('click', () => dialog.close());
+    if (flow) dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
     dialog.addEventListener('click', event => { if (event.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); });
     const photo = host.querySelector('.pagosya-signup-photo img, pya-photo img');
     photo?.addEventListener('error', () => { photo.parentElement.innerHTML = monogram; }, { once: true });

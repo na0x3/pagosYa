@@ -22,4 +22,8 @@ describe('popup design prompt', () => {
     expect(prompt).toMatch(/No uses pick ni quiz/);
     expect(popupDesignPrompt({ ...input, products: [input.products[0], { ...input.products[0], id: 'p2' }] })).not.toMatch(/No uses pick ni quiz/);
   });
+  it('asks for the answer slot inside the quiz template', () => {
+    expect(popupDesignPrompt(input)).toContain('<span data-slot="answer">');
+  });
 });
+

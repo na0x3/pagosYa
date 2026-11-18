@@ -24,7 +24,7 @@ export function popupDesignPrompt(input: PopupDesignPromptInput): string {
     'GANCHOS que tu HTML debe llevar (la plataforma hace toda la lógica; nunca escribas JavaScript, sin <script>, sin on…, sin enlaces ni imágenes de fuera):',
     '- todo paso: un botón [data-close] de al menos 44×44, visible; opcional [data-back].',
     '- offer: [data-next]. pick: UNA plantilla [data-tile] con [data-slot="photo"] (<img>), [data-slot="name"] y opcional [data-slot="price"]: la plataforma la repite por producto.',
-    '- quiz: [data-question] (la plataforma pone la pregunta) y UNA plantilla [data-choice] (la plataforma la repite por respuesta).',
+    '- quiz: [data-question] (la plataforma pone la pregunta) y UNA plantilla [data-choice] (la plataforma la repite por respuesta) con <span data-slot="answer"></span> donde va el texto de la respuesta; cada respuesta ocupa el ancho que necesita (nunca columnas angostas).',
     '- capture: un <input data-field> y un botón [data-submit]; opcional [data-slot="error"]. La plataforma agrega la línea de consentimiento. Cuando nombres el contacto escribe <span data-slot="contact"></span> (la plataforma pone «tu WhatsApp» o «tu correo»).',
     '- reveal: [data-slot="code"] (opcional [data-slot="percent"]) y [data-next] para ir al producto.',
     'CSS: una sola hoja; la plataforma la limita a tu popup. Diseña cada paso con libertad: composición, formas, decoración en SVG, movimiento con @keyframes (respetando prefers-reduced-motion), en los colores y letras de la marca. El texto se lee siempre (contraste 4.5:1), nada se sale de la pantalla a 390px, y el botón para cerrar nunca se esconde.',
