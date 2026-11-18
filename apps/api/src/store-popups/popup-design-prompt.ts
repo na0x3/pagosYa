@@ -3,11 +3,14 @@ export type PopupDesignPromptInput = {
   storeName: string; sector: string; palette: Record<string, string>; fonts: string[]; voice: string; photos: string[];
   products: Array<{ id: string; name: string; price: string; photo: string }>; capture: 'whatsapp' | 'email'; percent: number;
   taken: string[]; request?: string; retryProblems?: string[];
+  /** Product photos cut out on our server (transparent WebP): the art that can burst in from the edges. */
+  cutouts?: Array<{ url: string; product: string }>;
 };
 
 const LOOKS = [
   'Clásica: foto a un lado, texto y formulario al otro.', 'Portada: foto a sangre completa con el texto encima.', 'Cartel: tipografía enorme, casi sin foto.',
   'Postal: tarjeta pequeña inclinada sobre un fondo de color.', 'Revista: titular editorial con columna de texto.', 'Etiqueta: cupón troquelado con el código como protagonista.',
+  'Pantalla completa (como los mejores popups de Alia, p. ej. Fishwife): ocupa toda la pantalla dentro de un marco grueso de color, recortes grandes del producto entrando desde las esquinas y cortados por el borde, un titular enorme y una pregunta juguetona primero (quiz con respuestas Sí/No) antes de pedir el contacto.',
 ];
 
 export function popupDesignPrompt(input: PopupDesignPromptInput): string {
@@ -17,6 +20,7 @@ export function popupDesignPrompt(input: PopupDesignPromptInput): string {
     data('Tienda', input.storeName), data('Rubro', input.sector), data('Colores de la marca', input.palette), data('Letras de la marca', input.fonts), data('Voz', input.voice),
     data('Fotos de la tienda (rutas que puedes usar en <img src>)', input.photos.slice(0, 12)),
     data('Productos (id, nombre, precio, foto)', input.products.slice(0, 12)),
+    input.cutouts?.length ? data('Recortes de producto sin fondo (úsalos grandes, en <img data-art>)', input.cutouts.slice(0, 4)) : '',
     `Contacto que pide la tienda: ${input.capture === 'email' ? 'email' : 'WhatsApp'}. Descuento: ${input.percent}%.`,
     input.request ? data('Lo que pidió el comerciante', input.request) : '',
     '',
@@ -27,7 +31,7 @@ export function popupDesignPrompt(input: PopupDesignPromptInput): string {
     '- quiz: [data-question] (la plataforma pone la pregunta) y UNA plantilla [data-choice] (la plataforma la repite por respuesta) con <span data-slot="answer"></span> donde va el texto de la respuesta; cada respuesta ocupa el ancho que necesita (nunca columnas angostas).',
     '- capture: un <input data-field> y un botón [data-submit]; opcional [data-slot="error"]. La plataforma agrega la línea de consentimiento. Cuando nombres el contacto escribe <span data-slot="contact"></span> (la plataforma pone «tu WhatsApp» o «tu correo»).',
     '- reveal: [data-slot="code"] (opcional [data-slot="percent"]) y [data-next] para ir al producto.',
-    'CSS: una sola hoja; la plataforma la limita a tu popup. Diseña cada paso con libertad: composición, formas, decoración en SVG, movimiento con @keyframes (respetando prefers-reduced-motion), en los colores y letras de la marca. El texto se lee siempre (contraste 4.5:1), nada se sale de la pantalla a 390px, y el botón para cerrar nunca se esconde.',
+    'CSS: una sola hoja; la plataforma la limita a tu popup. Diseña cada paso con libertad: composición, formas, decoración en SVG, movimiento con @keyframes (respetando prefers-reduced-motion), en los colores y letras de la marca. El texto se lee siempre (contraste 4.5:1); el texto, los botones y el cierre nunca se salen de la pantalla a 390px, y el botón para cerrar nunca se esconde. La decoración (recortes, dibujos, formas) lleva data-art: puede cruzar los bordes de la tarjeta y de la pantalla y quedar cortada por ellos, nunca tapa el texto ni el cierre.',
     `INSPIRACIÓN (no son plantillas, inventa la tuya): ${LOOKS.join(' ')}`,
     input.products.length < 2 ? 'Esta tienda tiene menos de 2 productos: No uses pick ni quiz.' : '',
     input.taken.length ? data('Composiciones que ya usan otras tiendas', input.taken.slice(0, 30)) : '',

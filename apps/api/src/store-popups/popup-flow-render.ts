@@ -53,7 +53,9 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
   };
   const contrastFails: string[] = [];
   const squashed: string[] = [];
-  for (const el of Array.from(root?.querySelectorAll('*') ?? [])) {
+  // Decoration (data-art) may burst past the edges and is not text: it is left out of the text and edge checks.
+  const isArt = (el: Element) => Boolean(el.closest('[data-art]'));
+  for (const el of Array.from(root?.querySelectorAll('*') ?? []).filter(el => !isArt(el))) {
     const own = Array.from(el.childNodes).some(n => n.nodeType === 3 && (n.textContent ?? '').trim());
     const b = box(el);
     if (!own || !b?.visible) continue;
@@ -65,7 +67,7 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
     if ((hi + 0.05) / (lo + 0.05) < 4.5) contrastFails.push((el.textContent ?? '').trim().slice(0, 40));
   }
   const tiles = root?.querySelectorAll('[data-tile]') ?? null;
-  const edges = Array.from(root?.querySelectorAll('*') ?? []).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+  const edges = Array.from(root?.querySelectorAll('*') ?? []).filter(el => !el.closest('[data-art]')).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
   return { contentLeft: edges.length ? Math.min(...edges.map(r => r.left)) : 0, contentRight: edges.length ? Math.max(...edges.map(r => r.right)) : 0, close: closeBox, closeHit: Boolean(close && hit && (close === hit || close.contains(hit))), scrollWidth: document.documentElement.scrollWidth, dialog: box(dialog),
     contrastFails, squashed, tiles: tiles && tiles.length ? tiles.length : null,
     tileImages: tiles && tiles.length ? Array.from(tiles).filter(t => ((t.querySelector('img') as HTMLImageElement | null)?.naturalWidth ?? 0) > 0).length : null };

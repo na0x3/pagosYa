@@ -224,5 +224,12 @@ describe("a YAPI popup design", () => {
     expect(first.querySelector(".t").textContent).toBe("Sí");
     expect(first.querySelector(".ico")?.textContent).toBe("→");
   });
+  it("treats data-art as decoration: hidden from screen readers and never in the way of a tap", async () => {
+    const { root, w } = await mount({ design: { steps: { ...steps, o: '<div><button data-close aria-label="Cerrar">×</button><img data-art src="/v1/uploads/a.png" alt="lata"><button data-next>Quiero</button></div>' } } });
+    const art = root().querySelector("[data-art]");
+    expect(art.getAttribute("aria-hidden")).toBe("true");
+    expect(w.document.querySelector("style:not([data-pya-popup])")?.textContent ?? "").toBeDefined();
+    expect(Array.from(w.document.querySelectorAll("style")).some((style: any) => /\[data-art\]\{pointer-events:none/.test(style.textContent))).toBe(true);
+  });
 });
 

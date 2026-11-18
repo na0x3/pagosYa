@@ -16,6 +16,7 @@ describe('the popup model call', () => {
   prisma.$transaction = (fn: any) => fn(prisma);
   const usage = { record: jest.fn(async () => undefined) };
   const service = new PopupDesignService(prisma, { get: () => undefined } as any, { getBuffer: jest.fn(), saveBuffer: jest.fn() } as any, undefined, usage as any);
+  service.cut = jest.fn(async () => ({ cut: null }));
 
   it('records usage under the store and passes the model error on, without a second try when the allowance is used up', async () => {
     brandCall.mockImplementation(async (opts: any) => { await opts.record({ usage: {} }, 12, false); throw new Error('Model call failed: subscription_sharing_usage_limit_exceeded'); });

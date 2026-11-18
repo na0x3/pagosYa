@@ -25,5 +25,11 @@ describe('popup design prompt', () => {
   it('asks for the answer slot inside the quiz template', () => {
     expect(popupDesignPrompt(input)).toContain('<span data-slot="answer">');
   });
+  it('hands YAPI the product cut-outs and the full-screen, art-from-the-edges, question-first pattern', () => {
+    const prompt = popupDesignPrompt({ ...input, cutouts: [{ url: '/v1/uploads/cut-1.webp', product: 'Habanero' }] });
+    expect(prompt).toContain('/v1/uploads/cut-1.webp');
+    expect(prompt).toContain('data-art');
+    expect(prompt).toMatch(/pantalla completa/i);
+    expect(prompt).toMatch(/pregunta/);
+  });
 });
-

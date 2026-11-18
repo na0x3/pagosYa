@@ -15,6 +15,9 @@ import { popupFingerprint, varietyProblem } from './popup-fingerprint';
 import { checkFlowRender, measureFlow, type FlowRenderInput, type FlowStepMeasure } from './popup-flow-render';
 import { POPUP_DESIGN_SCHEMA, popupDesignPrompt } from './popup-design-prompt';
 import { popupChatRequest } from './popup-chat';
+import { join } from 'node:path';
+import sharp from 'sharp';
+import { productCutout } from '../storefront-source/source-photo-cutout';
 
 type Created = 'yapi' | 'merchant-chat' | 'batch';
 type Candidate = { flow: PopupFlow; steps: Record<string, string>; css: string; launcher: string | null; composition: string; fingerprint: string };
@@ -29,6 +32,8 @@ export class PopupDesignService {
   /** The model call and the browser check, replaceable in tests. */
   call: (prompt: string, storeId: string) => Promise<unknown> = (prompt, storeId) => this.modelCall(prompt, storeId);
   measure: (input: FlowRenderInput) => Promise<FlowStepMeasure[] | null> = input => measureFlow(input);
+  /** The local background removal (downloads its 44 MB model once), replaceable in tests. */
+  cut: (bytes: Buffer, model: string) => Promise<{ cut: Buffer | null }> = (bytes, model) => productCutout(bytes, model);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -108,6 +113,7 @@ export class PopupDesignService {
       const bytes = await this.uploads.getBuffer(photo.split('/').at(-1)!).catch(() => null);
       if (bytes) photos[photo] = { bytes, contentType: /\.png$/i.test(photo) ? 'image/png' : /\.webp$/i.test(photo) ? 'image/webp' : 'image/jpeg' };
     }
+    const cutouts = await this.cutouts(products, photos);
     const id = designId();
     let problems: string[] = [];
     let candidate: Candidate | null = null;
@@ -115,7 +121,7 @@ export class PopupDesignService {
     for (let attempt = 0; attempt < 2 && !candidate; attempt++) {
       options.signal?.throwIfAborted();
       const raw = await this.call(popupDesignPrompt({ storeName: store.name, sector: brief?.research?.niche ?? '', palette: brief?.identity?.palette ?? {}, fonts: [], voice: brief?.identity?.voice ?? '',
-        photos: Object.keys(photos), products, capture, percent, taken: taken.map(t => t.composition), request: options.request, retryProblems: problems.length ? problems : undefined }), storeId)
+        photos: Object.keys(photos).filter(path => !cutouts.some(cut => cut.url === path)), cutouts, products, capture, percent, taken: taken.map(t => t.composition), request: options.request, retryProblems: problems.length ? problems : undefined }), storeId)
         .catch((error: unknown) => ({ failed: String((error as Error)?.message ?? error).slice(0, 300) }));
       // The model's own words reach the chat and the batch log (live 2026-11-18: an exhausted ChatGPT allowance read as «no answer»).
       if (raw && typeof raw === 'object' && 'failed' in raw) {
@@ -175,6 +181,25 @@ export class PopupDesignService {
       ? `Listo: tu popup nuevo — ${(result.design as { composition?: string }).composition ?? ''}. Míralo en Crecimiento › Popups.`
       : 'No pude dejar un popup que pase las revisiones; tu popup sigue igual. Pídemelo de nuevo con otra idea.', { popupDesign: result.design });
     return { skipped: true };
+  }
+
+  /** Up to 4 product photos cut out on our server (no model call, nothing leaves pagosYa), uploaded as transparent WebP and served to
+   *  the browser check too. A photo that is a scene gives none. */
+  private async cutouts(products: Array<{ name: string; photo: string }>, photos: FlowRenderInput['photos']) {
+    const model = join(this.config.get<string>('app.uploadsDir') ?? 'uploads', '..', 'models', 'silueta.onnx');
+    const out: Array<{ url: string; product: string }> = [];
+    for (const product of products.filter(p => p.photo && photos[p.photo]).slice(0, 6)) {
+      if (out.length >= 4) break;
+      try {
+        const made = await this.cut(photos[product.photo].bytes, model);
+        if (!made.cut) continue;
+        const webp = await sharp(made.cut).trim().resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true }).webp({ quality: 86 }).toBuffer();
+        const stored = await this.uploads.saveBuffer(webp, 'image/webp');
+        photos[stored.url] = { bytes: webp, contentType: 'image/webp' };
+        out.push({ url: stored.url, product: product.name });
+      } catch { /* no cut-out for this photo */ }
+    }
+    return out;
   }
 
   async restore(merchantId: string, storeId: string, id: string) {

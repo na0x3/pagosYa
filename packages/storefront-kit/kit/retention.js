@@ -439,6 +439,8 @@
       const step = shown[at];
       if (!step) { dialog.close(); return; }
       root.innerHTML = design.steps[step.id];
+      // Decoration may burst past the edges (Fishwife-style); it is never read aloud nor in the way of a tap.
+      root.querySelectorAll('[data-art]').forEach(el => el.setAttribute('aria-hidden', 'true'));
       root.querySelectorAll('img[src], source[srcset], img[srcset]').forEach(img => {
         if (img.hasAttribute('src')) img.setAttribute('src', upload(img.getAttribute('src')));
         if (img.hasAttribute('srcset')) img.setAttribute('srcset', img.getAttribute('srcset').split(',').map(part => { const [url, ...rest] = part.trim().split(/\s+/); return [upload(url), ...rest].join(' '); }).join(', '));
@@ -558,7 +560,7 @@
         .pagosya-signup-host{--signup-paper:var(--store-background,#f3eddf);--signup-ink:var(--store-foreground,#26221c);--signup-accent:var(--store-accent,var(--signup-ink));--signup-accent-ink:var(--store-accent-foreground,var(--signup-paper));--signup-heading:var(--store-heading-font,Georgia,serif);--signup-body:var(--store-body-font,system-ui,sans-serif);--signup-radius:min(var(--store-radius,3px),24px);display:block;width:100%;font:inherit;color:inherit}.pagosya-signup-host *{box-sizing:border-box}
         .pagosya-signup-dialog{position:fixed;inset:0;width:min(1000px,calc(100% - 48px));max-width:none;max-height:calc(100dvh - 48px);margin:auto;padding:0;border:0;border-radius:var(--signup-radius);background:var(--signup-paper,#f3eddf);color:var(--signup-ink,#26221c);font:16px/1.6 var(--signup-body);overflow:auto;overscroll-behavior:contain;box-shadow:0 24px 80px #0003}
         .pagosya-signup-dialog::backdrop{background:rgb(24 22 17 / .6)}
-        .pagosya-signup-dialog.pagosya-flow{width:100%;max-width:100%;height:100%;max-height:100%;margin:0;padding:12px;box-sizing:border-box;border:0;background:transparent;box-shadow:none;overflow:auto;border-radius:0}.pagosya-signup-dialog.pagosya-flow[open]{display:flex}.pagosya-flow>[data-pya-popup]{margin:auto;max-width:100%;flex:0 1 auto}.pagosya-signup-dialog.pagosya-flow>[data-pya-popup]>*{margin-left:auto;margin-right:auto}.pagosya-flow-consent{display:block;margin-top:8px;font:12px/1.5 var(--signup-body);opacity:.8}
+        .pagosya-signup-dialog.pagosya-flow{width:100%;max-width:100%;height:100%;max-height:100%;margin:0;padding:12px;box-sizing:border-box;border:0;background:transparent;box-shadow:none;overflow:auto;border-radius:0}.pagosya-signup-dialog.pagosya-flow[open]{display:flex;overflow-x:hidden}.pagosya-flow [data-art]{pointer-events:none;user-select:none}.pagosya-flow>[data-pya-popup]{margin:auto;max-width:100%;flex:0 1 auto}:where(.pagosya-flow>[data-pya-popup]){width:100%}.pagosya-signup-dialog.pagosya-flow>[data-pya-popup]>*{margin-left:auto;margin-right:auto}.pagosya-flow-consent{display:block;margin-top:8px;font:12px/1.5 var(--signup-body);opacity:.8}
         .pagosya-signup-layout{display:grid;grid-template-columns:1fr 1fr;min-height:580px}
         .pagosya-signup-photo{margin:0;min-height:100%;background:color-mix(in srgb,var(--signup-paper),var(--signup-accent) 22%);position:relative;overflow:hidden}.pagosya-signup-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
         .pagosya-signup-photo .signup-monogram{display:grid;place-items:center;height:100%;min-height:450px;font:clamp(80px,14vw,180px)/1 var(--signup-heading);color:var(--signup-accent);opacity:.85}

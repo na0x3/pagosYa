@@ -49,5 +49,13 @@ describe('popup design render check', () => {
     const squeezed = await measureFlow(base(`${SHEET}.card h2{width:14px}`, { o: offer, c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(squeezed!).join(' ')).toMatch(/aplastado/);
   });
+  // Owner 2026-11-18 («look at their pop up its amazing», Fishwife/Alia): product art may burst past the edges; text may not.
+  it('lets decoration marked data-art cross the edges, never text', async () => {
+    const art = '<div class="card"><button data-close aria-label="Cerrar">×</button><img data-art class="burst" src="/v1/uploads/a.png" alt=""><h2>Hola</h2><button data-next>Ok</button></div>';
+    const sheet = `${SHEET}.card{position:relative;overflow:visible}.burst{position:absolute;left:-260px;top:0;width:700px;height:200px}`;
+    const ok = await measureFlow(base(sheet, { o: art, c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(ok!)).toEqual([]);
+    const words = await measureFlow(base(`${sheet}.card h2{position:absolute;left:-300px;white-space:nowrap}`, { o: art, c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(words!).join(' ')).toMatch(/se sale/);
+  });
 });
-

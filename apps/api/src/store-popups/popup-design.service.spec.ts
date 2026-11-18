@@ -36,6 +36,7 @@ function setup(answers: unknown[], over: { measures?: Array<(id: string, w: numb
   const plans: any = { assertCredits: jest.fn(async () => 100) };
   const service = new PopupDesignService(prisma, { get: () => undefined } as any, uploads, plans);
   const calls: string[] = [];
+  service.cut = jest.fn(async () => ({ cut: null }));
   service.call = jest.fn(async (prompt: string) => { calls.push(prompt); return answers.shift(); });
   let attempt = 0;
   service.measure = jest.fn(async (input: any) => { const make = over.measures?.[Math.min(attempt++, (over.measures?.length ?? 1) - 1)] ?? goodMeasure; return ['o', 'p', 'c', 'r'].flatMap(id => [1280, 390].map(w => make(id, w))) as any; });
