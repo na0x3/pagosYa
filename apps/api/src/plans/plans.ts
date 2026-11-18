@@ -8,15 +8,17 @@ import type { MerchantPlan } from '@prisma/client';
 export type PlanDetails = { id: MerchantPlan; name: string; monthlyCredits: number; canPublish: boolean; customDomain: boolean;
   /** Store emails a month (Resend). Receipts, order notices, replies and staff notices always go out; promotions stop at the cap. */
   emailsPerMonth: number; assistantConversations: number; perks: string[];
+  /** «Mejorar mi marca» (spec 2026-11-18): campaign photos one run may shoot. */
+  campaignPhotos: number;
   /** Bolivianos a month, and for a year paid at once (two months free). */
   priceBob: number; yearlyPriceBob: number };
 
 export const PLANS: Record<MerchantPlan, PlanDetails> = {
-  FREE: { id: 'FREE', name: 'Gratis', monthlyCredits: 300, canPublish: false, customDomain: false, emailsPerMonth: 100, assistantConversations: 0, priceBob: 0, yearlyPriceBob: 0,
+  FREE: { id: 'FREE', campaignPhotos: 2, name: 'Gratis', monthlyCredits: 300, canPublish: false, customDomain: false, emailsPerMonth: 100, assistantConversations: 0, priceBob: 0, yearlyPriceBob: 0,
     perks: ['Crea tu tienda con YAPI', '300 créditos de YAPI al mes', 'Vista previa de tu tienda en el editor'] },
-  EMPRENDEDOR: { id: 'EMPRENDEDOR', name: 'Emprendedor', monthlyCredits: 1500, canPublish: true, customDomain: true, emailsPerMonth: 2000, assistantConversations: 1000, priceBob: 199, yearlyPriceBob: 1990,
+  EMPRENDEDOR: { id: 'EMPRENDEDOR', campaignPhotos: 8, name: 'Emprendedor', monthlyCredits: 1500, canPublish: true, customDomain: true, emailsPerMonth: 2000, assistantConversations: 1000, priceBob: 199, yearlyPriceBob: 1990,
     perks: ['Publica tu tienda y cobra en línea', '1.500 créditos de YAPI al mes', 'Tu propio dominio (conéctalo o cómpralo aquí)', 'Hasta 2.000 correos al mes a tus clientes', 'Asistente de ventas: 1.000 conversaciones al mes'] },
-  PRO: { id: 'PRO', name: 'Pro', monthlyCredits: 5000, canPublish: true, customDomain: true, emailsPerMonth: 10000, assistantConversations: 3000, priceBob: 599, yearlyPriceBob: 5990,
+  PRO: { id: 'PRO', campaignPhotos: 8, name: 'Pro', monthlyCredits: 5000, canPublish: true, customDomain: true, emailsPerMonth: 10000, assistantConversations: 3000, priceBob: 599, yearlyPriceBob: 5990,
     perks: ['Todo lo de Emprendedor', '5.000 créditos de YAPI al mes', 'Hasta 10.000 correos al mes a tus clientes', 'Asistente de ventas: 3.000 conversaciones al mes'] },
 };
 

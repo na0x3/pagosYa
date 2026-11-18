@@ -126,4 +126,50 @@ export class ProductScenesService {
       await this.usage?.record(storeId, 'product-scene', model, body?.usage ? { usage: body.usage } : null, Date.now() - started, status);
     }
   }
+
+  /** «Mejorar mi marca» (spec 2026-11-18 §3.5): one campaign photo from several of the merchant's own photos at once
+   *  (the range, or logo + product). Same provider, quality, storage and metering as a product scene. */
+  async campaignShot(merchantId: string, storeId: string, input: { referenceUrls: string[]; prompt: string; aspect: ProductSceneAspect }) {
+    const apiKey = this.config.get<string>('app.openAi.apiKey'), model = this.config.get<string>('app.openAi.imageModel');
+    if (!apiKey || !model || this.config.get<boolean>('app.openAi.enabled') === false) throw new ServiceUnavailableException('La sesión de fotos de YAPI no está configurada en este momento.');
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } });
+    if (!store) throw new NotFoundException('Tienda no encontrada.');
+    const wanted = input.referenceUrls.slice(0, 4);
+    const sources = await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: wanted }, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } }, select: { id: true, url: true, mimeType: true } });
+    const ordered = wanted.map(url => sources.find(source => source.url === url)).filter((source): source is NonNullable<typeof source> => Boolean(source));
+    if (!ordered.length) throw new BadRequestException('No encontramos las fotos de tus productos.');
+    const size = input.aspect === 'portrait' ? '1024x1536' : input.aspect === 'landscape' ? '1536x1024' : '1024x1024';
+    const form = new FormData();
+    form.append('model', model);
+    for (const [index, source] of ordered.entries()) {
+      const bytes = await this.uploads.getBuffer(source.url.split('/').at(-1)!);
+      if (bytes) form.append('image[]', new Blob([new Uint8Array(bytes)], { type: source.mimeType }), `ref-${index}.${source.mimeType.split('/')[1]}`);
+    }
+    form.append('prompt', input.prompt);
+    form.append('size', size);
+    form.append('quality', 'medium');
+    form.append('output_format', 'jpeg');
+    form.append('output_compression', '88');
+    form.append('input_fidelity', 'high');
+    const started = Date.now();
+    let body: any, status = 'FAILED';
+    try {
+      const response = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(180_000) });
+      body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (body?.error?.code === 'moderation_blocked') throw new BadRequestException('El proveedor no aceptó esta escena.');
+        throw new BadGatewayException('El proveedor de imágenes no devolvió una foto utilizable.');
+      }
+      const encoded = body?.data?.[0]?.b64_json;
+      if (typeof encoded !== 'string' || !encoded) throw new BadGatewayException('El proveedor de imágenes no devolvió una foto utilizable.');
+      const stored = await this.uploads.saveBuffer(Buffer.from(encoded, 'base64'), 'image/jpeg');
+      try {
+        const asset = await this.prisma.mediaAsset.create({ data: { merchantId, storeId, url: stored.url, storageKey: stored.filename, kind: 'AI_DERIVED', parentAssetId: ordered[0].id, mimeType: stored.mimeType, byteSize: stored.byteSize } });
+        status = 'COMPLETED';
+        return { url: asset.url };
+      } catch (error) { await this.uploads.deleteFiles([stored.url]); throw error; }
+    } finally {
+      await this.usage?.record(storeId, 'brand-campaign-shot', model, body?.usage ? { usage: body.usage } : null, Date.now() - started, status);
+    }
+  }
 }

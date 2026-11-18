@@ -113,3 +113,29 @@ it('still creates a scene when the store has no design project or a drifted cont
     jest.restoreAllMocks();
   }
 });
+
+describe('ProductScenesService.campaignShot', () => {
+  const make = (fetchImpl: jest.Mock) => {
+    global.fetch = fetchImpl as any;
+    const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's1' }) },
+      mediaAsset: { findMany: jest.fn().mockResolvedValue([{ id: 'a1', url: '/v1/uploads/a.jpg', mimeType: 'image/jpeg' }, { id: 'a2', url: '/v1/uploads/b.jpg', mimeType: 'image/jpeg' }]), create: jest.fn().mockResolvedValue({ url: '/v1/uploads/new.jpg' }) } };
+    const config: any = { get: (key: string) => ({ 'app.openAi.apiKey': 'k', 'app.openAi.imageModel': 'gpt-image-2' } as Record<string, string>)[key] };
+    const uploads: any = { getBuffer: jest.fn().mockResolvedValue(Buffer.from('jpg')), saveBuffer: jest.fn().mockResolvedValue({ url: '/v1/uploads/new.jpg', filename: 'new.jpg', mimeType: 'image/jpeg', byteSize: 3 }), deleteFiles: jest.fn() };
+    return { service: new ProductScenesService(prisma, config, uploads), prisma };
+  };
+
+  it('sends every reference photo and saves the shot as an AI photo of the store', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [{ b64_json: Buffer.from('out').toString('base64') }] }) });
+    const { service, prisma } = make(fetchImpl);
+    await expect(service.campaignShot('m1', 's1', { referenceUrls: ['/v1/uploads/a.jpg', '/v1/uploads/b.jpg'], prompt: 'p', aspect: 'landscape' })).resolves.toEqual({ url: '/v1/uploads/new.jpg' });
+    const form = fetchImpl.mock.calls[0][1].body as FormData;
+    expect(form.getAll('image[]')).toHaveLength(2);
+    expect(form.get('size')).toBe('1536x1024');
+    expect(prisma.mediaAsset.create).toHaveBeenCalledWith({ data: expect.objectContaining({ storeId: 's1', kind: 'AI_DERIVED', parentAssetId: 'a1' }) });
+  });
+
+  it('turns a moderation refusal into a BadRequest the shoot can skip', async () => {
+    const { service } = make(jest.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({ error: { code: 'moderation_blocked' } }) }));
+    await expect(service.campaignShot('m1', 's1', { referenceUrls: ['/v1/uploads/a.jpg'], prompt: 'p', aspect: 'square' })).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
