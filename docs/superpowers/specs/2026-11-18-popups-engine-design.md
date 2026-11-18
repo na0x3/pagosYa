@@ -29,7 +29,8 @@ automatic tests (Part 4). Part 1 only tags codes and signups with the design id 
 |---|---|
 | Popup runtime on the storefront | `packages/storefront-kit/kit/retention.js` (today: 6 looks, games, «Rasca y elige») |
 | Games, signed prizes, personal codes | `apps/api/src/store-popups/popup-games.ts`, `popup-game.service.ts` |
-| Real-browser popup check | `apps/api/src/store-popups/popup-render.ts` (retention.js in demo mode, 1280 and 390, part boxes) |
+| Real-browser popup check | `apps/api/src/store-popups/popup-render.ts` (`measurePopup`, `checkPopupRender`: retention.js in demo mode, 1280 and 390) |
+| HTML / CSS cleaning | `storefront-source/design-engine/style-hero.ts` `sanitizeHeroHtml` (parse5 allowlist), `product-theme-css.ts` `sanitizeThemeCss` (postcss, scoped guarded CSS) |
 | Looks | `popup-looks.ts` — become *examples* in YAPI's prompt, no longer skeletons |
 | Subscribers with interests and favourite | `StoreNewsletterSubscriber` (`interests`, `favourite`, `sourceVisitId`) |
 | «Tu favorito» on later visits, product page landing | «Rasca y elige» (spec 2026-11-10) |
@@ -38,7 +39,8 @@ automatic tests (Part 4). Part 1 only tags codes and signups with the design id 
 
 ## 3. A popup design
 
-A new table `StorePopupDesign` (one row per version; the store points at its current one, `Store.popupDesignId`):
+A new table `StorePopupDesign` (one row per version; the store points at its current one with `popupDesignId` inside
+`StoreRetention.settings`, next to today's look/game settings — no new Store column):
 
 ```
 id, storeId, version, status (DRAFT | LIVE | FAILED | RETIRED), createdAt, createdBy (yapi | merchant-chat | batch)
@@ -53,7 +55,8 @@ fingerprint String — structural hash used by the variety check (§6)
 checks      Json   — the last browser check (per step, per size: pass/fail + reasons)
 ```
 
-The current settings in `Store.retention` (look, game, question) stay readable; a store without a LIVE design keeps today's popup.
+The current settings in `StoreRetention.settings` (look, game, question) stay readable; a store without a LIVE design keeps
+today's popup.
 
 ## 4. Steps the platform understands
 
@@ -114,12 +117,15 @@ its current popup. YAPI says so in the chat when the run came from chat.
 
 One runtime (`retention.js`, new `flow` branch) plays a LIVE design: entrance as the CSS defines (the runtime adds the
 open/close classes and respects reduced motion), step transitions, back and close, Escape, focus trap, phone and desktop.
-- **Contact:** WhatsApp numbers and emails are saved on the store's subscribers with `interests` (quiz answers), `favourite`
-  (picked product), `popupDesignId` and `channel`. Migration: `StoreNewsletterSubscriber.email` becomes optional, `phone` gets
-  `@@unique([storeId, phone])`, new `channel` and `popupDesignId` columns. pagosYa does not send WhatsApp; the merchant sees the
-  list (as today).
-- **Code:** personal, single-use, `percent` of the design, tagged with the design id (for Part 4).
-- **Land:** the chosen product page opens with the code already applied to the cart and the product marked «Tu favorito».
+- **Contact:** through today's `POST /stores/public/:slug/retention/subscribe` — emails into `StoreNewsletterSubscriber`, WhatsApp
+  numbers into the existing `StoreWhatsappSubscriber` (already unique by phone), both with `interests` (quiz answers) and
+  `favourite` (picked product), plus a new nullable `popupDesignId` column on each (migration). The WhatsApp branch, today allowed
+  only with a game, is allowed for any design whose `capture` is whatsapp. pagosYa does not send WhatsApp; the merchant sees the list.
+- **Code:** personal, single-use, `percent` of the design, issued like the game's winner codes (`PromoCode`, `maxUses: 1`) and
+  tagged with a new nullable `PromoCode.popupDesignId` (for Part 4). The subscribe answer returns it.
+- **Land:** today the code is only shown with «Copiar». The kit gains one event, `pagosya:apply-promo` `{ code }`, handled in
+  commerce.js by its existing `rememberPromo` (so the cart applies it), then the existing `pagosya:favourite` `{ id, go: true }`
+  opens the chosen product marked «Tu favorito» (hosted pages: the parent keeps both, as it keeps the favourite today).
 - Shown once per visitor per design (today's frequency rules); Part 2 replaces this with real targeting.
 
 ## 8. Set up by YAPI, tweaked by the merchant
