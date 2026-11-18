@@ -23,7 +23,7 @@ const items = [
   { id: "p3", name: "Viejo", price: 1, active: false, imageUrls: ["https://cdn.test/c.jpg"] },
 ];
 
-async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: boolean; body: any }; hosted?: boolean; parent?: boolean; design?: Record<string, unknown>; privacy?: unknown; banner?: boolean; cookiesPending?: boolean } = {}) {
+async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: boolean; body: any }; hosted?: boolean; parent?: boolean; design?: Record<string, unknown>; privacy?: unknown; banner?: boolean; cookiesPending?: boolean; answerFirst?: boolean; delay?: number } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", error => { if (!error.message.includes("Could not parse CSS stylesheet")) throw error; });
   const dom = new JSDOM(`<body><main><h1>Calima</h1></main></body>`, { runScripts: "outside-only", virtualConsole, url: "https://tienda.test/" });
@@ -36,7 +36,7 @@ async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: bo
   w.HTMLElement.prototype.scrollIntoView = () => {};
   w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   w.HTMLDialogElement.prototype.close = function () { this.open = false; this.dispatchEvent(new w.Event("close")); };
-  const settings = { signupEnabled: true, popupTrigger: "load", popupDelaySeconds: 0, popupDesign: { ...design, ...(o.design ?? {}) } };
+  const settings = { signupEnabled: true, popupTrigger: o.delay ? "delay" : "load", popupDelaySeconds: o.delay ?? 0, popupDesign: { ...design, ...(o.design ?? {}) } };
   const posts: any[] = [];
   const reply = (path: string, body: any) => { if (!body) return { ok: true, body: settings }; posts.push(body); return o.subscribe ? o.subscribe(body) : { ok: true, body: { subscribed: true, code: "POPABC234" } }; };
   w.fetch = vi.fn(async (url: string, init?: any) => { const r = reply(url, init?.body ? JSON.parse(init.body) : null); return { ok: r.ok, json: async () => r.body }; });
@@ -58,6 +58,7 @@ async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: bo
   if (o.cookiesPending) w.PAGOSYA_COOKIES_PENDING = true;
   w.eval(retention);
   await w.PAGOSYA_RETENTION_MOUNT({ slug: "calima", apiBaseUrl: "https://api.test/v1", data: { items: o.items ?? items } });
+  if (o.answerFirst) w.dispatchEvent(new w.MessageEvent("message", { data: { type: "pagosya:cookies-answered" }, source: w.parent }));
   for (const fn of timers.splice(0)) fn();
   const root = () => w.document.querySelector(`[data-pya-popup="${ID}"]`);
   const click = (selector: string) => root().querySelector(selector).click();
@@ -203,6 +204,10 @@ describe("a YAPI popup design", () => {
     expect(w.document.querySelector("dialog").open).toBe(false);
     w.dispatchEvent(new w.MessageEvent("message", { data: { type: "pagosya:cookies-answered" }, source: w.parent }));
     for (const fn of timers.splice(0)) fn();
+    expect(w.document.querySelector("dialog").open).toBe(true);
+  });
+  it("on a published store opens on time when the cookie answer came before the popup's delay", async () => {
+    const { w } = await mount({ hosted: true, privacy: { choice: () => null }, cookiesPending: true, answerFirst: true, delay: 8 });
     expect(w.document.querySelector("dialog").open).toBe(true);
   });
   it("writes each answer into YAPI's answer slot, keeping the rest of its button", async () => {

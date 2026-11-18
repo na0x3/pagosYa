@@ -649,7 +649,8 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
     const waitingForCookies = () => !demo && (window.PAGOSYA_HOSTED ? window.PAGOSYA_COOKIES_PENDING === true
       : typeof privacy?.choice === 'function' && privacy.choice(config.slug) === null && Boolean(document.querySelector('[data-pagosya-privacy][data-notice]')));
     let waiting = false;
-    const answered = () => { if (!waiting) return; waiting = false; window.PAGOSYA_COOKIES_PENDING = false; setTimeout(open, 800); };
+    // An answer before the popup's own delay just clears the way; one while it waits opens it.
+    const answered = () => { window.PAGOSYA_COOKIES_PENDING = false; if (!waiting) return; waiting = false; setTimeout(open, 800); };
     window.addEventListener('pagosya:privacy-change', answered);
     window.addEventListener('message', event => { if (event.source === window.parent && event.data?.type === 'pagosya:cookies-answered') answered(); });
     const open = () => {
