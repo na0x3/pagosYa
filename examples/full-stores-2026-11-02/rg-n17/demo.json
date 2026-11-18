@@ -1,0 +1,58 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwl1x9jg0001i0bulejpwexj",
+  "slug": "vyerqe9q",
+  "photos": {
+    "63dc59958a4ac9dbe52ee38bf7eeae6e.jpg": "/v1/uploads/ec25218c-9b2f-4d23-97aa-58e1f8387b10.jpg",
+    "c2ff1e41a06ff7f9c866c75066dc9d5e.jpg": "/v1/uploads/3921ccb8-a50f-42bd-b3ef-2e82c19d5e40.jpg",
+    "bb53f2a8df7dfae5fe6b3e1c89e80ce6.jpg": "/v1/uploads/2efbdc9c-451b-4ec3-be25-ca7a888f80a8.jpg",
+    "73aeac8d55ea9e7f0a0284b68406d109.jpg": "/v1/uploads/e2803d75-9ad1-4fd4-96dd-f214666cd4b0.jpg",
+    "e749ce6ad0b1dbc77cad2b7e14dd321b.jpg": "/v1/uploads/2ab95c47-7942-4ed4-9c0f-44e9b146e4a8.jpg",
+    "b80d47a871d453389f8cd806479b02e5.jpg": "/v1/uploads/40124733-81bc-4bd1-ac54-3558770619ea.jpg",
+    "6a1e5d7151ec44578f9a767e28d7a255.jpg": "/v1/uploads/629dcb73-7760-4c0d-8311-196181ae1c33.jpg",
+    "baf887a976adb82d1f55709a999a12e2.jpg": "/v1/uploads/8a507f21-a02f-44d6-b2bd-c57aa87ff419.jpg",
+    "2a9244d7f5f3d660836a2f73496cc5c1.jpg": "/v1/uploads/eac2a3d2-7e18-46d4-9bde-710ccb18b4db.jpg",
+    "cae6ff44702a1ddd403cb59d053a5c4e.jpg": "/v1/uploads/4b044dfc-da01-4e9c-93e2-4b6234eeb544.jpg",
+    "e1e625c4f245c1e81d5f766539f49ece.jpg": "/v1/uploads/3552f915-b8da-44e7-b1f2-0a066733ddff.jpg",
+    "brand:2a9244d7f5f3d660836a2f73496cc5c1.jpg": "",
+    "brand:63dc59958a4ac9dbe52ee38bf7eeae6e.jpg": "",
+    "brand:6a1e5d7151ec44578f9a767e28d7a255.jpg": "",
+    "brand:73aeac8d55ea9e7f0a0284b68406d109.jpg": "",
+    "brand:b80d47a871d453389f8cd806479b02e5.jpg": "",
+    "brand:baf887a976adb82d1f55709a999a12e2.jpg": "",
+    "brand:bb53f2a8df7dfae5fe6b3e1c89e80ce6.jpg": "",
+    "brand:c2ff1e41a06ff7f9c866c75066dc9d5e.jpg": "",
+    "brand:cae6ff44702a1ddd403cb59d053a5c4e.jpg": "",
+    "brand:e1e625c4f245c1e81d5f766539f49ece.jpg": "",
+    "brand:e749ce6ad0b1dbc77cad2b7e14dd321b.jpg": "",
+    "brand:f5eb135f57af406a850dea2ec9f45672.jpg": "/v1/uploads/7c6b6219-2e2e-493e-8996-1c9b899bab9b.jpg"
+  },
+  "categories": {
+    "Novias": "cmwl1x9jr0003i0buje1n5i7c",
+    "Noche": "cmwl1x9jt0005i0bucfrrk3rj",
+    "Piezas": "cmwl1x9jt0007i0buwnq80eum",
+    "Accesorios": "cmwl1x9jt0009i0buforemgep"
+  },
+  "products": {
+    "Vestido Cala": "cmwl1x9jy000di0bu0bvg360f",
+    "Vestido Escultura": "cmwl1x9k2000hi0bu8rl79lqj",
+    "Vestido Ciudad": "cmwl1x9k5000li0bux2adt0k9",
+    "Vestido Halter Civil": "cmwl1x9kr000ri0bucljljj6t",
+    "Vestido Espalda Luna": "cmwl1x9kv000vi0buce0e336f",
+    "Corsé Anturio": "cmwl1x9kz000zi0bu9fzfa19m",
+    "Falda Globo de Seda": "cmwl1x9l20013i0bu0g72jaw4",
+    "Collar de Calas": "cmwl1x9l40017i0buboosauql",
+    "Antifaz de Encaje": "cmwl1x9l7001bi0buia0bbk0i",
+    "Set de Seda para Dormir": "cmwl1x9l9001fi0bu64fthfwe"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwl1x9m2001ri0bud2y8vdko"
+}

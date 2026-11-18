@@ -70,3 +70,10 @@ examples/**/live*.json
 
 # Background-removal model (downloaded at first use, see source-photo-cutout.ts)
 apps/api/models/
+
+# V2 prototype caches the API writes while building (photo cutouts, screenshot reviews; see v2-prototype.service.ts)
+# and the screenshots of live checks. Regenerated on demand; references/ (study library + hero frames) stays tracked.
+examples/v2-proto/cutouts/
+examples/v2-proto/looks/
+examples/v2-proto/final/
+examples/v2-proto/round*/

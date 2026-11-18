@@ -1,0 +1,61 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwkxt4ge0001uww6vtrj5nbz",
+  "slug": "dkuxw2wc",
+  "photos": {
+    "brand:bandeja-saliendo-del-horno.jpg": "/v1/uploads/16379439-5719-48e4-95d4-00cdf4380144.jpg",
+    "brand:bolitas-de-masa-rodillo.jpg": "/v1/uploads/0c5bc73e-bf2c-4f7a-b3a4-a6c4822f2df1.jpg",
+    "brand:capuchino-y-canasta.jpg": "/v1/uploads/cd3de274-0819-487d-98d3-06b58db2f2ce.jpg",
+    "brand:cookies-en-bolsa-de-tela.jpg": "/v1/uploads/afc13b10-99da-4025-95c6-68d79928f546.jpg",
+    "brand:cookies-enfriando-rejilla.jpg": "/v1/uploads/792f4cdb-1702-4d62-b7a1-8a1efb3c17b0.jpg",
+    "brand:cortando-pan-de-masa-madre.jpg": "/v1/uploads/7d0d74f9-c648-4c9d-af81-23282b320b2b.jpg",
+    "brand:ingredientes-sobre-mesa.jpg": "/v1/uploads/04252efa-5734-41bd-8dd3-87e703188d85.jpg",
+    "brand:latte-con-pan-dulce.jpg": "/v1/uploads/b20fac83-b560-4bea-8caf-daed78beb89f.jpg",
+    "brand:local-ladrillo-mesas.jpg": "/v1/uploads/3b597420-03a3-4e3a-97e2-db63fbc6b305.jpg",
+    "brand:manos-amasando-harina.jpg": "/v1/uploads/1ad19056-8dcf-4d38-afb1-6873479091b7.jpg",
+    "brand:manos-desmigando-masa.jpg": "/v1/uploads/29e82f32-9800-4abe-815d-3cc39668e177.jpg",
+    "brand:manos-harina-oscuro.jpg": "/v1/uploads/d3abcb13-a9e7-4163-9d16-6a6cc590bae0.jpg",
+    "brand:mesa-junto-a-la-ventana.jpg": "/v1/uploads/90654f54-1a14-4603-98ab-6482705aea46.jpg",
+    "brand:mostrador-cafe-gente.jpg": "/v1/uploads/c102dc3d-57cd-4559-b056-8751a464a1e9.jpg",
+    "brand:mostrador-de-masas.jpg": "/v1/uploads/a3b9d29d-3ed5-4f32-aeb6-1bcc0236ae4d.jpg",
+    "brand:pain-au-chocolat-vitrina.jpg": "/v1/uploads/f63bd854-1d53-455b-87c7-43080412cf70.jpg",
+    "brand:torre-de-cookies-mesa.jpg": "/v1/uploads/054f4f8c-dce5-434b-b109-c6081b969d5d.jpg",
+    "brand:vitrina-panaderia-calida.jpg": "/v1/uploads/4e967073-fe0c-4331-b52c-cd34db406d93.jpg",
+    "caja-rolls-ellena-auto.jpg": "/v1/uploads/9569ac1c-8d20-47a6-9608-93e9421ca7b4.jpg",
+    "combo-matcha-cookie-verde.jpg": "/v1/uploads/a7f8a3ed-d242-4e3b-8ea5-4878e0ffe53f.jpg",
+    "desayuno-box-latte-ellena.jpg": "/v1/uploads/445bfcc3-eecc-497d-9f1e-8ef5b37ef662.jpg",
+    "galletas-chocochip-bandeja.jpg": "/v1/uploads/d2eb3bc8-0ac6-4e5b-92de-0fe221d11721.jpg",
+    "torre-cookies-rellenas-gourmet.jpg": "/v1/uploads/bd30e3bb-09c4-45ad-ae66-385852599f9e.jpg",
+    "degustacion-cookies-surtidas.jpg": "/v1/uploads/5284e7a6-5421-4b21-8fcb-b81fbb4935c4.jpg",
+    "caja-the-bake-lab-surtida.jpg": "/v1/uploads/7d79d259-4495-4ea9-bc8d-374a2da5145f.jpg",
+    "coleccion-cookies-pantone.jpg": "/v1/uploads/e5f4f77f-c55e-42b4-a7ae-b0c7b69f55d0.jpg"
+  },
+  "categories": {
+    "Pastelería": "cmwkxt4is0013uww6epkkm63c",
+    "Combos": "cmwkxt4iw0015uww657cpsera",
+    "Desayunos": "cmwkxt4iy0017uww6hk647j1u",
+    "Galletas": "cmwkxt4iy0019uww6alzz1i0a",
+    "Cajas": "cmwkxt4iz001buww6dmt1srts",
+    "Colecciones": "cmwkxt4iz001duww6o9go1n88"
+  },
+  "products": {
+    "Caja de rolls rellenos EllenA": "cmwkxt4j2001huww601dwfvuh",
+    "Combo matcha latte + cookie velvet": "cmwkxt4jc001luww63qi9nl19",
+    "Desayuno box EllenA con latte helado": "cmwkxt4jt001puww608zqb4ta",
+    "Galletas chocochip artesanales": "cmwkxt4jy001tuww6xubfaknw",
+    "Torre de cookies rellenas gourmet": "cmwkxt4kq001xuww6o58jav95",
+    "Degustación de cookies surtidas": "cmwkxt4kw0021uww65u12jjof",
+    "Caja surtida The Bake Lab": "cmwkxt4kz0025uww6lpap3dwj",
+    "Colección cookies Pantone": "cmwkxt4l40029uww67w8yjptb"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwkxt4me002huww6q0vffo70"
+}
