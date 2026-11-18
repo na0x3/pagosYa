@@ -37,6 +37,12 @@ export async function mountAsciiAnimals(canvas, options) {
  * @param {{ root: HTMLElement, greeting: string, onAsk: (text: string, from: DOMRect) => boolean | void, onClose?: () => void }} options
  * onAsk returns false when the words can't go to YAPI yet (no store): the welcome stays open with its note.
  */
+/** «Mejorar mi marca» (spec 2026-11-18): what the chip sends — a branding request the API runs as the brand flow — with what was typed (a link, a few words). */
+export function brandAsk(typed) {
+  const words = String(typed ?? "").trim();
+  return words ? `Mejorar mi marca. ${words}` : "Mejorar mi marca";
+}
+
 export function showYapiWelcome({ root, greeting, onAsk, onClose }) {
   const form = root.querySelector("form");
   const field = root.querySelector("textarea");
@@ -70,6 +76,11 @@ export function showYapiWelcome({ root, greeting, onAsk, onClose }) {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     event.preventDefault();
     form.requestSubmit();
+  });
+  root.querySelector("[data-welcome-brand]")?.addEventListener("click", () => {
+    if (onAsk(brandAsk(field.value), form.getBoundingClientRect()) === false) return;
+    note.textContent = "";
+    field.value = "";
   });
   form.addEventListener("submit", (event) => {
     event.preventDefault();

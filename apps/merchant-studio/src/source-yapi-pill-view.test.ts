@@ -9,6 +9,8 @@ describe('pill markup', () => {
     expect(html).toContain('placeholder="¿Qué quieres crear o mejorar?"');
     expect(html).toContain('data-action="open-upload"');
     expect(html).toContain('data-composer-action="create-product"');
+    // Spec 2026-11-18: «Mejorar mi marca» sends the branding request straight away (the API runs the brand flow).
+    expect(html).toContain('data-clarification="Mejorar mi marca"');
     expect(html).toContain('data-yapi-history-open');
     expect(html).toContain('Enviar');
     expect(html).toContain('is-spin');

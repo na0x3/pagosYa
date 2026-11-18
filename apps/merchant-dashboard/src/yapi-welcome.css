@@ -112,3 +112,7 @@ body.is-logged-out:has(.login-split.has-koi), .login-split.has-koi { background:
 .login-split.has-koi .login-foot { color: rgb(255 255 255 / .5); font-family: var(--lt-mono); font-size: .7rem; }
 @media (prefers-reduced-motion: reduce) { .login-split.has-koi .login-card::after { animation: none; } }
 @media (max-width: 860px) { .login-split.has-koi .login-hero { margin: 0; } .login-split.has-koi .login-pane { padding: 8px 12px 24px; } }
+
+/* «Mejorar mi marca» (spec 2026-11-18): one chip under the box. */
+.yapi-welcome-chip { margin-top: 8px; padding: 6px 12px; border-radius: 999px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; font-size: .875rem; cursor: pointer; }
+.yapi-welcome-chip:hover { background: rgb(255 255 255 / .12); }
