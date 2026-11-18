@@ -160,9 +160,20 @@ export class PopupDesignService {
     await this.point(storeId, { popupDesignId: id });
   }
 
-  async list(merchantId: string, storeId: string) {
+  /** The Popups page (spec 2026-11-18 §9): versions newest first, the live one, its settings and the store's products. */
+  async overview(merchantId: string, storeId: string) {
     await this.store(merchantId, storeId);
-    return this.prisma.storePopupDesign.findMany({ where: { storeId }, orderBy: { version: 'desc' }, take: 20, select: { id: true, version: true, status: true, composition: true, previews: true, percent: true, capture: true, createdAt: true } });
+    const settings = await this.settings(storeId);
+    const rows = await this.prisma.storePopupDesign.findMany({ where: { storeId }, orderBy: { version: 'desc' }, take: 20, select: { id: true, version: true, status: true, composition: true, previews: true, percent: true, capture: true, flow: true, createdAt: true } });
+    const products = await this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, select: { id: true, name: true }, orderBy: { createdAt: 'desc' }, take: 40 });
+    const liveId = typeof settings.popupDesignId === 'string' ? settings.popupDesignId : null;
+    const current = rows.find(row => row.id === (liveId ?? settings.popupDesignOff));
+    const pick = ((current?.flow ?? []) as PopupFlow).find(step => step.kind === 'pick') as { products?: string[] } | undefined;
+    return {
+      liveId, on: Boolean(liveId), percent: current?.percent ?? clamp(Number(settings.popupDesignPercent) || 10), capture: current?.capture ?? (settings.popupDesignCapture === 'email' ? 'email' : 'whatsapp'),
+      pick: pick?.products ?? [], products,
+      designs: rows.map(({ flow: _flow, ...row }) => row),
+    };
   }
 
   /** Percent, contact and the products in «¿qué buscas?» change without a model call; on/off turns the YAPI popup off (the old one shows). */

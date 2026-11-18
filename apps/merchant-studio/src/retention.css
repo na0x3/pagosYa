@@ -46,3 +46,11 @@
 @media (max-width: 480px) { .retention-card-preview { padding: 16px; } .retention-card-preview .comeback-card { padding: 18px; } }
 /* Embedded pages drop the dialog inset, so the sticky header and actions stay flush. */
 .retention-dialog.retention-embedded { --dialog-pad: 0px; }
+
+/* Popups 2.0 (spec 2026-11-18): the YAPI popup's steps as phone screenshots, side by side. */
+.popup-designs__steps { display: flex; gap: 12px; overflow-x: auto; padding: 0; margin: 12px 0; list-style: none; }
+.popup-designs__steps img { width: 195px; height: auto; border-radius: 14px; border: 1px solid rgb(0 0 0 / .08); display: block; }
+.popup-designs__products { display: flex; flex-wrap: wrap; gap: 8px 16px; border: 0; padding: 0; margin: 12px 0; }
+.popup-designs__versions ul { list-style: none; padding: 0; display: grid; gap: 8px; }
+.popup-designs__versions li { display: flex; align-items: center; gap: 10px; }
+.popup-designs__versions img { border-radius: 8px; }
