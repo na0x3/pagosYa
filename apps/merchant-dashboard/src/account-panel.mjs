@@ -89,6 +89,9 @@ export function createAccountPanel(deps) {
     document.getElementById("kycBusinessFields").hidden = !business;
     document.getElementById("kycNameLabel").textContent = business ? "Razón social" : "Nombre completo";
     for (const name of ["taxId", "legalRepName"]) document.querySelector(`#kycForm [name=${name}]`).required = business;
+    // Without a NIT, the SIN certificate shows the seller has none; a business level sends its NIT instead.
+    document.getElementById("kycPersonFields").hidden = business;
+    document.getElementById("kycDocNitCertificate").required = !business;
   }
   async function uploadKycPhoto(input) {
     const file = input.files?.[0];
@@ -172,8 +175,9 @@ export function createAccountPanel(deps) {
       infoEl.textContent = "";
       const data = Object.fromEntries(new FormData(e.target));
       try {
-        const [ciFrontDocId, ciBackDocId, selfieDocId] = await Promise.all(
-          ["kycDocFront", "kycDocBack", "kycDocSelfie"].map((id) => uploadKycPhoto(document.getElementById(id))),
+        const business = data.targetLevel === "2";
+        const [ciFrontDocId, ciBackDocId, selfieDocId, nitCertificateDocId] = await Promise.all(
+          ["kycDocFront", "kycDocBack", "kycDocSelfie", ...(business ? [] : ["kycDocNitCertificate"])].map((id) => uploadKycPhoto(document.getElementById(id))),
         );
         // The account goes first, with its proof; the identity then points at it (ASFI payout account ownership).
         let payoutAccountId = document.getElementById("kycAccountExisting")?.dataset.accountId;
@@ -188,7 +192,7 @@ export function createAccountPanel(deps) {
           deps.payoutAccounts?.sync();
         }
         for (const key of ["bankCode", "accountNumber", "holderName", "payoutBankAccount"]) delete data[key];
-        const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId, payoutAccountId };
+        const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId, nitCertificateDocId, payoutAccountId };
         for (const key of Object.keys(payload)) if (payload[key] === "" || payload[key] === undefined) delete payload[key];
         await api("/merchants/kyc", { method: "POST", body: JSON.stringify(payload) });
         await refresh();

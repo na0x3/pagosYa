@@ -77,6 +77,7 @@
   code { font-family: "0xProto Mono", ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.75rem; color: var(--pg-text-muted); }
   .actions-cell { display: flex; gap: 6px; }
   .kyc-photos { display: flex; gap: 6px; flex-wrap: wrap; }
+  .kyc-doc-link { font-size: 0.75rem; align-self: center; }
   .kyc-photo { width: 56px; height: 56px; object-fit: cover; border: 1.5px solid var(--pg-border); border-radius: 6px; background: var(--pg-bg); color: var(--pg-text-faint); font-size: 0.625rem; text-align: center; }
   .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
@@ -1033,7 +1034,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <td>${esc(s.legalName)}${s.taxId ? `<br><span class="muted">NIT ${esc(s.taxId)}</span>` : ""}</td>
         <td>${s.legalRepName ? `${esc(s.legalRepName)}${s.legalRepDocumentId ? `<br><span class="muted">${esc(s.legalRepDocumentId)}</span>` : ""}` : `<span class="muted">—</span>`}</td>
         <td>${identityAccountCell(s)}</td>
-        <td class="kyc-photos-cell" data-submission="${esc(s.id)}" data-slots="${esc([s.ciFrontDocId ? "CI_FRONT" : "", s.ciBackDocId ? "CI_BACK" : "", s.selfieDocId ? "SELFIE" : ""].filter(Boolean).join(","))}">
+        <td class="kyc-photos-cell" data-submission="${esc(s.id)}" data-slots="${esc([s.ciFrontDocId ? "CI_FRONT" : "", s.ciBackDocId ? "CI_BACK" : "", s.selfieDocId ? "SELFIE" : "", s.nitCertificateDocId ? "NIT_CERTIFICATE" : ""].filter(Boolean).join(","))}">
           <button type="button" class="secondary kyc-view-photos">Ver fotos</button>
           <div class="kyc-photos"></div>
         </td>
@@ -1054,7 +1055,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     // looked").
   }
 
-  const KYC_SLOT_LABELS = { CI_FRONT: "CI frente", CI_BACK: "CI dorso", SELFIE: "Selfie" };
+  const KYC_SLOT_LABELS = { CI_FRONT: "CI frente", CI_BACK: "CI dorso", SELFIE: "Selfie", NIT_CERTIFICATE: "Certificado de no inscripción en el NIT" };
 
   async function loadKycImages(root) {
     for (const img of root.querySelectorAll("img.kyc-photo")) {
@@ -1067,7 +1068,19 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           img.alt = "No disponible";
           continue;
         }
-        img.src = URL.createObjectURL(await res.blob());
+        const blob = await res.blob();
+        if (blob.type === "application/pdf") {
+          // The SIN certificate usually comes as a PDF: open it in a tab; ops check its QR/code on the SIN site.
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.target = "_blank";
+          link.rel = "noopener";
+          link.className = "kyc-doc-link";
+          link.textContent = `${KYC_SLOT_LABELS[img.dataset.slot] || img.dataset.slot} (PDF) — verifícalo en el sitio del SIN`;
+          img.replaceWith(link);
+          continue;
+        }
+        img.src = URL.createObjectURL(blob);
       } catch {
         img.alt = "No disponible";
       }
@@ -1082,8 +1095,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const slots = (cell.dataset.slots || "").split(",").filter(Boolean);
     // Revoke any blob URLs from a previous click on this same submission
     // before replacing the <img> elements that held them.
-    for (const img of container.querySelectorAll("img.kyc-photo")) {
-      if (img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
+    for (const el of container.querySelectorAll(".kyc-photo, .kyc-doc-link")) {
+      const url = el.src || el.href || "";
+      if (url.startsWith("blob:")) URL.revokeObjectURL(url);
     }
     container.innerHTML = slots
       .map((slot) => `<img class="kyc-photo" alt="${esc(KYC_SLOT_LABELS[slot] || slot)}" data-submission="${esc(cell.dataset.submission)}" data-slot="${esc(slot)}">`)

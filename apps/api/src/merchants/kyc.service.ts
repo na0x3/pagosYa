@@ -40,6 +40,7 @@ export class KycService {
       throw new BadRequestException("Para el nivel Negocio necesitamos NIT, razón social y representante legal");
     }
     if (targetLevel === 1 && !dto.legalRepDocumentId) throw new BadRequestException("Ingresa tu número de CI");
+    if (targetLevel === 1 && !dto.nitCertificateDocId) throw new BadRequestException("Sube tu certificación de no inscripción en el NIT del SIN");
     await this.identityDocuments.assertOwned(merchantId, dto);
 
     const pending = await this.prisma.merchantKycSubmission.findFirst({
@@ -72,6 +73,7 @@ export class KycService {
         ciFrontDocId: dto.ciFrontDocId,
         ciBackDocId: dto.ciBackDocId,
         selfieDocId: dto.selfieDocId,
+        nitCertificateDocId: targetLevel === 1 ? dto.nitCertificateDocId : null,
       },
     });
     if (account.status === PayoutAccountStatus.PENDING_REVIEW && !account.kycSubmissionId) {

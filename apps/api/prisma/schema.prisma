@@ -121,6 +121,8 @@ enum KycDocumentSlot {
   CI_FRONT
   CI_BACK
   SELFIE
+  // SIN «certificación de no inscripción en el NIT»: level 1 sellers have no NIT, this proves it. Image or PDF.
+  NIT_CERTIFICATE
 }
 
 enum InvoiceStatus {
@@ -736,6 +738,7 @@ model MerchantKycSubmission {
   ciFrontDocId         String?
   ciBackDocId          String?
   selfieDocId          String?
+  nitCertificateDocId  String?
   payoutAccounts       PayoutAccount[]
 
   @@index([merchantId, createdAt])

@@ -134,13 +134,15 @@ test("warns at 80% and blocks at 100%", async ({ page }) => {
   await expect(page.locator("#limitBanner")).toHaveAttribute("data-state", "blocked");
 });
 
-test("uploads three photos and submits a level 1 application without NIT", async ({ page }) => {
+test("uploads three photos and the NIT certificate and submits a level 1 application without NIT", async ({ page }) => {
   const posted = [];
   await openCompliance(page, usage({ level: 0, levelName: "Sin verificar", liveEnabled: false, monthlyLimit: null, perPaymentLimit: null, used: 0 }), posted);
   await expect(page.locator("#kycTargetLevel")).toHaveValue("1");
   await expect(page.locator("#kycBusinessFields")).toBeHidden();
   const photo = { name: "ci.png", mimeType: "image/png", buffer: Buffer.from("89504e47", "hex") };
   for (const id of ["#kycDocFront", "#kycDocBack", "#kycDocSelfie"]) await page.setInputFiles(id, photo);
+  await expect(page.locator("#kycDocNitCertificate")).toHaveAttribute("required", "");
+  await page.setInputFiles("#kycDocNitCertificate", { name: "certificado.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7") });
   await page.fill("#kycForm [name=legalName]", "Juana Mamani");
   await page.fill("#kycForm [name=legalRepDocumentId]", "7654321 LP");
   await page.selectOption("#kycForm [name=bankCode]", "BNB");
@@ -149,7 +151,7 @@ test("uploads three photos and submits a level 1 application without NIT", async
   await page.setInputFiles("#kycAccountProof", photo);
   await page.click("#kycForm button[type=submit]");
   await expect.poll(() => posted.find((p) => p.path === "/merchants/kyc")?.body)
-    .toMatchObject({ targetLevel: 1, ciFrontDocId: "doc_CI_FRONT", ciBackDocId: "doc_CI_BACK", selfieDocId: "doc_SELFIE", payoutAccountId: "pa_new" });
+    .toMatchObject({ targetLevel: 1, ciFrontDocId: "doc_CI_FRONT", ciBackDocId: "doc_CI_BACK", selfieDocId: "doc_SELFIE", nitCertificateDocId: "doc_NIT_CERTIFICATE", payoutAccountId: "pa_new" });
   expect(posted.find((p) => p.path === "/merchants/kyc").body.taxId).toBeUndefined();
 });
 
@@ -158,6 +160,7 @@ test("asks for NIT when applying for level 2", async ({ page }) => {
   await expect(page.locator("#kycTargetLevel")).toHaveValue("2");
   await expect(page.locator("#kycBusinessFields")).toBeVisible();
   await expect(page.locator("#kycForm [name=taxId]")).toHaveAttribute("required", "");
+  await expect(page.locator("#kycPersonFields")).toBeHidden();
 });
 
 test("an approved level 1 merchant still sees the level card and can apply for level 2", async ({ page }) => {

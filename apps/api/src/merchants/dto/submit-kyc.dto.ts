@@ -62,4 +62,9 @@ export class SubmitKycDto {
   @IsOptional()
   @IsString()
   selfieDocId?: string;
+
+  @ApiPropertyOptional({ description: "Identity document id for the SIN certificate of non-registration in the NIT. Required for level 1." })
+  @IsOptional()
+  @IsString()
+  nitCertificateDocId?: string;
 }

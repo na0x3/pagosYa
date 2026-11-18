@@ -103,14 +103,14 @@ export class MerchantsController {
     return this.kyc.listPending();
   }
 
-  /** Merchant uploads a CI photo or selfie into private storage — never the public /v1/uploads path. */
+  /** Merchant uploads a CI photo, selfie or NIT certificate into private storage — never the public /v1/uploads path. */
   @Post("kyc/documents")
   @ApiBearerAuth()
   @ApiConsumes("multipart/form-data")
   @UseGuards(MerchantAuthGuard)
   @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 8_000_000 } }))
   uploadKycDocument(@CurrentMerchant() merchant: { id: string }, @UploadedFile() file: Express.Multer.File, @Body() dto: UploadKycDocumentDto) {
-    if (!file) throw new BadRequestException("Selecciona una foto");
+    if (!file) throw new BadRequestException("Selecciona un archivo");
     return this.identityDocuments.upload(merchant.id, dto.slot, file);
   }
 

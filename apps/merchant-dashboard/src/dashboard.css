@@ -854,7 +854,7 @@
   .limit-banner { padding: 10px 12px; border-radius: 8px; font-size: .8rem; }
   .limit-banner[data-state="warn"] { background: #fff7e6; color: #8a5300; }
   .limit-banner[data-state="blocked"] { background: #fdecec; color: #9b1c1c; }
-  #kycBusinessFields[hidden] { display: none; }
+  #kycBusinessFields[hidden], #kycPersonFields[hidden] { display: none; }
   .inline[hidden] { display: none !important; }
   .visual-upload-zone { grid-column: 1 / -1; padding: 14px; border: 1px dashed var(--pg-border-strong); border-radius: 11px; background: var(--pg-surface); }
   .visual-upload-zone p { margin: 5px 0 10px; max-width: 65ch; color: var(--pg-text-faint); font-size: .75rem; line-height: 1.5; }

@@ -59,6 +59,7 @@ const person = {
   ciFrontDocId: "d1",
   ciBackDocId: "d2",
   selfieDocId: "d3",
+  nitCertificateDocId: "d4",
 };
 const kycPrisma = (merchant: Record<string, unknown>) => ({
   merchant: { findUniqueOrThrow: jest.fn().mockResolvedValue(merchant) },
@@ -145,13 +146,15 @@ describe("KycService.submit", () => {
     const prisma = kycPrisma({ id: "m_1", status: "PENDING", level: 0 });
     const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accountsOk() as any);
     await service.submit("m_1", person as any);
-    expect(prisma.merchantKycSubmission.create).toHaveBeenCalledWith({ data: expect.objectContaining({ targetLevel: 1, taxId: null, ciFrontDocId: "d1" }) });
+    expect(prisma.merchantKycSubmission.create).toHaveBeenCalledWith({ data: expect.objectContaining({ targetLevel: 1, taxId: null, ciFrontDocId: "d1", nitCertificateDocId: "d4" }) });
   });
 
   it("rejects level 1 without the photos and level 2 without NIT", async () => {
     const service = new KycService(kycPrisma({ id: "m_1", status: "PENDING", level: 0 }) as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accountsOk() as any);
     await expect(service.submit("m_1", { ...person, selfieDocId: undefined } as any)).rejects.toThrow("Sube las dos caras de tu CI y una selfie con tu CI");
     await expect(service.submit("m_1", { ...person, targetLevel: 2 } as any)).rejects.toThrow("Para el nivel Negocio necesitamos NIT, razón social y representante legal");
+    // Without a NIT, the SIN's certificate of non-registration is what shows the person has none (as PedidosYa asks).
+    await expect(service.submit("m_1", { ...person, nitCertificateDocId: undefined } as any)).rejects.toThrow("Sube tu certificación de no inscripción en el NIT del SIN");
   });
 
   it("lets an ACTIVE level 1 merchant apply for level 2 but not re-apply for level 1", async () => {
