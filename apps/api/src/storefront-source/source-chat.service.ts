@@ -117,6 +117,7 @@ import { VisualAiService } from '../visual-studio/visual-ai.service';
 import { BRAND_SOURCE_QUESTION, brandSourceAnswer, brandSourceIntent, brandSourceOther, brandSourceOwnSite, brandSourcePointsAtSite, brandSourceTouchesLook } from './brand-source-intent';
 import { brandWebsiteNotes, extractBrandWebsite, type BrandQuote } from './brand-source-website';
 import { importBrandImages } from './brand-source-import';
+import { collectSiteArtwork } from './website-copy/site-artwork';
 import type { BrandImageCandidate } from './brand-source-website';
 import { productLinkIn, productSiteName, type ProductLink } from './product-source/product-source-links';
 import { readProductSource, type ProductSourceFailure } from './product-source/product-source-read';
@@ -373,7 +374,7 @@ export class SourceChatService {
   }
 
   /** Spec 2026-09-27 §3: the free first build after a Shopify import. Progress is saved on the user message under requestId = importId. */
-  async importBuild(merchantId: string, storeId: string, input: { importId: string; option: 'same' | 'redesign'; origin: string; productHandle?: string; summary: string }) {
+  async importBuild(merchantId: string, storeId: string, input: { importId: string; option: 'same' | 'redesign'; origin: string; productHandle?: string; summary: string; productImages?: string[] }) {
     const current = await this.projects.current(merchantId, storeId);
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const request = IMPORT_BUILD_REQUEST[input.option];
@@ -383,12 +384,16 @@ export class SourceChatService {
     await workflow.report('interpreting');
     const urls = [input.origin, ...(input.productHandle ? [new URL(`/products/${input.productHandle}`, input.origin).href] : [])];
     const references = await Promise.all(urls.map(url => inspectSourceWebsite(url)));
+    // Owner 2026-11-17 («graza is still way better with way much more artwork»): the shop is the merchant's own, so its
+    // drawings, badges, section photos, phrases and type come along as their brand, not only its screenshots.
+    const brand = await this.importSiteBrand(merchantId, storeId, input.origin, input.productImages ?? [], sourceWebsiteReferenceCaptures(references)).catch(() => null);
     try {
       const revision = await this.generation.generate(merchantId, storeId, {
         revision: current.revision, model: IMPORT_BUILD_MODEL, maxCredits: IMPORT_BUILD_MAX_CREDITS,
         brief: { sitePurpose: 'shop', businessInformation: input.summary, businessType: 'Tienda en línea', audience: 'Clientes de la tienda', primaryAction: 'Comprar', visualDirection: input.option === 'same' ? 'El estilo de su tienda Shopify actual' : 'Diseño nuevo con su marca' },
         instruction: `${sourceRequestExecutionPrompt(request, current.revision > 0)}\n\nContexto del negocio:\n${input.summary}\n\nSu tienda Shopify actual (inspección pública):\n${JSON.stringify(sourceWebsiteReferenceContext(references))}\n\nPedido actual del comercio:\n${request}`,
-      }, this.generation.newBudget(IMPORT_BUILD_MAX_CREDITS), [], workflow.report, { free: true, sponsor: 'shopify-import', referenceCaptures: sourceWebsiteReferenceCaptures(references), ...(input.option === 'redesign' && current.revision ? { redesign: true } : {}) });
+        ...(brand?.uses.length ? { assetUrls: brand.uses.map(use => use.url) } : {}),
+      }, this.generation.newBudget(IMPORT_BUILD_MAX_CREDITS), brand?.uses ?? [], workflow.report, { free: true, sponsor: 'shopify-import', referenceCaptures: sourceWebsiteReferenceCaptures(references), ...(brand ? { brandSource: brand.source } : {}), ...(input.option === 'redesign' && current.revision ? { redesign: true } : {}) });
       if ('styleProposal' in revision) throw new Error('unexpected style proposal');
       await workflow.finish('completed');
       await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT',
@@ -2869,6 +2874,45 @@ export class SourceChatService {
     const result = await this.productReader(link);
     this.productLogger.log(JSON.stringify({ event: 'product_source_read', storeId, host: link.host, ok: result.ok, ...(result.ok ? { tier: result.tier, images: result.listing.images.length, price: result.listing.price !== null } : { reason: result.reason }), durationMs: Date.now() - started }));
     return result.ok ? { link, site, listing: result.listing } : { link, site, failure: result.reason };
+  }
+
+  /** The merchant's own shop as brand material for an import build: its artwork into their uploads (photos at most 1600 px,
+   *  about 3.5 MB in all so the catalog's covers still fit the project), its phrases and its type. Product photos the import
+   *  already brought are skipped by file name; the header's drawing becomes the logo when the store has none. */
+  private async importSiteBrand(merchantId: string, storeId: string, origin: string, productImages: string[], captures: Array<{ url?: string }>): Promise<{ uses: SourceImageUse[]; source: BrandSourceInput } | null> {
+    if (!this.uploads) return null;
+    const fileName = (url: string) => { try { return new URL(url, origin).pathname.split('/').pop()!.replace(/_(?:\d+x\d*|\d*x\d+|small|medium|large|grande|master)(?=\.)/i, '').toLowerCase(); } catch { return ''; } };
+    const known = new Set(productImages.map(fileName).filter(Boolean));
+    const [site, page] = await Promise.all([
+      collectSiteArtwork(origin, source => known.has(fileName(source)), 16),
+      readSourceWebsite(origin, 'html', AbortSignal.timeout(10_000)).catch(() => null),
+    ]);
+    const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { logoUrl: true } });
+    const uses: SourceImageUse[] = [];
+    const imported: BrandSourceInput['imported'] = [];
+    let room = 3_500_000, logo = Boolean(store?.logoUrl);
+    for (const art of site.artwork) {
+      let body = art.body, mimeType: string = art.mimeType;
+      if (art.width > 1600 || body.length > 600_000) {
+        const resized = sharp(body).resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true });
+        body = art.kind === 'drawing' ? await resized.png({ compressionLevel: 9 }).toBuffer() : await resized.webp({ quality: 84 }).toBuffer();
+        mimeType = art.kind === 'drawing' ? 'image/png' : 'image/webp';
+      }
+      if (body.length > room || body.length > 1_900_000) continue;
+      room -= body.length;
+      const stored = await this.uploads.saveBuffer(body, mimeType);
+      await this.prisma.mediaAsset.create({ data: { merchantId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
+      const takeLogo = !logo && art.kind === 'drawing' && art.inHeader;
+      if (takeLogo) logo = true;
+      imported.push({ url: stored.url, source: art.source, kind: takeLogo ? 'logo' : 'photo' });
+      uses.push({ url: stored.url, role: takeLogo ? 'logo' : 'business', description: takeLogo ? 'Logo de su tienda Shopify (su propio dibujo).'
+        : `${art.kind === 'drawing' ? 'Ilustración propia de la marca (dibujo de su tienda Shopify, fondo transparente): úsala como arte de la marca' : 'Foto propia de la marca, de su tienda Shopify'}${art.alt ? `: ${art.alt}` : ''}.` });
+    }
+    const extracted = page ? extractBrandWebsite(page.content, page.url) : undefined;
+    const fontFamilies = [site.fonts.display, site.fonts.text, ...(extracted?.fontFamilies ?? [])].filter((name): name is string => Boolean(name));
+    const captureIndexes = captures.flatMap((capture, index) => capture.url === origin || capture.url === `${origin}/` ? [index] : []);
+    const notes = site.artwork.length ? [] : ['No pude traer el arte de tu tienda; usé tus fotos de productos.'];
+    return { uses, source: { imageUrls: [], captureIndexes, quotes: extracted?.quotes ?? [], fontFamilies: [...new Set(fontFamilies)].slice(0, 4), imported, look: true, notes } };
   }
 
   /** Images from the web into this merchant's uploads, one by one; a failed one is skipped (brand source and product links). */

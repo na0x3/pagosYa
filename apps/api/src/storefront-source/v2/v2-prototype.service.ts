@@ -78,6 +78,8 @@ export type V2RunState = {
   free?: boolean;
   /** Owner 2026-11-16 («let users give a link and our ai remixes the users website to be like the link»): the site this run remixes. */
   remix?: string;
+  /** Copy a store (owner 2026-11-17, Graza): the remixed site is the merchant's OWN old shop, so its logo, phrases and artwork are theirs to keep. */
+  ownSite?: boolean;
   /** Owner 2026-11-16 («drop restrictions for now»): loose mode for this run. */
   loose?: boolean;
   /** Owner 2026-11-16: the Nov 14 rule set (Gramiyaa r3) for this run. */
@@ -98,6 +100,9 @@ type Content = { type: 'input_text'; text: string } | { type: 'input_image'; ima
 /** Owner 2026-11-16 («remix the users website to be like the link»): what the art direction and the writers hear in a remix. */
 const remixDirectionText = (host: string) => `REMIX DE ${host}: el comerciante quiere que SU tienda se sienta como este sitio. Sigue estas capturas sección por sección: el mismo orden de secciones, la misma forma de cabecera y de menú, el mismo tipo de portada, la misma paleta (o la más cercana) y el mismo carácter de letra, el mismo aire y ritmo, el mismo estilo de tarjetas y de fotos. Con los productos, fotos, datos y voz de ESTA tienda: nunca su logo, su nombre, sus textos ni sus fotos.`;
 const remixLooseText = (host: string) => `REMIX DE ${host} (capturas abajo): copia este sitio lo más fiel que puedas — la misma portada, las mismas secciones en el mismo orden, la misma cabecera, la misma paleta, la misma letra (o la más parecida que tengas), los mismos tamaños, espacios y estilo de fotos y tarjetas —, con los productos, fotos, datos y textos de ESTA tienda. Nunca su logo, su nombre, sus textos ni sus fotos.`;
+/** The merchant's own old shop (copy a store): its identity is theirs, so the copy keeps it. */
+const OWN_SITE_TEXT = ' ESTE SITIO ES LA TIENDA ANTERIOR DEL PROPIO COMERCIANTE (la está trayendo a pagosYa): su logo, su nombre, sus frases y su arte SON suyos. Usa su logo dibujado, sus ilustraciones, sellos y fotos de marca (están entre las fotos de la tienda) y sus frases tal cual; recrea su portada, su cabecera y su carácter lo más fiel que puedas. En la portada muestra pocos productos destacados (4 a 8), no el catálogo entero.';
+const ownRemix = (text: string, own?: boolean) => own ? text.replace(/(?:: |\. )?[Nn]unca su logo, su nombre, sus textos ni sus fotos\.|; el contenido es siempre el de esta tienda, nunca el de ese sitio\./, '.') + OWN_SITE_TEXT : text;
 const remixWriterText = (host: string) => `REMIX DE ${host} (capturas abajo): la tienda se siente como ese sitio — orden de secciones, cabecera, paleta, letra, ritmo, tarjetas —; el contenido es siempre el de esta tienda, nunca el de ese sitio.`;
 const spent = (error: unknown) => error instanceof SourceProviderQuotaException || (error instanceof Error && (error.message.includes(MODEL_LIMIT_MERCHANT_FAILURE)
   // Live 2026-11-14 13:07 (round 4): a 429 from the bridge reads «ChatGPT indicó un límite de uso» — the writer took it for an empty
@@ -119,7 +124,7 @@ export class SourceV2PrototypeService {
     return this.runs.get(storeId) ?? null;
   }
 
-  async start(merchantId: string, storeId: string, input: { revision?: number; references?: string[]; restyleCards?: boolean; animated?: boolean; model?: string; maxUsd?: number; free?: boolean; remix?: string; loose?: boolean; rules?: string; creative?: boolean }) {
+  async start(merchantId: string, storeId: string, input: { revision?: number; references?: string[]; restyleCards?: boolean; animated?: boolean; model?: string; maxUsd?: number; free?: boolean; remix?: string; ownSite?: boolean; loose?: boolean; rules?: string; creative?: boolean }) {
     this.enabled();
     if (this.runs.get(storeId)?.status === 'RUNNING') throw new ConflictException('Ya hay un diseño V2 en curso para esta tienda.');
     // The design starts from the store's last template revision, not from an earlier V2 design: its data and the library's code
@@ -130,7 +135,7 @@ export class SourceV2PrototypeService {
     const references = remix ? [remix] : (input.references ?? []).filter(url => /^https:\/\//.test(url)).slice(0, 2);
     const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), baseRevision: revision, stages: [], usd: 0,
       // Owner 2026-11-16: one run on a model of its own (a Claude model, paid from the Anthropic key), with a spending cap.
-      ...(input.model ? { model: input.model } : {}), ...(input.maxUsd ? { maxUsd: input.maxUsd } : {}), ...(typeof input.free === 'boolean' ? { free: input.free } : {}), ...(remix ? { remix } : {}), ...(input.loose ? { loose: true } : {}), ...(input.creative ? { creative: true } : {}), // Owner 2026-11-16: the Nov 14 rules are the default (YAPI_V2_RULES=nov14) unless a run asks for «strict» or loose mode.
+      ...(input.model ? { model: input.model } : {}), ...(input.maxUsd ? { maxUsd: input.maxUsd } : {}), ...(typeof input.free === 'boolean' ? { free: input.free } : {}), ...(remix ? { remix, ...(input.ownSite ? { ownSite: true } : {}) } : {}), ...(input.loose ? { loose: true } : {}), ...(input.creative ? { creative: true } : {}), // Owner 2026-11-16: the Nov 14 rules are the default (YAPI_V2_RULES=nov14) unless a run asks for «strict» or loose mode.
       ...(input.rules === 'nov14' || (!input.rules && !input.loose && process.env.YAPI_V2_RULES === 'nov14') ? { basic: true } : {}) };
     this.runs.set(storeId, state);
     void this.run(merchantId, storeId, revision, references, state, input.restyleCards === true, input.animated === true).catch(error => {
@@ -333,8 +338,8 @@ export class SourceV2PrototypeService {
       : (await this.captureReferences(references, state.remix ? [0, 900, 1800, 2700, 3600, 4500] : undefined)).map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' })), list => list.length);
     const remixHost = state.remix ? new URL(state.remix).host.replace(/^www\./, '') : '';
     // Every writer call of a remix sees the site (small) and what a remix keeps of it.
-    const looseRemixShots: Content[] = state.remix && state.loose ? [{ type: 'input_text', text: remixLooseText(remixHost) } as Content, ...shots] : [];
-    const remixShots: Content[] = state.remix ? [{ type: 'input_text', text: remixWriterText(remixHost) } as Content, ...shots.map(shot => shot.type === 'input_image' ? { ...shot, detail: 'low' as const } : shot)] : [];
+    const looseRemixShots: Content[] = state.remix && state.loose ? [{ type: 'input_text', text: ownRemix(remixLooseText(remixHost), state.ownSite) } as Content, ...shots] : [];
+    const remixShots: Content[] = state.remix ? [{ type: 'input_text', text: ownRemix(remixWriterText(remixHost), state.ownSite) } as Content, ...shots.map(shot => shot.type === 'input_image' ? { ...shot, detail: 'low' as const } : shot)] : [];
     // Their recipe cards (written once by the study route): words the direction and the writer can follow, cheaper than pictures.
     const cards = (await Promise.all(library.map(ref => this.card(ref.host)))).map((card, i) => card && cardText(card, i === 0)).filter((text): text is string => Boolean(text));
     const study: Content[] = cards.length ? [{ type: 'input_text', text: `FICHAS DE ESTUDIO DE ESAS TIENDAS (la primera es la referencia principal: sigue su ESTRUCTURA — orden de secciones, forma de la cabecera, tarjeta de producto, caja de compra, cómo se recompone en el teléfono — adaptada a esta marca y a sus fotos; de las demás toma solo un toque. Nunca sus colores, textos, logos ni fotos):\n\n${cards.join('\n\n')}` }] : [];
@@ -370,7 +375,7 @@ export class SourceV2PrototypeService {
     const direction = context.loose ? ({} as V2Direction) : await stage('direction', () => this.call<V2Direction>(storeId, 'v2-direction', model, v2DirectionPrompt(context.free), [
       { type: 'input_text', text: `${v2DirectionInput(context)}${context.animated ? `\n\n${ANIMATED_RULES}` : ''}` },
       ...photos.map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' })),
-      ...(shots.length ? [{ type: 'input_text', text: state.remix ? remixDirectionText(remixHost) : 'TIENDAS REALES DE REFERENCIA (aprende su oficio — retícula, tipografía, aire, cómo muestran el producto —, nunca copies sus colores ni sus textos):' } as Content] : []),
+      ...(shots.length ? [{ type: 'input_text', text: state.remix ? ownRemix(remixDirectionText(remixHost), state.ownSite) : 'TIENDAS REALES DE REFERENCIA (aprende su oficio — retícula, tipografía, aire, cómo muestran el producto —, nunca copies sus colores ni sus textos):' } as Content] : []),
       ...shots,
       ...study,
       ...(motionShots.length ? [{ type: 'input_text', text: 'REFERENCIA DE MOVIMIENTO Y OFICIO PARA ESTA TIENDA ANIMADA (una tienda Shopify animada; aprende su oficio, nunca sus colores, textos ni fotos):' } as Content, ...motionShots] : []),

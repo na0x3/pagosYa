@@ -19,6 +19,8 @@ class V2PrototypeDto {
   @IsOptional() @IsBoolean() free?: boolean;
   /** Owner 2026-11-16: remix the store to feel like this site (its structure, palette and type; never its content). */
   @IsOptional() @IsUrl({ protocols: ['https'], require_protocol: true }) remix?: string;
+  /** Copy a store (owner 2026-11-17): the remixed site is the merchant's own old shop — its logo, phrases and artwork are kept. */
+  @IsOptional() @IsBoolean() ownSite?: boolean;
   /** Owner 2026-11-16: drop the taste rules for this run — only what keeps the store working is checked. */
   @IsOptional() @IsBoolean() loose?: boolean;
   /** «nov14»: the rules Gramiyaa r3 was built with (free mode, basic breakage checks only). */
