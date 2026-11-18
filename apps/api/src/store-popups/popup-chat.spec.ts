@@ -15,4 +15,8 @@ describe('popup requests in the chat', () => {
     for (const text of ['apaga el popup', 'quita el popup', 'desactiva el popup', 'activa mi popup', 'pon el popup a los 10 segundos', 'prueba el popup con 20%', 'haz un test A/B del popup']) expect(popupChatRequest(text)).toBeNull();
     expect(popupChatRequest('quita la pregunta del popup')).toEqual({ redesign: true, request: 'quita la pregunta del popup' });
   });
+  it('reads a full-page request', () => {
+    expect(popupChatRequest('haz mi popup a pantalla completa')).toEqual({ redesign: true, request: 'haz mi popup a pantalla completa', layout: 'full' });
+    expect(popupChatRequest('quiero un popup full screen')).toMatchObject({ redesign: true, layout: 'full' });
+  });
 });

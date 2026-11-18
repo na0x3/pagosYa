@@ -39,4 +39,11 @@ describe('popup design prompt', () => {
     expect(prompt).toMatch(/corrige solo/i);
     expect(popupDesignPrompt(input)).toMatch(/100vw/);
   });
+  // Owner 2026-11-18 «i would also like some full pages ones».
+  it('asks for a full-page popup when the layout is full', () => {
+    const prompt = popupDesignPrompt({ ...input, layout: 'full' });
+    expect(prompt).toMatch(/PANTALLA COMPLETA/);
+    expect(prompt).toContain('data-full');
+    expect(popupDesignPrompt(input)).not.toMatch(/FORMATO: PANTALLA COMPLETA/);
+  });
 });

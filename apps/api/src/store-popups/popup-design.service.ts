@@ -75,7 +75,7 @@ export class PopupDesignService {
   }
 
   /** YAPI's answer made safe and complete, or the list of what is wrong (in the words YAPI gets back). */
-  private assemble(raw: any, id: string, products: string[], taken: Array<{ fingerprint: string; composition: string }>): Candidate | { problems: string[] } {
+  private assemble(raw: any, id: string, products: string[], taken: Array<{ fingerprint: string; composition: string }>, layout?: 'full' | 'card'): Candidate | { problems: string[] } {
     const problems: string[] = [];
     const flowResult = validateFlow(raw?.flow, products);
     if ('problems' in flowResult) return { problems: flowResult.problems };
@@ -84,6 +84,7 @@ export class PopupDesignService {
     for (const step of renderedSteps(flowResult.flow)) {
       const cleaned = cleanStepHtml(given.get(step.id) ?? '', step.kind);
       if ('problem' in cleaned) problems.push(`paso ${step.id}: ${cleaned.problem}`); else steps[step.id] = cleaned.html;
+      if (layout === 'full' && 'html' in cleaned && !/^<[a-z0-9]+\b[^>]*\sdata-full\b/i.test(cleaned.html.trim())) problems.push(`paso ${step.id}: falta data-full en el elemento exterior (formato pantalla completa).`);
     }
     const scoped = scopePopupCss(String(raw?.css ?? ''), id);
     if ('problem' in scoped) problems.push(scoped.problem);
@@ -98,7 +99,7 @@ export class PopupDesignService {
     return { flow: flowResult.flow, steps, css: scoped.css, launcher: cleanLauncher && 'html' in cleanLauncher ? cleanLauncher.html : null, composition, fingerprint };
   }
 
-  async design(merchantId: string, storeId: string, options: { createdBy: Created; request?: string; signal?: AbortSignal }) {
+  async design(merchantId: string, storeId: string, options: { createdBy: Created; request?: string; signal?: AbortSignal; layout?: 'full' | 'card' }) {
     const store = await this.store(merchantId, storeId);
     if (options.createdBy !== 'batch') await this.plans?.assertCredits(storeId);
     const settings = await this.settings(storeId);
@@ -123,7 +124,7 @@ export class PopupDesignService {
     for (let attempt = 0; attempt < 3 && !candidate; attempt++) {
       options.signal?.throwIfAborted();
       const raw = await this.call(popupDesignPrompt({ storeName: store.name, sector: brief?.research?.niche ?? '', palette: brief?.identity?.palette ?? {}, fonts: [], voice: brief?.identity?.voice ?? '',
-        photos: Object.keys(photos).filter(path => !cutouts.some(cut => cut.url === path)), cutouts, products, capture, percent, taken: taken.map(t => t.composition), request: options.request, retryProblems: problems.length ? problems : undefined, previous: problems.length ? previous : undefined }), storeId)
+        photos: Object.keys(photos).filter(path => !cutouts.some(cut => cut.url === path)), cutouts, products, capture, percent, taken: taken.map(t => t.composition), request: options.request, retryProblems: problems.length ? problems : undefined, previous: problems.length ? previous : undefined, layout: options.layout }), storeId)
         .catch((error: unknown) => ({ failed: String((error as Error)?.message ?? error).slice(0, 300) }));
       // The model's own words reach the chat and the batch log (live 2026-11-18: an exhausted ChatGPT allowance read as «no answer»).
       if (raw && typeof raw === 'object' && 'failed' in raw) {
@@ -131,7 +132,7 @@ export class PopupDesignService {
         if (/usage_limit|quota|rate.?limit|insufficient|ServiceUnavailable|no está configurad/i.test(problems[0])) break;
         continue;
       }
-      const built = raw ? this.assemble(raw, id, products.map(p => p.id), taken) : { problems: ['No llegó una respuesta del modelo.'] };
+      const built = raw ? this.assemble(raw, id, products.map(p => p.id), taken, options.layout) : { problems: ['No llegó una respuesta del modelo.'] };
       if (raw && typeof raw === 'object') {
         const answer = raw as { flow?: unknown; steps?: Array<{ id?: string; html?: string }>; css?: string };
         previous = { flow: answer.flow, steps: Object.fromEntries((Array.isArray(answer.steps) ? answer.steps : []).map(step => [String(step?.id), String(step?.html ?? '')])), css: String(answer.css ?? '') };
@@ -182,7 +183,7 @@ export class PopupDesignService {
       return { skipped: true };
     }
     await this.post(job.storeId, 'Diseñando tu popup nuevo (1–2 minutos)…', { progress: 'popup' });
-    const result = await this.design(job.merchantId, job.storeId, { createdBy: 'merchant-chat', request: ask.request, signal: job.signal });
+    const result = await this.design(job.merchantId, job.storeId, { createdBy: 'merchant-chat', request: ask.request, signal: job.signal, layout: ask.layout });
     await this.post(job.storeId, result.design.status === 'LIVE'
       ? `Listo: tu popup nuevo — ${(result.design as { composition?: string }).composition ?? ''}. Míralo en Crecimiento › Popups.`
       : 'No pude dejar un popup que pase las revisiones; tu popup sigue igual. Pídemelo de nuevo con otra idea.', { popupDesign: result.design });

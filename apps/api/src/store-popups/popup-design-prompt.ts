@@ -7,6 +7,8 @@ export type PopupDesignPromptInput = {
   cutouts?: Array<{ url: string; product: string }>;
   /** The attempt that failed: a retry repairs it instead of starting over (live 2026-11-18, Fishwife). */
   previous?: { flow: unknown; steps: Record<string, string>; css: string };
+  /** Owner 2026-11-18 («some full pages ones»): the popup covers the whole screen, edge to edge. */
+  layout?: 'full' | 'card';
 };
 
 const LOOKS = [
@@ -25,6 +27,7 @@ export function popupDesignPrompt(input: PopupDesignPromptInput): string {
     input.cutouts?.length ? data('Recortes de producto sin fondo (úsalos grandes, en <img data-art>)', input.cutouts.slice(0, 4)) : '',
     `Contacto que pide la tienda: ${input.capture === 'email' ? 'email' : 'WhatsApp'}. Descuento: ${input.percent}%.`,
     input.request ? data('Lo que pidió el comerciante', input.request) : '',
+    input.layout === 'full' ? 'FORMATO: PANTALLA COMPLETA. Este popup ocupa toda la pantalla de borde a borde: la plataforma le da el 100% del ancho y del alto, sin margen. El elemento exterior de CADA paso lleva el atributo data-full y llena la pantalla con su fondo o su marco (como Fishwife en Alia); el contenido va centrado, a no más de unos 560px de ancho para leerse bien, y el botón para cerrar en una esquina de arriba.' : '',
     '',
     'FLUJO: de 2 a 6 pasos, en el orden que quieras, con estos tipos: offer (la oferta), pick (el comprador elige un producto entre fichas), quiz (1 a 3 preguntas; cada respuesta lleva los ids de productos que recomienda), capture (el contacto), reveal (el código), land (último, sin HTML: abre el producto elegido con el descuento en el carrito). capture va antes que reveal. No uses juegos.',
     'GANCHOS que tu HTML debe llevar (la plataforma hace toda la lógica; nunca escribas JavaScript, sin <script>, sin on…, sin enlaces ni imágenes de fuera):',

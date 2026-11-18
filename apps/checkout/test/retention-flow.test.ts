@@ -237,4 +237,12 @@ describe("a YAPI popup design", () => {
     w.PAGOSYA_POPUP_PREVIEW({ signupEnabled: true, popupDesign: design }, { slug: "calima", data: { items } }, "r");
     expect(w.document.querySelector("[data-pagosya-popup-preview] [data-slot=code]").textContent).toMatch(/^[A-Z0-9]{6,}$/);
   });
+  it("gives a full-page step the whole screen", async () => {
+    const { w, root, click } = await mount({ design: { steps: { ...steps, o: '<div data-full><button data-close aria-label="Cerrar">×</button><h2>15%</h2><button data-next>Quiero</button></div>' } } });
+    expect(w.document.querySelector("dialog").classList.contains("pagosya-flow-full")).toBe(true);
+    click("[data-next]");
+    expect(w.document.querySelector("dialog").classList.contains("pagosya-flow-full")).toBe(false);
+    void root;
+  });
 });
+

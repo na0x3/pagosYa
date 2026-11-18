@@ -79,5 +79,12 @@ describe('popup design render check', () => {
     const fine = await measureFlow(base(`${SHEET}.card{position:relative}.tin{position:absolute;left:0;top:40px;width:100%;height:160px;z-index:0}.panel{position:relative;z-index:1;background:#fff}`, { o: card, c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(fine!).join(' ')).not.toMatch(/encima de un recorte/);
   });
+  it('passes a sound full-page design at both sizes', async () => {
+    const page = (inner: string) => `<div class="full" data-full><button data-close aria-label="Cerrar" class="x">×</button><div class="inner">${inner}</div></div>`;
+    const sheet = '.full{position:relative;background:#e8f4ff;color:#111;padding:72px 24px;display:flex;align-items:center;justify-content:center;border:12px solid #e33}.inner{max-width:520px;text-align:center}.x{position:absolute;top:16px;right:16px;width:44px;height:44px}';
+    const measures = await measureFlow(base(sheet, { o: page('<h2>Tienes un descuento sorpresa</h2><button data-next>Ver</button>'), c: page('<input data-field="whatsapp"><button data-submit>Enviar</button>') }, [flow[0], flow[2]]));
+    expect(checkFlowRender(measures!)).toEqual([]);
+    expect(measures!.every(m => m.contentRight - m.contentLeft >= m.size.width - 2)).toBe(true);
+  });
 });
 

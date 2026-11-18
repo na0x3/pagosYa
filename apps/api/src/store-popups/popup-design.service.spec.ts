@@ -146,4 +146,13 @@ describe('PopupDesignService', () => {
     expect(calls[1]).toContain('.mark-1{color:red}');
     expect(result.design.status).toBe('LIVE');
   });
+  it('a full-page design must mark every step data-full', async () => {
+    const plain = answer();
+    const full = answer({ steps: answer().steps.map((step: any) => ({ ...step, html: step.html.replace('<div class="card">', '<div class="card" data-full>') })) });
+    const { service, calls } = setup([plain, full]);
+    const result = await service.design('m1', 's1', { createdBy: 'merchant-chat', layout: 'full' });
+    expect(calls[0]).toMatch(/PANTALLA COMPLETA/);
+    expect(calls[1]).toMatch(/data-full/);
+    expect(result.design.status).toBe('LIVE');
+  });
 });
