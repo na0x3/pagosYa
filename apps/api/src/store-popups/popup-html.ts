@@ -42,7 +42,8 @@ function cleanNode(parent: { childNodes: Node[] }): void {
       if (name === 'style') { const kept = customProperties(value); return kept ? [{ ...attr, value: kept }] : []; }
       return [attr];
     });
-    if (tag === 'img' && !el.attrs.some(attr => attr.name === 'src')) continue;
+    // The picker's photo slot is filled by the platform per product: it is the one image allowed without a src.
+    if (tag === 'img' && !el.attrs.some(attr => attr.name === 'src' || (attr.name === 'data-slot' && attr.value === 'photo'))) continue;
     if (tag === 'input') {
       const type = (el.attrs.find(attr => attr.name === 'type')?.value ?? 'text').toLowerCase();
       if (!INPUT_TYPES.has(type)) continue;

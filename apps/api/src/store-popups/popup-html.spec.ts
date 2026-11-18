@@ -39,4 +39,12 @@ describe('popup step html', () => {
     expect(cleanStepHtml('<span class="tab">¿15% para ti?</span>', 'launcher')).toEqual({ html: '<span class="tab">¿15% para ti?</span>' });
     expect(cleanStepHtml('<span>x</span><input data-field>', 'launcher')).toEqual({ problem: expect.stringMatching(/pestaña/) });
   });
+  // Live 2026-11-18 (NOA VARGAS): the tile's photo has no src — the platform fills it per product — and must survive cleaning.
+  it('keeps the picker\'s photo slot without a src, and still drops other images without one', () => {
+    const pick = '<div><button data-close>×</button><ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b></li></ul><img alt="sin foto"></div>';
+    const out = cleanStepHtml(pick, 'pick') as { html: string };
+    expect(out.html).toContain('<img data-slot="photo" alt="">');
+    expect(out.html).not.toContain('sin foto');
+  });
 });
+
