@@ -15,7 +15,7 @@ export const NAV_SECTIONS = [
   { id: "cobrar", label: "Cobrar", description: "Un QR o un link para cobrar al instante.",
     tabs: [{ view: "charge-links", label: "Cobrar" }] },
   { id: "dinero", label: "Dinero", description: "Tu saldo, tus finanzas y cuándo te llega el dinero.",
-    tabs: [{ view: "payouts", label: "Dinero" }] },
+    tabs: [{ view: "payouts", label: "Dinero" }, { view: "complaints", label: "Reclamos" }] },
   { id: "clientes", label: "Clientes", description: "Correos, promociones y quienes vuelven a comprar.",
     tabs: [
       { view: "marketing", marketingTab: "emails", label: "Correos" },

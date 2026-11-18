@@ -130,9 +130,11 @@ export class SettlementHoldService {
     await lockMerchantSettlement(tx, params.merchantId);
     // Payouts already created but not yet delivered are still in MERCHANT_PAYABLE yet promised to the bank: treat
     // them as spent, so the refund takes from pending and reserve before driving available below what they'll debit.
-    // Read after the lock, which createDuePayouts also takes around its check-and-create.
-    const payable = await accountBalance(tx, params.merchantId, LedgerAccount.MERCHANT_PAYABLE, params.currency);
+    // Read after the lock, which createDuePayouts also takes around its check-and-create. Delivery doesn't take it:
+    // a payout succeeding between the two reads leaves in-flight and debits payable in one commit, so in-flight is
+    // read first — the race can then only understate available, never pay out the same money as a refund source.
     const inFlight = await tx.payout.aggregate({ where: inFlightPayoutWhere(params.merchantId, params.currency), _sum: { amount: true } });
+    const payable = await accountBalance(tx, params.merchantId, LedgerAccount.MERCHANT_PAYABLE, params.currency);
     const available = payable - (inFlight._sum.amount ?? 0);
     const holds = await tx.settlementHold.findMany({
       where: { merchantId: params.merchantId, currency: params.currency, status: { in: [PENDING, RESERVE_HELD] } },

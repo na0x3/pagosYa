@@ -89,6 +89,9 @@ export function createAccountPanel(deps) {
     document.getElementById("kycBusinessFields").hidden = !business;
     document.getElementById("kycNameLabel").textContent = business ? "Razón social" : "Nombre completo";
     for (const name of ["taxId", "legalRepName"]) document.querySelector(`#kycForm [name=${name}]`).required = business;
+    // Without a NIT, the SIN certificate shows the seller has none; a business level sends its NIT instead.
+    document.getElementById("kycPersonFields").hidden = business;
+    document.getElementById("kycDocNitCertificate").required = !business;
   }
   async function uploadKycPhoto(input) {
     const file = input.files?.[0];
@@ -166,16 +169,38 @@ export function createAccountPanel(deps) {
         button.disabled = false;
       }
     });
+    document.getElementById("kycIsPep")?.addEventListener("change", (event) => {
+      const row = document.getElementById("kycPepRoleRow");
+      row.hidden = !event.target.checked;
+      document.getElementById("kycPepRole").required = event.target.checked;
+    });
     document.getElementById("kycForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       errorEl.textContent = "";
       infoEl.textContent = "";
       const data = Object.fromEntries(new FormData(e.target));
       try {
-        const [ciFrontDocId, ciBackDocId, selfieDocId] = await Promise.all(
-          ["kycDocFront", "kycDocBack", "kycDocSelfie"].map((id) => uploadKycPhoto(document.getElementById(id))),
+        const business = data.targetLevel === "2";
+        const [ciFrontDocId, ciBackDocId, selfieDocId, nitCertificateDocId] = await Promise.all(
+          ["kycDocFront", "kycDocBack", "kycDocSelfie", ...(business ? [] : ["kycDocNitCertificate"])].map((id) => uploadKycPhoto(document.getElementById(id))),
         );
-        const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId };
+        // The account goes first, with its proof; the identity then points at it (ASFI payout account ownership).
+        let payoutAccountId = document.getElementById("kycAccountExisting")?.dataset.accountId;
+        if (!payoutAccountId) {
+          const accountForm = new FormData();
+          for (const key of ["bankCode", "accountNumber", "holderName"]) accountForm.append(key, String(data[key] ?? ""));
+          const proof = document.getElementById("kycAccountProof")?.files?.[0];
+          if (proof) accountForm.append("proof", proof);
+          payoutAccountId = (await api("/dashboard/payout_accounts", { method: "POST", body: accountForm })).id;
+          // Remembered before the identity call: if that fails, a retry reuses this account instead of sending it again.
+          await deps.payoutAccounts?.show();
+          deps.payoutAccounts?.sync();
+        }
+        for (const key of ["bankCode", "accountNumber", "holderName", "payoutBankAccount"]) delete data[key];
+        // PEP self-declaration (UIF): a checkbox sends "on"; the API takes a boolean and the role only when it is checked.
+        const isPep = data.isPep === "on";
+        if (!isPep) delete data.pepRole;
+        const payload = { ...data, isPep, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId, nitCertificateDocId, payoutAccountId };
         for (const key of Object.keys(payload)) if (payload[key] === "" || payload[key] === undefined) delete payload[key];
         await api("/merchants/kyc", { method: "POST", body: JSON.stringify(payload) });
         await refresh();

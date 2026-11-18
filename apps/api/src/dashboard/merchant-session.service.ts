@@ -8,6 +8,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { boliviaDayKey } from "../rewards/reward-policy";
 import { countStoreSales, gameXpForStore, wheelSpinsToday } from "../rewards/reward-queries";
 import { MAX_PROFILE_VARIATION, profileBlobSeed } from "./profile-blob-seed";
+import { MerchantMfaService } from "./merchant-mfa.service";
 
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const generateSecretPart = customAlphabet(alphabet, 32);
@@ -41,9 +42,16 @@ export class MerchantSessionService {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly google?: GoogleIdentityService,
+    @Optional() private readonly mfa?: MerchantMfaService,
   ) {}
 
-  async login(emailInput: string, password: string): Promise<{ token: string; expiresAt: Date; merchant: { id: string }; user: { email: string } }> {
+  /** ISO M-09: with codes turned on, the password (or Google) is not enough — the code is spent before any session. */
+  private async secondFactor(user: { id: string; totpSecret?: string | null; totpEnabledAt?: Date | null; totpLastStep?: number | null }, code: string | undefined) {
+    if (!user.totpEnabledAt || !this.mfa) return;
+    await this.mfa.spendCode({ id: user.id, totpSecret: user.totpSecret ?? null, totpLastStep: user.totpLastStep ?? null }, code);
+  }
+
+  async login(emailInput: string, password: string, code?: string): Promise<{ token: string; expiresAt: Date; merchant: { id: string }; user: { email: string } }> {
     const email = emailInput.trim().toLowerCase();
     const user = await this.prisma.merchantUser.findUnique({ where: { email } });
     const passwordMatches = await argon2.verify(user?.hashedPassword ?? DUMMY_PASSWORD_HASH, password);
@@ -56,11 +64,12 @@ export class MerchantSessionService {
     if (!user.emailVerifiedAt) {
       throw new UnauthorizedException("Confirm your email before logging in — check your inbox for the verification link.");
     }
+    await this.secondFactor(user, code);
 
     return this.issueSession(user);
   }
 
-  async loginWithGoogle(credential: string): Promise<{ token: string; expiresAt: Date; merchant: { id: string }; user: { email: string } }> {
+  async loginWithGoogle(credential: string, code?: string): Promise<{ token: string; expiresAt: Date; merchant: { id: string }; user: { email: string } }> {
     if (!this.google) throw new ServiceUnavailableException("El acceso con Google todavía no está disponible");
     const identity = await this.google.verifyCredential(credential);
     let user = await this.prisma.merchantUser.findUnique({ where: { googleSubject: identity.subject } });
@@ -78,6 +87,7 @@ export class MerchantSessionService {
       });
     }
     if (user.deletedAt) throw new ForbiddenException("Esta cuenta comercial fue eliminada");
+    await this.secondFactor(user, code);
     return this.issueSession(user);
   }
 

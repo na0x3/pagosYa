@@ -3,6 +3,8 @@ import * as argon2 from "argon2";
 import { createHash } from "node:crypto";
 import { MerchantSessionService } from "./merchant-session.service";
 import { profileBlobSeed } from "./profile-blob-seed";
+import { MerchantMfaService } from "./merchant-mfa.service";
+import { base32Encode, totpCode, totpStep } from "../auth/totp";
 
 function makeFakePrisma() {
   const prisma: any = {
@@ -113,6 +115,36 @@ describe("MerchantSessionService.login", () => {
 
     const service = new MerchantSessionService(prisma as any);
     await expect(service.login("nobody@tienda.bo", "whatever")).rejects.toThrow(UnauthorizedException);
+  });
+});
+
+describe("MerchantSessionService.login with a second factor (ISO M-09)", () => {
+  it("asks for the code before any session, refuses a wrong one, and signs in with the right one", async () => {
+    const prisma = makeFakePrisma();
+    const secret = base32Encode(Buffer.from("merchant-secret-0001"));
+    const user = { id: "user_1", merchantId: "m_1", email: "owner@tienda.bo", hashedPassword: await argon2.hash("correct-password"), emailVerifiedAt: new Date(), totpSecret: secret, totpEnabledAt: new Date(), totpLastStep: null };
+    prisma.merchantUser.findUnique.mockResolvedValue(user);
+    prisma.merchantUser.updateMany.mockResolvedValue({ count: 1 });
+    prisma.merchantUser.update.mockResolvedValue({ totpFailedCount: 1 });
+    prisma.merchantSession.create.mockResolvedValue({});
+    const service = new MerchantSessionService(prisma as any, undefined, new MerchantMfaService(prisma as any));
+
+    const missing = await service.login("owner@tienda.bo", "correct-password").catch((e) => e);
+    expect(missing).toBeInstanceOf(UnauthorizedException);
+    expect(missing.getResponse()).toMatchObject({ code: "mfa_required" });
+    await expect(service.login("owner@tienda.bo", "correct-password", "000000")).rejects.toThrow(UnauthorizedException);
+    expect(prisma.merchantSession.create).not.toHaveBeenCalled();
+
+    const result = await service.login("owner@tienda.bo", "correct-password", totpCode(secret, totpStep()));
+    expect(result.token).toMatch(/^dash_/);
+    expect(prisma.merchantUser.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { totpLastStep: totpStep(), totpFailedCount: 0 } }));
+  });
+
+  it("never asks for a code from a wrong password (no hint that codes are on)", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchantUser.findUnique.mockResolvedValue({ id: "user_1", merchantId: "m_1", email: "owner@tienda.bo", hashedPassword: await argon2.hash("correct-password"), emailVerifiedAt: new Date(), totpEnabledAt: new Date(), totpSecret: "GEZDGNBVGY3TQOJQ" });
+    const failure = await new MerchantSessionService(prisma as any, undefined, new MerchantMfaService(prisma as any)).login("owner@tienda.bo", "wrong").catch((e) => e);
+    expect(failure.getResponse()).not.toMatchObject({ code: "mfa_required" });
   });
 });
 

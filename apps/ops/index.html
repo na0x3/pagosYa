@@ -77,6 +77,7 @@
   code { font-family: "0xProto Mono", ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.75rem; color: var(--pg-text-muted); }
   .actions-cell { display: flex; gap: 6px; }
   .kyc-photos { display: flex; gap: 6px; flex-wrap: wrap; }
+  .kyc-doc-link { font-size: 0.75rem; align-self: center; }
   .kyc-photo { width: 56px; height: 56px; object-fit: cover; border: 1.5px solid var(--pg-border); border-radius: 6px; background: var(--pg-bg); color: var(--pg-text-faint); font-size: 0.625rem; text-align: center; }
   .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
@@ -352,6 +353,13 @@
   button.reject { border-color: var(--pg-border); background: var(--bento-red); color: var(--pg-text); }
   button.danger { border-color: var(--pg-border); background: var(--pg-error-soft); color: var(--pg-text); }
   button.danger:hover { border-color: var(--pg-border); background: var(--bento-red); }
+  .screening-matches { margin: 6px 0; padding-left: 16px; font-size: 0.75rem; }
+  .screening-decide { display: grid; gap: 4px; }
+  .screening-decide input { font-size: 0.75rem; }
+  .badge-ok { color: #1f7a3d; } .badge-danger { color: #b42318; } .badge-warn { color: #8a5300; }
+  .mfa-setup { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--pg-border); }
+  .mfa-setup[hidden], #signOut[hidden] { display: none; }
+  .mfa-setup img { display: block; margin: 8px 0; background: #fff; border-radius: 8px; }
   .token-help {
     margin: 12px 0 0;
     padding-top: 12px;
@@ -395,6 +403,15 @@
     .support-sidebar { border-right: 0; border-bottom: 3px solid var(--pg-border); padding: 0 0 20px; box-shadow: none; }
     h2 { font-size: 1.6rem; }
   }
+  #complaintsRows tr { cursor: pointer; }
+  tr.is-overdue td { color: #b42318; font-weight: 600; }
+  tr.is-due-soon td:first-child::after { content: " · vence pronto"; color: #b54708; font-weight: 400; }
+  .complaint-detail form { display: grid; gap: 8px; margin: 12px 0; }
+  .complaint-detail textarea, .complaint-detail input, .complaint-detail select { width: 100%; }
+  .complaint-history { padding-left: 18px; }
+  .payout-account { margin: 12px 0; }
+  .payout-account form { display: grid; gap: 6px; margin: 10px 0; }
+  .payout-account label { display: flex; gap: 8px; align-items: center; }
 </style>
 </head>
 <body>
@@ -421,6 +438,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
   <nav class="ops-nav" aria-label="Secciones de operaciones">
     <a href="#soporte">Soporte de cuentas</a>
+    <a href="#reclamos">Reclamos</a>
+    <a href="#cuentas">Cuentas por revisar</a>
     <a href="#revisiones">Revisiones KYC</a>
     <a href="#incidencias">Incidencias</a>
     <a href="#dominios">Dominios</a>
@@ -438,13 +457,28 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       </div>
       <div>
         <label for="opsToken">Token personal de operaciones</label>
-        <input id="opsToken" type="password" placeholder="ops_...">
+        <input id="opsToken" type="password" placeholder="ops_..." autocomplete="off">
+      </div>
+      <div>
+        <label for="opsCode">Código de tu app de verificación</label>
+        <input id="opsCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456">
       </div>
       <button class="primary" id="connect" type="button">Conectar y actualizar</button>
+      <button class="secondary" id="signOut" type="button" hidden>Salir</button>
+    </div>
+    <div id="mfaSetup" class="mfa-setup" hidden>
+      <p><strong>Configura tu código de verificación.</strong> Escanea este código con Google Authenticator, Microsoft Authenticator, 1Password o Authy. Desde ahora entrarás con tu token y el código de 6 dígitos que muestra la app.</p>
+      <img id="mfaQr" alt="Código QR para tu app de verificación" width="180" height="180">
+      <p class="muted">¿No puedes escanear? Escribe esta clave en la app: <code id="mfaSecret"></code></p>
+      <div class="panel-row">
+        <div><label for="mfaConfirmCode">Primer código que muestra la app</label><input id="mfaConfirmCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456"></div>
+        <button class="primary" id="mfaConfirm" type="button">Activar</button>
+      </div>
     </div>
     <details class="token-help">
       <summary>¿Dónde obtengo mi token?</summary>
       <p>Un administrador de pagosYa debe crear tu usuario de operaciones. El token <code>ops_…</code> se muestra una sola vez al emitirlo; si se perdió, debe revocarse y emitirse uno nuevo. Nunca se puede recuperar desde la base de datos.</p>
+      <p>Además del token, cada ingreso pide el código de 6 dígitos de tu app de verificación (doble factor). Si perdiste el teléfono, un administrador restablece tu código y lo configuras de nuevo al entrar. La sesión dura 10 horas.</p>
     </details>
   </div>
 
@@ -492,9 +526,38 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
   </section>
 
+  <section class="block" id="cuentas">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Cuentas por revisar</h2>
+        <p class="muted">Ningún desembolso sale a una cuenta sin un comprobante aprobado. Un cambio de cuenta lo aprueba solo un administrador y paga 72 horas después.</p>
+      </div>
+      <div id="payoutAccountsList"><div class="empty-state">Conecta para ver las cuentas.</div></div>
+    </div>
+  </section>
+
+  <section class="block" id="reclamos">
+    <div class="panel">
+      <div class="section-head">
+        <h2>Reclamos de compradores</h2>
+        <p class="muted">Cada reclamo vence 5 días hábiles después de recibido. Los vencidos aparecen en rojo.</p>
+      </div>
+      <div class="panel-row complaints-filters">
+        <div><label for="complaintsStatus">Estado</label><select id="complaintsStatus"><option value="">Abiertos</option><option value="RECEIVED">Recibido</option><option value="IN_REVIEW">En revisión</option><option value="WAITING_MERCHANT">Esperando al comercio</option><option value="ANSWERED">Respondido</option></select></div>
+        <div><label for="complaintsSearch">Buscar</label><input id="complaintsSearch" placeholder="Número, correo o comercio"></div>
+        <div><label for="complaintsFrom">Desde</label><input type="date" id="complaintsFrom"></div>
+        <div><label for="complaintsTo">Hasta</label><input type="date" id="complaintsTo"></div>
+        <div><button type="button" id="complaintsExport">Exportar CSV</button></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Número</th><th>Vence</th><th>Estado</th><th>Comprador</th><th>Comercio</th><th>Asignado</th></tr></thead><tbody id="complaintsRows"></tbody></table></div>
+      <div id="complaintDetail" class="panel complaint-detail" hidden aria-live="polite"></div>
+    </div>
+  </section>
+
   <section class="block" id="revisiones">
     <div class="panel">
       <div class="section-head"><h2>Revisiones KYC pendientes</h2><p class="muted">Aprobar habilita credenciales en vivo y desembolsos para el comercio.</p></div>
+      <p class="muted sanctions-status" id="sanctionsStatus"></p>
       <div id="notConnected1" class="empty-state">Ingresa tu token y conecta para cargar la cola.</div>
       <div id="empty" class="empty-state" style="display:none">No hay solicitudes pendientes.</div>
       <div class="table-wrap"><table id="table" style="display:none">
@@ -505,6 +568,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
             <th>Liquidación</th>
             <th>Razón social / NIT</th>
             <th>Representante legal</th>
+            <th>Listas / PEP</th>
             <th>Cuenta de desembolso</th>
             <th>Fotos</th>
             <th>Enviado</th>
@@ -578,6 +642,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <h2>Pagos internacionales</h2>
         <p class="muted" style="margin: 2px 0 0">Solicitudes de comercios para cobrar en USD con dLocal. Aprobar o rechazar queda auditado.</p>
       </div>
+      <p id="intlOffNotice" class="muted" hidden>Los pagos internacionales están desactivados en la plataforma. Puedes rechazar solicitudes, pero no aprobarlas.</p>
       <div id="notConnected5" class="empty-state">Conecta para consultar las solicitudes.</div>
       <div id="intlEmpty" class="empty-state" style="display:none">No hay solicitudes pendientes.</div>
       <div class="table-wrap"><table id="intlTable" style="display:none">
@@ -725,18 +790,90 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   let supportCases = [];
 
   apiOriginEl.value = sessionStorage.getItem("pagosya_ops_api_origin") || apiOriginEl.value;
-  opsTokenEl.value = sessionStorage.getItem("pagosya_ops_token") || "";
+  // ISO A-01: the ops_ token is never kept in the browser; token + code start a 10 h session and only that is stored.
+  sessionStorage.removeItem("pagosya_ops_token");
+  let opsSessionToken = sessionStorage.getItem("pagosya_ops_session") || "";
+  const opsCodeEl = document.getElementById("opsCode");
+  const signOutEl = document.getElementById("signOut");
+  const mfaSetupEl = document.getElementById("mfaSetup");
+  const authHeader = () => "Bearer " + (opsSessionToken || opsTokenEl.value);
+
+  function setSession(token) {
+    opsSessionToken = token || "";
+    if (opsSessionToken) sessionStorage.setItem("pagosya_ops_session", opsSessionToken);
+    else sessionStorage.removeItem("pagosya_ops_session");
+    signOutEl.hidden = !opsSessionToken;
+  }
+
+  async function openPost(path, body) {
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => null);
+    return { res, data };
+  }
+
+  /** Token + code → session. First time: the API asks for setup, and the QR panel opens. */
+  async function signIn() {
+    if (!opsTokenEl.value) {
+      if (opsSessionToken) return true;
+      throw new Error("Escribe tu token de operaciones.");
+    }
+    const { res, data } = await openPost("/internal/ops_session", { token: opsTokenEl.value.trim(), ...(opsCodeEl.value.trim() ? { code: opsCodeEl.value.trim() } : {}) });
+    if (res.ok) {
+      setSession(data.sessionToken);
+      opsTokenEl.value = "";
+      opsCodeEl.value = "";
+      mfaSetupEl.hidden = true;
+      return true;
+    }
+    if (res.status === 403 && data && data.code === "mfa_setup_required") {
+      await beginMfaSetup();
+      return false;
+    }
+    if (res.status === 404) return true; // an API from before sessions: the token itself still works there
+    throw new Error((data && data.message) || res.statusText);
+  }
+
+  async function beginMfaSetup() {
+    const { res, data } = await openPost("/internal/ops_session/mfa/setup", { token: opsTokenEl.value.trim() });
+    if (!res.ok) throw new Error((data && data.message) || res.statusText);
+    document.getElementById("mfaQr").src = data.qrDataUrl;
+    document.getElementById("mfaSecret").textContent = data.secret;
+    mfaSetupEl.hidden = false;
+    document.getElementById("mfaConfirmCode").focus();
+  }
+
+  document.getElementById("mfaConfirm").addEventListener("click", async () => {
+    errorEl.textContent = "";
+    const code = document.getElementById("mfaConfirmCode").value.trim();
+    const { res, data } = await openPost("/internal/ops_session/mfa/confirm", { token: opsTokenEl.value.trim(), code });
+    if (!res.ok) { errorEl.textContent = (data && data.message) || res.statusText; return; }
+    mfaSetupEl.hidden = true;
+    document.getElementById("mfaConfirmCode").value = "";
+    errorEl.textContent = "Código activado. Espera el siguiente código en tu app, escríbelo arriba y pulsa «Conectar y actualizar».";
+    opsCodeEl.focus();
+  });
+
+  signOutEl.addEventListener("click", async () => {
+    await fetch(apiOriginEl.value.replace(/\/$/, "") + "/internal/ops_session", { method: "DELETE", headers: { authorization: authHeader() } }).catch(() => null);
+    setSession("");
+    location.reload();
+  });
+  setSession(opsSessionToken);
 
   async function api(path, options = {}) {
     const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + path, {
       ...options,
       headers: {
         "content-type": "application/json",
-        authorization: "Bearer " + opsTokenEl.value,
+        authorization: authHeader(),
         ...(options.headers || {}),
       },
     });
     const body = await res.json().catch(() => null);
+    if (res.status === 401 && opsSessionToken) {
+      setSession("");
+      throw new Error("Tu sesión terminó. Vuelve a entrar con tu token y el código de tu app.");
+    }
     if (!res.ok) throw new Error((body && body.message) || res.statusText);
     return body;
   }
@@ -755,6 +892,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
   function maskedValue(value) {
     if (!value) return "—";
+    // Payout accounts read "{bank} {number} — {holder}": mask the number only, so support can tell which account it is.
+    if (/\d{6,}/.test(String(value))) return String(value).replace(/\d{6,}/g, (digits) => `····${digits.slice(-4)}`);
     return `•••• ${String(value).slice(-4)}`;
   }
 
@@ -946,7 +1085,79 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     await refreshSupportCases();
   }
 
+  const PAYOUT_ACCOUNT_STATUS = { PENDING_REVIEW: "Cuenta en revisión", APPROVED: "Cuenta aprobada", REJECTED: "Cuenta rechazada", REPLACED: "Cuenta reemplazada" };
+
+  function identityAccountCell(s) {
+    const account = (s.payoutAccounts || [])[0];
+    if (!account) return `${esc(maskedValue(s.payoutBankAccount))}<br><span class="muted">Sin cuenta con comprobante</span>`;
+    return `${esc(maskedValue(`${account.bankCode} ${account.accountNumber} — ${account.holderName}`))}
+      <br><span class="badge">${esc(PAYOUT_ACCOUNT_STATUS[account.status] ?? account.status)}</span>
+      <button type="button" class="secondary" data-account-proof="${esc(account.id)}">Ver comprobante</button>
+      ${account.status === "PENDING_REVIEW" ? '<br><span class="muted">Se aprueba en <a href="#cuentas">Cuentas por revisar</a></span>' : ""}`;
+  }
+
+  async function openPayoutProof(id) {
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/payout_accounts/${encodeURIComponent(id)}/proof`, { headers: { authorization: authHeader() } });
+    if (!res.ok) { errorEl.textContent = "No se pudo abrir el comprobante."; return; }
+    const url = URL.createObjectURL(await res.blob());
+    window.open(url, "_blank", "noopener");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  rowsEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-account-proof]");
+    if (!button) return;
+    event.stopPropagation();
+    openPayoutProof(button.dataset.accountProof);
+  });
+
+  /** Sanctions (UN, OFAC) and PEP: what the screening found, and the decision ops must take before approving. */
+  function screeningCell(s) {
+    const screening = (s.screenings || [])[0];
+    const pep = s.isPep ? `<br><span class="badge badge-warn">PEP${s.pepRole ? ": " + esc(s.pepRole) : ""}</span><br><span class="muted">Aprobar pide una nota de revisión reforzada.</span>` : "";
+    if (!screening || screening.status === "NOT_SCREENED") return `<span class="muted">Sin revisar: las listas no estaban cargadas (se revisa al aprobar)</span>${pep}`;
+    if (screening.status === "CLEAR") return `<span class="badge badge-ok">Sin coincidencias</span>${pep}`;
+    if (screening.status === "DISMISSED") return `<span class="badge">Descartada</span><br><span class="muted">${esc(screening.resolutionNote || "")}</span>${pep}`;
+    if (screening.status === "CONFIRMED") return `<span class="badge badge-danger">Coincidencia confirmada</span>${pep}`;
+    const matches = (screening.matches || []).slice(0, 5).map((m) => `<li><strong>${esc(m.source)}</strong> ${esc(m.primaryName)}${m.listedName !== m.primaryName ? ` (alias ${esc(m.listedName)})` : ""}<br><span class="muted">Nac.: ${esc((m.birthDates || []).join(", ") || "—")} · ${esc((m.nationalities || []).join(", ") || "—")} · ${esc((m.programs || []).join(", "))}</span></li>`).join("");
+    return `<span class="badge badge-danger">Posible coincidencia</span>
+      <ul class="screening-matches">${matches}</ul>
+      <div class="screening-decide" data-screening="${esc(screening.id)}">
+        <input class="screening-note" placeholder="Cómo lo sabes (fecha de nacimiento, CI, nacionalidad)" minlength="10">
+        ${opsRole === "SUPPORT_ADMIN" ? '<button type="button" class="secondary" data-screening-action="DISMISSED">Es otra persona</button>' : '<span class="muted">Descartarla es decisión de un administrador.</span>'}
+        <button type="button" class="reject" data-screening-action="CONFIRMED">Es la persona listada</button>
+      </div>${pep}`;
+  }
+
+  async function loadSanctionsStatus() {
+    const el = document.getElementById("sanctionsStatus");
+    try {
+      const status = await api("/internal/sanctions");
+      const lists = status.lists.map((l) => `${l.source} ${new Date(l.importedAt).toLocaleDateString("es-BO")} (${l.entries})`).join(" · ");
+      el.innerHTML = `Listas de sanciones: ${lists ? esc(lists) : "<strong>no cargadas</strong>"}${opsRole === "SUPPORT_ADMIN" ? ' <button type="button" class="secondary" id="sanctionsImport">Actualizar listas</button>' : ""}`;
+      document.getElementById("sanctionsImport")?.addEventListener("click", async (event) => {
+        event.target.disabled = true;
+        event.target.textContent = "Descargando UN y OFAC…";
+        try { const r = await api("/internal/sanctions/import", { method: "POST" }); errorEl.textContent = `Listas actualizadas; ${r.rescreened} comercio(s) aprobado(s) con una coincidencia nueva.`; await refresh(); }
+        catch (err) { errorEl.textContent = "No pudimos actualizar las listas: " + err.message; event.target.disabled = false; }
+      });
+    } catch { el.textContent = ""; }
+  }
+
+  rowsEl.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-screening-action]");
+    if (!button) return;
+    const box = button.closest(".screening-decide");
+    const note = box.querySelector(".screening-note").value.trim();
+    if (note.length < 10) { errorEl.textContent = "Explica la decisión sobre la coincidencia (al menos 10 caracteres)."; box.querySelector(".screening-note").focus(); return; }
+    try {
+      await api(`/internal/sanctions/screenings/${encodeURIComponent(box.dataset.screening)}/resolve`, { method: "POST", body: JSON.stringify({ decision: button.dataset.screeningAction, note }) });
+      await refreshQueue();
+    } catch (err) { errorEl.textContent = "No pudimos guardar la decisión: " + err.message; }
+  });
+
   async function refreshQueue() {
+    loadSanctionsStatus();
     const pending = await api("/v1/merchants/kyc/pending");
     if (pending.length === 0) {
       tableEl.style.display = "none";
@@ -958,14 +1169,15 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     rowsEl.innerHTML = pending
       .map(
         (s) => `
-      <tr data-id="${esc(s.id)}">
+      <tr data-id="${esc(s.id)}" data-pep="${s.isPep ? "1" : ""}">
         <td><strong>${esc(s.merchant.name)}</strong><br><span class="muted">${esc(s.merchant.email)}</span></td>
         <td>Nivel solicitado: ${esc(s.targetLevel)}<br><span class="muted">Nivel actual: ${esc(s.merchant.level)}</span></td>
         <td><span class="badge badge-${s.merchant.settlementMode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(s.merchant.settlementMode)}</span></td>
         <td>${esc(s.legalName)}${s.taxId ? `<br><span class="muted">NIT ${esc(s.taxId)}</span>` : ""}</td>
         <td>${s.legalRepName ? `${esc(s.legalRepName)}${s.legalRepDocumentId ? `<br><span class="muted">${esc(s.legalRepDocumentId)}</span>` : ""}` : `<span class="muted">—</span>`}</td>
-        <td>${esc(s.payoutBankAccount)}${s.payoutUsdBankAccount ? `<br><span class="muted">USD: ${esc(s.payoutUsdBankAccount)}</span>` : ""}</td>
-        <td class="kyc-photos-cell" data-submission="${esc(s.id)}" data-slots="${esc([s.ciFrontDocId ? "CI_FRONT" : "", s.ciBackDocId ? "CI_BACK" : "", s.selfieDocId ? "SELFIE" : ""].filter(Boolean).join(","))}">
+        <td class="screening-cell">${screeningCell(s)}</td>
+        <td>${identityAccountCell(s)}</td>
+        <td class="kyc-photos-cell" data-submission="${esc(s.id)}" data-slots="${esc([s.ciFrontDocId ? "CI_FRONT" : "", s.ciBackDocId ? "CI_BACK" : "", s.selfieDocId ? "SELFIE" : "", s.nitCertificateDocId ? "NIT_CERTIFICATE" : ""].filter(Boolean).join(","))}">
           <button type="button" class="secondary kyc-view-photos">Ver fotos</button>
           <div class="kyc-photos"></div>
         </td>
@@ -986,20 +1198,32 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     // looked").
   }
 
-  const KYC_SLOT_LABELS = { CI_FRONT: "CI frente", CI_BACK: "CI dorso", SELFIE: "Selfie" };
+  const KYC_SLOT_LABELS = { CI_FRONT: "CI frente", CI_BACK: "CI dorso", SELFIE: "Selfie", NIT_CERTIFICATE: "Certificado de no inscripción en el NIT" };
 
   async function loadKycImages(root) {
     for (const img of root.querySelectorAll("img.kyc-photo")) {
       try {
         const res = await fetch(
           apiOriginEl.value.replace(/\/$/, "") + `/v1/merchants/kyc/${encodeURIComponent(img.dataset.submission)}/documents/${img.dataset.slot}`,
-          { headers: { authorization: "Bearer " + opsTokenEl.value } },
+          { headers: { authorization: authHeader() } },
         );
         if (!res.ok) {
           img.alt = "No disponible";
           continue;
         }
-        img.src = URL.createObjectURL(await res.blob());
+        const blob = await res.blob();
+        if (blob.type === "application/pdf") {
+          // The SIN certificate usually comes as a PDF: open it in a tab; ops check its QR/code on the SIN site.
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.target = "_blank";
+          link.rel = "noopener";
+          link.className = "kyc-doc-link";
+          link.textContent = `${KYC_SLOT_LABELS[img.dataset.slot] || img.dataset.slot} (PDF) — verifícalo en el sitio del SIN`;
+          img.replaceWith(link);
+          continue;
+        }
+        img.src = URL.createObjectURL(blob);
       } catch {
         img.alt = "No disponible";
       }
@@ -1014,8 +1238,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const slots = (cell.dataset.slots || "").split(",").filter(Boolean);
     // Revoke any blob URLs from a previous click on this same submission
     // before replacing the <img> elements that held them.
-    for (const img of container.querySelectorAll("img.kyc-photo")) {
-      if (img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
+    for (const el of container.querySelectorAll(".kyc-photo, .kyc-doc-link")) {
+      const url = el.src || el.href || "";
+      if (url.startsWith("blob:")) URL.revokeObjectURL(url);
     }
     container.innerHTML = slots
       .map((slot) => `<img class="kyc-photo" alt="${esc(KYC_SLOT_LABELS[slot] || slot)}" data-submission="${esc(cell.dataset.submission)}" data-slot="${esc(slot)}">`)
@@ -1175,8 +1400,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
   const settlementBadge = (mode) => `<span class="badge badge-${mode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(mode)}</span>`;
 
+  // Switched off platform-wide (INTERNATIONAL_PAYMENTS_ENABLED): ops can still reject, never approve.
+  let intlAvailable = true;
+
   async function refreshInternationalPayments() {
-    lastIntlRequests = await api("/internal/international_payments");
+    const [requests, availability] = await Promise.all([
+      api("/internal/international_payments"),
+      api("/internal/international_payments/availability").catch(() => ({ available: true })),
+    ]);
+    lastIntlRequests = requests;
+    intlAvailable = availability.available !== false;
+    document.getElementById("intlOffNotice").hidden = intlAvailable;
     if (lastIntlRequests.length === 0) {
       intlTableEl.style.display = "none";
       intlDossierEl.style.display = "none";
@@ -1210,7 +1444,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <label for="intlReason">Motivo (queda en la auditoría)</label>
         <textarea id="intlReason" minlength="8" maxlength="500" required placeholder="Verificamos la actividad internacional y la cuenta en USD del comercio."></textarea>
         <div class="panel-row" style="margin-top:8px">
-          <button class="approve" type="submit" value="approve" name="action">Aprobar</button>
+          ${intlAvailable ? '<button class="approve" type="submit" value="approve" name="action">Aprobar</button>' : ""}
           <button class="reject" type="submit" value="reject" name="action">Rechazar</button>
         </div>
       </form>
@@ -1394,10 +1628,206 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     }
   });
 
+  let opsRole = null;
+  const COMPLAINT_STATUS = { RECEIVED: "Recibido", IN_REVIEW: "En revisión", WAITING_MERCHANT: "Esperando al comercio", ANSWERED: "Respondido" };
+  const COMPLAINT_CATEGORY = { NOT_DELIVERED: "Pedido no recibido", NOT_AS_DESCRIBED: "Producto distinto o dañado", UNRECOGNIZED_CHARGE: "Cobro no reconocido", DUPLICATE_CHARGE: "Cobro duplicado", REFUND_NOT_RECEIVED: "Reembolso no recibido", OTHER: "Otro" };
+  const COMPLAINT_OUTCOME = { UPHELD: "A favor del comprador", PARTIALLY_UPHELD: "Parcialmente a favor", NOT_UPHELD: "No a favor" };
+  const COMPLAINT_EVENT = { RECEIVED: "Reclamo recibido", EMAIL_CONFIRMED: "Correo confirmado", BUYER_MESSAGE: "Mensaje del comprador", TAKEN: "Tomado", LINKED: "Vinculado", NOTE: "Nota interna", MERCHANT_ASKED: "Consulta al comercio", MERCHANT_REPLIED: "Respuesta del comercio", EXTENDED: "Plazo extendido", ANSWERED: "Respuesta enviada", REFUNDED: "Reembolso", PAYOUTS_PAUSED: "Desembolsos en pausa", EMAIL_SENT: "Correo enviado", EMAIL_FAILED: "Correo no entregado" };
+  const complaintsRowsEl = document.getElementById("complaintsRows");
+  const complaintDetailEl = document.getElementById("complaintDetail");
+
+  async function loadComplaints() {
+    const params = new URLSearchParams();
+    const status = document.getElementById("complaintsStatus").value;
+    const q = document.getElementById("complaintsSearch").value.trim();
+    if (status) params.set("status", status);
+    if (q) params.set("q", q);
+    const rows = await api(`/internal/complaints${params.size ? `?${params}` : ""}`);
+    complaintsRowsEl.innerHTML = rows.map((r) => `
+      <tr class="${r.overdue ? "is-overdue" : r.dueSoon ? "is-due-soon" : ""}" data-complaint="${esc(r.id)}">
+        <td>${esc(r.number)}${r.test ? ' <span class="badge">prueba</span>' : ""}${r.emailFailed ? ' <span class="badge">correo no entregado</span>' : ""}</td>
+        <td>${esc(dateTime(r.dueAt))}</td>
+        <td>${esc(COMPLAINT_STATUS[r.status])}</td>
+        <td>${esc(r.buyerName)}<br><small>${esc(r.buyerEmail)}</small></td>
+        <td>${esc(r.merchant?.name ?? "—")}</td>
+        <td>${esc(r.assignedTo?.name ?? "—")}</td>
+      </tr>`).join("") || `<tr><td colspan="6">No hay reclamos.</td></tr>`;
+    complaintsRowsEl.querySelectorAll("[data-complaint]").forEach((tr) => tr.addEventListener("click", () => openComplaint(tr.dataset.complaint)));
+  }
+
+  async function complaintAction(id, path, body) {
+    try {
+      const detail = await api(`/internal/complaints/${encodeURIComponent(id)}/${path}`, { method: "POST", body: JSON.stringify(body ?? {}) });
+      renderComplaint(detail);
+      await loadComplaints();
+    } catch (error) {
+      errorEl.textContent = error.message;
+    }
+  }
+
+  async function openComplaintFile(id, attachmentId) {
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/complaints/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`, { headers: { authorization: authHeader() } });
+    if (!res.ok) return;
+    const url = URL.createObjectURL(await res.blob());
+    window.open(url, "_blank", "noopener");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  function renderComplaint(c) {
+    const admin = opsRole === "SUPPORT_ADMIN";
+    const open = c.status !== "ANSWERED";
+    complaintDetailEl.hidden = false;
+    complaintDetailEl.innerHTML = `
+      <h3>Reclamo ${esc(c.number)} · ${esc(COMPLAINT_STATUS[c.status])}</h3>
+      <p>Vence ${esc(dateTime(c.dueAt))}${c.extendedAt ? ` (extendido: ${esc(c.extensionReason)})` : ""}</p>
+      <p><strong>${esc(c.buyerName)}</strong> · ${esc(c.buyerEmail)}${c.buyerPhone ? ` · ${esc(c.buyerPhone)}` : ""}</p>
+      ${c.sameEmailCount ? `<p class="badge">Otro reclamo del mismo correo (${esc(c.sameEmailCount)})</p>` : ""}
+      <p>${esc(COMPLAINT_CATEGORY[c.category])} · pide: ${esc(c.request)}</p>
+      <p>${c.payment ? `Pago ${esc(c.payment.id)} · ${esc(money(c.payment.amount, c.payment.currency))} · ${esc(c.payment.status)}${c.payment.livemode ? "" : " · prueba"}` : `Sin pago vinculado (referencia escrita: ${esc(c.referenceGiven ?? "—")}, tienda: ${esc(c.storeNameGiven ?? "—")})`}</p>
+      <p>${c.merchant ? `Comercio ${esc(c.merchant.name)}${c.merchant.payoutHeldAt ? " · desembolsos en pausa" : ""}` : "Sin comercio vinculado"}</p>
+      <h4>Historial</h4>
+      <ol class="complaint-history">${c.events.map((e) => `<li><time>${esc(dateTime(e.createdAt))}</time> · ${esc(COMPLAINT_EVENT[e.type] ?? e.type)}${e.body ? `<br>${esc(e.body)}` : ""}${e.attachments.map((a) => ` <button type="button" class="ghost" data-file="${esc(a.id)}">${esc(a.fileName)}</button>`).join("")}</li>`).join("")}</ol>
+      ${open ? `<button type="button" id="complaintTake">Tomar</button>` : ""}
+      ${open ? `<form id="complaintLinkForm"><label>Vincular pago<input id="complaintLinkPayment" placeholder="pi_…"></label><button type="submit">Vincular</button></form>` : ""}
+      <form id="complaintNoteForm"><label>Nota interna<textarea id="complaintNote" rows="2"></textarea></label><button type="submit">Guardar nota</button></form>
+      ${c.status === "IN_REVIEW" && c.merchant ? `<form id="complaintAskForm"><label>Consulta al comercio<textarea id="complaintQuestion" rows="2"></textarea></label><button type="submit" id="complaintAskMerchant">Consultar al comercio</button></form>` : ""}
+      ${c.merchant && !c.merchant.payoutHeldAt ? `<form id="complaintPauseForm"><label>Motivo de la pausa<input id="complaintPauseReason"></label><button type="submit" id="complaintPause">Pausar desembolsos</button></form>` : ""}
+      ${admin && open && !c.extendedAt ? `<form id="complaintExtendForm"><label>Motivo de la extensión<input id="complaintExtendReason"></label><button type="submit" id="complaintExtend">Extender plazo (5 días hábiles)</button></form>` : ""}
+      ${admin && c.payment ? `<form id="complaintRefundForm"><label>Monto a reembolsar (${esc(c.payment.currency)}, vacío = total)<input id="complaintRefundAmount" inputmode="decimal"></label><button type="submit" id="complaintRefund">Reembolsar</button></form>` : ""}
+      ${admin && (c.status === "IN_REVIEW" || c.status === "WAITING_MERCHANT") ? `<form id="complaintAnswerForm"><label>Resultado<select id="complaintOutcome"><option value="">Elige</option>${Object.entries(COMPLAINT_OUTCOME).map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</select></label><label>Respuesta al comprador<textarea id="complaintAnswer" rows="5"></textarea></label><button type="submit" id="complaintAnswerSend">Enviar respuesta final</button></form>` : ""}
+      ${c.status === "ANSWERED" ? `<p><strong>${esc(COMPLAINT_OUTCOME[c.outcome] ?? "")}</strong></p><p>${esc(c.answer)}</p>` : ""}`;
+    const on = (id, handler) => { const el = complaintDetailEl.querySelector(id); if (el) el.addEventListener(el.tagName === "FORM" ? "submit" : "click", (event) => { event.preventDefault(); handler(); }); };
+    on("#complaintTake", () => complaintAction(c.id, "take"));
+    on("#complaintLinkForm", () => complaintAction(c.id, "link", { paymentIntentId: complaintDetailEl.querySelector("#complaintLinkPayment").value.trim() }));
+    on("#complaintNoteForm", () => complaintAction(c.id, "notes", { body: complaintDetailEl.querySelector("#complaintNote").value }));
+    on("#complaintAskForm", () => complaintAction(c.id, "ask_merchant", { question: complaintDetailEl.querySelector("#complaintQuestion").value }));
+    on("#complaintPauseForm", () => complaintAction(c.id, "pause_payouts", { reason: complaintDetailEl.querySelector("#complaintPauseReason").value }));
+    on("#complaintExtendForm", () => complaintAction(c.id, "extend", { reason: complaintDetailEl.querySelector("#complaintExtendReason").value }));
+    // One id per rendered form: a double click or a resend after a timeout is the same refund to the API.
+    const refundRequestId = "req_" + crypto.randomUUID().replace(/-/g, "");
+    on("#complaintRefundForm", () => {
+      const raw = complaintDetailEl.querySelector("#complaintRefundAmount").value.trim();
+      if (raw && !/^\d+([.,]\d{1,2})?$/.test(raw)) {
+        errorEl.textContent = "Escribe el monto con números, por ejemplo 25 o 25,50. Déjalo vacío para reembolsar el total.";
+        return;
+      }
+      const amount = raw ? Math.round(Number(raw.replace(",", ".")) * 100) : null;
+      if (amount !== null && amount <= 0) {
+        errorEl.textContent = "El monto debe ser mayor que cero.";
+        return;
+      }
+      const label = amount ? money(amount, c.payment.currency) : `el total, ${money(c.payment.amount, c.payment.currency)}`;
+      if (!window.confirm(`¿Reembolsar ${label} al comprador? Sale de los fondos del comercio y no se puede deshacer.`)) return;
+      errorEl.textContent = "";
+      complaintAction(c.id, "refund", { ...(amount ? { amount } : {}), requestId: refundRequestId });
+    });
+    on("#complaintAnswerForm", () => complaintAction(c.id, "answer", { outcome: complaintDetailEl.querySelector("#complaintOutcome").value, answer: complaintDetailEl.querySelector("#complaintAnswer").value }));
+    complaintDetailEl.querySelectorAll("[data-file]").forEach((button) => button.addEventListener("click", () => openComplaintFile(c.id, button.dataset.file)));
+  }
+
+  async function openComplaint(id) {
+    renderComplaint(await api(`/internal/complaints/${encodeURIComponent(id)}`));
+  }
+
+  document.getElementById("complaintsStatus").addEventListener("change", loadComplaints);
+  document.getElementById("complaintsSearch").addEventListener("input", () => { clearTimeout(window.__complaintsSearchTimer); window.__complaintsSearchTimer = setTimeout(loadComplaints, 250); });
+  document.getElementById("complaintsExport").addEventListener("click", async () => {
+    const from = document.getElementById("complaintsFrom").value;
+    const to = document.getElementById("complaintsTo").value;
+    if (!from || !to) return;
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/complaints/export.csv?from=${from}&to=${to}`, { headers: { authorization: authHeader() } });
+    if (!res.ok) return;
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(await res.blob());
+    link.download = `reclamos-${from}-${to}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+  });
+
+  function payoutExpectedName(row) {
+    const e = row.expected || {};
+    if (e.level >= 2) return `Nombre esperado: ${e.legalName ?? "—"} (o ${e.legalRepName ?? "—"} si es unipersonal)`;
+    return `Nombre esperado: ${e.legalName ?? "—"}`;
+  }
+
+  function renderPayoutAccount(row) {
+    const company = (row.expected?.level ?? 0) >= 2;
+    const canApprove = !row.isChange || opsRole === "SUPPORT_ADMIN";
+    return `<article class="panel payout-account" data-account="${esc(row.id)}">
+      <h3>${esc(row.merchant.name)} · ${row.isChange ? "Cambio de cuenta" : "Primera cuenta"}${row.kycPending ? ' <span class="badge">con verificación de identidad</span>' : ""}</h3>
+      <p>${esc(row.bankName ?? row.bankCode)} · ${esc(row.accountNumber)} · ${esc(row.holderName)}</p>
+      <p class="muted">${esc(payoutExpectedName(row))} · enviada ${esc(dateTime(row.createdAt))}</p>
+      <button type="button" class="secondary" data-proof>Ver comprobante</button>
+      ${canApprove ? `<form data-approve>
+        <label><input type="checkbox" name="nameMatches"> El nombre coincide</label>
+        <label><input type="checkbox" name="numberMatches"> El número coincide</label>
+        <label><input type="checkbox" name="bankMatches"> El banco coincide</label>
+        ${company ? `<label>A nombre de <select name="ownerType" aria-label="A nombre de"><option value="COMPANY">Empresa</option><option value="SOLE_PROPRIETOR">Unipersonal (a nombre del dueño)</option></select></label>
+        <label data-reason style="display:none">Por qué está a nombre del dueño <input name="reason"></label>` : ""}
+        <button class="approve" type="submit" disabled>Aprobar cuenta</button>
+      </form>` : '<p class="muted">Solo un administrador puede aprobar un cambio de cuenta.</p>'}
+      <form data-reject>
+        <label>Motivo del rechazo <input name="rejectReason"></label>
+        <button class="reject" type="submit">Rechazar cuenta</button>
+      </form>
+    </article>`;
+  }
+
+  async function payoutAccountAction(id, action, body) {
+    try {
+      await api(`/internal/payout_accounts/${encodeURIComponent(id)}/${action}`, { method: "POST", body: JSON.stringify(body) });
+      errorEl.textContent = "";
+      await loadPayoutAccounts();
+    } catch (error) {
+      errorEl.textContent = error.message;
+    }
+  }
+
+  function bindPayoutAccount(card) {
+    const id = card.dataset.account;
+    card.querySelector("[data-proof]").addEventListener("click", () => openPayoutProof(id));
+    const approve = card.querySelector("[data-approve]");
+    if (approve) {
+      const button = approve.querySelector("button[type=submit]");
+      const sync = () => {
+        const ticks = ["nameMatches", "numberMatches", "bankMatches"].every((name) => approve.elements[name].checked);
+        const owner = approve.elements.ownerType?.value ?? "PERSON";
+        const reasonWrap = approve.querySelector("[data-reason]");
+        if (reasonWrap) reasonWrap.style.display = owner === "SOLE_PROPRIETOR" ? "" : "none";
+        const reasonOk = owner !== "SOLE_PROPRIETOR" || approve.elements.reason.value.trim().length >= 8;
+        button.disabled = !(ticks && reasonOk);
+      };
+      approve.addEventListener("input", sync);
+      approve.addEventListener("change", sync);
+      approve.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const owner = approve.elements.ownerType?.value ?? "PERSON";
+        payoutAccountAction(id, "approve", {
+          checks: { nameMatches: approve.elements.nameMatches.checked, numberMatches: approve.elements.numberMatches.checked, bankMatches: approve.elements.bankMatches.checked },
+          ownerType: owner,
+          ...(owner === "SOLE_PROPRIETOR" ? { reason: approve.elements.reason.value.trim() } : {}),
+        });
+      });
+    }
+    card.querySelector("[data-reject]").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const reason = event.currentTarget.elements.rejectReason.value.trim();
+      if (reason.length < 8) { errorEl.textContent = "Escribe el motivo del rechazo (mínimo 8 caracteres)."; return; }
+      payoutAccountAction(id, "reject", { reason });
+    });
+  }
+
+  async function loadPayoutAccounts() {
+    const rows = await api("/internal/payout_accounts");
+    const list = document.getElementById("payoutAccountsList");
+    if (!rows.length) { list.innerHTML = '<div class="empty-state">No hay cuentas por revisar.</div>'; return; }
+    list.innerHTML = rows.map(renderPayoutAccount).join("");
+    list.querySelectorAll("[data-account]").forEach(bindPayoutAccount);
+  }
+
   async function refresh() {
     errorEl.textContent = "";
     sessionStorage.setItem("pagosya_ops_api_origin", apiOriginEl.value);
-    sessionStorage.setItem("pagosya_ops_token", opsTokenEl.value);
     // A real connection attempt is underway — past the cold "nothing entered
     // yet" state, regardless of whether this attempt succeeds.
     document.getElementById("notConnected1").style.display = "none";
@@ -1413,7 +1843,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     try {
       const me = await api("/internal/ops_users/me");
       whoamiEl.textContent = `Sesión de ${me.name} <${me.email}> · ${me.role}`;
-      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments(), refreshLimits()]);
+      opsRole = me.role;
+      await Promise.all([refreshQueue(), refreshFailures(), refreshAuditLog(), refreshSupportCases(), refreshDomainOrders(), refreshInternationalPayments(), refreshLimits(), loadComplaints().catch(() => null), loadPayoutAccounts().catch(() => null)]);
     } catch (err) {
       errorEl.textContent = "No pudimos actualizar la consola: " + err.message;
       whoamiEl.textContent = "";
@@ -1682,6 +2113,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
     if (action === "approve" && !confirm(`¿Aprobar a ${legalName} para desembolsos en vivo? Esta acción habilita sus credenciales y desembolsos.`)) return;
     let note;
+    if (action === "approve" && row.dataset.pep) {
+      // A politically exposed person: the approval records what the enhanced review checked.
+      const raw = prompt("Persona expuesta políticamente. ¿Qué revisaste? (cargo, origen de los fondos):");
+      if (raw === null) return;
+      note = raw;
+    }
     if (action === "reject") {
       const raw = prompt("Motivo del rechazo (será visible para el comercio):");
       if (raw === null) return;
@@ -1698,7 +2135,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     try {
       await api(`/v1/merchants/kyc/${id}/review`, {
         method: "POST",
-        body: JSON.stringify(action === "approve" ? { decision: "APPROVED" } : { decision: "REJECTED", note }),
+        body: JSON.stringify(action === "approve" ? { decision: "APPROVED", ...(note ? { note } : {}) } : { decision: "REJECTED", note }),
       });
       await refresh();
     } catch (err) {
@@ -1715,13 +2152,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     connectBtn.disabled = true;
     connectBtn.textContent = "Conectando…";
     try {
+      errorEl.textContent = "";
+      if (!(await signIn())) return;
       await refresh();
+    } catch (err) {
+      errorEl.textContent = "No pudimos entrar: " + err.message;
     } finally {
       connectBtn.disabled = false;
       connectBtn.textContent = "Conectar y actualizar";
     }
   });
-  if (opsTokenEl.value) refresh();
+  if (opsSessionToken) refresh();
 </script>
 </body>
 </html>

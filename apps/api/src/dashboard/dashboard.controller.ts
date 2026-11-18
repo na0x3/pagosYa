@@ -6,6 +6,8 @@ import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
 import { MerchantSessionGuard } from "./guards/merchant-session.guard";
 import { MerchantUserService } from "./merchant-user.service";
 import { MerchantSessionService } from "./merchant-session.service";
+import { MerchantMfaService } from "./merchant-mfa.service";
+import { MfaCodeDto } from "./dto/mfa-code.dto";
 import { DashboardSignupDto } from "./dto/dashboard-signup.dto";
 import { DashboardSignupPasswordlessDto } from "./dto/dashboard-signup-passwordless.dto";
 import { DashboardLoginDto } from "./dto/dashboard-login.dto";
@@ -23,6 +25,7 @@ export class DashboardController {
   constructor(
     private readonly merchantUsers: MerchantUserService,
     private readonly sessions: MerchantSessionService,
+    private readonly mfa: MerchantMfaService,
   ) {}
 
   /** Called once from the merchant's own backend (with their secret key) to provision a human login — never from the browser. */
@@ -47,13 +50,13 @@ export class DashboardController {
   @Post("login")
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   login(@Body() dto: DashboardLoginDto) {
-    return this.sessions.login(dto.email, dto.password);
+    return this.sessions.login(dto.email, dto.password, dto.code);
   }
 
   @Post("google")
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   googleLogin(@Body() dto: GoogleLoginDto) {
-    return this.sessions.loginWithGoogle(dto.credential);
+    return this.sessions.loginWithGoogle(dto.credential, dto.code);
   }
 
   /** GET, not POST: this is meant to be clicked directly out of an email client. Throttled against token-guessing. */
@@ -70,6 +73,38 @@ export class DashboardController {
   async logout(@Req() req: { sessionToken: string }) {
     await this.sessions.revoke(req.sessionToken);
     return { success: true };
+  }
+
+  /** ISO M-09: the signed-in person's second factor — whether it is on, and turning it on or off. */
+  @Get("mfa")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  mfaStatus(@Req() req: { merchantUser: { id: string } }) {
+    return this.mfa.status(req.merchantUser.id);
+  }
+
+  @Post("mfa/setup")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  mfaSetup(@Req() req: { merchantUser: { id: string } }) {
+    return this.mfa.beginSetup(req.merchantUser.id);
+  }
+
+  @Post("mfa/confirm")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  mfaConfirm(@Req() req: { merchantUser: { id: string } }, @Body() dto: MfaCodeDto) {
+    return this.mfa.confirmSetup(req.merchantUser.id, dto.code);
+  }
+
+  @Post("mfa/disable")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  mfaDisable(@Req() req: { merchantUser: { id: string } }, @Body() dto: MfaCodeDto) {
+    return this.mfa.disable(req.merchantUser.id, dto.code);
   }
 
   @Get("sessions")

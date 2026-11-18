@@ -7,10 +7,11 @@ import { assertSafeImageDimensions, detectedMediaMime, MAX_IMAGE_UPLOAD_BYTES } 
 import type { OpsActor } from "./ops-actor";
 
 const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const SLOT_FIELD = { CI_FRONT: "ciFrontDocId", CI_BACK: "ciBackDocId", SELFIE: "selfieDocId" } as const;
+const SLOT_FIELD = { CI_FRONT: "ciFrontDocId", CI_BACK: "ciBackDocId", SELFIE: "selfieDocId", NIT_CERTIFICATE: "nitCertificateDocId" } as const;
+const PDF_MAGIC = Buffer.from("%PDF-");
 type DocIds = Partial<Record<(typeof SLOT_FIELD)[KycDocumentSlot], string>>;
 
-/** CI photos and selfies: private storage only, never the public /v1/uploads path. */
+/** CI photos, selfies and the SIN NIT certificate: private storage only, never the public /v1/uploads path. */
 @Injectable()
 export class IdentityDocumentsService {
   constructor(
@@ -20,10 +21,17 @@ export class IdentityDocumentsService {
   ) {}
 
   async upload(merchantId: string, slot: KycDocumentSlot, file: { buffer: Buffer; mimetype: string }) {
-    if (!IMAGE_MIMES.has(file.mimetype)) throw new BadRequestException("Sube una foto en JPG, PNG o WEBP.");
-    if (file.buffer.length > MAX_IMAGE_UPLOAD_BYTES) throw new BadRequestException("La foto supera los 8 MB.");
-    if (detectedMediaMime(file.buffer) !== file.mimetype) throw new BadRequestException("El archivo no es una imagen válida.");
-    assertSafeImageDimensions(file.buffer, file.mimetype);
+    if (file.buffer.length > MAX_IMAGE_UPLOAD_BYTES) throw new BadRequestException("El archivo supera los 8 MB.");
+    // The SIN issues its certificate as a PDF; only that slot takes one, checked by its bytes like the photos.
+    if (slot === KycDocumentSlot.NIT_CERTIFICATE && file.mimetype === "application/pdf") {
+      if (!file.buffer.subarray(0, PDF_MAGIC.length).equals(PDF_MAGIC)) throw new BadRequestException("El archivo no es un PDF válido.");
+    } else {
+      if (!IMAGE_MIMES.has(file.mimetype)) {
+        throw new BadRequestException(slot === KycDocumentSlot.NIT_CERTIFICATE ? "Sube el certificado en PDF, JPG, PNG o WEBP." : "Sube una foto en JPG, PNG o WEBP.");
+      }
+      if (detectedMediaMime(file.buffer) !== file.mimetype) throw new BadRequestException("El archivo no es una imagen válida.");
+      assertSafeImageDimensions(file.buffer, file.mimetype);
+    }
     const storageKey = await this.files.put(file.buffer, file.mimetype);
     return this.prisma.merchantKycDocument.create({
       data: { merchantId, slot, storageKey, mimeType: file.mimetype, byteSize: file.buffer.length },

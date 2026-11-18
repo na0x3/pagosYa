@@ -30,6 +30,14 @@ export class OpsUsersController {
     return this.opsUsers.revoke(id);
   }
 
+  /** A lost phone: clears the person's codes and ends their sessions; they set codes up again on their next sign-in. */
+  @Post(":id/mfa_reset")
+  @ApiBearerAuth()
+  @UseGuards(InternalOpsGuard)
+  resetMfa(@Param("id") id: string) {
+    return this.opsUsers.resetMfa(id);
+  }
+
   @Get("me")
   @ApiBearerAuth()
   @UseGuards(OpsAuthGuard)

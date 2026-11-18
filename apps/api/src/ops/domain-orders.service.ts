@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { SupportCaseStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { AuditLogService } from "./audit-log.service";
+import { AuditLogService, auditEntryJson } from "./audit-log.service";
 import { SupportActor, actorLabel } from "./support.service";
 
 const QUEUE_STATUSES = ["REVIEW_REQUIRED", "AWAITING_PAYMENT", "REGISTERING", "CONNECTING"];
@@ -50,7 +50,7 @@ export class DomainOrdersService {
       this.prisma.supportCase.findFirst({ where: { summary: { contains: id } }, orderBy: { createdAt: "desc" } }),
       this.prisma.auditLogEntry.findMany({ where: { targetType: "DomainOrder", targetId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
     ]);
-    return { ...order, supportCase, audit };
+    return { ...order, supportCase, audit: audit.map(auditEntryJson) };
   }
 
   /**

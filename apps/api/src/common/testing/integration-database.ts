@@ -66,8 +66,18 @@ function reachable(url: string): boolean {
  * semicolon inside a string literal. If one ever does, this is the line to fix.
  */
 function statements(sql: string): string[] {
-  return sql.split("\n").filter((line) => !line.trim().startsWith("--")).join("\n")
-    .split(";").map((s) => s.trim()).filter(Boolean);
+  const body = sql.split("\n").filter((line) => !line.trim().startsWith("--")).join("\n");
+  // A ; inside a $$ … $$ function body (plpgsql, the audit chain triggers) does not end the statement.
+  const out: string[] = [];
+  let current = "";
+  for (const [i, part] of body.split("$$").entries()) {
+    if (i % 2 === 1) { current += `$$${part}$$`; continue; }
+    const pieces = part.split(";");
+    current += pieces[0];
+    for (const piece of pieces.slice(1)) { out.push(current); current = piece; }
+  }
+  out.push(current);
+  return out.map((s) => s.trim()).filter(Boolean);
 }
 
 export interface IntegrationDatabase {

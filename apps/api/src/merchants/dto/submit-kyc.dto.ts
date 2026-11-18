@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class SubmitKycDto {
   @ApiPropertyOptional({ enum: [1, 2], default: 2 })
@@ -30,10 +30,17 @@ export class SubmitKycDto {
   @MinLength(5)
   legalRepDocumentId?: string;
 
-  @ApiProperty({ example: "BNB 4012345678", description: "Payout bank account" })
+  /** Legacy free-text account; ignored. The account now comes from a proven PayoutAccount (payoutAccountId). */
+  @ApiPropertyOptional({ description: "Legacy, ignored" })
+  @IsOptional()
   @IsString()
-  @MinLength(5)
-  payoutBankAccount!: string;
+  @MaxLength(300)
+  payoutBankAccount?: string;
+
+  @ApiProperty({ description: "A payout account sent with its proof (POST /v1/dashboard/payout_accounts), waiting or approved" })
+  @IsString()
+  @MaxLength(40)
+  payoutAccountId!: string;
 
   @ApiPropertyOptional({ description: "USD account (bank, account number, SWIFT/ABA) for international payouts." })
   @IsOptional()
@@ -55,4 +62,20 @@ export class SubmitKycDto {
   @IsOptional()
   @IsString()
   selfieDocId?: string;
+
+  @ApiPropertyOptional({ description: "Identity document id for the SIN certificate of non-registration in the NIT. Required for level 1." })
+  @IsOptional()
+  @IsString()
+  nitCertificateDocId?: string;
+
+  @ApiPropertyOptional({ description: "Self-declared politically exposed person, or close family/associate of one (UIF)." })
+  @IsOptional()
+  @IsBoolean()
+  isPep?: boolean;
+
+  @ApiPropertyOptional({ example: "Concejal de El Alto (2021-2026)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  pepRole?: string;
 }

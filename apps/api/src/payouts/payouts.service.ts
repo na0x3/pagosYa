@@ -1,16 +1,17 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { KycStatus, LedgerAccount, LedgerDirection, MerchantStatus, Prisma, SettlementMode } from "@prisma/client";
+import { KycStatus, LedgerAccount, LedgerDirection, MerchantStatus, Prisma, SettlementMode, PayoutAccountStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { createPayoutsPdf } from "../reports/finance-pdfs";
 import { TermsAcceptanceService } from "../legal/terms-acceptance.service";
 import { lockMerchantSettlement } from "../settlement/settlement-lock";
 import { inFlightPayoutWhere } from "./payout-in-flight";
+import { accountSnapshot } from "../payout-accounts/payout-account-rules";
 
 /** Why the daily batch would not pay a (merchant, currency) balance today. A code, never the ops hold reason. */
-export type PayoutBlocker = "held" | "terms" | "inactive" | "facilitator" | "kyc" | "no_account" | "in_flight";
+export type PayoutBlocker = "held" | "terms" | "inactive" | "facilitator" | "kyc" | "no_account" | "account_missing" | "account_review" | "account_waiting" | "in_flight";
 
 type PayoutDb = PrismaService | Prisma.TransactionClient;
-type PayoutCheck = { blocker: PayoutBlocker } | { blocker: null; bankAccount: string };
+type PayoutCheck = { blocker: PayoutBlocker } | { blocker: null; bankAccount: string; payoutAccountId: string | null };
 
 @Injectable()
 export class PayoutsService {
@@ -78,11 +79,23 @@ export class PayoutsService {
       orderBy: { createdAt: "desc" },
     });
     if (!approvedKyc) return { blocker: "kyc" }; // shouldn't happen for an ACTIVE merchant, but never guess a bank account
-    const bankAccount = currency === "BOB" ? approvedKyc.payoutBankAccount : currency === "USD" ? approvedKyc.payoutUsdBankAccount : null;
-    if (!bankAccount) return { blocker: "no_account" };
+    let bankAccount: string | null;
+    let payoutAccountId: string | null = null;
+    if (currency === "BOB") {
+      // Only an account ops approved against proof, once its 72-hour change wait is over (payout account ownership).
+      if (await db.payoutAccount.findFirst({ where: { merchantId, currency, status: PayoutAccountStatus.PENDING_REVIEW } })) return { blocker: "account_review" };
+      const account = await db.payoutAccount.findFirst({ where: { merchantId, currency, status: PayoutAccountStatus.APPROVED }, orderBy: { reviewedAt: "desc" } });
+      if (!account) return { blocker: "account_missing" };
+      if (account.payableFrom && account.payableFrom.getTime() > Date.now()) return { blocker: "account_waiting" };
+      bankAccount = accountSnapshot(account);
+      payoutAccountId = account.id;
+    } else {
+      // Dollar accounts are not yet checked against proof, so no dollar payout leaves until they are.
+      return { blocker: "no_account" };
+    }
     // Until it succeeds a payout's amount is still in MERCHANT_PAYABLE, so a second one would pay it twice.
     if (await db.payout.findFirst({ where: inFlightPayoutWhere(merchantId, currency) })) return { blocker: "in_flight" };
-    return { blocker: null, bankAccount };
+    return { blocker: null, bankAccount, payoutAccountId };
   }
 
   /**
@@ -97,25 +110,41 @@ export class PayoutsService {
       where: { settlementMode: SettlementMode.AGGREGATOR, status: MerchantStatus.ACTIVE },
     });
 
+    // One merchant's failure (a deadlock, a dropped connection) is logged and left for tomorrow's run; it never costs
+    // the merchants after it their payout.
     for (const merchant of merchants) {
-      const balances = (await this.getPayableBalances(merchant.id)).filter((b) => b.payableBalance > 0);
+      let balances: { currency: string; payableBalance: number }[];
+      try {
+        balances = (await this.getPayableBalances(merchant.id)).filter((b) => b.payableBalance > 0);
+      } catch (error) {
+        this.logger.error(`Payout batch could not read merchant ${merchant.id}'s balances: ${(error as Error).message}`, (error as Error).stack);
+        continue;
+      }
       for (const { currency } of balances) {
-        await this.prisma.$transaction(async (tx) => {
-          await lockMerchantSettlement(tx, merchant.id);
-          const check = await this.checkPayout(merchant.id, currency, tx);
-          if (check.blocker) {
-            if (check.blocker === "held") this.logger.warn(`Payout held by ops: merchant ${merchant.id}`);
-            if (check.blocker === "terms") this.logger.warn(`Payout held: merchant ${merchant.id} has not accepted the terms in force`);
-            return;
-          }
-          const amount = (await this.getPayableBalances(merchant.id, tx)).find((b) => b.currency === currency)?.payableBalance ?? 0;
-          if (amount <= 0) return;
-          await tx.payout.create({
-            data: { merchantId: merchant.id, amount, currency, bankAccount: check.bankAccount, nextRetryAt: new Date() },
-          });
-        });
+        try {
+          await this.createDuePayout(merchant.id, currency);
+        } catch (error) {
+          this.logger.error(`Payout batch failed for merchant ${merchant.id} (${currency}): ${(error as Error).message}`, (error as Error).stack);
+        }
       }
     }
+  }
+
+  private async createDuePayout(merchantId: string, currency: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await lockMerchantSettlement(tx, merchantId);
+      const check = await this.checkPayout(merchantId, currency, tx);
+      if (check.blocker) {
+        if (check.blocker === "held") this.logger.warn(`Payout held by ops: merchant ${merchantId}`);
+        if (check.blocker === "terms") this.logger.warn(`Payout held: merchant ${merchantId} has not accepted the terms in force`);
+        return;
+      }
+      const amount = (await this.getPayableBalances(merchantId, tx)).find((b) => b.currency === currency)?.payableBalance ?? 0;
+      if (amount <= 0) return;
+      await tx.payout.create({
+        data: { merchantId, amount, currency, bankAccount: check.bankAccount, payoutAccountId: check.payoutAccountId, nextRetryAt: new Date() },
+      });
+    });
   }
 
   async listForMerchant(merchantId: string, options: { exportPdf?: boolean } = {}) {

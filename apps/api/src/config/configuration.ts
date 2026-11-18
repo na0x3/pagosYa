@@ -13,6 +13,12 @@ export interface BanecoQrConfig {
 
 export interface DlocalConfig {
   enabled: boolean;
+  /**
+   * Product switch for international payments as a whole (INTERNATIONAL_PAYMENTS_ENABLED). Off by default while dLocal
+   * has not confirmed the account: no checkout offer, no new merchant requests or approvals, no dLocal charge, in any
+   * environment. `enabled` still says whether the real dLocal client (vs fixtures) would be used once it is on.
+   */
+  internationalPaymentsEnabled: boolean;
   baseUrl: string;
   login: string;
   transKey: string;
@@ -39,6 +45,7 @@ function nonNegativeNumber(value: string | undefined, fallback: number): number 
 export function parseDlocalConfig(env: NodeJS.ProcessEnv): DlocalConfig {
   return {
     enabled: env.DLOCAL_ENABLED === "true",
+    internationalPaymentsEnabled: env.INTERNATIONAL_PAYMENTS_ENABLED === "true",
     baseUrl: env.DLOCAL_BASE_URL ?? "https://sandbox.dlocal.com",
     login: env.DLOCAL_LOGIN ?? "",
     transKey: env.DLOCAL_TRANS_KEY ?? "",
@@ -254,6 +261,20 @@ export interface AppConfig {
   storeAnalyticsDailyCap: number;
   operationsEncryptionKey: string;
   extensionsEncryptionKey: string;
+  /** ISO A-02: seals bank accounts, NIT/CI and stored secrets in the database (src/prisma/field-encryption.ts). */
+  fieldEncryptionKey: string;
+  /** Older field keys that still open envelopes while scripts/encrypt-fields.ts re-seals after a rotation. */
+  fieldEncryptionPreviousKeys: string[];
+  /** ISO A-01: ops staff need an authenticator code to start a session (the ops_ token alone stops working). On in production. */
+  opsMfaRequired: boolean;
+  /** ISO A-01: when set, ops endpoints answer only these IPs (the VPN's exit address). Comma-separated, exact or IPv4 CIDR. */
+  opsAllowedIps: string[];
+  /** ISO M-09: changing an approved payout account needs the merchant's second factor. On in production. (API keys are only issued with a secret key, never from the dashboard.) */
+  merchantMfaForSensitive: boolean;
+  /** Sanctions screening (UN + OFAC) at KYC: approval waits for a real screening. On in production. */
+  sanctionsScreeningRequired: boolean;
+  /** Download the UN and OFAC lists every day at 05:00 La Paz and re-screen approved merchants. On in production. */
+  sanctionsAutoImport: boolean;
   corsOrigins: string[];
   exposeDocs: boolean;
   trustProxy: false | number | string;
@@ -332,32 +353,42 @@ function parseBoundedInteger(name: string, value: string | undefined, fallback: 
   return parsed;
 }
 
+// The daily payout batch holds one connection for a merchant's settlement lock while it reads through another, so a
+// single-connection pool would wait on itself until pool_timeout.
+const MIN_DATABASE_POOL_SIZE = 2;
+
 function databaseUrlWithPoolSettings(value: string): string {
   if (!value) return value;
+  let url: URL;
   try {
-    const url = new URL(value);
-    if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", String(parseBoundedInteger("DATABASE_POOL_SIZE", process.env.DATABASE_POOL_SIZE, 10, 1, 100)));
-    }
-    if (!url.searchParams.has("pool_timeout")) {
-      url.searchParams.set("pool_timeout", String(parseBoundedInteger("DATABASE_POOL_TIMEOUT_SECONDS", process.env.DATABASE_POOL_TIMEOUT_SECONDS, 10, 1, 60)));
-    }
-    return url.toString();
+    url = new URL(value);
   } catch {
     return value;
   }
+  const explicitLimit = url.searchParams.get("connection_limit");
+  if (explicitLimit === null) {
+    url.searchParams.set("connection_limit", String(parseBoundedInteger("DATABASE_POOL_SIZE", process.env.DATABASE_POOL_SIZE, 10, MIN_DATABASE_POOL_SIZE, 100)));
+  } else if (!(Number.parseInt(explicitLimit, 10) >= MIN_DATABASE_POOL_SIZE)) {
+    throw new Error(`DATABASE_URL connection_limit must be at least ${MIN_DATABASE_POOL_SIZE}`);
+  }
+  if (!url.searchParams.has("pool_timeout")) {
+    url.searchParams.set("pool_timeout", String(parseBoundedInteger("DATABASE_POOL_TIMEOUT_SECONDS", process.env.DATABASE_POOL_TIMEOUT_SECONDS, 10, 1, 60)));
+  }
+  return url.toString();
 }
 
 /**
  * dLocal fixture mode (DLOCAL_ENABLED=false) fakes payments, so international
  * charges may only be offered outside production unless the real client is on.
  */
-export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled">, environment: string | undefined): boolean {
+export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled" | "internationalPaymentsEnabled">, environment: string | undefined): boolean {
+  if (!dlocal.internationalPaymentsEnabled) return false;
   return dlocal.enabled || environment !== "production";
 }
 
 /** The analytics session key outside production (the production check refuses it: "dev-" / "change-me"). */
 export const DEVELOPMENT_ANALYTICS_SESSION_SECRET = "development-only-analytics-session-secret-change-me";
+export const DEVELOPMENT_FIELD_ENCRYPTION_KEY = "development-only-field-encryption-key-change-me";
 
 /** Where store-email test sends go in local development (EMAIL_TEST_TO). Never in production: there a test goes to the signed-in account. */
 export function emailTestRecipient(environment: string, value: string | undefined): string | null {
@@ -406,6 +437,8 @@ export function assertProductionSecurityConfig(app: AppConfig): void {
   requireSecret("ANALYTICS_SESSION_SECRET", app.analyticsSessionSecret);
   requireSecret("OPERATIONS_ENCRYPTION_KEY", app.operationsEncryptionKey);
   requireSecret("EXTENSIONS_ENCRYPTION_KEY", app.extensionsEncryptionKey);
+  requireSecret("FIELD_ENCRYPTION_KEY", app.fieldEncryptionKey);
+  if (!app.opsMfaRequired) failures.push("OPS_MFA_REQUIRED cannot be false in production (ISO A-01)");
   requireHttps("CHECKOUT_ORIGIN", app.checkoutOrigin);
   if (app.publicAssetBaseUrl) requireHttps("PUBLIC_ASSET_BASE_URL", app.publicAssetBaseUrl);
   requireHttps("CONSUMER_DASHBOARD_ORIGIN", app.consumerDashboardOrigin);
@@ -493,6 +526,13 @@ export default (): { app: AppConfig } => {
     storeAnalyticsDailyCap: parseBoundedInteger("STORE_ANALYTICS_DAILY_CAP", process.env.STORE_ANALYTICS_DAILY_CAP, 50_000, 1, 10_000_000),
     operationsEncryptionKey: process.env.OPERATIONS_ENCRYPTION_KEY ?? "development-only-operations-key",
     extensionsEncryptionKey: process.env.EXTENSIONS_ENCRYPTION_KEY ?? "development-only-extensions-key",
+    fieldEncryptionKey: process.env.FIELD_ENCRYPTION_KEY ?? DEVELOPMENT_FIELD_ENCRYPTION_KEY,
+    fieldEncryptionPreviousKeys: (process.env.FIELD_ENCRYPTION_PREVIOUS_KEYS ?? "").split(",").map((key) => key.trim()).filter(Boolean),
+    opsMfaRequired: process.env.OPS_MFA_REQUIRED ? process.env.OPS_MFA_REQUIRED === "true" : environment === "production",
+    opsAllowedIps: (process.env.OPS_ALLOWED_IPS ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
+    merchantMfaForSensitive: process.env.MERCHANT_MFA_FOR_SENSITIVE ? process.env.MERCHANT_MFA_FOR_SENSITIVE === "true" : environment === "production",
+    sanctionsScreeningRequired: process.env.SANCTIONS_SCREENING_REQUIRED ? process.env.SANCTIONS_SCREENING_REQUIRED === "true" : environment === "production",
+    sanctionsAutoImport: process.env.SANCTIONS_AUTO_IMPORT ? process.env.SANCTIONS_AUTO_IMPORT === "true" : environment === "production",
     // Checkout iframe origin plus any browser-side internal tools (ops
     // console, merchant dashboard) — merchant *backends* never need CORS,
     // they call the API server-to-server.

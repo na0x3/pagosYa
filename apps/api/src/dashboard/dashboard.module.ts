@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { MerchantUserService } from "./merchant-user.service";
 import { MerchantSessionService } from "./merchant-session.service";
+import { MerchantMfaService } from "./merchant-mfa.service";
 import { MerchantAuthGuard } from "./guards/merchant-auth.guard";
 import { MerchantSessionGuard } from "./guards/merchant-session.guard";
 import { DashboardController } from "./dashboard.controller";
@@ -17,6 +18,7 @@ import { AuthModule } from "../auth/auth.module";
   providers: [
     MerchantUserService,
     MerchantSessionService,
+    MerchantMfaService,
     MerchantAuthGuard,
     MerchantSessionGuard,
     MockEmailProvider,
@@ -31,6 +33,6 @@ import { AuthModule } from "../auth/auth.module";
       inject: [MockEmailProvider, ResendEmailProvider, ConfigService],
     },
   ],
-  exports: [MerchantUserService, MerchantSessionService, MerchantAuthGuard, MerchantSessionGuard, EMAIL_PROVIDER],
+  exports: [MerchantUserService, MerchantSessionService, MerchantMfaService, MerchantAuthGuard, MerchantSessionGuard, EMAIL_PROVIDER],
 })
 export class DashboardModule {}

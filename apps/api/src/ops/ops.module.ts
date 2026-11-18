@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { OpsUserService } from "./ops-user.service";
+import { OpsSessionController } from "./ops-session.controller";
 import { AuditLogService } from "./audit-log.service";
 import { DeliveryFailuresService } from "./delivery-failures.service";
 import { OpsAuthGuard } from "./guards/ops-auth.guard";
@@ -16,7 +17,7 @@ import { DomainOrdersService } from "./domain-orders.service";
 
 @Module({
   imports: [AuthModule, DashboardModule],
-  controllers: [OpsUsersController, AuditLogController, DeliveryFailuresController, SupportController, MerchantSupportController, DomainOrdersController],
+  controllers: [OpsUsersController, OpsSessionController, AuditLogController, DeliveryFailuresController, SupportController, MerchantSupportController, DomainOrdersController],
   providers: [OpsUserService, AuditLogService, DeliveryFailuresService, SupportService, DomainOrdersService, OpsAuthGuard],
   exports: [OpsUserService, AuditLogService, DeliveryFailuresService, SupportService, DomainOrdersService, OpsAuthGuard],
 })

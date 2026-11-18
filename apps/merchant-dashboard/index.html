@@ -114,6 +114,10 @@
             </button>
           </div>
         </div>
+        <div class="login-field" id="loginCodeRow" hidden>
+          <label for="loginCode">Código de tu app de verificación</label>
+          <input id="loginCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456">
+        </div>
         <label class="login-terms" data-signup-only hidden id="signupTermsRow"><input id="signupTerms" type="checkbox"> <span>Acepto los <a href="https://pagosya.bo/terminos/comercios" target="_blank" rel="noopener">términos para comercios</a> de pagosYa</span></label>
         <button class="primary login-submit" id="login" type="submit">Continuar</button>
         <button class="login-forgot" id="showForgot" type="button">¿Olvidaste tu contraseña?</button>
@@ -457,6 +461,7 @@
     <section class="growth-view assistant-view" id="assistantSection" data-dashboard-page="assistant" aria-label="Asistente" hidden><div id="assistantRoot"></div></section>
     <section class="proposals-view" id="proposalsSection" data-dashboard-page="proposals" aria-label="Propuestas" hidden><div id="proposalsRoot"></div></section>
     <section class="contracts-view" id="contractsSection" data-dashboard-page="contracts" aria-label="Contratos" hidden><div id="contractsRoot"></div></section>
+    <section class="complaints-view" id="complaintsSection" data-dashboard-page="complaints" aria-label="Reclamos" hidden><div id="complaintsRoot"></div></section>
     <section class="block charge-links-workspace" id="chargeLinksSection" data-dashboard-page="charge-links">
       <header class="charge-links-banner" aria-labelledby="chargeLinksBannerTitle">
         <div class="charge-links-banner-copy">
@@ -816,7 +821,18 @@
           <div><label>Foto del CI (anverso)</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocFront" data-slot="CI_FRONT" required></div>
           <div><label>Foto del CI (reverso)</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocBack" data-slot="CI_BACK" required></div>
           <div><label>Selfie sosteniendo tu CI</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocSelfie" data-slot="SELFIE" required></div>
-          <div><label>Cuenta bancaria a tu nombre para pagos</label><input name="payoutBankAccount" required></div>
+          <div id="kycPersonFields"><label>Certificación de no inscripción en el NIT (la descargas del SIN)</label><input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" id="kycDocNitCertificate" data-slot="NIT_CERTIFICATE" required></div>
+          <div class="kyc-pep">
+            <label class="checkbox-row"><input type="checkbox" name="isPep" id="kycIsPep"> Tengo o tuve en los últimos 5 años un cargo público importante, o soy familiar o colaborador cercano de alguien que lo tiene (persona expuesta políticamente)</label>
+            <div id="kycPepRoleRow" hidden><label for="kycPepRole">¿Qué cargo, y de quién?</label><input id="kycPepRole" name="pepRole" maxlength="200" placeholder="Ej.: concejal de El Alto (2021–2026)"></div>
+          </div>
+          <p id="kycAccountExisting" class="muted" hidden></p>
+          <div id="kycAccountFields">
+            <div><label>Banco para tus desembolsos</label><select name="bankCode" required><option value="">Elige tu banco</option></select></div>
+            <div><label>Número de cuenta</label><input name="accountNumber" inputmode="numeric" required></div>
+            <div><label>Titular de la cuenta (como aparece en el comprobante)</label><input name="holderName" required></div>
+            <div><label>Certificado o captura de tu banco con tu nombre y el número de cuenta</label><input type="file" accept="image/png,image/jpeg,application/pdf" id="kycAccountProof" required></div>
+          </div>
           <div><label>Cuenta en USD para desembolsos internacionales (opcional)</label><input name="payoutUsdBankAccount" maxlength="300"></div>
           <button class="primary" type="submit">Enviar verificación</button>
         </form>
@@ -927,6 +943,8 @@
     </section>
 
     <section class="block" id="payoutsSection" data-dashboard-page="payouts">
+      <div class="panel" id="payoutAccountPanel"></div>
+      <div class="panel" id="mfaPanel"></div>
       <div class="panel settlement-panel" id="settlementPanel" hidden>
         <h2>Cuándo recibes tu dinero</h2>
         <p id="settlementPolicy"></p>

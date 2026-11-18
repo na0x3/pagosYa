@@ -31,6 +31,11 @@ export class InternationalPaymentsService {
     return this.config.get<DlocalConfig>("app.dlocal")!;
   }
 
+  /** For the ops console: whether approving a request means anything right now. */
+  availability() {
+    return { available: this.cfg.internationalPaymentsEnabled };
+  }
+
   async statusFor(merchantId: string) {
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } });
     const kyc = await this.prisma.merchantKycSubmission.findFirst({
@@ -39,6 +44,7 @@ export class InternationalPaymentsService {
       select: { payoutUsdBankAccount: true },
     });
     return {
+      available: this.cfg.internationalPaymentsEnabled,
       status: merchant.internationalPaymentsStatus,
       settlementMode: merchant.settlementMode,
       feeBps: this.cfg.intlFeeBps,
@@ -49,6 +55,7 @@ export class InternationalPaymentsService {
   }
 
   async request(merchantId: string) {
+    if (!this.cfg.internationalPaymentsEnabled) throw new ConflictException("Los pagos internacionales no están disponibles por ahora.");
     const merchant = await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } });
     if (merchant.settlementMode !== "AGGREGATOR") {
       throw new BadRequestException("Los pagos internacionales requieren que pagosYa liquide tus cobros (modo agregador).");
@@ -77,6 +84,8 @@ export class InternationalPaymentsService {
     // is checked and applied atomically below so two ops users racing on the
     // same REQUESTED merchant can't both "win" (one write, one audit entry).
     await this.prisma.merchant.findUniqueOrThrow({ where: { id: merchantId } });
+    // Rejecting stays possible while switched off, so ops can clear the queue; approving would promise a feature that is off.
+    if (decision === "approve" && !this.cfg.internationalPaymentsEnabled) throw new ConflictException("Los pagos internacionales están desactivados.");
     const status = decision === "approve" ? ("ENABLED" as const) : ("REJECTED" as const);
     await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.merchant.updateMany({

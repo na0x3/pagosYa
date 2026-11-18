@@ -63,7 +63,7 @@ const dossier = {
 async function openOps(page, { onRequest } = {}) {
   await page.addInitScript(() => {
     sessionStorage.setItem("pagosya_ops_api_origin", "http://localhost:3001");
-    sessionStorage.setItem("pagosya_ops_token", "ops_test");
+    sessionStorage.setItem("pagosya_ops_session", "opss_test");
   });
   await page.route("http://localhost:3001/**", async (route) => {
     const request = route.request();
@@ -91,6 +91,7 @@ async function openOps(page, { onRequest } = {}) {
       });
     }
     if (path === "/internal/audit_log") return route.fulfill({ json: [] });
+    if (path === "/internal/sanctions") return route.fulfill({ json: { required: true, lists: [] } });
     if (path === "/internal/support/cases") return route.fulfill({ json: [supportCaseSummary] });
     if (path === "/internal/domain_orders") return route.fulfill({ json: [] });
     if (path === "/internal/international_payments") return route.fulfill({ json: [] });
@@ -99,6 +100,9 @@ async function openOps(page, { onRequest } = {}) {
     if (path === "/internal/limits/near_limit") return route.fulfill({ json: [] });
     if (path === "/internal/support/merchants/merchant_1") return route.fulfill({ json: dossier });
     if (path === "/internal/payout_holds") return route.fulfill({ json: [] });
+    if (path === "/internal/complaints") return route.fulfill({ json: [] });
+    if (path === "/internal/payout_accounts") return route.fulfill({ json: [] });
+    if (path === "/internal/international_payments/availability") return route.fulfill({ json: { available: true } });
     if (path === "/internal/merchants/merchant_1/settlement") return route.fulfill({ json: { merchantId: "merchant_1", overrides: { payoutDelayDaysOverride: null, reserveBpsOverride: null, reserveDaysOverride: null }, hold: null, policy: { level: 1, levelName: "Persona", delayDays: 7, reserveBps: 1000, reserveDays: 60 }, balances: [], releases: [] } });
 
     return route.fulfill({ status: 404, json: { message: "no mock for " + path } });

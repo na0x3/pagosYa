@@ -32,6 +32,15 @@ it("rejects non-images and mislabeled files", async () => {
   await expect(service.upload("m_1", "SELFIE", { buffer: Buffer.from("not a png"), mimetype: "image/png" })).rejects.toBeInstanceOf(BadRequestException);
 });
 
+it("takes the SIN's NIT certificate as a PDF, but only in its own slot", async () => {
+  const { service, files } = setup();
+  const pdf = Buffer.from("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF");
+  await service.upload("m_1", "NIT_CERTIFICATE", { buffer: pdf, mimetype: "application/pdf" });
+  expect(files.put).toHaveBeenCalledWith(pdf, "application/pdf");
+  await expect(service.upload("m_1", "NIT_CERTIFICATE", { buffer: Buffer.from("not a pdf"), mimetype: "application/pdf" })).rejects.toBeInstanceOf(BadRequestException);
+  await expect(service.upload("m_1", "NIT_CERTIFICATE", { buffer: png, mimetype: "image/png" })).resolves.toEqual({ id: "doc_1", slot: "CI_FRONT" });
+});
+
 it("rejects another merchant's document or a wrong slot", async () => {
   const { service, prisma } = setup();
   prisma.merchantKycDocument.findMany.mockResolvedValue([{ id: "doc_1", merchantId: "m_2", slot: "CI_FRONT" }]);

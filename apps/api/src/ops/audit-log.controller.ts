@@ -14,4 +14,12 @@ export class AuditLogController {
   list() {
     return this.auditLog.list();
   }
+
+  /** ISO M-04: is the hash chain intact, and its head (seq + hash) to copy outside the database. */
+  @Get("verify")
+  @ApiBearerAuth()
+  @UseGuards(OpsAuthGuard)
+  verify() {
+    return this.auditLog.verify();
+  }
 }

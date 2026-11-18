@@ -193,16 +193,18 @@ describe('Merchant levels and limits', () => {
     const ciBack = (await upload('CI_BACK')).body;
     const selfie = (await upload('SELFIE')).body;
 
+    // ASFI payout account ownership: the identity points at a proven account sent first (the dashboard uploads its proof).
+    const account = await prisma.payoutAccount.create({ data: { merchantId, bankCode: 'BNB', accountNumber: '4012345678', holderName: 'Limits SRL', proofStorageKey: 'e2e-proof.pdf', proofFileName: 'proof.pdf', proofContentType: 'application/pdf' } });
     const submission = await http()
       .post('/v1/merchants/kyc')
       .set({ Authorization: `Bearer ${liveKey}` })
       .send({
+        payoutAccountId: account.id,
         targetLevel: 2,
         legalName: 'Limits SRL',
         taxId: '1023456028',
         legalRepName: 'Maria Fernanda Rojas',
         legalRepDocumentId: '7654321 LP',
-        payoutBankAccount: 'BNB 4012345678',
         ciFrontDocId: ciFront.id,
         ciBackDocId: ciBack.id,
         selfieDocId: selfie.id,

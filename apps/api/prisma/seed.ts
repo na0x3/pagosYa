@@ -11,6 +11,7 @@ import { AuditLogService } from "../src/ops/audit-log.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { LegalDocumentsService, sha256Hex } from "../src/legal/legal-documents.service";
 import { TermsAcceptanceService } from "../src/legal/terms-acceptance.service";
+import { PayoutAccountsService } from "../src/payout-accounts/payout-accounts.service";
 
 // Placeholder texts so the terms prompt, signup checkbox and checkout notice can
 // be exercised locally. Production texts come from the lawyer via an ops publish.
@@ -30,7 +31,9 @@ async function main() {
   // assertOwned only reads merchantKycDocument rows — no object storage needed
   // for seed data, so the files dependency is never exercised here.
   const identityDocuments = new IdentityDocumentsService(prisma as unknown as PrismaService, undefined as never, auditLog);
-  const kyc = new KycService(prisma as unknown as PrismaService, auditLog, terms, identityDocuments);
+  // Only rejectLinkedToSubmission is reached from the seed (never on approval), so no storage or email is needed.
+  const payoutAccounts = new PayoutAccountsService(prisma as unknown as PrismaService, undefined as never, auditLog, { send: async () => undefined });
+  const kyc = new KycService(prisma as unknown as PrismaService, auditLog, terms, identityDocuments, payoutAccounts);
   const merchantsService = new MerchantsService(prisma as unknown as PrismaService, apiKeys);
   const opsUsers = new OpsUserService(prisma as unknown as PrismaService);
 
@@ -115,13 +118,22 @@ async function main() {
           }),
         ),
       );
+      // A proven, approved payout account, so the demo merchant's payouts run (payout account ownership check).
+      const payoutAccount = await prisma.payoutAccount.create({
+        data: {
+          merchantId: merchant.id, bankCode: "BNB", accountNumber: "4012345678", holderName: m.name,
+          proofStorageKey: randomUUID(), proofFileName: "certificado.pdf", proofContentType: "application/pdf",
+          status: "APPROVED", ownerType: "COMPANY", checks: { nameMatches: true, numberMatches: true, bankMatches: true },
+          reviewedAt: new Date(), reviewedByLabel: "seed", payableFrom: new Date(),
+        },
+      });
       const submission = await kyc.submit(merchant.id, {
         targetLevel: 2,
         legalName: m.name,
         taxId: "1023456028",
         legalRepName: "Maria Fernanda Rojas",
         legalRepDocumentId: "7654321 LP",
-        payoutBankAccount: "BNB 4012345678",
+        payoutAccountId: payoutAccount.id,
         ciFrontDocId: ciFront.id,
         ciBackDocId: ciBack.id,
         selfieDocId: selfie.id,

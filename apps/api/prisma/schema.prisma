@@ -121,6 +121,8 @@ enum KycDocumentSlot {
   CI_FRONT
   CI_BACK
   SELFIE
+  // SIN «certificación de no inscripción en el NIT»: level 1 sellers have no NIT, this proves it. Image or PDF.
+  NIT_CERTIFICATE
 }
 
 enum InvoiceStatus {
@@ -172,12 +174,102 @@ model OpsUser {
   hashedToken          String
   role                 OpsRole                 @default(SUPPORT_AGENT)
   revokedAt            DateTime?
+  // Second factor (ISO A-01): the ops_ token alone no longer reaches the API — it plus a code starts an 8-12 h session.
+  totpSecret           String?
+  totpEnabledAt        DateTime?
+  totpLastStep         Int?
+  // Five wrong codes in a row lock code entry for 15 minutes, whatever IP they come from.
+  totpFailedCount      Int                     @default(0)
+  totpLockedUntil      DateTime?
+  sessions             OpsSession[]
   createdAt            DateTime                @default(now())
   kycReviews           MerchantKycSubmission[]
   createdSupportCases  SupportCase[]           @relation("SupportCaseCreator")
   assignedSupportCases SupportCase[]           @relation("SupportCaseAssignee")
   supportNotes         SupportCaseNote[]
   legalDocuments       LegalDocument[]
+  assignedComplaints   Complaint[]             @relation("ComplaintAssignee")
+  reviewedPayoutAccounts PayoutAccount[]     @relation("PayoutAccountReviewer")
+}
+
+enum SanctionsSource {
+  UN
+  OFAC
+}
+
+enum KycScreeningStatus {
+  // No listed name looks like the screened ones.
+  CLEAR
+  // Waits for ops: approval is refused until it is dismissed (a different person) or confirmed.
+  POSSIBLE_MATCH
+  DISMISSED
+  CONFIRMED
+  // The lists were not loaded when it ran; in production approval waits for a real screening.
+  NOT_SCREENED
+}
+
+// One person or organisation on a sanctions list (UN Security Council consolidated list, US OFAC SDN), refreshed daily.
+model SanctionsEntry {
+  id            String          @id @default(cuid())
+  source        SanctionsSource
+  externalId    String
+  kind          String
+  primaryName   String
+  names         String[]
+  birthDates    String[]
+  nationalities String[]
+  programs      String[]
+  listedOn      String?
+  importId      String
+
+  @@unique([source, externalId])
+  @@index([source])
+}
+
+// Evidence of which version of each list screenings used.
+model SanctionsListImport {
+  id          String          @id @default(cuid())
+  source      SanctionsSource
+  entries     Int
+  sha256      String
+  publishedAt String?
+  importedAt  DateTime        @default(now())
+
+  @@index([source, importedAt])
+}
+
+// A KYC submission's names checked against the sanctions lists: at submission and again whenever the lists change.
+model KycScreening {
+  id                  String                @id @default(cuid())
+  submissionId        String
+  submission          MerchantKycSubmission @relation(fields: [submissionId], references: [id])
+  screenedNames       String[]
+  status              KycScreeningStatus
+  matches             Json
+  listImports         Json
+  trigger             String
+  resolvedByOpsUserId String?
+  resolvedByLabel     String?
+  resolutionNote      String?
+  resolvedAt          DateTime?
+  createdAt           DateTime              @default(now())
+
+  @@index([submissionId, createdAt])
+  @@index([status])
+}
+
+// A staff session started with the ops_ token and an authenticator code (ISO A-01). Only its SHA-256 is stored.
+model OpsSession {
+  id          String    @id @default(cuid())
+  opsUserId   String
+  opsUser     OpsUser   @relation(fields: [opsUserId], references: [id])
+  hashedToken String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  ip          String?
+  createdAt   DateTime  @default(now())
+
+  @@index([opsUserId])
 }
 
 // Generic append-only trail for sensitive ops actions (KYC review today;
@@ -193,6 +285,11 @@ model AuditLogEntry {
   targetId   String
   metadata   Json?
   createdAt  DateTime @default(now())
+  // Tamper-evident chain (ISO M-04): numbered and hashed by the database's insert trigger, never by code (NOT NULL in the
+  // table; optional here so Prisma leaves them to the trigger). The table is append-only.
+  seq        BigInt   @unique @default(autoincrement())
+  prevHash   String?  @unique
+  hash       String?
 
   @@index([targetType, targetId])
   @@index([createdAt])
@@ -236,6 +333,134 @@ model SupportCaseNote {
   createdAt DateTime    @default(now())
 
   @@index([caseId, createdAt])
+}
+
+enum ComplaintStatus {
+  RECEIVED
+  IN_REVIEW
+  WAITING_MERCHANT
+  ANSWERED
+}
+
+enum ComplaintCategory {
+  NOT_DELIVERED
+  NOT_AS_DESCRIBED
+  UNRECOGNIZED_CHARGE
+  DUPLICATE_CHARGE
+  REFUND_NOT_RECEIVED
+  OTHER
+}
+
+enum ComplaintRequest {
+  REFUND
+  DELIVERY
+  OTHER
+}
+
+enum ComplaintOutcome {
+  UPHELD
+  PARTIALLY_UPHELD
+  NOT_UPHELD
+}
+
+enum ComplaintActor {
+  BUYER
+  OPS
+  MERCHANT
+  SYSTEM
+}
+
+enum ComplaintEventType {
+  RECEIVED
+  EMAIL_CONFIRMED
+  BUYER_MESSAGE
+  TAKEN
+  LINKED
+  NOTE
+  MERCHANT_ASKED
+  MERCHANT_REPLIED
+  EXTENDED
+  ANSWERED
+  REFUND_REQUESTED
+  REFUNDED
+  REFUND_FAILED
+  PAYOUTS_PAUSED
+  EMAIL_SENT
+  EMAIL_FAILED
+}
+
+// ASFI sub-project 4: a buyer complaint pagosYa registers, investigates and answers.
+model Complaint {
+  id                String                @id @default(cuid())
+  number            String                @unique
+  status            ComplaintStatus       @default(RECEIVED)
+  category          ComplaintCategory
+  request           ComplaintRequest
+  buyerName         String
+  buyerEmail        String
+  buyerPhone        String?
+  referenceGiven    String?
+  storeNameGiven    String?
+  paymentIntentId   String?
+  paymentIntent     PaymentIntent?        @relation(fields: [paymentIntentId], references: [id])
+  merchantId        String?
+  merchant          Merchant?             @relation(fields: [merchantId], references: [id])
+  description       String
+  outcome           ComplaintOutcome?
+  answer            String?
+  assignedOpsUserId String?
+  assignedOpsUser   OpsUser?              @relation("ComplaintAssignee", fields: [assignedOpsUserId], references: [id])
+  receivedAt        DateTime              @default(now())
+  dueAt             DateTime
+  extendedAt        DateTime?
+  extensionReason   String?
+  merchantDueAt     DateTime?
+  emailConfirmedAt  DateTime?
+  answeredAt        DateTime?
+  events            ComplaintEvent[]
+  attachments       ComplaintAttachment[]
+
+  @@index([status, dueAt])
+  @@index([merchantId, receivedAt])
+  @@index([buyerEmail])
+}
+
+// Append-only: the code never updates or deletes a row (sub-project 7 makes it tamper-evident).
+model ComplaintEvent {
+  id          String                @id @default(cuid())
+  complaintId String
+  complaint   Complaint             @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  type        ComplaintEventType
+  actor       ComplaintActor
+  actorId     String?
+  body        String?
+  meta        Json?
+  createdAt   DateTime              @default(now())
+  attachments ComplaintAttachment[]
+
+  @@index([complaintId, createdAt])
+  @@index([type, createdAt])
+}
+
+model ComplaintAttachment {
+  id          String          @id @default(cuid())
+  complaintId String
+  complaint   Complaint       @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  eventId     String?
+  event       ComplaintEvent? @relation(fields: [eventId], references: [id])
+  uploadedBy  ComplaintActor
+  storageKey  String
+  fileName    String
+  contentType String
+  sizeBytes   Int
+  createdAt   DateTime        @default(now())
+
+  @@index([complaintId])
+}
+
+model ComplaintCounter {
+  year Int @id
+  last Int
 }
 
 model Merchant {
@@ -288,6 +513,8 @@ model Merchant {
   // Set when the free YAPI build after a Shopify import is saved (spec 2026-09-27 §3): one per merchant.
   importBuildUsedAt           DateTime?
   storeImports                StoreImport[]
+  complaints                  Complaint[]
+  payoutAccounts              PayoutAccount[]
   // Plans 2026-11-07: the monthly YAPI credits and whether stores may be published (FREE may not). Ops sets it by hand.
   plan                        MerchantPlan                @default(FREE)
   creditGrants                MerchantCreditGrant[]
@@ -317,6 +544,14 @@ model MerchantUser {
   // Null until the confirmation link is used. An unverified row doesn't
   // permanently claim its email — see MerchantUserService.signup for why.
   emailVerifiedAt      DateTime?
+  // Optional second factor (ISO M-09): authenticator-app codes. The secret is stored encrypted (field-encryption.ts);
+  // it is set at setup and only counts once confirmed (totpEnabledAt). totpLastStep refuses a code used twice.
+  totpSecret           String?
+  totpEnabledAt        DateTime?
+  totpLastStep         Int?
+  // Five wrong codes in a row lock code entry for 15 minutes, whatever IP they come from.
+  totpFailedCount      Int                     @default(0)
+  totpLockedUntil      DateTime?
   createdAt            DateTime                      @default(now())
   sessions             MerchantSession[]
   verificationTokens   EmailVerificationToken[]
@@ -534,9 +769,55 @@ model Payout {
   nextRetryAt   DateTime?
   paidOutAt     DateTime?
   createdAt     DateTime     @default(now())
+  payoutAccountId String?
+  payoutAccount   PayoutAccount? @relation(fields: [payoutAccountId], references: [id])
 
   @@index([status, nextRetryAt])
   @@index([merchantId, createdAt])
+}
+
+enum PayoutAccountStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REPLACED
+}
+
+enum PayoutAccountOwner {
+  PERSON
+  COMPANY
+  SOLE_PROPRIETOR
+}
+
+// A bank account a merchant asked to be paid to, and the proof that it is theirs. Payouts use only an APPROVED
+// one whose payableFrom has passed (payout account ownership check).
+model PayoutAccount {
+  id                  String                 @id @default(cuid())
+  merchantId          String
+  merchant            Merchant               @relation(fields: [merchantId], references: [id])
+  currency            String                 @default("BOB")
+  bankCode            String
+  accountNumber       String
+  holderName          String
+  proofStorageKey     String
+  proofFileName       String
+  proofContentType    String
+  status              PayoutAccountStatus    @default(PENDING_REVIEW)
+  isChange            Boolean                @default(false)
+  ownerType           PayoutAccountOwner?
+  checks              Json?
+  reviewNote          String?
+  reviewedAt          DateTime?
+  reviewedByOpsUserId String?
+  reviewedByOpsUser   OpsUser?               @relation("PayoutAccountReviewer", fields: [reviewedByOpsUserId], references: [id])
+  reviewedByLabel     String?
+  payableFrom         DateTime?
+  kycSubmissionId     String?
+  kycSubmission       MerchantKycSubmission? @relation(fields: [kycSubmissionId], references: [id])
+  createdAt           DateTime               @default(now())
+  payouts             Payout[]
+
+  @@index([merchantId, currency, status])
 }
 
 model MerchantKycSubmission {
@@ -563,6 +844,12 @@ model MerchantKycSubmission {
   ciFrontDocId         String?
   ciBackDocId          String?
   selfieDocId          String?
+  nitCertificateDocId  String?
+  // Self-declared politically exposed person (or close family/associate of one): enhanced review before approval.
+  isPep                Boolean                 @default(false)
+  pepRole              String?
+  payoutAccounts       PayoutAccount[]
+  screenings           KycScreening[]
 
   @@index([merchantId, createdAt])
 }
@@ -671,6 +958,7 @@ model PaymentIntent {
   limitAmountBob       Int?
   limitFxRate          Decimal?                @db.Decimal(10, 4)
   limitStatus          LimitReservationStatus?
+  complaints           Complaint[]
 
   @@index([merchantId, createdAt])
   @@index([consumerUserId, createdAt])

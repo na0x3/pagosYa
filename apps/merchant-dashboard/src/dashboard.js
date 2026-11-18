@@ -23,6 +23,10 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
 import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
 import { playImmersiveMove } from "/src/immersive.mjs";
 import { lowStock, renderRestock } from "/src/restock.mjs";
+import { bankOptionsHtml, mountPayoutAccountPanel } from "/src/payout-account-panel.mjs";
+import { ownerFitsLevel } from "/src/payout-accounts.mjs";
+import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
+import { mountMfaPanel } from "/src/mfa-panel.mjs";
 import { renderMascotBubbles, renderMascotCards, storeSummary } from "/src/store-mascots.mjs";
 import { renderSellingCard } from "/src/selling-card.mjs";
 import { mountTareas } from "/src/tareas.mjs";
@@ -647,6 +651,7 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
     if (nextView === "assistant") assistantPanel.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
+    if (nextView === "complaints") complaintsPanel.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch { /* storage unavailable: the view still opens */ }
@@ -763,6 +768,7 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
   // Cuenta: account card, KYC, terms and the affiliation level (src/account-panel.mjs).
   const accountPanel = createAccountPanel({
     api, emailEl, errorEl, infoEl, profileMenuEl, setDashboardView, setButtonBusy, refresh,
+    payoutAccounts: { show: () => payoutPanel.show(), sync: () => syncKycAccountFields() },
     stores: () => lastStores,
     profileSessionsPayload: () => lastProfileSessionsPayload,
     loadProfileSessions: (...args) => loadProfileSessions(...args),
@@ -942,9 +948,37 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
     return monetaryValuesHidden ? "••••••" : (cents / 100).toFixed(2);
   }
 
+  // Desembolsos → Cuenta para desembolsos (ASFI payout account ownership, merged 2026-11-07).
+  const payoutPanel = mountPayoutAccountPanel({ api });
+  // Dinero → Verificación en dos pasos (ISO M-09), right under the account it protects.
+  const mfaPanel = mountMfaPanel({ api });
+  const kycBankSelect = document.querySelector('#kycForm select[name="bankCode"]');
+  if (kycBankSelect) kycBankSelect.innerHTML = bankOptionsHtml();
+  // The identity form reuses an account already approved or under review instead of asking for another.
+  function syncKycAccountFields() {
+    const { approved, waiting } = payoutPanel.current();
+    const targetLevel = Number(document.querySelector('#kycForm [name="targetLevel"]')?.value || 1);
+    // An approved account is reused only for a level its owner fits; a business level needs one in the company's name.
+    const existing = waiting ?? (approved && ownerFitsLevel(approved.ownerType, targetLevel) ? approved : null);
+    const note = document.getElementById("kycAccountExisting");
+    const fields = document.getElementById("kycAccountFields");
+    if (!note || !fields) return;
+    note.hidden = !existing;
+    note.dataset.accountId = existing?.id ?? "";
+    note.textContent = existing ? `Tus desembolsos irán a ${existing.bankName ?? existing.bankCode} ····${existing.accountLast4} (${existing.holderName}).` : "";
+    // form.inline children are display:grid, which beats [hidden]; set it outright.
+    fields.hidden = Boolean(existing);
+    fields.style.display = existing ? "none" : "";
+    fields.querySelectorAll("input, select").forEach((el) => { el.required = !existing; });
+  }
+  document.querySelector('#kycForm [name="targetLevel"]')?.addEventListener("change", () => syncKycAccountFields());
+  // Reclamos (ASFI sub-project 4): complaints pagosYa sent this merchant for their side.
+  const complaintsPanel = mountComplaintsPanel({ api, signedIn: () => !!sessionToken });
+
   // Finanzas: balances, settlement, international payments, payouts and the finance charts (src/finances-panel.mjs).
   const financesPanel = createFinancesPanel({
     api, money, moneyNumber, renderOverview,
+    payoutWaitingFrom: () => payoutPanel.current().waitingPayableFrom,
     storeId: () => currentStoreId,
     stores: () => lastStores,
     setSettlement: (schedule) => { lastSettlement = schedule; },
@@ -1336,8 +1370,10 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
             const result = await api("/dashboard/google", { method: "POST", body: JSON.stringify({ credential }) });
             await completeMerchantLogin(result);
           } catch (err) {
-            errorEl.textContent = "Error: " + err.message;
             infoEl.textContent = "";
+            // A second factor is on (ISO M-09): keep the Google credential and ask for the code in the login form.
+            if (err.code === "mfa_required") { pendingGoogleCredential = credential; askForLoginCode(); return; }
+            errorEl.textContent = "Error: " + err.message;
           }
         },
       });
@@ -1408,10 +1444,16 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
       lastBalances = balance.balances?.length
         ? balance.balances
         : [{ currency: balance.currency || "BOB", payableBalance: balance.payableBalance || 0 }];
+      await payoutPanel.show();
+      mfaPanel.show();
+      syncKycAccountFields();
       renderBalanceCards(lastBalances);
       document.getElementById("payoutHoldBanner").hidden = !balance.payoutsHeld;
       renderSettlementPanel(settlementSchedule);
       document.getElementById("internationalPaymentsCard").innerHTML = renderInternationalCard(international);
+      // No USD payouts while international payments are off, so the verification form doesn't ask for a USD account.
+      const usdAccountField = document.querySelector('input[name="payoutUsdBankAccount"]')?.closest("div");
+      if (usdAccountField) usdAccountField.hidden = international?.available === false;
       const selectedStore = lastStores.find((store) => store.id === currentStoreId) || null;
       const paymentStore = (selectedStore?.checkoutMode || "payment") === "payment";
 
@@ -1506,6 +1548,18 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
   document.getElementById("loginSwitch").addEventListener("click", () => setSignupMode(!signupMode));
   if (location.hash === "#crear-cuenta") setSignupMode(true);
 
+  // ISO M-09: an account with a second factor asks for the code after the password (or Google) is right.
+  let pendingGoogleCredential = "";
+  const loginCodeRowEl = document.getElementById("loginCodeRow");
+  const loginCodeEl = document.getElementById("loginCode");
+  function askForLoginCode() {
+    loginCodeRowEl.hidden = false;
+    loginCodeEl.value = "";
+    infoEl.textContent = "Escribe el código de 6 dígitos de tu app de verificación.";
+    loginCodeEl.focus();
+  }
+  const loginCode = () => (loginCodeRowEl.hidden || !loginCodeEl.value.trim() ? {} : { code: loginCodeEl.value.trim() });
+
   loginFormEl.addEventListener("submit", async (event) => {
     event.preventDefault();
     const loginButton = document.getElementById("login");
@@ -1522,15 +1576,20 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
           body: JSON.stringify({ name: document.getElementById("signupBusiness").value.trim(), email: emailEl.value.trim(), password: passwordEl.value,
             ...(signupTermsVersion && termsEl.checked ? { termsVersion: signupTermsVersion } : {}) }),
         })
-        : await api("/dashboard/login", {
-          method: "POST",
-          body: JSON.stringify({ email: emailEl.value, password: passwordEl.value }),
-        });
+        : pendingGoogleCredential && !loginCodeRowEl.hidden
+          ? await api("/dashboard/google", { method: "POST", body: JSON.stringify({ credential: pendingGoogleCredential, ...loginCode() }) })
+          : await api("/dashboard/login", {
+            method: "POST",
+            body: JSON.stringify({ email: emailEl.value, password: passwordEl.value, ...loginCode() }),
+          });
+      pendingGoogleCredential = "";
+      loginCodeRowEl.hidden = true;
       // A brand-new account opens with the short welcome before its first store (owner 2026-11-07).
       if (signupMode) { sessionStorage.setItem("pagosya_welcome", "1"); history.replaceState(null, "", location.pathname + location.search); setSignupMode(false); }
       await completeMerchantLogin(result);
     } catch (err) {
-      errorEl.textContent = "Error: " + err.message;
+      if (err.code === "mfa_required") askForLoginCode();
+      else errorEl.textContent = "Error: " + err.message;
     } finally {
       setButtonBusy(loginButton, false, signupMode ? "Crear mi cuenta" : "Continuar");
     }
