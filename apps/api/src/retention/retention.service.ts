@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { PlansService } from '../plans/plans.service';
 import { workspaceMail, workspaceSender, renderEmailText } from '../email-workspace/email-workspace.config';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
@@ -163,12 +164,15 @@ export class RetentionService {
   async popupPreview(merchantId: string, storeId: string) {
     const store = await this.owner(merchantId, storeId);
     const settings = await this.settings(storeId);
-    return { slug: store.slug, storeName: store.name, settings: { ...publicRetentionSettings(settings, store.slug), signupEnabled: true, signupVisual: await this.signupVisual(storeId) } };
+    const popupDesign = await this.liveDesign(storeId, settings as { popupDesignId?: unknown });
+    return { slug: store.slug, storeName: store.name, settings: { ...publicRetentionSettings(settings, store.slug), signupEnabled: true, signupVisual: await this.signupVisual(storeId), ...(popupDesign ? { popupDesign } : {}) } };
   }
-  async subscribe(store: { id: string; slug: string; name: string }, rawEmail: string | null, profile: Pick<RetentionSubscribeDto, 'name' | 'phone' | 'interests' | 'source' | 'gameToken' | 'answer' | 'sourceVisitToken' | 'answers' | 'favourite'> = {}) {
+  async subscribe(store: { id: string; slug: string; name: string }, rawEmail: string | null, profile: Pick<RetentionSubscribeDto, 'name' | 'phone' | 'interests' | 'source' | 'gameToken' | 'answer' | 'sourceVisitToken' | 'answers' | 'favourite' | 'popupDesignId'> = {}) {
     // Spec 2026-11-09 A/B tests: a B visitor's signup gets B's code; a new row remembers the test visit it came from.
     const { settings, visitId } = await this.settingsFor(store.id, profile.sourceVisitToken);
     if (!settings.signupEnabled) throw new BadRequestException('Las suscripciones están desactivadas.');
+    // Popups 2.0 (spec 2026-11-18): a YAPI-written popup has its own path; every older popup keeps the one below.
+    if (profile.popupDesignId) return this.subscribeToDesign(store, settings, visitId, rawEmail, profile);
     // Spec 2026-11-10 rasca y elige: the store's own interest answers only, and a favourite that is really one of its products.
     const allowed = new Set((readInterests(settings as PopupGameSettings)?.answers ?? []).map(entry => entry.label));
     const chosen = (profile.answers ?? []).filter(label => allowed.has(label));
@@ -202,6 +206,52 @@ export class RetentionService {
     if (profile.gameToken && this.games) return { subscribed: true, ...(await this.games.claim(store.id, profile.gameToken, existed)) };
     const code = profile.source === 'popup' && settings.popupPromoCodeId ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId: store.id, isActive: true } }) : null;
     return { subscribed: true, ...(code ? { code: code.code } : {}) };
+  }
+  /** Popups 2.0 (spec 2026-11-18 §7): what a store page gets of its LIVE design — never another store's, never a FAILED one. */
+  async liveDesign(storeId: string, settings: { popupDesignId?: unknown }) {
+    const id = typeof settings.popupDesignId === 'string' ? settings.popupDesignId : null;
+    if (!id) return null;
+    const row = await this.prisma.storePopupDesign.findFirst({ where: { id, storeId, status: 'LIVE' } });
+    return row ? { id: row.id, flow: row.flow, steps: row.steps, css: row.css, launcher: row.launcher, capture: row.capture, percent: row.percent } : null;
+  }
+  /** One personal code per contact and design: the same shopper always gets the same single-use code, and nobody can work out
+   *  another shopper's (keyed with the server secret). Tagged with the design for Part 4's sales count. */
+  private async designCode(storeId: string, design: { id: string; percent: number }, contact: string) {
+    const secret = this.config.get<string>('app.orderTrackingSecret') || 'development-only';
+    const digest = createHmac('sha256', secret).update(`${design.id}:${contact}`).digest();
+    const code = `POP${Array.from(digest.subarray(0, 6), byte => '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'[byte % 32]).join('')}`;
+    const existing = await this.prisma.promoCode.findFirst({ where: { storeId, code } });
+    if (existing) return code;
+    try {
+      await this.prisma.promoCode.create({ data: { storeId, code, discountType: 'PERCENT', discountValue: design.percent, maxUses: 1, isActive: true, showInEmails: false, showInAssistant: false, popupDesignId: design.id } });
+    } catch (error) { if ((error as { code?: string }).code !== 'P2002') throw error; }
+    return code;
+  }
+  /** A signup from a YAPI-written popup: the contact the design asks for, its answers and favourite, and the design's code. */
+  private async subscribeToDesign(store: { id: string; slug: string; name: string }, settings: RetentionSettings, visitId: string | null | undefined, rawEmail: string | null, profile: Pick<RetentionSubscribeDto, 'phone' | 'answers' | 'favourite' | 'popupDesignId'>) {
+    const design = await this.prisma.storePopupDesign.findFirst({ where: { id: profile.popupDesignId!, storeId: store.id, status: 'LIVE' } });
+    if (!design) throw new BadRequestException('Este popup ya no está activo; recarga la página.');
+    const interests = (profile.answers ?? []).map(answer => String(answer).trim().slice(0, 60)).filter(Boolean).slice(0, 6);
+    const favourite = await this.realFavourite(store.id, profile.favourite);
+    const tag = { popupDesignId: design.id, ...(visitId ? { sourceVisitId: visitId } : {}) };
+    if (design.capture === 'whatsapp') {
+      if (rawEmail) throw new BadRequestException('Esta tienda pide tu WhatsApp.');
+      const phone = whatsappDigits(profile.phone ?? '');
+      if (!phone) throw new BadRequestException('Escribe tu WhatsApp con 8 números, como 71234567.');
+      await this.prisma.storeWhatsappSubscriber.upsert({ where: { storeId_phone: { storeId: store.id, phone } },
+        create: { storeId: store.id, phone, interests, favourite, ...tag },
+        update: { isActive: true, ...(interests.length ? { interests } : {}), ...(favourite ? { favourite } : {}) } });
+      return { subscribed: true, code: await this.designCode(store.id, design, phone) };
+    }
+    if (!rawEmail) throw new BadRequestException('Escribe tu correo.');
+    const email = normalized(rawEmail);
+    await this.prisma.$transaction(async tx => {
+      const subscriber = await tx.storeNewsletterSubscriber.upsert({ where: { storeId_email: { storeId: store.id, email } },
+        create: { storeId: store.id, email, interests, favourite, ...tag },
+        update: { isActive: true, ...(interests.length ? { interests } : {}), ...(favourite ? { favourite } : {}) } });
+      if (settings.welcomeEnabled) await this.enqueue(tx, { storeId: store.id, email, kind: 'WELCOME', sourceId: subscriber.id, dedupeKey: `welcome:${subscriber.id}`, subject: settings.welcomeSubject.replaceAll('{{store}}', () => store.name), body: settings.welcomeBody.replaceAll('{{store}}', () => store.name) });
+    });
+    return { subscribed: true, code: await this.designCode(store.id, design, email) };
   }
   /** Spec 2026-11-10 rasca y elige: «id» of a product of this store, or «id:value» of one of its option values; null otherwise. */
   private async realFavourite(storeId: string, raw: string | undefined): Promise<string | null> {
