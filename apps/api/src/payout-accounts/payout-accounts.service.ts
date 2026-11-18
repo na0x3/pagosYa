@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
 import { OpsRole, PayoutAccountStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PrivateFilesService } from "../commerce-platform/private-files.service";
 import { AuditLogService } from "../ops/audit-log.service";
 import { EMAIL_PROVIDER } from "../dashboard/tokens";
 import { EmailProvider } from "../dashboard/interfaces/email-provider.interface";
+import { MerchantMfaService } from "../dashboard/merchant-mfa.service";
 import { lockMerchantSettlement } from "../settlement/settlement-lock";
 import { checkComplaintFiles, safeFileName, type UploadedComplaintFile } from "../complaints/complaint-files";
 import { bankName, normaliseAccountNumber, payableFromFor, validateApproval } from "./payout-account-rules";
@@ -34,10 +35,15 @@ export class PayoutAccountsService {
     private readonly files: PrivateFilesService,
     private readonly auditLog: AuditLogService,
     @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider,
+    @Optional() private readonly mfa?: MerchantMfaService,
   ) {}
 
-  async create(merchantId: string, dto: CreatePayoutAccountDto, file: UploadedComplaintFile | undefined) {
+  async create(merchantId: string, dto: CreatePayoutAccountDto, file: UploadedComplaintFile | undefined, actor?: { userId: string }) {
     if (!file) throw new BadRequestException("Sube el certificado o la captura de tu banco.");
+    // ISO M-09: redirecting payouts away from an approved account takes the person's second factor, before anything is stored.
+    if (this.mfa && actor && (await this.prisma.payoutAccount.findFirst({ where: { merchantId, currency: CURRENCY, status: PayoutAccountStatus.APPROVED }, select: { id: true } }))) {
+      await this.mfa.assertForPayoutChange(actor.userId, dto.mfaCode);
+    }
     const [proof] = checkComplaintFiles([file]);
     const accountNumber = normaliseAccountNumber(dto.accountNumber);
     const holderName = dto.holderName.trim();

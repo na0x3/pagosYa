@@ -69,6 +69,30 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
   });
 }
 
+// ISO M-09: an account with codes on gets the code field after a right password, and the same sign-in carries the code.
+test("sign-in asks for the verification code when the account has it on", async ({ page }) => {
+  await mockDashboardApi(page);
+  const requests = [];
+  await page.route("http://localhost:3001/v1/dashboard/login", async (route) => {
+    const body = route.request().postDataJSON();
+    requests.push({ path: "/dashboard/login", body });
+    if (!body.code) return route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ code: "mfa_required", message: "Escribe el código de 6 dígitos de tu app de verificación" }) });
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ token: "dash_ok", expiresAt: "2099-01-01T00:00:00.000Z", merchant: { id: "merchant_1" }, user: { email: body.email } }) });
+  });
+  await page.goto("/");
+  await expect(page.locator("#loginCodeRow")).toBeHidden();
+  await page.locator("#loginForm").getByLabel("Correo", { exact: true }).fill("owner@tienda.bo");
+  await page.locator("#loginForm").getByLabel("Contraseña", { exact: true }).fill("correct-password");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.locator("#loginCodeRow")).toBeVisible();
+  await expect(page.locator("#error")).toHaveText("");
+  await page.locator("#loginCode").fill("123456");
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await expect(page.locator("body")).not.toHaveClass(/is-logged-out/);
+  const logins = requests.filter((r) => r.path === "/dashboard/login").map((r) => r.body);
+  expect(logins).toEqual([{ email: "owner@tienda.bo", password: "correct-password" }, { email: "owner@tienda.bo", password: "correct-password", code: "123456" }]);
+});
+
 test("an expired session returns to sign-in", async ({ page }) => {
   await page.addInitScript(() => {
     if (window !== window.top) return; // sandboxed email previews cannot read storage

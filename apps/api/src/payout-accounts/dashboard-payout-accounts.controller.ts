@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Post, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { MerchantSessionGuard } from "../dashboard/guards/merchant-session.guard";
@@ -19,7 +19,7 @@ export class DashboardPayoutAccountsController {
 
   @Post()
   @UseInterceptors(FileInterceptor("proof", { limits: { fileSize: 5_000_000 } }))
-  create(@CurrentMerchant() merchant: { id: string }, @Body() dto: CreatePayoutAccountDto, @UploadedFile() proof: UploadedComplaintFile) {
-    return this.accounts.create(merchant.id, dto, proof);
+  create(@CurrentMerchant() merchant: { id: string }, @Body() dto: CreatePayoutAccountDto, @UploadedFile() proof: UploadedComplaintFile, @Req() req: { merchantUser: { id: string } }) {
+    return this.accounts.create(merchant.id, dto, proof, { userId: req.merchantUser.id });
   }
 }

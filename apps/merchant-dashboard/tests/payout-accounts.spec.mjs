@@ -84,6 +84,8 @@ test("the identity form sends the account with its proof first, then the identit
   await form.locator('input[name="legalName"]').fill("Ana Pérez");
   await form.locator('input[name="legalRepDocumentId"]').fill("7654321 LP");
   for (const id of ["#kycDocFront", "#kycDocBack", "#kycDocSelfie"]) await form.locator(id).setInputFiles(png);
+  // Level 1 without NIT also sends the SIN certificate of non-registration (2026-11-18).
+  if (await form.locator("#kycDocNitCertificate").isVisible()) await form.locator("#kycDocNitCertificate").setInputFiles({ name: "certificado.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7") });
   await form.locator('select[name="bankCode"]').selectOption("BNB");
   await form.locator('input[name="accountNumber"]').fill("4012345678");
   await form.locator('input[name="holderName"]').fill("Ana Pérez");
@@ -109,6 +111,8 @@ test("moving up a level reuses the approved account instead of asking again", as
   await form.locator('input[name="legalName"]').fill("Ana Pérez");
   await form.locator('input[name="legalRepDocumentId"]').fill("7654321 LP");
   for (const id of ["#kycDocFront", "#kycDocBack", "#kycDocSelfie"]) await form.locator(id).setInputFiles(png);
+  // Level 1 without NIT also sends the SIN certificate of non-registration (2026-11-18).
+  if (await form.locator("#kycDocNitCertificate").isVisible()) await form.locator("#kycDocNitCertificate").setInputFiles({ name: "certificado.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7") });
   await form.locator("button[type=submit]").click();
   await expect.poll(() => kyc.length).toBe(1);
   expect(kyc[0].payoutAccountId).toBe("pa_a");
@@ -132,6 +136,8 @@ test("a failed identity submission doesn't send the account twice", async ({ pag
   await form.locator('input[name="legalName"]').fill("Ana Pérez");
   await form.locator('input[name="legalRepDocumentId"]').fill("7654321 LP");
   for (const id of ["#kycDocFront", "#kycDocBack", "#kycDocSelfie"]) await form.locator(id).setInputFiles(png);
+  // Level 1 without NIT also sends the SIN certificate of non-registration (2026-11-18).
+  if (await form.locator("#kycDocNitCertificate").isVisible()) await form.locator("#kycDocNitCertificate").setInputFiles({ name: "certificado.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7") });
   await form.locator('select[name="bankCode"]').selectOption("BNB");
   await form.locator('input[name="accountNumber"]').fill("4012345678");
   await form.locator('input[name="holderName"]').fill("Ana Pérez");
@@ -154,4 +160,56 @@ test("a business level asks for a new account when the approved one is personal"
   await form.locator('select[name="targetLevel"]').selectOption("2");
   await expect(form.locator('select[name="bankCode"]')).toBeVisible();
   await expect(form.locator("#kycAccountExisting")).toBeHidden();
+});
+
+// ISO M-09: a change of account asks for the authenticator code in place, keeping what was typed and the proof.
+test("a change asks for the verification code without losing the form", async ({ page }) => {
+  const bodies = [];
+  let first = true;
+  await openDashboard(page, { accounts: [approved] });
+  await page.route("http://localhost:3001/v1/dashboard/payout_accounts", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    bodies.push(route.request().postData() ?? "");
+    if (first) { first = false; return route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ code: "mfa_required", message: "Escribe el código de 6 dígitos de tu app de verificación" }) }); }
+    return route.fallback();
+  });
+  await page.goto("/#dashboard-payouts");
+  const panel = page.locator("#payoutAccountPanel");
+  await panel.getByRole("button", { name: "Cambiar cuenta" }).click();
+  await panel.locator('select[name="bankCode"]').selectOption("BUN");
+  await panel.locator('input[name="accountNumber"]').fill("1000 1234");
+  await panel.locator('input[name="holderName"]').fill("Ana Pérez");
+  await panel.locator('input[name="proof"]').setInputFiles(png);
+  await panel.getByRole("button", { name: "Enviar cambio" }).click();
+  await expect(panel.locator("#payoutAccountError")).toHaveText("Escribe el código de 6 dígitos de tu app de verificación");
+  await expect(panel.locator('input[name="accountNumber"]')).toHaveValue("1000 1234");
+  await panel.locator('input[name="mfaCode"]').fill("123456");
+  await panel.getByRole("button", { name: "Enviar cambio" }).click();
+  await expect(panel).toContainText("Estamos revisando tu cuenta bancaria.");
+  expect(bodies[1]).toContain('name="mfaCode"');
+  expect(bodies[1]).toContain("123456");
+});
+
+test("the two-step verification card turns codes on with a scanned QR and a first code", async ({ page }) => {
+  let enabled = false;
+  const confirms = [];
+  await openDashboard(page, { accounts: [approved] });
+  await page.route("http://localhost:3001/v1/dashboard/mfa**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const json = (body) => route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+    if (path.endsWith("/mfa")) return json({ enabled, requiredForPayoutChange: true });
+    if (path.endsWith("/mfa/setup")) return json({ secret: "JBSWY3DPEHPK3PXP", uri: "otpauth://totp/x", qrDataUrl: "data:image/png;base64,iVBORw0KGgo=" });
+    if (path.endsWith("/mfa/confirm")) { confirms.push(JSON.parse(route.request().postData())); enabled = true; return json({ enabled: true }); }
+    return json({});
+  });
+  await page.goto("/#dashboard-payouts");
+  const card = page.locator("#mfaPanel");
+  await expect(card).toContainText("La necesitas para cambiar tu cuenta de desembolsos.");
+  await card.getByRole("button", { name: "Activar verificación en dos pasos" }).click();
+  await expect(card.locator("code")).toHaveText("JBSWY3DPEHPK3PXP");
+  await card.locator('input[name="code"]').fill("123456");
+  await card.getByRole("button", { name: "Activar" }).click();
+  await expect(card).toContainText("Listo: la verificación en dos pasos está activa.");
+  await expect(card.getByRole("button", { name: "Desactivar" })).toBeVisible();
+  expect(confirms).toEqual([{ code: "123456" }]);
 });

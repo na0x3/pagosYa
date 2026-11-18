@@ -145,6 +145,9 @@ export class MerchantUserService {
       // mailbox, so this can safely log the merchant straight into a fresh
       // session (issued after the revocation above, so it isn't revoked too)
       // instead of making them type their new password again immediately.
+      // With a second factor on (ISO M-09) the mailbox is only one factor:
+      // they sign in with the new password and their code instead.
+      if (user.totpEnabledAt) return { reset: true };
       const session = await this.sessions.createSession(user);
       return { reset: true, session };
     }
