@@ -52,7 +52,7 @@ describe('popup design render check', () => {
   // Owner 2026-11-18 («look at their pop up its amazing», Fishwife/Alia): product art may burst past the edges; text may not.
   it('lets decoration marked data-art cross the edges, never text', async () => {
     const art = '<div class="card"><button data-close aria-label="Cerrar">×</button><img data-art class="burst" src="/v1/uploads/a.png" alt=""><h2>Hola</h2><button data-next>Ok</button></div>';
-    const sheet = `${SHEET}.card{position:relative;overflow:visible}.burst{position:absolute;left:-260px;top:0;width:700px;height:200px}`;
+    const sheet = `${SHEET}.card{position:relative;overflow:visible}.burst{position:absolute;left:-260px;bottom:-140px;width:420px;height:120px}`;
     const ok = await measureFlow(base(sheet, { o: art, c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(ok!)).toEqual([]);
     const words = await measureFlow(base(`${sheet}.card h2{position:absolute;left:-300px;white-space:nowrap}`, { o: art, c: capture }, [flow[0], flow[2]]));
@@ -64,4 +64,14 @@ describe('popup design render check', () => {
     const measures = await measureFlow(base(`${SHEET}.row{position:relative;display:block}.pre{position:absolute;left:8px;top:8px}.row input{position:relative;width:100%;height:44px;background:#fff}`, { o: offer, c: covered }, [flow[0], flow[2]]));
     expect(checkFlowRender(measures!).join(' ')).toMatch(/tapado/);
   });
+  // Live 2026-11-18 (Fishwife v3): the close floated mid-left over the art, and the headline ran over a tin.
+  it('wants the close in a top corner and no words over the cut-outs', async () => {
+    const mid = '<div class="card"><button data-close aria-label="Cerrar" class="mid">×</button><h2>Hola amigos</h2><button data-next>Ok</button></div>';
+    const lost = await measureFlow(base(`${SHEET}.card{position:relative;min-height:400px}.mid{position:absolute;left:8px;top:180px}`, { o: mid, c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(lost!).join(' ')).toMatch(/esquina/);
+    const over = '<div class="card"><button data-close aria-label="Cerrar">×</button><img data-art class="tin" src="/v1/uploads/a.png" alt=""><h2>Hola amigos</h2><button data-next>Ok</button></div>';
+    const under = await measureFlow(base(`${SHEET}.card{position:relative}.tin{position:absolute;left:0;top:40px;width:100%;height:120px}`, { o: over, c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(under!).join(' ')).toMatch(/encima de un recorte/);
+  });
 });
+
