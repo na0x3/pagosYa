@@ -38,7 +38,8 @@ export function scopePopupCss(css: string, designId: string): { css: string; dro
     if (name !== 'media' && name !== 'supports') { dropped.push(`@${name}`); at.remove(); }
   });
   root.walkRules(rule => {
-    if (inKeyframes(rule)) return;
+    // A nested rule (CSS nesting) already sits inside a scoped one.
+    if (inKeyframes(rule) || rule.parent?.type === 'rule') return;
     rule.selectors = rule.selectors.map(selector => {
       const trimmed = selector.trim();
       if (/^(?::root|html|body)$/i.test(trimmed)) return scope;
@@ -48,7 +49,8 @@ export function scopePopupCss(css: string, designId: string): { css: string; dro
   root.walkDecls(decl => {
     const prop = decl.prop.toLowerCase(), value = decl.value.trim();
     const urls = [...value.matchAll(/url\(\s*(["']?)([^"')]*)\1\s*\)/gi)].map(m => m[2].trim());
-    if (urls.some(url => !LOCAL_URL.test(url)) || /expression\s*\(|javascript:/i.test(value)) { dropped.push(`${prop}: dirección fuera de la tienda`); decl.remove(); return; }
+    // Escapes (`\\75 rl(`) and bare addresses (image-set("https://…")) are how a url() hides from the check above.
+    if (urls.some(url => !LOCAL_URL.test(url)) || /expression\s*\(|javascript:|\\/i.test(value) || /\b(?:https?|ftp|wss?):/i.test(value) || /(?:^|[\s,("'])\/\//.test(value)) { dropped.push(`${prop}: dirección fuera de la tienda`); decl.remove(); return; }
     const rule = decl.parent as Rule | undefined;
     if (rule?.type !== 'rule' || inKeyframes(rule)) return;
     if (prop === 'position' && /^fixed\b/i.test(value) && rule.selector !== scope) { dropped.push(`${rule.selector}: position fixed`); decl.remove(); return; }

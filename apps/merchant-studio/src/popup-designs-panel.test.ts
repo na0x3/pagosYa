@@ -41,4 +41,13 @@ describe('Popups page', () => {
     expect(host.querySelector('[data-popup-steps]')).toBeNull();
     expect(host.querySelector('[data-popup-redesign]')!.textContent).toMatch(/Diseñar mi popup/);
   });
+  it('keeps «¿qué buscas?» to 6 products', async () => {
+    api.popupDesigns.mockResolvedValue({ ...overview(), products: Array.from({ length: 8 }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })) });
+    await mountPopupDesigns(host, api, 's1');
+    host.querySelectorAll<HTMLInputElement>('[name=popupProduct]').forEach(box => { box.checked = true; });
+    host.querySelector<HTMLButtonElement>('[data-popup-save]')!.click();
+    expect(api.popupSettings).not.toHaveBeenCalled();
+    expect(host.textContent).toMatch(/hasta 6 productos/);
+  });
 });
+

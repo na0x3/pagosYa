@@ -18,4 +18,15 @@ describe('popup css', () => {
     expect((scopePopupCss(':root{--a:1}body{--b:2}', 'd1') as { css: string }).css).toMatch(/^\[data-pya-popup="d1"\]\{--a:1\}/);
     expect(scopePopupCss(`.a{color:red}`.repeat(3000), 'd1')).toEqual({ problem: expect.stringMatching(/24/) });
   });
+  // Final review minors (owner 2026-11-18 «fix the small things»).
+  it('drops escaped url() and outside image-set addresses', () => {
+    const out = scopePopupCss('.a{background:\\75 rl(https://x.test/a.png);color:red}.b{background-image:image-set("https://x.test/a.jpg" 1x)}.c{background:image-set("/v1/uploads/a.jpg" 1x)}', 'cdesign000000000000000001') as any;
+    expect(out.css).not.toMatch(/x\.test/);
+    expect(out.css).toContain('.a{color:red}');
+    expect(out.css).toContain('/v1/uploads/a.jpg');
+  });
+  it('scopes nested rules once', () => {
+    const out = scopePopupCss('.a{color:red; .b{color:blue}}', 'cdesign000000000000000001') as any;
+    expect(out.css.match(/data-pya-popup/g)).toHaveLength(1);
+  });
 });

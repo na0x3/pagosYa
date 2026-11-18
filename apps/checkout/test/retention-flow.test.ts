@@ -151,4 +151,33 @@ describe("a YAPI popup design", () => {
     expect(root().querySelector("img").getAttribute("srcset")).toBe("https://api.test/v1/uploads/a.jpg 1x, https://api.test/v1/uploads/b.jpg 2x");
     expect(w.document.querySelector("dialog style").textContent).toContain('url("https://api.test/v1/uploads/b.jpg")');
   });
+  // Owner 2026-11-18 «fix the small things» (final review minors).
+  it("names the contact the store asks for, even after it changed in the settings", async () => {
+    const c = '<div><button data-close aria-label="Cerrar">×</button><p>Déjanos <span data-slot="contact"></span></p><input data-field placeholder="71234567"><button data-submit>Enviar</button></div>';
+    const { root, click } = await mount({ design: { capture: "email", steps: { ...steps, c } } });
+    click("[data-next]"); click("[data-tile]");
+    expect(root().querySelector("[data-slot=contact]").textContent).toBe("tu correo");
+    expect(root().querySelector("[data-field]").getAttribute("type")).toBe("email");
+    expect(root().querySelector("[data-field]").getAttribute("placeholder")).toBe("tu@correo.com");
+  });
+  it("falls back to the classic popup when the design has no step it can play", async () => {
+    const { w } = await mount({ design: { steps: {} } });
+    expect(w.document.querySelector("[data-pya-popup]")).toBeNull();
+    expect(w.document.querySelector("dialog .signup-close")).not.toBeNull();
+  });
+  it("keeps YAPI's data-choice on every answer and drops the template", async () => {
+    const quiz = '<div><button data-close aria-label="Cerrar">×</button><p data-question></p><button data-choice class="ans">x</button></div>';
+    const { root } = await mount({ design: { flow: [{ id: "q", kind: "quiz", questions: [{ id: "a", text: "¿Picante?", answers: [{ id: "s", text: "Sí", products: ["p1"] }, { id: "n", text: "No", products: ["p2"] }] }] }, { id: "c", kind: "capture" }, { id: "r", kind: "reveal" }], steps: { ...steps, q: quiz } } });
+    expect(Array.from(root().querySelectorAll("[data-choice]")).map((el: any) => el.textContent)).toEqual(["Sí", "No"]);
+  });
+  it("shows YAPI's launcher tab after the shopper closes, and it opens the popup again", async () => {
+    const { w, click } = await mount({ design: { launcher: '<span class="tab">¿15% para ti?</span>' } });
+    click("[data-close]");
+    const tab = w.document.querySelector(`[data-pya-launcher] [data-pya-popup="${ID}"]`);
+    expect(tab?.textContent).toContain("¿15% para ti?");
+    (w.document.querySelector("[data-pya-launcher] button") as any).click();
+    expect(w.document.querySelector("dialog").open).toBe(true);
+    expect(w.document.querySelector("[data-pya-launcher]")).toBeNull();
+  });
 });
+

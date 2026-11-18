@@ -13,7 +13,7 @@ const TAGS = new Set(['div', 'section', 'header', 'footer', 'p', 'h1', 'h2', 'h3
   // Harmless text and section tags YAPI reaches for (links stay out: the runtime does every navigation).
   'b', 'i', 'u', 's', 'mark', 'del', 'ins', 'sup', 'sub', 'blockquote', 'q', 'cite', 'time', 'article', 'aside', 'nav', 'main', 'dl', 'dt', 'dd', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath']);
 const ATTRS = new Set(['class', 'id', 'role', 'alt', 'src', 'srcset', 'width', 'height', 'loading', 'viewbox', 'd', 'fill', 'stroke', 'stroke-width', 'stroke-linecap',
-  'stroke-linejoin', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'transform', 'opacity', 'type', 'placeholder', 'autocomplete', 'inputmode', 'for', 'style']);
+  'stroke-linejoin', 'clip-path', 'offset', 'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform', 'fx', 'fy', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'transform', 'opacity', 'type', 'placeholder', 'autocomplete', 'inputmode', 'for', 'style']);
 const INPUT_TYPES = new Set(['email', 'tel', 'text']);
 // The store's own uploads and project assets only (an optional srcset descriptor after it).
 const LOCAL = /^(?:\/v1\/uploads\/[A-Za-z0-9._-]+|assets\/[A-Za-z0-9._/-]+)(?:\s+\d+(?:\.\d+)?[wx])?$/;
@@ -32,6 +32,8 @@ function cleanNode(parent: { childNodes: Node[] }): void {
     if (!TAGS.has(tag)) continue;
     el.attrs = el.attrs.flatMap(attr => {
       const name = attr.name.toLowerCase(), value = attr.value.trim();
+      // SVG paints may point at a gradient or clip inside the drawing (`url(#g1)`), never anywhere else.
+      if (['fill', 'stroke', 'clip-path'].includes(name) && /^url\(#[A-Za-z][\w-]{0,40}\)$/.test(value)) return [attr];
       if (name.startsWith('on') || SCRIPTY.test(value) && name !== 'style') return [];
       if (name.startsWith('data-') || name.startsWith('aria-')) return [attr];
       if (!ATTRS.has(name)) return [];
@@ -64,9 +66,11 @@ const attr = (el: Element, name: string) => el.attrs.find(a => a.name === name)?
 const hasAttr = (el: Element, name: string, value?: string) => el.attrs.some(a => a.name === name && (value === undefined || a.value === value));
 
 /** The first hook a step of this kind is missing, in the words YAPI gets back on a retry. */
-function hookProblem(root: { childNodes: Node[] }, kind: PopupStepKind): string | null {
+function hookProblem(root: { childNodes: Node[] }, kind: PopupStepKind | 'launcher'): string | null {
   const all = elements(root);
   const some = (name: string, value?: string) => all.some(el => hasAttr(el, name, value));
+  // The launcher is a small tab that opens the popup again: no fields, no hooks of its own.
+  if (kind === 'launcher') return all.some(el => el.tagName === 'input' || el.tagName === 'button' || hasAttr(el, 'data-field') || hasAttr(el, 'data-submit')) ? 'La pestaña no lleva campos ni botones: la plataforma la hace un botón.' : null;
   if (!some('data-close')) return 'Falta [data-close] (el botón para cerrar).';
   if (kind === 'offer' && !some('data-next')) return 'Falta [data-next] (el botón para seguir).';
   if (kind === 'game' && !some('data-game-surface')) return 'Falta [data-game-surface] (dónde va el juego).';
@@ -89,7 +93,7 @@ function hookProblem(root: { childNodes: Node[] }, kind: PopupStepKind): string 
   return null;
 }
 
-export function cleanStepHtml(html: string, kind: PopupStepKind): { html: string } | { problem: string } {
+export function cleanStepHtml(html: string, kind: PopupStepKind | 'launcher'): { html: string } | { problem: string } {
   if (typeof html !== 'string' || !html.trim()) return { problem: 'El paso está vacío.' };
   if (html.length > MAX_STEP_HTML) return { problem: `El paso es demasiado grande (máx. ${MAX_STEP_HTML.toLocaleString('es')} caracteres).` };
   // A real step has a few hundred tags; thousands only come from nesting bombs that make the parser slow.

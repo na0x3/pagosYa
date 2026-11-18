@@ -399,20 +399,22 @@
   // never writes script: the steps carry data-* hooks and this runtime does the logic (products, contact, code, cart, landing).
   function mountFlow(dialog, design, { api, demo, remember, slug, items, startAt, apiBaseUrl }) {
     const hostedPage = Boolean(window.PAGOSYA_HOSTED);
-    dialog.classList.add('pagosya-flow');
     // Photos YAPI wrote as /v1/uploads/… live on the API (a published store's frame resolves paths against another origin).
     const apiOrigin = String(apiBaseUrl || '').replace(/\/v1\/?$/, '');
     const upload = value => apiOrigin && /^\/v1\/uploads\//.test(value) ? `${apiOrigin}${value}` : value;
     const sheet = document.createElement('style');
     sheet.textContent = String(design.css || '').replace(/url\(\s*(["']?)(\/v1\/uploads\/[^"')\s]+)\1\s*\)/g, (_, quote, path) => `url(${quote}${upload(path)}${quote})`);
     const root = document.createElement('div'); root.setAttribute('data-pya-popup', String(design.id || ''));
-    dialog.replaceChildren(sheet, root);
     const steps = (Array.isArray(design.flow) ? design.flow : []).filter(step => step && step.kind);
     const land = steps.find(step => step.kind === 'land');
     const product = id => (items || []).find(item => item && item.id === id && item.active !== false && item.archived !== true);
     const live = step => step.kind === 'pick' ? (step.products || []).filter(product).length >= 2
       : step.kind === 'quiz' ? (step.questions || []).some(question => (question.answers || []).some(answer => (answer.products || []).some(product))) : true;
     const shown = steps.filter(step => step.kind !== 'land' && typeof design.steps?.[step.id] === 'string' && live(step));
+    // A design with no step this page can play (malformed, or every product gone) leaves the classic popup in place.
+    if (!shown.length || !shown.some(step => step.kind === 'capture')) return false;
+    dialog.classList.add('pagosya-flow');
+    dialog.replaceChildren(sheet, root);
     const memory = { answers: [], favourite: '', code: '', busy: false };
     let at = Math.max(0, shown.findIndex(step => step.id === startAt));
     const money = value => typeof value === 'number' ? `Bs ${(value / 100).toLocaleString('es-BO', { minimumFractionDigits: value % 100 ? 2 : 0 })}` : String(value ?? '');
@@ -466,14 +468,17 @@
       if (step.kind === 'quiz') {
         const questions = Array.isArray(step.questions) ? step.questions : [];
         let q = 0, pool = null;
-        const choice = root.querySelector('[data-choice]'), label = root.querySelector('[data-question]');
+        const template = root.querySelector('[data-choice]'), label = root.querySelector('[data-question]');
+        const marker = document.createComment('choices');
+        const choice = template ? template.cloneNode(true) : null;
+        if (template) template.replaceWith(marker);
         const ask = () => {
           const question = questions[q];
           if (!question || !choice || !label) { next(); return; }
           label.textContent = question.text || '';
-          choice.parentElement.querySelectorAll('[data-choice-copy]').forEach(el => el.remove());
+          root.querySelectorAll('[data-choice-copy]').forEach(el => el.remove());
           for (const answer of question.answers || []) {
-            const copy = choice.cloneNode(true); copy.removeAttribute('data-choice'); copy.setAttribute('data-choice-copy', answer.id || '');
+            const copy = choice.cloneNode(true); copy.setAttribute('data-choice-copy', answer.id || '');
             copy.textContent = answer.text || ''; copy.hidden = false;
             copy.addEventListener('click', () => {
               memory.answers.push(answer.text || '');
@@ -483,16 +488,20 @@
               memory.favourite = pool[0] || memory.favourite;
               q += 1; if (q < questions.length) ask(); else next();
             });
-            choice.before(copy);
+            marker.before(copy);
           }
-          choice.hidden = true;
         };
         ask();
       }
       if (step.kind === 'capture') {
         const field = root.querySelector('[data-field]'), submit = root.querySelector('[data-submit]'), error = root.querySelector('[data-slot=error]');
         const say = text => { if (error) error.textContent = text; else { let line = root.querySelector('.pagosya-flow-error'); if (!line) { line = document.createElement('p'); line.className = 'pagosya-flow-error'; line.setAttribute('role', 'status'); root.append(line); } line.textContent = text; } };
-        if (field) { field.setAttribute('autocomplete', design.capture === 'email' ? 'email' : 'tel'); field.setAttribute('inputmode', design.capture === 'email' ? 'email' : 'tel'); }
+        const email = design.capture === 'email';
+        root.querySelectorAll('[data-slot=contact]').forEach(el => { el.textContent = email ? 'tu correo' : 'tu WhatsApp'; });
+        if (field) {
+          field.setAttribute('type', email ? 'email' : 'tel'); field.setAttribute('autocomplete', email ? 'email' : 'tel'); field.setAttribute('inputmode', email ? 'email' : 'tel');
+          field.setAttribute('placeholder', email ? 'tu@correo.com' : 'Tu número de WhatsApp'); field.setAttribute('aria-label', email ? 'Tu correo' : 'Tu WhatsApp');
+        }
         const send = async () => {
           if (memory.busy) return;
           const value = String(field?.value || '').trim();
@@ -520,6 +529,20 @@
       }
       (root.querySelector('[data-next],[data-field],[data-tile],[data-choice-copy],button') || root).focus?.();
     }
+    // YAPI's launcher: a small tab in a corner after the shopper closes without the code; it opens the popup again from the start.
+    const preview = Boolean(dialog.closest('[data-pagosya-popup-preview]'));
+    dialog.addEventListener('close', () => {
+      if (preview || memory.code || typeof design.launcher !== 'string' || !design.launcher.trim() || document.querySelector('[data-pya-launcher]')) return;
+      const holder = document.createElement('div'); holder.setAttribute('data-pya-launcher', '');
+      holder.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483000';
+      const button = document.createElement('button'); button.type = 'button'; button.setAttribute('aria-label', 'Abrir la oferta');
+      button.style.cssText = 'all:unset;cursor:pointer;display:block';
+      const scope = document.createElement('span'); scope.style.display = 'block'; scope.setAttribute('data-pya-popup', String(design.id || ''));
+      scope.innerHTML = design.launcher;
+      button.append(scope); holder.append(button);
+      button.addEventListener('click', () => { holder.remove(); at = 0; draw(); if (!dialog.open) dialog.showModal(); });
+      document.body.append(holder);
+    });
     draw();
     return true;
   }

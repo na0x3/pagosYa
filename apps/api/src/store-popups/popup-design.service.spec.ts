@@ -12,10 +12,12 @@ const goodMeasure = (stepId: string, width: number) => ({ stepId, size: { width,
 
 function setup(answers: unknown[], over: { measures?: Array<(id: string, w: number) => unknown>; taken?: Array<{ fingerprint: string; composition: string }> } = {}) {
   const rows: any[] = [];
-  let retention: any = { settings: { popupDesignId: 'old' } };
+  let retention: any = { settings: { popupDesignId: 'old' }, updatedAt: new Date(1) };
   const prisma: any = {
     store: { findFirst: jest.fn(async () => ({ id: 's1', name: 'Calima', slug: 'calima', merchantId: 'm1', onboarding: null })) },
-    storeRetention: { findUnique: jest.fn(async () => retention), upsert: jest.fn(async ({ update }: any) => { retention = { settings: update.settings }; return retention; }) },
+    storeRetention: { findUnique: jest.fn(async () => retention), upsert: jest.fn(async ({ update }: any) => { retention = { settings: update.settings }; return retention; }),
+      create: jest.fn(async ({ data }: any) => { retention = { settings: data.settings, updatedAt: new Date(1) }; return retention; }),
+      updateMany: jest.fn(async ({ where, data }: any) => { if (retention?.updatedAt && where.updatedAt && retention.updatedAt.getTime() !== where.updatedAt.getTime()) return { count: 0 }; retention = { settings: data.settings, updatedAt: new Date((retention?.updatedAt?.getTime() ?? 0) + 1) }; return { count: 1 }; }) },
     paymentLink: { findMany: jest.fn(async () => [{ id: 'p1', name: 'Habanero', amount: 4500, imageUrls: ['/v1/uploads/a.jpg'] }, { id: 'p2', name: 'Serrano', amount: 4000, imageUrls: ['/v1/uploads/b.jpg'] }]) },
     storePopupDesign: {
       findMany: jest.fn(async () => over.taken ?? []),
@@ -26,6 +28,9 @@ function setup(answers: unknown[], over: { measures?: Array<(id: string, w: numb
       update: jest.fn(async ({ where, data }: any) => Object.assign(rows.find(r => r.id === where.id), data)),
     },
   };
+  const order: string[] = [];
+  prisma.$executeRaw = jest.fn(async () => { order.push('lock'); return 1; });
+  const aggregate = prisma.storePopupDesign.aggregate; prisma.storePopupDesign.aggregate = jest.fn(async (args: any) => { order.push('version'); return aggregate(args); });
   prisma.$transaction = (fn: any) => fn(prisma);
   const uploads: any = { getBuffer: jest.fn(async () => Buffer.from('img')), saveBuffer: jest.fn(async () => ({ url: '/v1/uploads/preview.jpg', filename: 'preview.jpg', mimeType: 'image/jpeg', byteSize: 3 })) };
   const plans: any = { assertCredits: jest.fn(async () => 100) };
@@ -34,7 +39,7 @@ function setup(answers: unknown[], over: { measures?: Array<(id: string, w: numb
   service.call = jest.fn(async (prompt: string) => { calls.push(prompt); return answers.shift(); });
   let attempt = 0;
   service.measure = jest.fn(async (input: any) => { const make = over.measures?.[Math.min(attempt++, (over.measures?.length ?? 1) - 1)] ?? goodMeasure; return ['o', 'p', 'c', 'r'].flatMap(id => [1280, 390].map(w => make(id, w))) as any; });
-  return { service, rows, prisma, calls, plans, retention: () => retention };
+  return { service, rows, prisma, calls, plans, order, retention: () => retention, setRetention: (value: any) => { retention = value; } };
 }
 
 describe('PopupDesignService', () => {
@@ -114,5 +119,22 @@ describe('PopupDesignService', () => {
     await service.updateSettings('m1', 's1', { on: true, percent: 15 });
     expect(retention().settings.popupDesignId).toBe(fresh.design.id);
     expect(retention().settings.popupDesignOff ?? null).toBeNull();
+  });
+  it('takes the store lock before numbering a new version, so two designs never clash', async () => {
+    const { service, order } = setup([answer()]);
+    await service.design('m1', 's1', { createdBy: 'merchant-chat' });
+    expect(order).toEqual(['lock', 'version']);
+  });
+  it('writes the store settings only over the version it read, retrying when another save came first', async () => {
+    const { service, prisma, retention, setRetention } = setup([answer()]);
+    const real = prisma.storeRetention.updateMany;
+    prisma.storeRetention.updateMany = jest.fn(async (args: any) => { if (prisma.storeRetention.updateMany.mock.calls.length === 1) { setRetention({ settings: { ...retention().settings, comebackEnabled: true }, updatedAt: new Date(50) }); return { count: 0 }; } return real(args); });
+    await service.updateSettings('m1', 's1', { percent: 20 });
+    expect(retention().settings).toMatchObject({ comebackEnabled: true, popupDesignPercent: 20 });
+  });
+  it('keeps «¿qué buscas?» to 6 products, the most a design was checked with', async () => {
+    const { service, prisma } = setup([answer()]);
+    prisma.paymentLink.findMany = jest.fn(async ({ where }: any) => (where.id?.in ?? []).map((id: string) => ({ id })));
+    await expect(service.updateSettings('m1', 's1', { products: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] })).rejects.toThrow(/6/);
   });
 });

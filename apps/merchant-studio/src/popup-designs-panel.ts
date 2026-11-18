@@ -46,7 +46,7 @@ export async function mountPopupDesigns(host: HTMLElement, api: PopupApi, storeI
         <label>Contacto<select name="popupCapture"${off}>${[['whatsapp', 'WhatsApp'], ['email', 'Correo']].map(([v, l]) => `<option value="${v}"${data!.capture === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
         <label class="retention-toggle"><input type="checkbox" name="popupOn"${data.on ? ' checked' : ''}${off}>Mostrar el popup de YAPI</label>
       </div>
-      ${data.pick.length ? `<fieldset class="popup-designs__products"><legend>Productos en «¿qué buscas?»</legend>${data.products.map(p => `<label><input type="checkbox" name="popupProduct" value="${esc(p.id)}"${data!.pick.includes(p.id) ? ' checked' : ''}${off}>${esc(p.name)}</label>`).join('')}</fieldset>` : ''}
+      ${data.pick.length ? `<fieldset class="popup-designs__products"><legend>Productos en «¿qué buscas?» (de 2 a 6)</legend>${data.products.map(p => `<label><input type="checkbox" name="popupProduct" value="${esc(p.id)}"${data!.pick.includes(p.id) ? ' checked' : ''}${off}>${esc(p.name)}</label>`).join('')}</fieldset>` : ''}
       <p><button type="button" data-popup-save${off}>Guardar popup</button></p>` : ''}
       ${earlier.length ? `<details class="popup-designs__versions"><summary>Versiones anteriores (${earlier.length})</summary><ul>${earlier.map(d => `<li data-popup-version="${esc(d.id)}">${d.previews?.[0] ? `<img src="${esc(asset(d.previews[0].url))}" alt="" width="64" loading="lazy">` : ''}<span>v${d.version} · ${esc(d.composition || '')}</span><button type="button"${off}>Volver a esta</button></li>`).join('')}</ul></details>` : ''}
       <p role="${failed ? 'alert' : 'status'}" class="retention-message">${esc(note)}</p>
@@ -63,6 +63,8 @@ export async function mountPopupDesigns(host: HTMLElement, api: PopupApi, storeI
       const boxes = Array.from(host.querySelectorAll<HTMLInputElement>('[name=popupProduct]'));
       const products = boxes.length ? boxes.filter(box => box.checked).map(box => box.value) : undefined;
       if (products && products.length < 2) { failed = true; note = 'Elige al menos 2 productos para «¿qué buscas?».'; draw(); return; }
+      // A design is checked with at most 6 tiles; more would be a layout nobody looked at.
+      if (products && products.length > 6) { failed = true; note = 'Elige hasta 6 productos para «¿qué buscas?».'; draw(); return; }
       void run(() => api.popupSettings(storeId, { percent, capture, on, ...(products ? { products } : {}) }), 'Popup guardado.');
     });
     host.querySelectorAll<HTMLElement>('[data-popup-version]').forEach(row => row.querySelector('button')?.addEventListener('click', () => void run(() => api.popupRestore(storeId, row.dataset.popupVersion!), 'Volviste a esa versión.')));

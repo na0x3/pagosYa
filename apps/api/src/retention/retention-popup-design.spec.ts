@@ -53,4 +53,10 @@ describe('popup designs in retention', () => {
   it('keeps the YAPI popup settings when the other retention settings are saved', () => {
     expect(KEPT_SETTINGS).toEqual(expect.arrayContaining(['popupDesignId', 'popupDesignOff', 'popupDesignPercent', 'popupDesignCapture']));
   });
+  it('keeps only answers the design\'s quiz offers as interests', async () => {
+    const quizDesign = { ...design, flow: [{ id: 'q', kind: 'quiz', questions: [{ id: 'a', text: '¿Picante?', answers: [{ id: 's', text: 'Muy picante', products: ['p1'] }] }] }, ...design.flow] };
+    const { service, prisma } = setup({ design: quizDesign });
+    await service.subscribe(store, null, { phone: '71234567', source: 'popup', popupDesignId: design.id, answers: ['Muy picante', 'compra en http://x.test'] } as any);
+    expect(prisma.storeWhatsappSubscriber.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ interests: ['Muy picante'] }) }));
+  });
 });

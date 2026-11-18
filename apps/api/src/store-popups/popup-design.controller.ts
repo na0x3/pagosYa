@@ -7,7 +7,7 @@ import { PopupDesignService } from './popup-design.service';
 export class PopupDesignSettingsDto {
   @IsOptional() @IsInt() @Min(0) @Max(100) percent?: number;
   @IsOptional() @IsIn(['whatsapp', 'email']) capture?: 'whatsapp' | 'email';
-  @IsOptional() @IsArray() @ArrayMaxSize(12) @IsString({ each: true }) products?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(6) @IsString({ each: true }) products?: string[];
   @IsOptional() @IsBoolean() on?: boolean;
 }
 

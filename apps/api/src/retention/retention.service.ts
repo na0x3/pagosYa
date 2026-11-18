@@ -232,7 +232,10 @@ export class RetentionService {
   private async subscribeToDesign(store: { id: string; slug: string; name: string }, settings: RetentionSettings, visitId: string | null | undefined, rawEmail: string | null, profile: Pick<RetentionSubscribeDto, 'phone' | 'answers' | 'favourite' | 'popupDesignId'>) {
     const design = await this.prisma.storePopupDesign.findFirst({ where: { id: profile.popupDesignId!, storeId: store.id, status: 'LIVE' } });
     if (!design) throw new BadRequestException('Este popup ya no está activo; recarga la página.');
-    const interests = (profile.answers ?? []).map(answer => String(answer).trim().slice(0, 60)).filter(Boolean).slice(0, 6);
+    // Only answers this design's quiz offers are kept (a public endpoint: never free text from the shopper's browser).
+    const offered = new Set(((design.flow ?? []) as Array<{ kind?: string; questions?: Array<{ answers?: Array<{ text?: string }> }> }>)
+      .flatMap(step => step.kind === 'quiz' ? (step.questions ?? []).flatMap(question => (question.answers ?? []).map(answer => String(answer.text ?? '').trim())) : []));
+    const interests = (profile.answers ?? []).map(answer => String(answer).trim()).filter(answer => offered.has(answer)).map(answer => answer.slice(0, 60)).slice(0, 6);
     const favourite = await this.realFavourite(store.id, profile.favourite);
     const tag = { popupDesignId: design.id, ...(visitId ? { sourceVisitId: visitId } : {}) };
     if (design.capture === 'whatsapp') {

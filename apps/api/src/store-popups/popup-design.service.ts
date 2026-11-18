@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
@@ -53,9 +54,19 @@ export class PopupDesignService {
   private async settings(storeId: string) {
     return ((await this.prisma.storeRetention.findUnique({ where: { storeId } }))?.settings ?? {}) as Record<string, unknown>;
   }
+  /** Writes over the settings version it read (another save in between → read again), so no other setting is lost. */
   private async point(storeId: string, patch: Record<string, unknown>) {
-    const settings = { ...(await this.settings(storeId)), ...patch };
-    await this.prisma.storeRetention.upsert({ where: { storeId }, create: { storeId, settings: settings as never }, update: { settings: settings as never } });
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const row = await this.prisma.storeRetention.findUnique({ where: { storeId } });
+      if (!row) {
+        const created = await this.prisma.storeRetention.create({ data: { storeId, settings: patch as never } }).then(() => true, () => false);
+        if (created) return; continue;
+      }
+      const settings = { ...((row.settings ?? {}) as Record<string, unknown>), ...patch };
+      const { count } = await this.prisma.storeRetention.updateMany({ where: { storeId, updatedAt: row.updatedAt }, data: { settings: settings as never } });
+      if (count) return;
+    }
+    throw new ConflictException('Otra pestaña guardó a la vez; vuelve a intentarlo.');
   }
 
   /** YAPI's answer made safe and complete, or the list of what is wrong (in the words YAPI gets back). */
@@ -78,7 +89,7 @@ export class PopupDesignService {
     const repeated = varietyProblem({ fingerprint, composition }, taken);
     if (repeated) return { problems: [repeated] };
     const launcher = String(raw?.launcher ?? '').trim();
-    const cleanLauncher = launcher ? cleanStepHtml(`<div><button data-close hidden></button>${launcher}</div>`, 'offer') : null;
+    const cleanLauncher = launcher ? cleanStepHtml(launcher.slice(0, 2000), 'launcher') : null;
     return { flow: flowResult.flow, steps, css: scoped.css, launcher: cleanLauncher && 'html' in cleanLauncher ? cleanLauncher.html : null, composition, fingerprint };
   }
 
@@ -111,17 +122,27 @@ export class PopupDesignService {
       problems = measures ? checkFlowRender(measures) : ['No se pudo abrir el navegador de prueba.'];
       if (!problems.length) candidate = built;
     }
-    const version = ((await this.prisma.storePopupDesign.aggregate({ where: { storeId }, _max: { version: true } }))._max.version ?? 0) + 1;
     const previews = [];
     for (const m of (measures ?? []).filter(m => m.size.width < 500 && m.screenshot.length)) previews.push({ stepId: m.stepId, url: (await this.uploads.saveBuffer(m.screenshot, 'image/jpeg')).url });
-    const base = { id, storeId, version, createdBy: options.createdBy, request: options.request ?? null, capture, percent, checks: { problems } as never, previews: (candidate ? previews : null) as never };
+    // One store, one writer at a time: the version is numbered and the LIVE one switched under a per-store lock.
+    const nextVersion = async (tx: Prisma.TransactionClient) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`popup-design:${storeId}`}::text))`;
+      return ((await tx.storePopupDesign.aggregate({ where: { storeId }, _max: { version: true } }))._max.version ?? 0) + 1;
+    };
+    const base = { id, storeId, createdBy: options.createdBy, request: options.request ?? null, capture, percent, checks: { problems } as never, previews: (candidate ? previews : null) as never };
     if (!candidate) {
-      await this.prisma.storePopupDesign.create({ data: { ...base, status: 'FAILED', flow: [] as never, steps: {} as never, css: '', composition: '', fingerprint: '' } });
+      const version = await this.prisma.$transaction(async tx => {
+        const version = await nextVersion(tx);
+        await tx.storePopupDesign.create({ data: { ...base, version, status: 'FAILED', flow: [] as never, steps: {} as never, css: '', composition: '', fingerprint: '' } });
+        return version;
+      });
       return { design: { id, version, status: 'FAILED' as const }, problems };
     }
-    await this.prisma.$transaction(async tx => {
+    const version = await this.prisma.$transaction(async tx => {
+      const version = await nextVersion(tx);
       await tx.storePopupDesign.updateMany({ where: { storeId, status: 'LIVE', id: { not: id } }, data: { status: 'RETIRED' } });
-      await tx.storePopupDesign.create({ data: { ...base, status: 'LIVE', flow: candidate!.flow as never, steps: candidate!.steps as never, css: candidate!.css, launcher: candidate!.launcher, composition: candidate!.composition, fingerprint: candidate!.fingerprint } });
+      await tx.storePopupDesign.create({ data: { ...base, version, status: 'LIVE', flow: candidate!.flow as never, steps: candidate!.steps as never, css: candidate!.css, launcher: candidate!.launcher, composition: candidate!.composition, fingerprint: candidate!.fingerprint } });
+      return version;
     });
     await this.point(storeId, { popupDesignId: id, popupDesignOff: null });
     return { design: { id, version, status: 'LIVE' as const, composition: candidate.composition }, problems: [] };
@@ -186,6 +207,7 @@ export class PopupDesignService {
     const row = liveId || offId ? await this.prisma.storePopupDesign.findFirst({ where: { id: liveId || offId, storeId } }) : null;
     if (patch.products) {
       const owned = await this.prisma.paymentLink.findMany({ where: { storeId, id: { in: patch.products }, status: 'ACTIVE' }, select: { id: true } });
+      if (patch.products.length > 6) throw new BadRequestException('Elige hasta 6 productos para «¿qué buscas?».');
       if (owned.length !== patch.products.length || owned.length < 2) throw new BadRequestException('Elige al menos 2 productos activos de tu tienda.');
     }
     const percent = patch.percent !== undefined ? clamp(patch.percent) : undefined;

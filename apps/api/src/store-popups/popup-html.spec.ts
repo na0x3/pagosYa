@@ -28,4 +28,15 @@ describe('popup step html', () => {
   it('asks the reveal step for data-next', () => {
     expect(cleanStepHtml('<div><button data-close>×</button><strong data-slot="code"></strong></div>', 'reveal')).toEqual({ problem: expect.stringMatching(/data-next/) });
   });
+  it('keeps SVG gradients that point inside the drawing, never outside', () => {
+    const html = '<div><button data-close>×</button><svg viewBox="0 0 10 10"><defs><linearGradient id="g1"><stop offset="0" stop-color="#f00"></stop></linearGradient></defs><rect width="10" height="10" fill="url(#g1)"></rect><circle r="2" fill="url(https://x.test/a)"></circle></svg><button data-next>Ok</button></div>';
+    const out = cleanStepHtml(html, 'offer') as { html: string };
+    expect(out.html).toContain('fill="url(#g1)"');
+    expect(out.html).toContain('stop-color="#f00"');
+    expect(out.html).not.toContain('x.test');
+  });
+  it('cleans a launcher tab without step hooks', () => {
+    expect(cleanStepHtml('<span class="tab">¿15% para ti?</span>', 'launcher')).toEqual({ html: '<span class="tab">¿15% para ti?</span>' });
+    expect(cleanStepHtml('<span>x</span><input data-field>', 'launcher')).toEqual({ problem: expect.stringMatching(/pestaña/) });
+  });
 });
