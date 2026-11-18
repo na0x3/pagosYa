@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
 import { KycStatus, MerchantStatus, PayoutAccountStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditLogService } from "../ops/audit-log.service";
@@ -9,6 +9,7 @@ import { IdentityDocumentsService } from "./identity-documents.service";
 import type { OpsActor } from "./ops-actor";
 import { PayoutAccountsService } from "../payout-accounts/payout-accounts.service";
 import { accountSnapshot, ownerFitsLevel } from "../payout-accounts/payout-account-rules";
+import { SanctionsService } from "../sanctions/sanctions.service";
 
 /**
  * pagosYa-side half of merchant onboarding: collect KYC once, review it
@@ -18,12 +19,15 @@ import { accountSnapshot, ownerFitsLevel } from "../payout-accounts/payout-accou
  */
 @Injectable()
 export class KycService {
+  private readonly logger = new Logger(KycService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly terms: TermsAcceptanceService,
     private readonly identityDocuments: IdentityDocumentsService,
     private readonly payoutAccounts: PayoutAccountsService,
+    @Optional() private readonly sanctions?: SanctionsService,
   ) {}
 
   async submit(merchantId: string, dto: SubmitKycDto) {
@@ -74,8 +78,12 @@ export class KycService {
         ciBackDocId: dto.ciBackDocId,
         selfieDocId: dto.selfieDocId,
         nitCertificateDocId: targetLevel === 1 ? dto.nitCertificateDocId : null,
+        isPep: dto.isPep === true,
+        pepRole: dto.isPep === true ? dto.pepRole?.trim() || null : null,
       },
     });
+    // Sanctions lists (UN, OFAC): checked now; a failure here never loses the submission, approval screens again.
+    await this.sanctions?.screenSubmission(submission.id).catch((error) => this.logger.error(`Sanctions screening failed for ${submission.id}: ${(error as Error).message}`));
     if (account.status === PayoutAccountStatus.PENDING_REVIEW && !account.kycSubmissionId) {
       await this.prisma.payoutAccount.update({ where: { id: account.id }, data: { kycSubmissionId: submission.id } });
     }
@@ -98,6 +106,8 @@ export class KycService {
         merchant: { select: { id: true, name: true, email: true, settlementMode: true, level: true } },
         // The account sent with this identity: ops see whether it is approved and can open its proof.
         payoutAccounts: { select: { id: true, status: true, isChange: true, bankCode: true, accountNumber: true, holderName: true, ownerType: true }, orderBy: { createdAt: "desc" }, take: 1 },
+        // The latest sanctions screening: ops decide a possible match before they can approve.
+        screenings: { orderBy: { createdAt: "desc" }, take: 1 },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -111,6 +121,14 @@ export class KycService {
     }
 
     const actorLabel = `${actor.name} <${actor.email}>`;
+    if (dto.decision === KycStatus.APPROVED) {
+      const blocker = await this.sanctions?.approvalBlocker(submissionId);
+      if (blocker) throw new BadRequestException(blocker);
+      // A politically exposed person gets enhanced due diligence: the approval says what was checked.
+      if (submission.isPep && (dto.note?.trim().length ?? 0) < 15) {
+        throw new BadRequestException("Persona expuesta políticamente: escribe en la nota qué revisaste (origen de fondos, cargo) antes de aprobar");
+      }
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const reviewed = await tx.merchantKycSubmission.update({

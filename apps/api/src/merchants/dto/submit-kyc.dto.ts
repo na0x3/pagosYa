@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class SubmitKycDto {
   @ApiPropertyOptional({ enum: [1, 2], default: 2 })
@@ -67,4 +67,15 @@ export class SubmitKycDto {
   @IsOptional()
   @IsString()
   nitCertificateDocId?: string;
+
+  @ApiPropertyOptional({ description: "Self-declared politically exposed person, or close family/associate of one (UIF)." })
+  @IsOptional()
+  @IsBoolean()
+  isPep?: boolean;
+
+  @ApiPropertyOptional({ example: "Concejal de El Alto (2021-2026)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  pepRole?: string;
 }

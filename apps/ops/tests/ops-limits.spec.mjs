@@ -91,6 +91,7 @@ async function openOps(page, { onRequest } = {}) {
       });
     }
     if (path === "/internal/audit_log") return route.fulfill({ json: [] });
+    if (path === "/internal/sanctions") return route.fulfill({ json: { required: true, lists: [] } });
     if (path === "/internal/support/cases") return route.fulfill({ json: [supportCaseSummary] });
     if (path === "/internal/domain_orders") return route.fulfill({ json: [] });
     if (path === "/internal/international_payments") return route.fulfill({ json: [] });

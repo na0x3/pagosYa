@@ -353,6 +353,10 @@
   button.reject { border-color: var(--pg-border); background: var(--bento-red); color: var(--pg-text); }
   button.danger { border-color: var(--pg-border); background: var(--pg-error-soft); color: var(--pg-text); }
   button.danger:hover { border-color: var(--pg-border); background: var(--bento-red); }
+  .screening-matches { margin: 6px 0; padding-left: 16px; font-size: 0.75rem; }
+  .screening-decide { display: grid; gap: 4px; }
+  .screening-decide input { font-size: 0.75rem; }
+  .badge-ok { color: #1f7a3d; } .badge-danger { color: #b42318; } .badge-warn { color: #8a5300; }
   .mfa-setup { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--pg-border); }
   .mfa-setup[hidden], #signOut[hidden] { display: none; }
   .mfa-setup img { display: block; margin: 8px 0; background: #fff; border-radius: 8px; }
@@ -553,6 +557,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <section class="block" id="revisiones">
     <div class="panel">
       <div class="section-head"><h2>Revisiones KYC pendientes</h2><p class="muted">Aprobar habilita credenciales en vivo y desembolsos para el comercio.</p></div>
+      <p class="muted sanctions-status" id="sanctionsStatus"></p>
       <div id="notConnected1" class="empty-state">Ingresa tu token y conecta para cargar la cola.</div>
       <div id="empty" class="empty-state" style="display:none">No hay solicitudes pendientes.</div>
       <div class="table-wrap"><table id="table" style="display:none">
@@ -563,6 +568,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
             <th>Liquidación</th>
             <th>Razón social / NIT</th>
             <th>Representante legal</th>
+            <th>Listas / PEP</th>
             <th>Cuenta de desembolso</th>
             <th>Fotos</th>
             <th>Enviado</th>
@@ -1105,7 +1111,53 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     openPayoutProof(button.dataset.accountProof);
   });
 
+  /** Sanctions (UN, OFAC) and PEP: what the screening found, and the decision ops must take before approving. */
+  function screeningCell(s) {
+    const screening = (s.screenings || [])[0];
+    const pep = s.isPep ? `<br><span class="badge badge-warn">PEP${s.pepRole ? ": " + esc(s.pepRole) : ""}</span><br><span class="muted">Aprobar pide una nota de revisión reforzada.</span>` : "";
+    if (!screening || screening.status === "NOT_SCREENED") return `<span class="muted">Sin revisar: las listas no estaban cargadas (se revisa al aprobar)</span>${pep}`;
+    if (screening.status === "CLEAR") return `<span class="badge badge-ok">Sin coincidencias</span>${pep}`;
+    if (screening.status === "DISMISSED") return `<span class="badge">Descartada</span><br><span class="muted">${esc(screening.resolutionNote || "")}</span>${pep}`;
+    if (screening.status === "CONFIRMED") return `<span class="badge badge-danger">Coincidencia confirmada</span>${pep}`;
+    const matches = (screening.matches || []).slice(0, 5).map((m) => `<li><strong>${esc(m.source)}</strong> ${esc(m.primaryName)}${m.listedName !== m.primaryName ? ` (alias ${esc(m.listedName)})` : ""}<br><span class="muted">Nac.: ${esc((m.birthDates || []).join(", ") || "—")} · ${esc((m.nationalities || []).join(", ") || "—")} · ${esc((m.programs || []).join(", "))}</span></li>`).join("");
+    return `<span class="badge badge-danger">Posible coincidencia</span>
+      <ul class="screening-matches">${matches}</ul>
+      <div class="screening-decide" data-screening="${esc(screening.id)}">
+        <input class="screening-note" placeholder="Cómo lo sabes (fecha de nacimiento, CI, nacionalidad)" minlength="10">
+        <button type="button" class="secondary" data-screening-action="DISMISSED">Es otra persona</button>
+        <button type="button" class="reject" data-screening-action="CONFIRMED">Es la persona listada</button>
+      </div>${pep}`;
+  }
+
+  async function loadSanctionsStatus() {
+    const el = document.getElementById("sanctionsStatus");
+    try {
+      const status = await api("/internal/sanctions");
+      const lists = status.lists.map((l) => `${l.source} ${new Date(l.importedAt).toLocaleDateString("es-BO")} (${l.entries})`).join(" · ");
+      el.innerHTML = `Listas de sanciones: ${lists ? esc(lists) : "<strong>no cargadas</strong>"}${opsRole === "SUPPORT_ADMIN" ? ' <button type="button" class="secondary" id="sanctionsImport">Actualizar listas</button>' : ""}`;
+      document.getElementById("sanctionsImport")?.addEventListener("click", async (event) => {
+        event.target.disabled = true;
+        event.target.textContent = "Descargando UN y OFAC…";
+        try { const r = await api("/internal/sanctions/import", { method: "POST" }); errorEl.textContent = `Listas actualizadas; ${r.rescreened} comercio(s) aprobado(s) con una coincidencia nueva.`; await refresh(); }
+        catch (err) { errorEl.textContent = "No pudimos actualizar las listas: " + err.message; event.target.disabled = false; }
+      });
+    } catch { el.textContent = ""; }
+  }
+
+  rowsEl.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-screening-action]");
+    if (!button) return;
+    const box = button.closest(".screening-decide");
+    const note = box.querySelector(".screening-note").value.trim();
+    if (note.length < 10) { errorEl.textContent = "Explica la decisión sobre la coincidencia (al menos 10 caracteres)."; box.querySelector(".screening-note").focus(); return; }
+    try {
+      await api(`/internal/sanctions/screenings/${encodeURIComponent(box.dataset.screening)}/resolve`, { method: "POST", body: JSON.stringify({ decision: button.dataset.screeningAction, note }) });
+      await refreshQueue();
+    } catch (err) { errorEl.textContent = "No pudimos guardar la decisión: " + err.message; }
+  });
+
   async function refreshQueue() {
+    loadSanctionsStatus();
     const pending = await api("/v1/merchants/kyc/pending");
     if (pending.length === 0) {
       tableEl.style.display = "none";
@@ -1117,12 +1169,13 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     rowsEl.innerHTML = pending
       .map(
         (s) => `
-      <tr data-id="${esc(s.id)}">
+      <tr data-id="${esc(s.id)}" data-pep="${s.isPep ? "1" : ""}">
         <td><strong>${esc(s.merchant.name)}</strong><br><span class="muted">${esc(s.merchant.email)}</span></td>
         <td>Nivel solicitado: ${esc(s.targetLevel)}<br><span class="muted">Nivel actual: ${esc(s.merchant.level)}</span></td>
         <td><span class="badge badge-${s.merchant.settlementMode === "AGGREGATOR" ? "aggregator" : "facilitator"}">${esc(s.merchant.settlementMode)}</span></td>
         <td>${esc(s.legalName)}${s.taxId ? `<br><span class="muted">NIT ${esc(s.taxId)}</span>` : ""}</td>
         <td>${s.legalRepName ? `${esc(s.legalRepName)}${s.legalRepDocumentId ? `<br><span class="muted">${esc(s.legalRepDocumentId)}</span>` : ""}` : `<span class="muted">—</span>`}</td>
+        <td class="screening-cell">${screeningCell(s)}</td>
         <td>${identityAccountCell(s)}</td>
         <td class="kyc-photos-cell" data-submission="${esc(s.id)}" data-slots="${esc([s.ciFrontDocId ? "CI_FRONT" : "", s.ciBackDocId ? "CI_BACK" : "", s.selfieDocId ? "SELFIE" : "", s.nitCertificateDocId ? "NIT_CERTIFICATE" : ""].filter(Boolean).join(","))}">
           <button type="button" class="secondary kyc-view-photos">Ver fotos</button>
@@ -2060,6 +2113,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
     if (action === "approve" && !confirm(`¿Aprobar a ${legalName} para desembolsos en vivo? Esta acción habilita sus credenciales y desembolsos.`)) return;
     let note;
+    if (action === "approve" && row.dataset.pep) {
+      // A politically exposed person: the approval records what the enhanced review checked.
+      const raw = prompt("Persona expuesta políticamente. ¿Qué revisaste? (cargo, origen de los fondos):");
+      if (raw === null) return;
+      note = raw;
+    }
     if (action === "reject") {
       const raw = prompt("Motivo del rechazo (será visible para el comercio):");
       if (raw === null) return;
@@ -2076,7 +2135,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     try {
       await api(`/v1/merchants/kyc/${id}/review`, {
         method: "POST",
-        body: JSON.stringify(action === "approve" ? { decision: "APPROVED" } : { decision: "REJECTED", note }),
+        body: JSON.stringify(action === "approve" ? { decision: "APPROVED", ...(note ? { note } : {}) } : { decision: "REJECTED", note }),
       });
       await refresh();
     } catch (err) {

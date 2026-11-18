@@ -189,6 +189,72 @@ model OpsUser {
   reviewedPayoutAccounts PayoutAccount[]     @relation("PayoutAccountReviewer")
 }
 
+enum SanctionsSource {
+  UN
+  OFAC
+}
+
+enum KycScreeningStatus {
+  // No listed name looks like the screened ones.
+  CLEAR
+  // Waits for ops: approval is refused until it is dismissed (a different person) or confirmed.
+  POSSIBLE_MATCH
+  DISMISSED
+  CONFIRMED
+  // The lists were not loaded when it ran; in production approval waits for a real screening.
+  NOT_SCREENED
+}
+
+// One person or organisation on a sanctions list (UN Security Council consolidated list, US OFAC SDN), refreshed daily.
+model SanctionsEntry {
+  id            String          @id @default(cuid())
+  source        SanctionsSource
+  externalId    String
+  kind          String
+  primaryName   String
+  names         String[]
+  birthDates    String[]
+  nationalities String[]
+  programs      String[]
+  listedOn      String?
+  importId      String
+
+  @@unique([source, externalId])
+  @@index([source])
+}
+
+// Evidence of which version of each list screenings used.
+model SanctionsListImport {
+  id          String          @id @default(cuid())
+  source      SanctionsSource
+  entries     Int
+  sha256      String
+  publishedAt String?
+  importedAt  DateTime        @default(now())
+
+  @@index([source, importedAt])
+}
+
+// A KYC submission's names checked against the sanctions lists: at submission and again whenever the lists change.
+model KycScreening {
+  id                  String                @id @default(cuid())
+  submissionId        String
+  submission          MerchantKycSubmission @relation(fields: [submissionId], references: [id])
+  screenedNames       String[]
+  status              KycScreeningStatus
+  matches             Json
+  listImports         Json
+  trigger             String
+  resolvedByOpsUserId String?
+  resolvedByLabel     String?
+  resolutionNote      String?
+  resolvedAt          DateTime?
+  createdAt           DateTime              @default(now())
+
+  @@index([submissionId, createdAt])
+  @@index([status])
+}
+
 // A staff session started with the ops_ token and an authenticator code (ISO A-01). Only its SHA-256 is stored.
 model OpsSession {
   id          String    @id @default(cuid())
@@ -773,7 +839,11 @@ model MerchantKycSubmission {
   ciBackDocId          String?
   selfieDocId          String?
   nitCertificateDocId  String?
+  // Self-declared politically exposed person (or close family/associate of one): enhanced review before approval.
+  isPep                Boolean                 @default(false)
+  pepRole              String?
   payoutAccounts       PayoutAccount[]
+  screenings           KycScreening[]
 
   @@index([merchantId, createdAt])
 }

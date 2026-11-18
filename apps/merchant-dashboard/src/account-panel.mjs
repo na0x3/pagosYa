@@ -169,6 +169,11 @@ export function createAccountPanel(deps) {
         button.disabled = false;
       }
     });
+    document.getElementById("kycIsPep")?.addEventListener("change", (event) => {
+      const row = document.getElementById("kycPepRoleRow");
+      row.hidden = !event.target.checked;
+      document.getElementById("kycPepRole").required = event.target.checked;
+    });
     document.getElementById("kycForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       errorEl.textContent = "";
@@ -192,7 +197,10 @@ export function createAccountPanel(deps) {
           deps.payoutAccounts?.sync();
         }
         for (const key of ["bankCode", "accountNumber", "holderName", "payoutBankAccount"]) delete data[key];
-        const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId, nitCertificateDocId, payoutAccountId };
+        // PEP self-declaration (UIF): a checkbox sends "on"; the API takes a boolean and the role only when it is checked.
+        const isPep = data.isPep === "on";
+        if (!isPep) delete data.pepRole;
+        const payload = { ...data, isPep, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId, nitCertificateDocId, payoutAccountId };
         for (const key of Object.keys(payload)) if (payload[key] === "" || payload[key] === undefined) delete payload[key];
         await api("/merchants/kyc", { method: "POST", body: JSON.stringify(payload) });
         await refresh();

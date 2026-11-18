@@ -822,6 +822,10 @@
           <div><label>Foto del CI (reverso)</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocBack" data-slot="CI_BACK" required></div>
           <div><label>Selfie sosteniendo tu CI</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocSelfie" data-slot="SELFIE" required></div>
           <div id="kycPersonFields"><label>Certificación de no inscripción en el NIT (la descargas del SIN)</label><input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" id="kycDocNitCertificate" data-slot="NIT_CERTIFICATE" required></div>
+          <div class="kyc-pep">
+            <label class="checkbox-row"><input type="checkbox" name="isPep" id="kycIsPep"> Tengo o tuve en los últimos 5 años un cargo público importante, o soy familiar o colaborador cercano de alguien que lo tiene (persona expuesta políticamente)</label>
+            <div id="kycPepRoleRow" hidden><label for="kycPepRole">¿Qué cargo, y de quién?</label><input id="kycPepRole" name="pepRole" maxlength="200" placeholder="Ej.: concejal de El Alto (2021–2026)"></div>
+          </div>
           <p id="kycAccountExisting" class="muted" hidden></p>
           <div id="kycAccountFields">
             <div><label>Banco para tus desembolsos</label><select name="bankCode" required><option value="">Elige tu banco</option></select></div>

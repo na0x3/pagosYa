@@ -308,6 +308,43 @@ describe("KycService.review", () => {
   });
 });
 
+describe("KycService with sanctions screening and PEP", () => {
+  const pending = { id: "kyc_1", merchantId: "m_1", status: KycStatus.PENDING_REVIEW, targetLevel: 1, isPep: false };
+  const sanctions = (blocker: string | null) => ({ screenSubmission: jest.fn().mockResolvedValue({}), approvalBlocker: jest.fn().mockResolvedValue(blocker) });
+
+  it("screens every new submission, and keeps it when the screening itself fails", async () => {
+    const prisma = kycPrisma({ id: "m_1", status: "PENDING", level: 0 });
+    const ok = sanctions(null);
+    await new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accountsOk() as any, ok as any).submit("m_1", { ...person, isPep: true, pepRole: " Concejal " } as any);
+    expect(ok.screenSubmission).toHaveBeenCalledWith("kyc_1");
+    expect(prisma.merchantKycSubmission.create).toHaveBeenCalledWith({ data: expect.objectContaining({ isPep: true, pepRole: "Concejal" }) });
+    const failing = { screenSubmission: jest.fn().mockRejectedValue(new Error("lists down")) };
+    await expect(new KycService(kycPrisma({ id: "m_1", status: "PENDING", level: 0 }) as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accountsOk() as any, failing as any).submit("m_1", person as any)).resolves.toMatchObject({ id: "kyc_1" });
+  });
+
+  it("refuses to approve while the sanctions screening has an open match, but still lets ops reject", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchantKycSubmission.findUnique.mockResolvedValue(pending);
+    prisma.merchantKycSubmission.update.mockResolvedValue({ ...pending, status: KycStatus.REJECTED });
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accountsOk() as any, sanctions("Hay una posible coincidencia") as any);
+    await expect(service.review("kyc_1", { decision: KycStatus.APPROVED }, actor)).rejects.toThrow("Hay una posible coincidencia");
+    expect(prisma.merchantKycSubmission.update).not.toHaveBeenCalled();
+    await service.review("kyc_1", { decision: KycStatus.REJECTED, note: "Coincide con la lista" }, actor);
+    expect(prisma.merchantKycSubmission.update).toHaveBeenCalled();
+  });
+
+  it("approves a politically exposed person only with a note on what was checked", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findUniqueOrThrow.mockResolvedValue({ id: "m_1", level: 0 });
+    prisma.merchantKycSubmission.findUnique.mockResolvedValue({ ...pending, isPep: true });
+    prisma.merchantKycSubmission.update.mockResolvedValue({ ...pending, status: KycStatus.APPROVED });
+    const service = new KycService(prisma as any, makeFakeAuditLog() as any, termsAccepted() as any, docsOk() as any, accountsOk() as any, sanctions(null) as any);
+    await expect(service.review("kyc_1", { decision: KycStatus.APPROVED, note: "ok" }, actor)).rejects.toThrow("Persona expuesta políticamente");
+    await service.review("kyc_1", { decision: KycStatus.APPROVED, note: "Cargo verificado; ingresos de su tienda de ropa, no del cargo" }, actor);
+    expect(prisma.merchantKycSubmission.update).toHaveBeenCalled();
+  });
+});
+
 describe("KycService.listPending", () => {
   it("shows ops the payout account sent with each identity, so they see its status and can open its proof", async () => {
     const prisma = makeFakePrisma() as any;

@@ -86,6 +86,7 @@ export class OpsUserService {
 
   /** Spends a code: matched against the secret and recorded, so the same code cannot start a second session. */
   private async spendCode(user: { id: string; totpSecret: string | null; totpLastStep: number | null }, code: string | undefined) {
+    if (!code?.trim()) throw new UnauthorizedException({ code: "mfa_required", message: "Escribe el código de 6 dígitos de tu app de verificación" });
     const step = user.totpSecret ? verifyTotp(user.totpSecret, code ?? "", user.totpLastStep) : null;
     if (step === null) throw new UnauthorizedException("Código incorrecto o ya usado");
     const claimed = await this.prisma.opsUser.updateMany({

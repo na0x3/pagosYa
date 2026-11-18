@@ -155,6 +155,27 @@ test("uploads three photos and the NIT certificate and submits a level 1 applica
   expect(posted.find((p) => p.path === "/merchants/kyc").body.taxId).toBeUndefined();
 });
 
+// UIF: a politically exposed person says so (and which office); the API gets a boolean and the role.
+test("a seller who declares being a PEP sends the office with the identity", async ({ page }) => {
+  const posted = [];
+  await openCompliance(page, usage({ level: 0, levelName: "Sin verificar", liveEnabled: false, monthlyLimit: null, perPaymentLimit: null, used: 0 }), posted);
+  const photo = { name: "ci.png", mimeType: "image/png", buffer: Buffer.from("89504e47", "hex") };
+  for (const id of ["#kycDocFront", "#kycDocBack", "#kycDocSelfie"]) await page.setInputFiles(id, photo);
+  await page.setInputFiles("#kycDocNitCertificate", { name: "certificado.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7") });
+  await page.fill("#kycForm [name=legalName]", "Juana Mamani");
+  await page.fill("#kycForm [name=legalRepDocumentId]", "7654321 LP");
+  await page.selectOption("#kycForm [name=bankCode]", "BNB");
+  await page.fill("#kycForm [name=accountNumber]", "1000234567");
+  await page.fill("#kycForm [name=holderName]", "Juana Mamani");
+  await page.setInputFiles("#kycAccountProof", photo);
+  await expect(page.locator("#kycPepRoleRow")).toBeHidden();
+  await page.check("#kycIsPep");
+  await expect(page.locator("#kycPepRole")).toHaveAttribute("required", "");
+  await page.fill("#kycPepRole", "Concejal de El Alto (2021-2026)");
+  await page.click("#kycForm button[type=submit]");
+  await expect.poll(() => posted.find((p) => p.path === "/merchants/kyc")?.body).toMatchObject({ isPep: true, pepRole: "Concejal de El Alto (2021-2026)" });
+});
+
 test("asks for NIT when applying for level 2", async ({ page }) => {
   await openCompliance(page, usage());
   await expect(page.locator("#kycTargetLevel")).toHaveValue("2");

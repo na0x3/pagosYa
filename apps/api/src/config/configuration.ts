@@ -271,6 +271,10 @@ export interface AppConfig {
   opsAllowedIps: string[];
   /** ISO M-09: changing the payout account or creating an API key needs the merchant's second factor. On in production. */
   merchantMfaForSensitive: boolean;
+  /** Sanctions screening (UN + OFAC) at KYC: approval waits for a real screening. On in production. */
+  sanctionsScreeningRequired: boolean;
+  /** Download the UN and OFAC lists every day at 05:00 La Paz and re-screen approved merchants. On in production. */
+  sanctionsAutoImport: boolean;
   corsOrigins: string[];
   exposeDocs: boolean;
   trustProxy: false | number | string;
@@ -527,6 +531,8 @@ export default (): { app: AppConfig } => {
     opsMfaRequired: process.env.OPS_MFA_REQUIRED ? process.env.OPS_MFA_REQUIRED === "true" : environment === "production",
     opsAllowedIps: (process.env.OPS_ALLOWED_IPS ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
     merchantMfaForSensitive: process.env.MERCHANT_MFA_FOR_SENSITIVE ? process.env.MERCHANT_MFA_FOR_SENSITIVE === "true" : environment === "production",
+    sanctionsScreeningRequired: process.env.SANCTIONS_SCREENING_REQUIRED ? process.env.SANCTIONS_SCREENING_REQUIRED === "true" : environment === "production",
+    sanctionsAutoImport: process.env.SANCTIONS_AUTO_IMPORT ? process.env.SANCTIONS_AUTO_IMPORT === "true" : environment === "production",
     // Checkout iframe origin plus any browser-side internal tools (ops
     // console, merchant dashboard) — merchant *backends* never need CORS,
     // they call the API server-to-server.
