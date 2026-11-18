@@ -644,10 +644,16 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
     const popupKey = `pagosya:popup:${config.slug}`;
     const remember = () => { state.signupDismissed = true; try { sessionStorage.setItem(dismissedKey, '1'); } catch {} try { localStorage.setItem(popupKey, String(Date.now())); } catch {} };
     // The cookie question comes first (live 2026-11-18: its banner covered the popup): open once the shopper has answered it.
+    // On a published store the banner is on the outer page, which says whether its question is still open and when it is answered.
     const privacy = window.PAGOSYA_PRIVACY;
-    const waitingForCookies = () => !demo && typeof privacy?.choice === 'function' && privacy.choice(config.slug) === null;
+    const waitingForCookies = () => !demo && (window.PAGOSYA_HOSTED ? window.PAGOSYA_COOKIES_PENDING === true
+      : typeof privacy?.choice === 'function' && privacy.choice(config.slug) === null && Boolean(document.querySelector('[data-pagosya-privacy][data-notice]')));
+    let waiting = false;
+    const answered = () => { if (!waiting) return; waiting = false; window.PAGOSYA_COOKIES_PENDING = false; setTimeout(open, 800); };
+    window.addEventListener('pagosya:privacy-change', answered);
+    window.addEventListener('message', event => { if (event.source === window.parent && event.data?.type === 'pagosya:cookies-answered') answered(); });
     const open = () => {
-      if (waitingForCookies()) { window.addEventListener('pagosya:privacy-change', () => setTimeout(open, 800), { once: true }); return; }
+      if (waitingForCookies()) { waiting = true; return; }
       if (!dialog.isConnected || dialog.open || document.querySelector('dialog[open]')) return; dialog.showModal(); (dialog.querySelector('h2') || dialog.querySelector('[data-pya-popup] button, [data-pya-popup] [tabindex]'))?.focus(); };
     dialog.addEventListener('close', remember);
     // Popups 2.0: a LIVE YAPI design takes the dialog; timing and the 30-day memory stay the same.

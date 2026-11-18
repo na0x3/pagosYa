@@ -23,7 +23,7 @@ const items = [
   { id: "p3", name: "Viejo", price: 1, active: false, imageUrls: ["https://cdn.test/c.jpg"] },
 ];
 
-async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: boolean; body: any }; hosted?: boolean; parent?: boolean; design?: Record<string, unknown>; privacy?: unknown } = {}) {
+async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: boolean; body: any }; hosted?: boolean; parent?: boolean; design?: Record<string, unknown>; privacy?: unknown; banner?: boolean; cookiesPending?: boolean } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", error => { if (!error.message.includes("Could not parse CSS stylesheet")) throw error; });
   const dom = new JSDOM(`<body><main><h1>Calima</h1></main></body>`, { runScripts: "outside-only", virtualConsole, url: "https://tienda.test/" });
@@ -54,6 +54,8 @@ async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: bo
   const messages: any[] = [];
   w.postMessage = (data: any) => messages.push(data);
   if (o.privacy) w.PAGOSYA_PRIVACY = o.privacy;
+  if (o.banner) w.document.body.insertAdjacentHTML("beforeend", '<aside data-pagosya-privacy data-notice="true"></aside>');
+  if (o.cookiesPending) w.PAGOSYA_COOKIES_PENDING = true;
   w.eval(retention);
   await w.PAGOSYA_RETENTION_MOUNT({ slug: "calima", apiBaseUrl: "https://api.test/v1", data: { items: o.items ?? items } });
   for (const fn of timers.splice(0)) fn();
@@ -181,12 +183,25 @@ describe("a YAPI popup design", () => {
     expect(w.document.querySelector("[data-pya-launcher]")).toBeNull();
   });
   // Live 2026-11-18 (Remolino, owner «its all buggy»): the cookie banner sat over the popup; answers lost YAPI's layout.
-  it("waits for the cookie answer before opening", async () => {
+  it("waits for the cookie answer while its banner shows on this page", async () => {
     let answered: boolean | null = null;
-    const { w, timers } = await mount({ privacy: { choice: () => answered } });
+    const { w, timers } = await mount({ privacy: { choice: () => answered }, banner: true });
     expect(w.document.querySelector("dialog").open).toBe(false);
     answered = true;
+    w.document.querySelector("[data-pagosya-privacy]").removeAttribute("data-notice");
     w.dispatchEvent(new w.CustomEvent("pagosya:privacy-change", { detail: { slug: "calima", analytics: true } }));
+    for (const fn of timers.splice(0)) fn();
+    expect(w.document.querySelector("dialog").open).toBe(true);
+  });
+  // Live 2026-11-18: on a published store the banner is on the outer page; the frame's own copy never hears the answer.
+  it("on a published store opens when the outer page has no question pending", async () => {
+    const { w } = await mount({ hosted: true, privacy: { choice: () => null } });
+    expect(w.document.querySelector("dialog").open).toBe(true);
+  });
+  it("on a published store waits for the outer page's word that the cookie question was answered", async () => {
+    const { w, timers } = await mount({ hosted: true, privacy: { choice: () => null }, cookiesPending: true });
+    expect(w.document.querySelector("dialog").open).toBe(false);
+    w.dispatchEvent(new w.MessageEvent("message", { data: { type: "pagosya:cookies-answered" }, source: w.parent }));
     for (const fn of timers.splice(0)) fn();
     expect(w.document.querySelector("dialog").open).toBe(true);
   });

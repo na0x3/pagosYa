@@ -155,7 +155,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, ...(favouriteOf(slug) ? { favourite: favouriteOf(slug) } : {}), ...(promoOf(slug) ? { promo: promoOf(slug) } : {}), accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, ...(favouriteOf(slug) ? { favourite: favouriteOf(slug) } : {}), ...(promoOf(slug) ? { promo: promoOf(slug) } : {}), ...(privacy.choice(slug) === null ? { cookiesPending: true } : {}), accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
   // The store draws its account pages; this origin keeps the session, calls the API and guards typed passwords
   // (spec 2026-10-08-store-built-in-account-pages-design). An emailed token is read here and never reaches the store.
   const emailToken = takeAccountEmailToken(location, history);
@@ -168,7 +168,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   funnel.track('visit');
   // G1: the frame only names moments; consent, the session, dedupe and sending happen here.
   const analytics = createStoreAnalytics(slug, merchantPreview, () => funnel.sessionId(), () => sourceVisitToken(slug));
-  const consentChanged = (event: Event) => { if ((event as CustomEvent).detail?.slug === slug) funnel.track('visit'); };
+  // The store frame's popup waits while the cookie question is open (live 2026-11-18): tell it once the shopper answers.
+  const consentChanged = (event: Event) => { if ((event as CustomEvent).detail?.slug !== slug) return; funnel.track('visit'); frame.contentWindow?.postMessage({ type: 'pagosya:cookies-answered' }, '*'); };
   window.addEventListener('pagosya:privacy-change', consentChanged);
   const pending = new Set<string>();
   const carrierRates = new Set<string>();

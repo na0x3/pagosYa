@@ -22,3 +22,13 @@ describe('the popup code handed to the store frame', () => {
     expect(sourcePreviewDocument(snapshot, 'index.html', { hosted: true, promo: 'x"</script>' })).not.toContain('PAGOSYA_PROMO');
   });
 });
+
+// Live 2026-11-18: the outer page tells the frame that its cookie question is still open, so the popup waits for the answer.
+describe('the cookie question handed to the store frame', () => {
+  const snapshot = { files: [{ path: 'index.html', content: '<!doctype html><html><head></head><body><main>Tienda</main></body></html>' }] } as never;
+  it('is flagged only while pending', () => {
+    expect(sourcePreviewDocument(snapshot, 'index.html', { hosted: true, cookiesPending: true })).toContain('window.PAGOSYA_COOKIES_PENDING=true;');
+    expect(sourcePreviewDocument(snapshot, 'index.html', { hosted: true })).not.toContain('PAGOSYA_COOKIES_PENDING');
+  });
+});
+
