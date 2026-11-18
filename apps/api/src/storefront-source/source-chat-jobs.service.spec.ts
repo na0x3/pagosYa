@@ -388,3 +388,22 @@ it('final review 2026-11-18: photos sent after YAPI asked for them resume the br
   await service.create('m', 's', { instruction: 'aquí están', assetUrls: ['/v1/uploads/p.jpg'], revision: 2, requestId: '6f1d2c0e-1111-4c4c-9999-000000000002' } as any);
   expect(prisma.storeSourceChatJob.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ input: expect.objectContaining({ brandFlow: true, instruction: 'Mejorar mi marca https://instagram.com/calima aquí están' }) }) }));
 });
+
+it('spec 2026-11-18 popups: a message about the popup runs the popup designer, not the chat', async () => {
+  const { prisma, chat } = setup();
+  const popups: any = { forChat: jest.fn().mockResolvedValue({ skipped: true }), design: jest.fn() };
+  const service = new SourceChatJobsService(prisma, chat, undefined, undefined, undefined, undefined, undefined, undefined, popups);
+  await service.run({ ...job, input: { ...input, revision: 2, instruction: 'rediseña mi popup', popupDesign: true } });
+  expect(popups.forChat).toHaveBeenCalledWith(expect.objectContaining({ merchantId: 'm', storeId: 's' }));
+  expect(chat.send).not.toHaveBeenCalled();
+  prisma.storeSourceChatJob.findUnique.mockResolvedValue(null);
+  prisma.storeAgentMessage = { findMany: jest.fn().mockResolvedValue([]) };
+  prisma.storeSourceChatJob.create.mockImplementation(async ({ data }: any) => ({ id: 'j', ...data, status: 'QUEUED', sequence: 0, attempt: 0, createdAt: new Date(), updatedAt: new Date() }));
+  // Final review I4: a discount change goes to the YAPI popup only when the store has one.
+  prisma.storeRetention = { findUnique: jest.fn().mockResolvedValue({ settings: {} }) };
+  await service.create('m', 's', { instruction: 'pon 15% en el popup', revision: 2, requestId: '6f1d2c0e-1111-4c4c-9999-000000000004' } as any);
+  expect(prisma.storeSourceChatJob.create).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ input: expect.not.objectContaining({ popupDesign: true }) }) }));
+  prisma.storeRetention.findUnique.mockResolvedValue({ settings: { popupDesignId: 'cd1' } });
+  await service.create('m', 's', { instruction: 'pon 15% en el popup', revision: 2, requestId: '6f1d2c0e-1111-4c4c-9999-000000000003' } as any);
+  expect(prisma.storeSourceChatJob.create).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ input: expect.objectContaining({ popupDesign: true }) }) }));
+});

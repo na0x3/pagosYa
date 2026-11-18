@@ -24,6 +24,11 @@
     }
     root.querySelectorAll(`[data-product-id="${CSS.escape(id)}"]`).forEach(card => card.insertAdjacentHTML('afterbegin', '<span class="pya-fav-tag">Tu favorito</span>'));
   }
+  // Popups 2.0 (spec 2026-11-18): a YAPI popup lands the shopper with its code already in the cart.
+  document.addEventListener('pagosya:apply-promo', event => {
+    const code = String(event.detail?.code || '').trim();
+    if (PROMO_PATTERN.test(code)) rememberPromo(code);
+  });
   document.addEventListener('pagosya:favourite', event => {
     const id = event.detail && typeof event.detail.id === 'string' ? event.detail.id : '';
     if (!id) return;

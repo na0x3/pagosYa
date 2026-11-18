@@ -135,3 +135,14 @@ describe('rasca y elige subscribers (spec 2026-11-10)', () => {
     await vi.waitFor(() => expect(api.writeRetention).toHaveBeenCalledWith('s1', 'whatsapp/w1/remove', 'POST', {}));
   });
 });
+
+describe('Popups 2.0 (spec 2026-11-18)', () => {
+  it('puts the YAPI popup section at the top of the program, outside the settings form', async () => {
+    (api as any).popupDesigns = vi.fn().mockResolvedValue({ liveId: 'cd1', on: true, percent: 10, capture: 'whatsapp', pick: [], products: [], designs: [{ id: 'cd1', version: 1, status: 'LIVE', composition: 'Ticket', previews: [{ stepId: 'o', url: '/v1/uploads/o.jpg' }] }] });
+    await openRetention(api, 's1', undefined, { host, view: 'program' });
+    await vi.waitFor(() => expect(host.querySelector('[data-popup-steps] img')).not.toBeNull());
+    const section = host.querySelector('[data-popup-designs]')!;
+    expect(section.closest('form')).toBeNull();
+    expect(section.compareDocumentPosition(host.querySelector('[data-settings]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});

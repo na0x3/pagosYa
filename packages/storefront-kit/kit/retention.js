@@ -394,6 +394,159 @@
     render(saved ? 'reveal' : 'play');
     if (saved) revealed = true;
   }
+
+  // Popups 2.0 (spec 2026-11-18 §7): a YAPI-written design — its own markup per step and its own scoped sheet — played here. YAPI
+  // never writes script: the steps carry data-* hooks and this runtime does the logic (products, contact, code, cart, landing).
+  function mountFlow(dialog, design, { api, demo, remember, slug, items, startAt, apiBaseUrl }) {
+    const hostedPage = Boolean(window.PAGOSYA_HOSTED);
+    // Photos YAPI wrote as /v1/uploads/… live on the API (a published store's frame resolves paths against another origin).
+    const apiOrigin = String(apiBaseUrl || '').replace(/\/v1\/?$/, '');
+    const upload = value => apiOrigin && /^\/v1\/uploads\//.test(value) ? `${apiOrigin}${value}` : value;
+    const sheet = document.createElement('style');
+    sheet.textContent = String(design.css || '').replace(/url\(\s*(["']?)(\/v1\/uploads\/[^"')\s]+)\1\s*\)/g, (_, quote, path) => `url(${quote}${upload(path)}${quote})`);
+    const root = document.createElement('div'); root.setAttribute('data-pya-popup', String(design.id || ''));
+    const steps = (Array.isArray(design.flow) ? design.flow : []).filter(step => step && step.kind);
+    const land = steps.find(step => step.kind === 'land');
+    const product = id => (items || []).find(item => item && item.id === id && item.active !== false && item.archived !== true);
+    const live = step => step.kind === 'pick' ? (step.products || []).filter(product).length >= 2
+      : step.kind === 'quiz' ? (step.questions || []).some(question => (question.answers || []).some(answer => (answer.products || []).some(product))) : true;
+    const shown = steps.filter(step => step.kind !== 'land' && typeof design.steps?.[step.id] === 'string' && live(step));
+    // A design with no step this page can play (malformed, or every product gone) leaves the classic popup in place.
+    if (!shown.length || !shown.some(step => step.kind === 'capture')) return false;
+    dialog.classList.add('pagosya-flow');
+    dialog.replaceChildren(sheet, root);
+    const memory = { answers: [], favourite: '', code: '', busy: false };
+    let at = Math.max(0, shown.findIndex(step => step.id === startAt));
+    const money = value => typeof value === 'number' ? `Bs ${(value / 100).toLocaleString('es-BO', { minimumFractionDigits: value % 100 ? 2 : 0 })}` : String(value ?? '');
+    let applied = false;
+    const applyCode = () => {
+      if (applied || !memory.code) return; applied = true;
+      if (hostedPage) { try { parent.postMessage({ type: 'pagosya:apply-promo', code: memory.code }, '*'); } catch {} }
+      document.dispatchEvent(new CustomEvent('pagosya:apply-promo', { detail: { code: memory.code } }));
+    };
+    const finish = () => {
+      applyCode();
+      if (land && memory.favourite) {
+        try { localStorage.setItem(`pagosya:fav:${slug}`, memory.favourite); } catch {}
+        if (hostedPage) { try { parent.postMessage({ type: 'pagosya:favourite', id: memory.favourite }, '*'); } catch {} }
+        document.dispatchEvent(new CustomEvent('pagosya:favourite', { detail: { id: memory.favourite, go: land.to !== 'scroll' } }));
+      }
+      dialog.close();
+    };
+    const next = () => { if (at + 1 < shown.length) { at += 1; draw(); } else finish(); };
+    const back = () => { if (at > 0) { at -= 1; draw(); } };
+    function draw() {
+      const step = shown[at];
+      if (!step) { dialog.close(); return; }
+      root.innerHTML = design.steps[step.id];
+      root.querySelectorAll('img[src], source[srcset], img[srcset]').forEach(img => {
+        if (img.hasAttribute('src')) img.setAttribute('src', upload(img.getAttribute('src')));
+        if (img.hasAttribute('srcset')) img.setAttribute('srcset', img.getAttribute('srcset').split(',').map(part => { const [url, ...rest] = part.trim().split(/\s+/); return [upload(url), ...rest].join(' '); }).join(', '));
+      });
+      root.setAttribute('data-step', step.kind);
+      root.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => { remember(); if (memory.code) applyCode(); dialog.close(); }));
+      root.querySelectorAll('[data-back]').forEach(el => el.addEventListener('click', back));
+      root.querySelectorAll('[data-next]').forEach(el => el.addEventListener('click', next));
+      if (step.kind === 'pick') {
+        const tile = root.querySelector('[data-tile]');
+        if (tile) {
+          for (const id of (step.products || []).filter(product)) {
+            const item = product(id), copy = tile.cloneNode(true);
+            const photo = copy.querySelector('[data-slot=photo]');
+            if (photo) { photo.setAttribute('src', (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || ''); photo.setAttribute('alt', item.name || ''); }
+            const nameSlot = copy.querySelector('[data-slot=name]'); if (nameSlot) nameSlot.textContent = item.name || '';
+            const priceSlot = copy.querySelector('[data-slot=price]'); if (priceSlot) priceSlot.textContent = money(item.price);
+            copy.setAttribute('tabindex', '0'); copy.setAttribute('role', 'button');
+            const choose = () => { memory.favourite = id; next(); };
+            copy.addEventListener('click', choose);
+            copy.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(); } });
+            tile.before(copy);
+          }
+          tile.remove();
+        }
+      }
+      if (step.kind === 'quiz') {
+        const questions = Array.isArray(step.questions) ? step.questions : [];
+        let q = 0, pool = null;
+        const template = root.querySelector('[data-choice]'), label = root.querySelector('[data-question]');
+        const marker = document.createComment('choices');
+        const choice = template ? template.cloneNode(true) : null;
+        if (template) template.replaceWith(marker);
+        const ask = () => {
+          const question = questions[q];
+          if (!question || !choice || !label) { next(); return; }
+          label.textContent = question.text || '';
+          root.querySelectorAll('[data-choice-copy]').forEach(el => el.remove());
+          for (const answer of question.answers || []) {
+            const copy = choice.cloneNode(true); copy.setAttribute('data-choice-copy', answer.id || '');
+            copy.textContent = answer.text || ''; copy.hidden = false;
+            copy.addEventListener('click', () => {
+              memory.answers.push(answer.text || '');
+              const found = (answer.products || []).filter(product);
+              pool = pool ? pool.filter(id => found.includes(id)) : found;
+              if (!pool.length) pool = found;
+              memory.favourite = pool[0] || memory.favourite;
+              q += 1; if (q < questions.length) ask(); else next();
+            });
+            marker.before(copy);
+          }
+        };
+        ask();
+      }
+      if (step.kind === 'capture') {
+        const field = root.querySelector('[data-field]'), submit = root.querySelector('[data-submit]'), error = root.querySelector('[data-slot=error]');
+        const say = text => { if (error) error.textContent = text; else { let line = root.querySelector('.pagosya-flow-error'); if (!line) { line = document.createElement('p'); line.className = 'pagosya-flow-error'; line.setAttribute('role', 'status'); root.append(line); } line.textContent = text; } };
+        const email = design.capture === 'email';
+        root.querySelectorAll('[data-slot=contact]').forEach(el => { el.textContent = email ? 'tu correo' : 'tu WhatsApp'; });
+        if (field) {
+          field.setAttribute('type', email ? 'email' : 'tel'); field.setAttribute('autocomplete', email ? 'email' : 'tel'); field.setAttribute('inputmode', email ? 'email' : 'tel');
+          field.setAttribute('placeholder', email ? 'tu@correo.com' : 'Tu número de WhatsApp'); field.setAttribute('aria-label', email ? 'Tu correo' : 'Tu WhatsApp');
+        }
+        const send = async () => {
+          if (memory.busy) return;
+          const value = String(field?.value || '').trim();
+          if (design.capture === 'email' ? !/^\S+@\S+\.\S+$/.test(value) : value.replace(/\D/g, '').length < 8) { say(design.capture === 'email' ? 'Escribe tu correo.' : 'Escribe tu WhatsApp con 8 números.'); return; }
+          memory.busy = true; if (submit) submit.disabled = true;
+          try {
+            const body = { ...(design.capture === 'email' ? { email: value } : { phone: value }), contact: design.capture === 'email' ? 'email' : 'whatsapp', consent: true, source: 'popup', popupDesignId: design.id, answers: memory.answers, favourite: memory.favourite || undefined };
+            const answer = demo ? { code: 'POPDEMO10' } : await api('subscribe', body);
+            memory.code = answer?.code || '';
+            remember();
+            next();
+          } catch (failure) { say(failure?.message || 'No se pudo completar. Intenta de nuevo.'); }
+          finally { memory.busy = false; if (submit) submit.disabled = false; }
+        };
+        submit?.addEventListener('click', event => { event.preventDefault(); void send(); });
+        field?.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); void send(); } });
+        // The consent is the platform's, never the design's words.
+        const consent = document.createElement('small'); consent.className = 'pagosya-flow-consent';
+        consent.textContent = design.capture === 'email' ? 'Al enviar aceptas recibir novedades de esta tienda por correo; puedes darte de baja cuando quieras.' : 'Al enviar aceptas que esta tienda te escriba por WhatsApp; puedes pedir que no lo haga cuando quieras.';
+        (submit?.parentElement || root).append(consent);
+      }
+      if (step.kind === 'reveal') {
+        root.querySelectorAll('[data-slot=code]').forEach(el => { el.textContent = memory.code; });
+        root.querySelectorAll('[data-slot=percent]').forEach(el => { el.textContent = `${design.percent}%`; });
+      }
+      (root.querySelector('[data-next],[data-field],[data-tile],[data-choice-copy],button') || root).focus?.();
+    }
+    // YAPI's launcher: a small tab in a corner after the shopper closes without the code; it opens the popup again from the start.
+    const preview = Boolean(dialog.closest('[data-pagosya-popup-preview]'));
+    dialog.addEventListener('close', () => {
+      if (preview || memory.code || typeof design.launcher !== 'string' || !design.launcher.trim() || document.querySelector('[data-pya-launcher]')) return;
+      const holder = document.createElement('div'); holder.setAttribute('data-pya-launcher', '');
+      holder.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483000';
+      const button = document.createElement('button'); button.type = 'button'; button.setAttribute('aria-label', 'Abrir la oferta');
+      button.style.cssText = 'all:unset;cursor:pointer;display:block';
+      const scope = document.createElement('span'); scope.style.display = 'block'; scope.setAttribute('data-pya-popup', String(design.id || ''));
+      scope.innerHTML = design.launcher;
+      button.append(scope); holder.append(button);
+      button.addEventListener('click', () => { holder.remove(); at = 0; draw(); if (!dialog.open) dialog.showModal(); });
+      document.body.append(holder);
+    });
+    draw();
+    return true;
+  }
+
   function mountSignup(host, settings, config, state, api, preview, query, demo = false) {
     host.className = 'pagosya-signup-host';
     if (!document.getElementById('pagosya-signup-style')) {
@@ -402,6 +555,7 @@
         .pagosya-signup-host{--signup-paper:var(--store-background,#f3eddf);--signup-ink:var(--store-foreground,#26221c);--signup-accent:var(--store-accent,var(--signup-ink));--signup-accent-ink:var(--store-accent-foreground,var(--signup-paper));--signup-heading:var(--store-heading-font,Georgia,serif);--signup-body:var(--store-body-font,system-ui,sans-serif);--signup-radius:min(var(--store-radius,3px),24px);display:block;width:100%;font:inherit;color:inherit}.pagosya-signup-host *{box-sizing:border-box}
         .pagosya-signup-dialog{position:fixed;inset:0;width:min(1000px,calc(100% - 48px));max-width:none;max-height:calc(100dvh - 48px);margin:auto;padding:0;border:0;border-radius:var(--signup-radius);background:var(--signup-paper,#f3eddf);color:var(--signup-ink,#26221c);font:16px/1.6 var(--signup-body);overflow:auto;overscroll-behavior:contain;box-shadow:0 24px 80px #0003}
         .pagosya-signup-dialog::backdrop{background:rgb(24 22 17 / .6)}
+        .pagosya-signup-dialog.pagosya-flow{width:auto;max-width:calc(100% - 24px);background:transparent;box-shadow:none;overflow:visible;border-radius:0}.pagosya-flow-consent{display:block;margin-top:8px;font:12px/1.5 var(--signup-body);opacity:.8}
         .pagosya-signup-layout{display:grid;grid-template-columns:1fr 1fr;min-height:580px}
         .pagosya-signup-photo{margin:0;min-height:100%;background:color-mix(in srgb,var(--signup-paper),var(--signup-accent) 22%);position:relative;overflow:hidden}.pagosya-signup-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
         .pagosya-signup-photo .signup-monogram{display:grid;place-items:center;height:100%;min-height:450px;font:clamp(80px,14vw,180px)/1 var(--signup-heading);color:var(--signup-accent);opacity:.85}
@@ -486,13 +640,17 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
     // Closed or answered, the popup stays away 30 days for this visitor and store (plan 2026-10-20-store-popup).
     const popupKey = `pagosya:popup:${config.slug}`;
     const remember = () => { state.signupDismissed = true; try { sessionStorage.setItem(dismissedKey, '1'); } catch {} try { localStorage.setItem(popupKey, String(Date.now())); } catch {} };
-    const open = () => { if (!dialog.isConnected || dialog.open || document.querySelector('dialog[open]')) return; dialog.showModal(); dialog.querySelector('h2').focus(); };
+    const open = () => { if (!dialog.isConnected || dialog.open || document.querySelector('dialog[open]')) return; dialog.showModal(); (dialog.querySelector('h2') || dialog.querySelector('[data-pya-popup] button, [data-pya-popup] [tabindex]'))?.focus(); };
     dialog.addEventListener('close', remember);
-    dialog.querySelector('.signup-close').addEventListener('click', () => dialog.close());
+    // Popups 2.0: a LIVE YAPI design takes the dialog; timing and the 30-day memory stay the same.
+    const flow = settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps
+      ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt, apiBaseUrl: config.apiBaseUrl }) : false;
+    dialog.querySelector('.signup-close')?.addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => { if (event.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); });
     const photo = host.querySelector('.pagosya-signup-photo img, pya-photo img');
     photo?.addEventListener('error', () => { photo.parentElement.innerHTML = monogram; }, { once: true });
-    if (game) mountGame(dialog, { game, settings, formHtml, api, demo, remember, slug: config.slug, items: config.data && config.data.items, photoUrl: value => safeImage(uploadPhoto(value), location.href) });
+    if (flow) { /* the design draws its own steps */ }
+    else if (game) mountGame(dialog, { game, settings, formHtml, api, demo, remember, slug: config.slug, items: config.data && config.data.items, photoUrl: value => safeImage(uploadPhoto(value), location.href) });
     else secureFields(dialog.querySelector('form'));
     dialog.querySelector('form')?.addEventListener('submit', async event => {
       event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('[type=submit]'); const status = dialog.querySelector('[role=status]');
@@ -719,7 +877,8 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
   };
   // «Ver ventana de suscripción» (spec 2026-11-08): the Studio opens the popup at once, drawn as on the store, faked like a demo store
   // (never sends). It opens over the Studio's own dialogs, so it never waits for the store's timing rules.
-  window.PAGOSYA_POPUP_PREVIEW = function previewPopup(settings, config) {
+  window.PAGOSYA_POPUP_PREVIEW = function previewPopup(settings, config, stepId) {
+    if (stepId) settings = { ...(settings || {}), popupDesignStartAt: stepId };
     document.querySelector('[data-pagosya-popup-preview]')?.remove();
     const host = document.createElement('section'); host.setAttribute('data-pagosya-popup-preview', ''); document.body.append(host);
     const previewConfig = { ...config, slug: `studio-preview-${config?.slug || 'tienda'}` };
@@ -728,7 +887,7 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
     if (!dialog) { host.remove(); return; }
     dialog.addEventListener('close', () => host.remove());
     if (!dialog.open) dialog.showModal();
-    dialog.querySelector('h2')?.focus();
+    (dialog.querySelector('h2') || dialog.querySelector('button'))?.focus();
   };
   if (window.PAGOSYA_CONFIG) {
     document.addEventListener('pagosya:cart-updated', () => window.PAGOSYA_RETENTION_REFRESH?.());

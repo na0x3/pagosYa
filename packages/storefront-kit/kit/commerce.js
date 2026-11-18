@@ -355,6 +355,8 @@
   const promoKey = `pagosya:promo:${config.slug}`;
   let promoCode = '';
   try { const stored = sessionStorage.getItem(promoKey) || ''; if (PROMO_PATTERN.test(stored)) promoCode = stored; } catch {}
+  // Popups 2.0: a published store's frame keeps nothing; the parent page hands the YAPI popup's code back on every page.
+  if (!promoCode && typeof window.PAGOSYA_PROMO === 'string' && PROMO_PATTERN.test(window.PAGOSYA_PROMO)) promoCode = window.PAGOSYA_PROMO;
   function rememberPromo(code) {
     promoCode = code;
     try { if (code) sessionStorage.setItem(promoKey, code); else sessionStorage.removeItem(promoKey); } catch {}
@@ -5317,6 +5319,11 @@
     }
     root.querySelectorAll(`[data-product-id="${CSS.escape(id)}"]`).forEach(card => card.insertAdjacentHTML('afterbegin', '<span class="pya-fav-tag">Tu favorito</span>'));
   }
+  // Popups 2.0 (spec 2026-11-18): a YAPI popup lands the shopper with its code already in the cart.
+  document.addEventListener('pagosya:apply-promo', event => {
+    const code = String(event.detail?.code || '').trim();
+    if (PROMO_PATTERN.test(code)) rememberPromo(code);
+  });
   document.addEventListener('pagosya:favourite', event => {
     const id = event.detail && typeof event.detail.id === 'string' ? event.detail.id : '';
     if (!id) return;

@@ -50,6 +50,8 @@ export class RetentionSubscribeDto {
   @IsOptional() @IsIn(['whatsapp', 'email']) contact?: 'whatsapp' | 'email';
   /** Spec 2026-11-09 A/B tests: the store page's test visit, so a B visitor gets B's code and the signup counts for B. */
   @IsOptional() @IsString() @MaxLength(64) sourceVisitToken?: string;
+  /** Popups 2.0 (spec 2026-11-18): the LIVE popup design this signup came from. */
+  @IsOptional() @Matches(/^c[a-z0-9]{20,30}$/) popupDesignId?: string;
 }
 class GameQuestionDto {
   @IsString() @MinLength(1) @MaxLength(80) text!: string;
