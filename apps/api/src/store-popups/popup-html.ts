@@ -85,6 +85,7 @@ function hookProblem(root: { childNodes: Node[] }, kind: PopupStepKind): string 
     if (!some('data-submit')) return 'Falta [data-submit] (el botón para enviar).';
   }
   if (kind === 'reveal' && !some('data-slot', 'code')) return 'Falta data-slot="code" (dónde va el código).';
+  if (kind === 'reveal' && !some('data-next')) return 'Falta un botón data-next en reveal (lleva al producto con el código).';
   return null;
 }
 

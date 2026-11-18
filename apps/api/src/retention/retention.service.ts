@@ -58,7 +58,8 @@ export function favouriteTally(favourites: ReadonlyArray<string | null | undefin
 /** 59171234567 → +591 7123 4567. */
 export const whatsappShown = (digits: string) => /^591\d{8}$/.test(digits) ? `+591 ${digits.slice(3, 7)} ${digits.slice(7)}` : /^591\d{7}$/.test(digits) ? `+591 ${digits.slice(3, 6)} ${digits.slice(6)}` : digits;
 /** Settings Ajustes may not send but must keep: the email workspace, dismissed suggestions and the popup look. */
-const KEPT_SETTINGS = ['emailWorkspace', 'suggestionsDismissedAt', 'popupLook', 'popupLookPrevious', 'popupPhoto', 'popupGame', 'popupGamePrizes', 'popupQuestion', 'popupShape', 'popupInterests', 'popupFavourite', 'popupContact'] as const;
+// Popups 2.0 (final review I2): the YAPI popup's pointer and settings are the Popups page's, never the settings form's.
+export const KEPT_SETTINGS = ['popupDesignId', 'popupDesignOff', 'popupDesignPercent', 'popupDesignCapture', 'emailWorkspace', 'suggestionsDismissedAt', 'popupLook', 'popupLookPrevious', 'popupPhoto', 'popupGame', 'popupGamePrizes', 'popupQuestion', 'popupShape', 'popupInterests', 'popupFavourite', 'popupContact'] as const;
 @Injectable()
 export class RetentionService {
   private working = false;

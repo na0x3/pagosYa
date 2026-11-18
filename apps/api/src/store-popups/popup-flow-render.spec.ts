@@ -35,4 +35,9 @@ describe('popup design render check', () => {
     const faint = await measureFlow(base(`${SHEET}.card h2{color:#eee}`, { o: offer, c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(faint!).join(' ')).toMatch(/contraste/);
   });
+  // Final review (I6): a close faded out through its parent (opacity is not inherited) is still hidden.
+  it('finds a close button faded out by a parent', async () => {
+    const faded = await measureFlow(base(`${SHEET}.top{opacity:0}`, { o: '<div class="card"><div class="top"><button data-close aria-label="Cerrar">×</button></div><h2>Hola</h2><button data-next>Ok</button></div>', c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(faded!).join(' ')).toMatch(/paso o a 390px: no se ve/);
+  });
 });

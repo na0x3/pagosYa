@@ -123,7 +123,7 @@ export class PopupDesignService {
       await tx.storePopupDesign.updateMany({ where: { storeId, status: 'LIVE', id: { not: id } }, data: { status: 'RETIRED' } });
       await tx.storePopupDesign.create({ data: { ...base, status: 'LIVE', flow: candidate!.flow as never, steps: candidate!.steps as never, css: candidate!.css, launcher: candidate!.launcher, composition: candidate!.composition, fingerprint: candidate!.fingerprint } });
     });
-    await this.point(storeId, { popupDesignId: id });
+    await this.point(storeId, { popupDesignId: id, popupDesignOff: null });
     return { design: { id, version, status: 'LIVE' as const, composition: candidate.composition }, problems: [] };
   }
 
@@ -157,7 +157,7 @@ export class PopupDesignService {
       await tx.storePopupDesign.updateMany({ where: { storeId, status: 'LIVE', id: { not: id } }, data: { status: 'RETIRED' } });
       await tx.storePopupDesign.update({ where: { id }, data: { status: 'LIVE' } });
     });
-    await this.point(storeId, { popupDesignId: id });
+    await this.point(storeId, { popupDesignId: id, popupDesignOff: null });
   }
 
   /** The Popups page (spec 2026-11-18 §9): versions newest first, the live one, its settings and the store's products. */
@@ -180,8 +180,10 @@ export class PopupDesignService {
   async updateSettings(merchantId: string, storeId: string, patch: { percent?: number; capture?: 'whatsapp' | 'email'; products?: string[]; on?: boolean }) {
     await this.store(merchantId, storeId);
     const settings = await this.settings(storeId);
-    const id = typeof settings.popupDesignId === 'string' ? settings.popupDesignId : '';
-    const row = id ? await this.prisma.storePopupDesign.findFirst({ where: { id, storeId } }) : null;
+    const liveId = typeof settings.popupDesignId === 'string' && settings.popupDesignId ? settings.popupDesignId : '';
+    const offId = typeof settings.popupDesignOff === 'string' && settings.popupDesignOff ? settings.popupDesignOff : '';
+    // Final review I3: the design these settings belong to is the one shown, or the one switched off.
+    const row = liveId || offId ? await this.prisma.storePopupDesign.findFirst({ where: { id: liveId || offId, storeId } }) : null;
     if (patch.products) {
       const owned = await this.prisma.paymentLink.findMany({ where: { storeId, id: { in: patch.products }, status: 'ACTIVE' }, select: { id: true } });
       if (owned.length !== patch.products.length || owned.length < 2) throw new BadRequestException('Elige al menos 2 productos activos de tu tienda.');
@@ -191,7 +193,9 @@ export class PopupDesignService {
       const flow = patch.products ? (row.flow as PopupFlow).map(step => step.kind === 'pick' ? { ...step, products: patch.products! } : step) : undefined;
       await this.prisma.storePopupDesign.update({ where: { id: row.id }, data: { ...(percent !== undefined ? { percent } : {}), ...(patch.capture ? { capture: patch.capture } : {}), ...(flow ? { flow: flow as never } : {}) } });
     }
-    await this.point(storeId, { ...(percent !== undefined ? { popupDesignPercent: percent } : {}), ...(patch.capture ? { popupDesignCapture: patch.capture } : {}),
-      ...(patch.on === false ? { popupDesignId: null, popupDesignOff: row?.id ?? id } : {}), ...(patch.on === true && typeof settings.popupDesignOff === 'string' ? { popupDesignId: settings.popupDesignOff } : {}) });
+    // On/off only when it changes: off keeps the shown design to come back to; on brings it back only while it is still LIVE.
+    const switching = patch.on === false && liveId ? { popupDesignId: null, popupDesignOff: liveId }
+      : patch.on === true && !liveId && row && row.status === 'LIVE' ? { popupDesignId: row.id, popupDesignOff: null } : {};
+    await this.point(storeId, { ...(percent !== undefined ? { popupDesignPercent: percent } : {}), ...(patch.capture ? { popupDesignCapture: patch.capture } : {}), ...switching });
   }
 }

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { JSDOM, VirtualConsole } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { kitPath } from "@pagosya/storefront-kit";
+import { withoutPersonalFields } from "../src/trusted-form";
 
 // Popups 2.0 part 1 (spec 2026-11-18 §7): the runtime plays a YAPI-written design — offer → pick → capture → reveal → land with the
 // code in the cart and the chosen product opened.
@@ -22,7 +23,7 @@ const items = [
   { id: "p3", name: "Viejo", price: 1, active: false, imageUrls: ["https://cdn.test/c.jpg"] },
 ];
 
-async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: boolean; body: any }; hosted?: boolean } = {}) {
+async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: boolean; body: any }; hosted?: boolean; parent?: boolean; design?: Record<string, unknown> } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", error => { if (!error.message.includes("Could not parse CSS stylesheet")) throw error; });
   const dom = new JSDOM(`<body><main><h1>Calima</h1></main></body>`, { runScripts: "outside-only", virtualConsole, url: "https://tienda.test/" });
@@ -35,11 +36,18 @@ async function mount(o: { items?: unknown[]; subscribe?: (body: any) => { ok: bo
   w.HTMLElement.prototype.scrollIntoView = () => {};
   w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   w.HTMLDialogElement.prototype.close = function () { this.open = false; this.dispatchEvent(new w.Event("close")); };
-  const settings = { signupEnabled: true, popupTrigger: "load", popupDelaySeconds: 0, popupDesign: design };
+  const settings = { signupEnabled: true, popupTrigger: "load", popupDelaySeconds: 0, popupDesign: { ...design, ...(o.design ?? {}) } };
   const posts: any[] = [];
   const reply = (path: string, body: any) => { if (!body) return { ok: true, body: settings }; posts.push(body); return o.subscribe ? o.subscribe(body) : { ok: true, body: { subscribed: true, code: "POPABC234" } }; };
   w.fetch = vi.fn(async (url: string, init?: any) => { const r = reply(url, init?.body ? JSON.parse(init.body) : null); return { ok: r.ok, json: async () => r.body }; });
   if (o.hosted) { w.PAGOSYA_HOSTED = true; w.PAGOSYA_HOSTED_REQUEST = async (_kind: string, req: any) => reply(req.path, req.payload); }
+  // The real parent page: personal fields are stripped, and its own form asks for WhatsApp only when the frame says so.
+  if (o.parent) { w.PAGOSYA_HOSTED = true; w.PAGOSYA_HOSTED_REQUEST = async (_kind: string, req: any) => {
+    if (!req.payload) return reply(req.path, null);
+    const stripped = withoutPersonalFields("retention", { path: req.path, payload: req.payload }).payload as any;
+    if (stripped.contact !== "whatsapp") return { ok: false, body: { message: "Esta tienda pide tu WhatsApp." } };
+    return reply(req.path, { ...stripped, phone: "71234567", consent: true });
+  }; }
   const events: string[] = [];
   w.document.addEventListener("pagosya:apply-promo", (e: any) => events.push(`promo:${e.detail.code}`));
   w.document.addEventListener("pagosya:favourite", (e: any) => events.push(`fav:${e.detail.id}:${e.detail.go}`));
@@ -83,7 +91,7 @@ describe("a YAPI popup design", () => {
     m.root().querySelector("[data-field]").value = "71234567";
     m.click("[data-submit]"); m.click("[data-submit]");
     await m.flush(); await m.flush();
-    expect(m.posts).toEqual([{ phone: "71234567", consent: true, source: "popup", popupDesignId: ID, answers: [], favourite: "p1" }]);
+    expect(m.posts).toEqual([{ phone: "71234567", contact: "whatsapp", consent: true, source: "popup", popupDesignId: ID, answers: [], favourite: "p1" }]);
     expect(m.root().querySelector("[data-slot=error]").textContent).toContain("8 números");
     fail = false;
     m.click("[data-submit]");
@@ -110,5 +118,37 @@ describe("a YAPI popup design", () => {
     w.document.querySelector("dialog").close();
     w.PAGOSYA_POPUP_PREVIEW({ signupEnabled: true, popupDesign: design }, { slug: "calima", data: { items } }, "c");
     expect(w.document.querySelector("[data-pagosya-popup-preview] [data-field]")).not.toBeNull();
+  });
+
+  // Final review 2026-11-18 (C1): on a published store the parent page strips the number and asks for it itself.
+  it("on a published store the parent page asks for WhatsApp and the code comes back", async () => {
+    const { click, root, posts, w, flush } = await mount({ parent: true });
+    click("[data-next]"); click("[data-tile]");
+    root().querySelector("[data-field]").value = "71234567";
+    click("[data-submit]"); await flush(); await flush();
+    expect(posts).toHaveLength(1);
+    expect(root().querySelector("[data-slot=code]")?.textContent).toBe("POPABC234");
+    void w;
+  });
+  // Final review (I7): a shopper who closes the reveal still gets the code in the cart.
+  it("puts the code in the cart when the shopper closes after it was given", async () => {
+    const { click, root, events, flush } = await mount();
+    click("[data-next]"); click("[data-tile]");
+    root().querySelector("[data-field]").value = "71234567";
+    click("[data-submit]"); await flush(); await flush();
+    click("[data-close]");
+    expect(events).toEqual(["promo:POPABC234"]);
+  });
+  it("skips a quiz whose products were all archived", async () => {
+    const quiz = '<div><button data-close aria-label="Cerrar">×</button><p data-question></p><button data-choice>x</button></div>';
+    const { root } = await mount({ design: { flow: [{ id: "q", kind: "quiz", questions: [{ id: "a", text: "¿Picante?", answers: [{ id: "s", text: "Sí", products: ["p3"] }] }] }, { id: "c", kind: "capture" }, { id: "r", kind: "reveal" }], steps: { ...steps, q: quiz } } });
+    expect(root().querySelector("[data-field]")).not.toBeNull();
+  });
+  // Final review (I5): photos YAPI wrote as /v1/uploads/… load from the API, in the steps and in the sheet.
+  it("points the design's upload photos at the API", async () => {
+    const { root, w } = await mount({ design: { steps: { ...steps, o: '<div><button data-close aria-label="Cerrar">×</button><img src="/v1/uploads/a.jpg" srcset="/v1/uploads/a.jpg 1x, /v1/uploads/b.jpg 2x" alt=""><button data-next>Quiero</button></div>' }, css: '.x{background:url("/v1/uploads/b.jpg")}' } });
+    expect(root().querySelector("img").getAttribute("src")).toBe("https://api.test/v1/uploads/a.jpg");
+    expect(root().querySelector("img").getAttribute("srcset")).toBe("https://api.test/v1/uploads/a.jpg 1x, https://api.test/v1/uploads/b.jpg 2x");
+    expect(w.document.querySelector("dialog style").textContent).toContain('url("https://api.test/v1/uploads/b.jpg")');
   });
 });

@@ -397,25 +397,33 @@
 
   // Popups 2.0 (spec 2026-11-18 §7): a YAPI-written design — its own markup per step and its own scoped sheet — played here. YAPI
   // never writes script: the steps carry data-* hooks and this runtime does the logic (products, contact, code, cart, landing).
-  function mountFlow(dialog, design, { api, demo, remember, slug, items, startAt }) {
+  function mountFlow(dialog, design, { api, demo, remember, slug, items, startAt, apiBaseUrl }) {
     const hostedPage = Boolean(window.PAGOSYA_HOSTED);
     dialog.classList.add('pagosya-flow');
-    const sheet = document.createElement('style'); sheet.textContent = String(design.css || '');
+    // Photos YAPI wrote as /v1/uploads/… live on the API (a published store's frame resolves paths against another origin).
+    const apiOrigin = String(apiBaseUrl || '').replace(/\/v1\/?$/, '');
+    const upload = value => apiOrigin && /^\/v1\/uploads\//.test(value) ? `${apiOrigin}${value}` : value;
+    const sheet = document.createElement('style');
+    sheet.textContent = String(design.css || '').replace(/url\(\s*(["']?)(\/v1\/uploads\/[^"')\s]+)\1\s*\)/g, (_, quote, path) => `url(${quote}${upload(path)}${quote})`);
     const root = document.createElement('div'); root.setAttribute('data-pya-popup', String(design.id || ''));
     dialog.replaceChildren(sheet, root);
     const steps = (Array.isArray(design.flow) ? design.flow : []).filter(step => step && step.kind);
     const land = steps.find(step => step.kind === 'land');
     const product = id => (items || []).find(item => item && item.id === id && item.active !== false && item.archived !== true);
-    const live = step => step.kind !== 'pick' || (step.products || []).filter(product).length >= 2;
+    const live = step => step.kind === 'pick' ? (step.products || []).filter(product).length >= 2
+      : step.kind === 'quiz' ? (step.questions || []).some(question => (question.answers || []).some(answer => (answer.products || []).some(product))) : true;
     const shown = steps.filter(step => step.kind !== 'land' && typeof design.steps?.[step.id] === 'string' && live(step));
     const memory = { answers: [], favourite: '', code: '', busy: false };
     let at = Math.max(0, shown.findIndex(step => step.id === startAt));
     const money = value => typeof value === 'number' ? `Bs ${(value / 100).toLocaleString('es-BO', { minimumFractionDigits: value % 100 ? 2 : 0 })}` : String(value ?? '');
+    let applied = false;
+    const applyCode = () => {
+      if (applied || !memory.code) return; applied = true;
+      if (hostedPage) { try { parent.postMessage({ type: 'pagosya:apply-promo', code: memory.code }, '*'); } catch {} }
+      document.dispatchEvent(new CustomEvent('pagosya:apply-promo', { detail: { code: memory.code } }));
+    };
     const finish = () => {
-      if (memory.code) {
-        if (hostedPage) { try { parent.postMessage({ type: 'pagosya:apply-promo', code: memory.code }, '*'); } catch {} }
-        document.dispatchEvent(new CustomEvent('pagosya:apply-promo', { detail: { code: memory.code } }));
-      }
+      applyCode();
       if (land && memory.favourite) {
         try { localStorage.setItem(`pagosya:fav:${slug}`, memory.favourite); } catch {}
         if (hostedPage) { try { parent.postMessage({ type: 'pagosya:favourite', id: memory.favourite }, '*'); } catch {} }
@@ -429,8 +437,12 @@
       const step = shown[at];
       if (!step) { dialog.close(); return; }
       root.innerHTML = design.steps[step.id];
+      root.querySelectorAll('img[src], source[srcset], img[srcset]').forEach(img => {
+        if (img.hasAttribute('src')) img.setAttribute('src', upload(img.getAttribute('src')));
+        if (img.hasAttribute('srcset')) img.setAttribute('srcset', img.getAttribute('srcset').split(',').map(part => { const [url, ...rest] = part.trim().split(/\s+/); return [upload(url), ...rest].join(' '); }).join(', '));
+      });
       root.setAttribute('data-step', step.kind);
-      root.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => { remember(); dialog.close(); }));
+      root.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => { remember(); if (memory.code) applyCode(); dialog.close(); }));
       root.querySelectorAll('[data-back]').forEach(el => el.addEventListener('click', back));
       root.querySelectorAll('[data-next]').forEach(el => el.addEventListener('click', next));
       if (step.kind === 'pick') {
@@ -487,7 +499,7 @@
           if (design.capture === 'email' ? !/^\S+@\S+\.\S+$/.test(value) : value.replace(/\D/g, '').length < 8) { say(design.capture === 'email' ? 'Escribe tu correo.' : 'Escribe tu WhatsApp con 8 números.'); return; }
           memory.busy = true; if (submit) submit.disabled = true;
           try {
-            const body = { ...(design.capture === 'email' ? { email: value } : { phone: value }), consent: true, source: 'popup', popupDesignId: design.id, answers: memory.answers, favourite: memory.favourite || undefined };
+            const body = { ...(design.capture === 'email' ? { email: value } : { phone: value }), contact: design.capture === 'email' ? 'email' : 'whatsapp', consent: true, source: 'popup', popupDesignId: design.id, answers: memory.answers, favourite: memory.favourite || undefined };
             const answer = demo ? { code: 'POPDEMO10' } : await api('subscribe', body);
             memory.code = answer?.code || '';
             remember();
@@ -609,7 +621,7 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
     dialog.addEventListener('close', remember);
     // Popups 2.0: a LIVE YAPI design takes the dialog; timing and the 30-day memory stay the same.
     const flow = settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps
-      ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt }) : false;
+      ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt, apiBaseUrl: config.apiBaseUrl }) : false;
     dialog.querySelector('.signup-close')?.addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => { if (event.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); });
     const photo = host.querySelector('.pagosya-signup-photo img, pya-photo img');

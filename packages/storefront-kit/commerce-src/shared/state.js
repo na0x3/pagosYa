@@ -33,6 +33,8 @@
   const promoKey = `pagosya:promo:${config.slug}`;
   let promoCode = '';
   try { const stored = sessionStorage.getItem(promoKey) || ''; if (PROMO_PATTERN.test(stored)) promoCode = stored; } catch {}
+  // Popups 2.0: a published store's frame keeps nothing; the parent page hands the YAPI popup's code back on every page.
+  if (!promoCode && typeof window.PAGOSYA_PROMO === 'string' && PROMO_PATTERN.test(window.PAGOSYA_PROMO)) promoCode = window.PAGOSYA_PROMO;
   function rememberPromo(code) {
     promoCode = code;
     try { if (code) sessionStorage.setItem(promoKey, code); else sessionStorage.removeItem(promoKey); } catch {}

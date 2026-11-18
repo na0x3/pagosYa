@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { RetentionService } from './retention.service';
+import { KEPT_SETTINGS, RetentionService } from './retention.service';
 
 /** Popups 2.0 part 1 (spec 2026-11-18 §7): the LIVE design served, signups tagged with it, one personal code per contact. */
 const design = { id: 'cdesign0000000000000000001', storeId: 's1', status: 'LIVE', flow: [{ id: 'o', kind: 'offer' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }], steps: { o: '<div></div>' }, css: '', launcher: null, capture: 'whatsapp', percent: 15, composition: 'x', fingerprint: 'y' };
@@ -48,5 +48,9 @@ describe('popup designs in retention', () => {
     const { service } = setup();
     await expect(service.subscribe(store, 'ana@x.bo', { source: 'popup', popupDesignId: design.id } as any)).rejects.toThrow('Esta tienda pide tu WhatsApp');
     await expect(setup({ design: null }).service.subscribe(store, null, { phone: '71234567', source: 'popup', popupDesignId: design.id } as any)).rejects.toBeInstanceOf(BadRequestException);
+  });
+  // Final review 2026-11-18 (I2): saving the Comeback/welcome settings must not switch the YAPI popup off.
+  it('keeps the YAPI popup settings when the other retention settings are saved', () => {
+    expect(KEPT_SETTINGS).toEqual(expect.arrayContaining(['popupDesignId', 'popupDesignOff', 'popupDesignPercent', 'popupDesignCapture']));
   });
 });

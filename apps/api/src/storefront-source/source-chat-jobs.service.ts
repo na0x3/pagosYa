@@ -69,6 +69,10 @@ export class SourceChatJobsService implements OnModuleDestroy {
   private async owner(merchantId: string, storeId: string) {
     if (!await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } })) throw new NotFoundException('Tienda no encontrada.');
   }
+  private async hasPopupDesign(storeId: string) {
+    const settings = (await this.prisma.storeRetention?.findUnique({ where: { storeId }, select: { settings: true } }).catch(() => null))?.settings as { popupDesignId?: unknown } | undefined;
+    return typeof settings?.popupDesignId === 'string' && Boolean(settings.popupDesignId);
+  }
   async create(merchantId: string, storeId: string, input: SourceMessageInput) {
     await this.owner(merchantId, storeId);
     const requestId = input.requestId;
@@ -76,7 +80,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
     // «Mejorar mi marca» in words (spec 2026-11-18 §3.1) runs the same flow as the chip.
     if (!input.personalTouch && !input.brandFlow && isBrandRequest(input.instruction ?? '')) input = { ...input, brandFlow: true };
     // Popups 2.0 (spec 2026-11-18 §8): a message about the popup goes to the popup designer.
-    if (!input.personalTouch && !input.brandFlow && !input.popupDesign && popupChatRequest(input.instruction ?? '')) input = { ...input, popupDesign: true };
+    // A discount/contact change only when the store has a YAPI popup (final review I4); otherwise the chat answers as before.
+    const popupAsk = !input.personalTouch && !input.brandFlow && !input.popupDesign ? popupChatRequest(input.instruction ?? '') : null;
+    if (popupAsk && (popupAsk.redesign || await this.hasPopupDesign(storeId))) input = { ...input, popupDesign: true };
     const inputDigest = chatRequestDigest(input);
     const existing = await this.prisma.storeSourceChatJob.findUnique({ where: { storeId_requestId: { storeId, requestId } } });
     if (existing) {

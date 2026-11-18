@@ -13,3 +13,12 @@ describe('the favourite handed to the store frame', () => {
     expect(sourcePreviewDocument(snapshot, 'index.html', { hosted: true })).not.toContain('PAGOSYA_FAVOURITE');
   });
 });
+
+// Popups 2.0 final review (I1): the YAPI popup's code, kept by the parent page, rides into every reloaded page of a published store.
+describe('the popup code handed to the store frame', () => {
+  const snapshot = { files: [{ path: 'index.html', content: '<!doctype html><html><head></head><body><main>Tienda</main></body></html>' }] } as never;
+  it('is set before the kit runs; anything that is not a code is left out', () => {
+    expect(sourcePreviewDocument(snapshot, 'index.html', { hosted: true, promo: 'POPABC234' })).toContain('window.PAGOSYA_PROMO="POPABC234"');
+    expect(sourcePreviewDocument(snapshot, 'index.html', { hosted: true, promo: 'x"</script>' })).not.toContain('PAGOSYA_PROMO');
+  });
+});

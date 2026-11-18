@@ -39,6 +39,14 @@ export function hostedRetentionMethod(path: string, hasPayload: boolean): 'GET' 
 export function favouriteOf(slug: string): string {
   try { const value = localStorage.getItem(`pagosya:fav:${slug}`) || ''; return value.length <= 140 ? value : ''; } catch { return ''; }
 }
+/** Popups 2.0 (final review I1): the YAPI popup's code, kept on this page for this visit — the store frame cannot keep it. */
+const PROMO = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
+export function keepPromo(slug: string, code: unknown): void {
+  if (typeof code === 'string' && PROMO.test(code)) { try { sessionStorage.setItem(`pagosya:promo:${slug}`, code); } catch {} }
+}
+export function promoOf(slug: string): string {
+  try { const value = sessionStorage.getItem(`pagosya:promo:${slug}`) || ''; return PROMO.test(value) ? value : ''; } catch { return ''; }
+}
 export function hostedRetentionRequest(apiBase: string, slug: string, path: string, payload: Record<string, unknown> | undefined, visit: string | undefined): { url: string; body?: Record<string, unknown> } {
   const url = `${apiBase}/stores/public/${encodeURIComponent(slug)}/retention${path ? '/' + path : ''}${visit && path === '' ? `?visit=${encodeURIComponent(visit)}` : ''}`;
   if (!payload) return { url };
@@ -147,7 +155,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, ...(favouriteOf(slug) ? { favourite: favouriteOf(slug) } : {}), accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, ...(favouriteOf(slug) ? { favourite: favouriteOf(slug) } : {}), ...(promoOf(slug) ? { promo: promoOf(slug) } : {}), accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
   // The store draws its account pages; this origin keeps the session, calls the API and guards typed passwords
   // (spec 2026-10-08-store-built-in-account-pages-design). An emailed token is read here and never reaches the store.
   const emailToken = takeAccountEmailToken(location, history);
@@ -212,6 +220,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       return;
     }
     // Spec 2026-11-10 rasca y elige: the frame cannot keep the shopper's favourite; this page does, and hands it back on every page.
+    if (data?.type === 'pagosya:apply-promo') { keepPromo(slug, data.code); return; }
     if (data?.type === 'pagosya:favourite') { if (typeof data.id === 'string' && data.id.length <= 140) { try { localStorage.setItem(`pagosya:fav:${slug}`, data.id); } catch {} } return; }
     if (data?.type === 'pagosya:funnel') return; // Older kits still post steps; the steps arrive as pagosya:analytics.
     if (data?.type === 'pagosya:analytics') { if (Array.isArray(data.events)) { data.events.slice(0, 40).forEach(analytics.record); if (!merchantPreview) rememberRecent(slug, data.events.slice(0, 40)); } return; }

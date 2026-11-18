@@ -99,4 +99,20 @@ describe('PopupDesignService', () => {
     expect(calls[0]).toContain('hazme otro popup más divertido');
     expect(messages.at(-1)).toMatch(/^Listo: tu popup nuevo/);
   });
+  // Final review (I3): off → on → a new design → save with the box ticked keeps the new design; saving while off keeps the design.
+  it('keeps on/off pointed at the right design', async () => {
+    const { service, rows, retention } = setup([answer()]);
+    rows.push({ id: 'cold000000000000000000001', storeId: 's1', version: 1, status: 'LIVE', percent: 10, capture: 'whatsapp', flow: answer().flow });
+    await service.restore('m1', 's1', 'cold000000000000000000001');
+    await service.updateSettings('m1', 's1', { on: false });
+    await service.updateSettings('m1', 's1', { on: false, percent: 12 });
+    expect(retention().settings).toMatchObject({ popupDesignId: null, popupDesignOff: 'cold000000000000000000001' });
+    expect(rows[0].percent).toBe(12);
+    await service.updateSettings('m1', 's1', { on: true });
+    expect(retention().settings.popupDesignId).toBe('cold000000000000000000001');
+    const fresh = await service.design('m1', 's1', { createdBy: 'merchant-chat' });
+    await service.updateSettings('m1', 's1', { on: true, percent: 15 });
+    expect(retention().settings.popupDesignId).toBe(fresh.design.id);
+    expect(retention().settings.popupDesignOff ?? null).toBeNull();
+  });
 });

@@ -24,4 +24,8 @@ describe('popup step html', () => {
   it('refuses oversized markup', () => {
     expect(cleanStepHtml(`<div>${'x'.repeat(13_000)}</div>`, 'offer')).toEqual({ problem: expect.stringMatching(/grande/) });
   });
+  // Final review (I7): the reveal needs a way on to the product, or the shopper never lands with the code.
+  it('asks the reveal step for data-next', () => {
+    expect(cleanStepHtml('<div><button data-close>×</button><strong data-slot="code"></strong></div>', 'reveal')).toEqual({ problem: expect.stringMatching(/data-next/) });
+  });
 });

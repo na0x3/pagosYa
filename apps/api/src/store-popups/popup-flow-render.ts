@@ -26,7 +26,18 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
     return { x: r.x, y: r.y, width: r.width, height: r.height, visible: r.width > 0 && r.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) > 0 };
   };
   const close = root?.querySelector('[data-close]') ?? null;
+  // Opacity is not inherited: a parent at 0 (or filter: opacity(0)) hides the close though its own opacity reads 1 (final review I6).
+  const faded = (el: Element | null) => {
+    let shown = 1;
+    for (let node = el; node && node !== document.documentElement; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      shown *= Number(style.opacity);
+      if (/opacity\(\s*0(?:\.0+)?%?\s*\)/.test(style.filter)) shown = 0;
+    }
+    return shown < 0.2;
+  };
   const closeBox = box(close);
+  if (closeBox && faded(close)) closeBox.visible = false;
   const hit = closeBox && closeBox.visible ? document.elementFromPoint(closeBox.x + closeBox.width / 2, closeBox.y + closeBox.height / 2) : null;
   const rgb = (value: string) => { const m = value.match(/rgba?\(([^)]+)\)/); if (!m) return null; const [r, g, b, a = '1'] = m[1].split(/[ ,/]+/).filter(Boolean); return { r: +r, g: +g, b: +b, a: +a }; };
   const lum = (c: { r: number; g: number; b: number }) => [c.r, c.g, c.b].map(v => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
