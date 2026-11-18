@@ -197,6 +197,11 @@ model AuditLogEntry {
   targetId   String
   metadata   Json?
   createdAt  DateTime @default(now())
+  // Tamper-evident chain (ISO M-04): numbered and hashed by the database's insert trigger, never by code (NOT NULL in the
+  // table; optional here so Prisma leaves them to the trigger). The table is append-only.
+  seq        BigInt   @unique @default(autoincrement())
+  prevHash   String?  @unique
+  hash       String?
 
   @@index([targetType, targetId])
   @@index([createdAt])
