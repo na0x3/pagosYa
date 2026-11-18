@@ -15,6 +15,7 @@ import { preparedSourceArtifact } from '../source-prepared-artifact';
 import { probeSourceShopping, withVisualSandbox } from '../source-visual-capture';
 import { sourceVisualState } from '../source-visual-state';
 import { isNextSource, nextProjectScaffold } from '../source-next';
+import { resolveAccountTheme, snapshotWithAccountTheme } from '../account-theme';
 import { templateQaFindings } from '../source-template-qa';
 import type { SourceProjectSnapshot } from '../source-project';
 import { assembleV2Files, photoDataUrl, readConfigData, v2Context, type V2Context, type V2Cutout, withStoreSettings } from './v2-context';
@@ -51,6 +52,12 @@ import { layoutSignature, signatureDistance, type SectionShape } from './v2-sign
  *  call it, and nothing is published or migrated. */
 
 export const V2_LABEL = 'Diseño V2 (prototipo)';
+/** The remix extras call (owner 2026-11-18): the site's login look and its not-found page. */
+const REMIX_EXTRAS_PROMPT = `Copias dos páginas de un sitio a una tienda pagosYa, mirando sus capturas.
+1) INGRESO: el formulario lo dibuja la plataforma; tú eliges su forma. layout: «split» (foto a un lado, formulario al otro), «card», «minimal» o «panel», el más parecido a la captura. photo: con split, la ruta de UNA foto de la tienda (de la lista) que se parezca a la de la captura; si no, vacío. css: reglas para las partes, con selectores [data-part="card"], [data-part="title"], [data-part="input"], [data-part="submit"], [data-part="link"] (y media, lead, field, label): color, fondo, borde, radio, sombra, tipografía, mayúsculas, espaciado, como en la captura. Usa var(--ui-...) o colores hex de la paleta. Nunca ocultes, achiques ni tapes campos, botones o enlaces.
+2) PÁGINA 404: notFound es un componente React (TSX) completo. Primera línea: import Shell from '../Shell'; luego export default function NotFound() { return <Shell>…</Shell>; }. Dentro, un <main id="contenido"> con la composición de su 404 (fondo, ilustración o foto de la tienda con <img src="assets/…" alt="…">, un texto corto en español con su tono, y un botón <a href="index.html">). Sin imports más que Shell, sin estado, sin scripts. notFoundCss: el CSS de esa página con clases propias que empiecen por nf-.`;
+const REMIX_EXTRAS_SCHEMA = { type: 'object', additionalProperties: false, required: ['layout', 'photo', 'css', 'notFound', 'notFoundCss'], properties: {
+  layout: { type: 'string', enum: ['split', 'card', 'minimal', 'panel'] }, photo: { type: 'string' }, css: { type: 'string' }, notFound: { type: 'string' }, notFoundCss: { type: 'string' } } };
 /** Copy a store (2026-11-17, Graza): an imported store starts as plain pages, without the React build. V2 writes components, so
  *  the store gets the build's runtime and its marker first (home and product, the pages V2 writes, and the platform's checkout); otherwise the design was
  *  saved but never built, and the checks looked at the old plain page. */
@@ -93,6 +100,8 @@ export type V2RunState = {
   remix?: string;
   /** Copy a store (owner 2026-11-17, Graza): the remixed site is the merchant's OWN old shop, so its logo, phrases and artwork are theirs to keep. */
   ownSite?: boolean;
+  /** What a remix copied beyond the home (owner 2026-11-18): the login look and whether a not-found page was written. */
+  extras?: { login: string | null; notFound: boolean };
   /** Owner 2026-11-16 («drop restrictions for now»): loose mode for this run. */
   loose?: boolean;
   /** Owner 2026-11-16: the Nov 14 rule set (Gramiyaa r3) for this run. */
@@ -411,10 +420,29 @@ export class SourceV2PrototypeService {
     context.cartSheet = v2CartSheet(direction.cart?.look, context.storeName, direction.cart?.photo);
     // Written parts kept between rounds until a whole first version is put together (see write below).
     const kept: { system?: NonNullable<ReturnType<typeof readV2Part>>; a?: NonNullable<ReturnType<typeof readV2Half>>; b?: NonNullable<ReturnType<typeof readV2Half>>; product?: NonNullable<ReturnType<typeof readV2Part>> } = {};
+    // Owner 2026-11-18 («look at graza login page and etc that should also be copied»): a remix also copies the site's login look
+    // and its not-found page, written beside the home and put into the store before its first build.
+    const extras = state.remix ? this.remixExtras(storeId, model, state, context, direction).catch(error => {
+      this.log.warn(JSON.stringify({ event: 'v2_extras_failed', storeId, error: String((error as Error)?.message ?? error).slice(0, 300) }));
+      return null;
+    }) : Promise.resolve(null);
+    let extrasPlaced = false;
+    const withExtras = async (written: V2File[] | null): Promise<V2File[] | null> => {
+      const got = written && await extras;
+      if (!written || !got) return written;
+      if (!extrasPlaced) {
+        extrasPlaced = true;
+        const config = files.findIndex(file => file.path === 'config.js');
+        if (got.theme && config >= 0) files[config] = snapshotWithAccountTheme({ files: [files[config]] }, got.theme).files[0] as typeof files[number];
+        if (got.notFound) { const at = files.findIndex(file => file.path === 'components/pages/not-found.tsx'); const page = { path: 'components/pages/not-found.tsx', content: got.notFound } as typeof files[number]; if (at >= 0) files[at] = page; else files.push(page); }
+        state.extras = { login: got.theme?.layout ?? null, notFound: Boolean(got.notFound) };
+      }
+      return got.css ? written.map(file => file.path === 'styles/globals.css' && !file.content.includes('/* v2:remix-extras */') ? { ...file, content: `${file.content}\n/* v2:remix-extras */\n${got.css}\n/* /v2:remix-extras */\n` } : file) : written;
+    };
     const built = await stage('write+build', () => runV2Build({ revision, brief: base.brief, files }, context, V2_LABEL, {
       // Two calls (design system, then pages) so each fits the bridge's 10-minute request; a call that times out or fails is a
       // failed attempt the loop retries, a spent quota stops the run.
-      write: async (feedback, previous) => {
+      write: async (feedback, previous) => withExtras(await (async () => {
         const ask = async (part: V2Part, system?: V2File[]) => {
           try {
             return readV2Part(await this.call(storeId, `v2-writer-${part}`, model, v2WriterPrompt(context.free, context.loose), [
@@ -467,7 +495,7 @@ export class SourceV2PrototypeService {
         const library = buildV2Library(lib.entries, libraryFacts, context, ownPhotos(pages.files));
         state.library = { slots: library.order, dropped: library.dropped };
         return [...joinV2Parts(system, pages), v2LibraryFile(library)];
-      },
+      })()),
       ...this.loopChecks(storeId, model, context, state),
       // Free mode (owner 2026-11-14: Meat House r4 was saved with its problems after 4 attempts, 2 spent on a missing slot and a prop):
       // more rounds to fix what the page checks find.
@@ -955,6 +983,29 @@ export class SourceV2PrototypeService {
   }
 
   /** The reference stores' first screen and one screen further down, desktop width — a normal browser, outside the build sandbox. */
+  /** A remix's login look and not-found page, from screenshots of the site's own (owner 2026-11-18, Graza). The login form stays the
+   *  platform's: only its layout (split with one of the store's photos, card, minimal or panel) and guarded CSS on its parts. The
+   *  not-found page is a platform page in the store's Shell with a way home. Null when the site's pages could not be seen. */
+  private async remixExtras(storeId: string, model: string, state: V2RunState, context: V2Context, direction: V2Direction): Promise<{ theme?: ReturnType<typeof resolveAccountTheme>['theme']; notFound?: string; css: string } | null> {
+    const origin = new URL(state.remix!).origin;
+    const [login, missing] = await Promise.all([this.captureReferences([`${origin}/account/login`], [0]), this.captureReferences([`${origin}/pagosya-pagina-que-no-existe`], [0])]);
+    if (!login.length && !missing.length) return null;
+    const photos = context.photos.filter(photo => !photo.product).map(photo => `${photo.path} (${photo.shape}${photo.words ? ', con letras' : ''})`);
+    const raw = await this.call<{ layout: string; photo: string; css: string; notFound: string; notFoundCss: string }>(storeId, 'v2-remix-extras', model, REMIX_EXTRAS_PROMPT, [
+      { type: 'input_text', text: `TIENDA: ${context.storeName}\nPALETA Y LETRA DE SU DISEÑO: ${JSON.stringify({ palette: direction.palette, display: direction.display, text: direction.text })}\nFOTOS DE LA TIENDA (para photo y la página 404; usa la ruta tal cual): ${photos.join(' · ') || 'ninguna'}${state.ownSite ? '\nEs la tienda anterior del propio comerciante: su arte y sus frases son suyos.' : '\nOtro sitio: copia su forma, nunca sus textos ni su logo.'}` },
+      ...(login.length ? [{ type: 'input_text', text: 'SU PÁGINA DE INGRESO:' } as Content, ...login.map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' }))] : []),
+      ...(missing.length ? [{ type: 'input_text', text: 'SU PÁGINA 404 (página que no existe):' } as Content, ...missing.map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' }))] : []),
+    ], REMIX_EXTRAS_SCHEMA, 'v2_remix_extras', 12_000, state, 'medium');
+    if (!raw) return null;
+    const theme = resolveAccountTheme({ layout: raw.layout, ...(raw.photo ? { photo: raw.photo } : {}), css: raw.css }, context.photos.map(photo => photo.path)).theme;
+    const page = String(raw.notFound ?? '').trim();
+    // A platform page in the store's Shell with a link home, nothing more: anything else is left out rather than risked.
+    const notFound = /^import Shell from '\.\.\/Shell';/m.test(page) && /href="index\.html"/.test(page) && !/dangerouslySetInnerHTML|<script|import\(|fetch\(|eval\(/.test(page) && page.length < 12_000
+      ? `// @pagosya-page\n${page.replace(/^\/\/ @pagosya-page\n?/, '')}\n` : undefined;
+    const css = notFound ? String(raw.notFoundCss ?? '').replace(/<\/?style[^>]*>|@import[^;]*;/gi, '').slice(0, 8_000) : '';
+    return { theme, ...(notFound ? { notFound } : {}), css };
+  }
+
   private async captureReferences(urls: string[], ys: readonly number[] = [0, 1100]): Promise<string[]> {
     if (!urls.length) return [];
     const browser = await chromium.launch({ headless: true });
