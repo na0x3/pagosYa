@@ -1257,6 +1257,7 @@ model Store {
   emailCopyOverrides           StoreEmailCopyOverride[]
   emailContent                 StoreEmailContent?
 
+  popupDesigns                StorePopupDesign[]
   @@index([merchantId, createdAt])
 }
 
@@ -1482,9 +1483,12 @@ model StoreNewsletterSubscriber {
   sourceVisitId    String?
   sourceVisit      StoreSourceVisit? @relation(fields: [sourceVisitId], references: [id], onDelete: SetNull)
 
+  /// Popups 2.0 (spec 2026-11-18): the popup design this signup or code came from.
+  popupDesignId    String?
   @@unique([storeId, email])
   @@index([storeId, createdAt])
   @@index([sourceVisitId])
+  @@index([popupDesignId])
 }
 
 /// Spec 2026-11-10 rasca y elige: a popup signup by WhatsApp (pagosYa sends no WhatsApp; the merchant writes to the list).
@@ -1501,8 +1505,11 @@ model StoreWhatsappSubscriber {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  /// Popups 2.0 (spec 2026-11-18): the popup design this signup or code came from.
+  popupDesignId    String?
   @@unique([storeId, phone])
   @@index([storeId, createdAt])
+  @@index([popupDesignId])
 }
 
 enum MediaAssetKind {
@@ -1841,8 +1848,11 @@ model PromoCode {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
+  /// Popups 2.0 (spec 2026-11-18): the popup design this signup or code came from.
+  popupDesignId    String?
   @@unique([storeId, code])
   @@index([storeId, isActive, createdAt])
+  @@index([popupDesignId])
 }
 
 // Groups a Store's products into sections on the storefront (e.g. "Bebidas",
@@ -3912,4 +3922,37 @@ model StoreSellingChange {
 
   @@index([storeId, status])
   @@index([storeId, endedAt])
+}
+
+enum PopupDesignStatus {
+  DRAFT
+  LIVE
+  FAILED
+  RETIRED
+}
+
+// Popups 2.0 (spec 2026-11-18): one YAPI-written popup per row; StoreRetention.settings.popupDesignId points at the LIVE one.
+model StorePopupDesign {
+  id          String            @id @default(cuid())
+  storeId     String
+  store       Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  version     Int
+  status      PopupDesignStatus @default(DRAFT)
+  createdBy   String
+  request     String?
+  flow        Json
+  steps       Json
+  css         String
+  launcher    String?
+  capture     String            @default("whatsapp")
+  percent     Int               @default(10)
+  composition String
+  fingerprint String
+  checks      Json?
+  previews    Json?
+  createdAt   DateTime          @default(now())
+
+  @@unique([storeId, version])
+  @@index([storeId, status])
+  @@index([createdAt])
 }
