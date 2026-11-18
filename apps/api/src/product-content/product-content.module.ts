@@ -20,5 +20,7 @@ import { ProductPageController } from "./product-page.controller";
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, ProductPageModule],
   controllers: [ProductScenesController, ProductHighlightsController, CommerceContentController, CommerceContentPublicController, ProductPageController],
   providers: [ProductScenesService, ProductHighlightsService, CommerceContentService],
+  // «Mejorar mi marca» (storefront-source/brand) shoots its campaign through the scenes service.
+  exports: [ProductScenesService],
 })
 export class ProductContentModule {}

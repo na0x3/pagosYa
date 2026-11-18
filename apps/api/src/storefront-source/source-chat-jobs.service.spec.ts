@@ -358,3 +358,23 @@ it('spec 2026-11-17: a new store\'s V2 first design runs on the V2 engine, not t
   await service.run({ ...job, input: { ...input, revision: 2, v2Design: true, firstDesign: true } });
   expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED' }) }));
 });
+
+it('spec 2026-11-18: a «Mejorar mi marca» job runs the brand flow, not the chat', async () => {
+  const { prisma, chat } = setup();
+  const brandFlow: any = { runForChat: jest.fn().mockResolvedValue({ revision: { revision: 4 } }) };
+  const service = new SourceChatJobsService(prisma, chat, undefined, undefined, undefined, undefined, undefined, brandFlow);
+  await service.run({ ...job, input: { ...input, revision: 2, brandFlow: true } });
+  expect(brandFlow.runForChat).toHaveBeenCalledWith(expect.objectContaining({ merchantId: 'm', storeId: 's', input: expect.objectContaining({ brandFlow: true }) }));
+  expect(chat.send).not.toHaveBeenCalled();
+  expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'COMPLETED' }) }));
+});
+
+it('spec 2026-11-18: a branding request in words is queued as a brand-flow job', async () => {
+  const { prisma, chat } = setup();
+  prisma.storeSourceChatJob.findUnique.mockResolvedValue(null);
+  prisma.storeAgentMessage = { findMany: jest.fn().mockResolvedValue([]) };
+  prisma.storeSourceChatJob.create.mockImplementation(async ({ data }: any) => ({ id: 'j', ...data, status: 'QUEUED', sequence: 0, attempt: 0, createdAt: new Date(), updatedAt: new Date() }));
+  const service = new SourceChatJobsService(prisma, chat);
+  await service.create('m', 's', { instruction: 'quiero mejorar mi marca', revision: 2, requestId: '6f1d2c0e-1111-4c4c-9999-000000000001' } as any);
+  expect(prisma.storeSourceChatJob.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ input: expect.objectContaining({ brandFlow: true }) }) }));
+});

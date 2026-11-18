@@ -16,6 +16,8 @@ import { MODEL_LIMIT, MODEL_LIMIT_MERCHANT_FAILURE, merchantFacingSourceFailure 
 import { SourceProviderQuotaException } from './source-provider-error';
 import { isFirstBuildStep, PopupLookService } from '../store-popups/popup-look.service';
 import { SourceV2PrototypeService } from './v2/v2-prototype.service';
+import { BrandFlowService } from './brand/brand-flow.service';
+import { isBrandRequest } from './brand/brand-intent';
 /** Spec 2026-10-28 §1: a new store's first design waits out a spent ChatGPT plan — 12 tries, 10 minutes apart — instead of failing. */
 export const FIRST_DESIGN_MAX_ATTEMPTS = 12;
 export const QUOTA_PAUSE_MS = 10 * 60_000;
@@ -58,7 +60,7 @@ export class SourceChatJobsService implements OnModuleDestroy {
   private pausedUntil = 0;
   private controller?: AbortController;
   private readonly logger = new Logger(SourceChatJobsService.name);
-  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService, @Optional() private readonly plans?: PlansService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService, @Optional() private readonly v2?: SourceV2PrototypeService) {}
+  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService, @Optional() private readonly plans?: PlansService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService, @Optional() private readonly v2?: SourceV2PrototypeService, @Optional() private readonly brandFlow?: BrandFlowService) {}
   /** The API is shutting down (a deploy, a dev restart): a running first design goes back to the queue instead of ending. */
   private stopping = false;
   onModuleDestroy() { this.stopping = true; this.controller?.abort(); }
@@ -69,6 +71,8 @@ export class SourceChatJobsService implements OnModuleDestroy {
     await this.owner(merchantId, storeId);
     const requestId = input.requestId;
     if (!requestId) throw new BadRequestException('La solicitud necesita un requestId.');
+    // «Mejorar mi marca» in words (spec 2026-11-18 §3.1) runs the same flow as the chip.
+    if (!input.personalTouch && !input.brandFlow && isBrandRequest(input.instruction ?? '')) input = { ...input, brandFlow: true };
     const inputDigest = chatRequestDigest(input);
     const existing = await this.prisma.storeSourceChatJob.findUnique({ where: { storeId_requestId: { storeId, requestId } } });
     if (existing) {
@@ -206,7 +210,10 @@ export class SourceChatJobsService implements OnModuleDestroy {
       await this.plans?.assertCredits(job.storeId);
       // Spec 2026-11-17: a new store's first design on the V2 engine (YAPI_V2_CHAT=1), awaited here like any job.
       const v2Job = (job.input as { v2Design?: boolean; revision?: number } | null);
-      const result = v2Job?.v2Design && this.v2 ? await this.v2.designForChat(job.merchantId, job.storeId, Number(v2Job.revision)) : await sourceRequestContext.run({ request: (job.input as any).merchantRequest || sourceMerchantRequest(job.input as unknown as SendSourceMessageDto), jobId: job.id, signal: controller.signal, progress: async progress => {
+      // Spec 2026-11-18: «Mejorar mi marca» — research, identity card, campaign shoot and a brief-aware V2 build.
+      const brandJob = Boolean((job.input as { brandFlow?: boolean } | null)?.brandFlow && this.brandFlow);
+      const result = brandJob ? await this.brandFlow!.runForChat({ merchantId: job.merchantId, storeId: job.storeId, input: job.input as unknown as SourceMessageInput, signal: controller.signal })
+        : v2Job?.v2Design && this.v2 ? await this.v2.designForChat(job.merchantId, job.storeId, Number(v2Job.revision)) : await sourceRequestContext.run({ request: (job.input as any).merchantRequest || sourceMerchantRequest(job.input as unknown as SendSourceMessageDto), jobId: job.id, signal: controller.signal, progress: async progress => {
         const updated = await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { progress: json(progress), sequence: { increment: 1 } } });
         if (!updated.count) controller.abort();
       }, assertLease: async (tx, revision, targetStoreId) => {
