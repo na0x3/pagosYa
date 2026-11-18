@@ -47,6 +47,8 @@ export function validateFlow(raw: unknown, products: readonly string[]): { flow:
   }
   const kinds = flow.map(step => step.kind);
   if (kinds.filter(k => k === 'game').length > 1) problems.push('Un flujo lleva un solo juego.');
+  // Part 1 ruling (2026-11-18): the runtime does not play scratch/wheel inside a YAPI design yet; today's games keep their own popup.
+  if (kinds.includes('game')) problems.push('Los juegos todavía no van en los popups de YAPI: usa offer, pick o quiz.');
   const capture = kinds.indexOf('capture'), reveal = kinds.indexOf('reveal');
   if (capture < 0) problems.push('Falta el paso capture (WhatsApp o email).');
   if (reveal >= 0 && (capture < 0 || capture > reveal)) problems.push('El paso capture va antes que reveal.');

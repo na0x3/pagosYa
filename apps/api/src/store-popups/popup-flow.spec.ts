@@ -22,4 +22,7 @@ describe('popup flow rules', () => {
     const quiz = { id: 'q', kind: 'quiz', questions: [{ id: 'q1', text: '¿Para quién?', answers: [{ id: 'a1', text: 'Para mí', products: [] }, { id: 'a2', text: 'Regalo', products: ['p2'] }] }] };
     expect((validateFlow([quiz, ...ok.slice(2)], products) as any).problems.join()).toMatch(/respuesta sin productos/);
   });
+  it('refuses game steps until the runtime plays them inside a design (today\'s games keep their own popup)', () => {
+    expect((validateFlow([{ id: 'g', kind: 'game', game: 'scratch' }, ...ok.slice(2)], products) as any).problems.join()).toMatch(/juegos todavía no/);
+  });
 });
