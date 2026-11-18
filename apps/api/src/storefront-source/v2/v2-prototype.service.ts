@@ -28,6 +28,8 @@ import { v2CartSheet } from './v2-kit-baseline';
 import { mergeSectionFix, sectionFixPlan, v2SectionFixInput, v2SectionFixPrompt, v2SectionFixSchema } from './v2-section-fix';
 import { publicRetentionSettings } from '../../retention/retention.service';
 import { DEFAULT_RETENTION } from '../../retention/retention.dto';
+import { makeRoom } from './v2-room';
+import { sourcePublicApiUrl } from '../source-store-config';
 import { wordsLookPrompt, wordsLookSchema } from './v2-words';
 import { allowedHeroIdeas, drawsLibre, heroIdea, newestStores, readShowcases, readStoreLooks } from './v2-heroes';
 import { allowedMenus, cleanMenu } from './v2-menus';
@@ -148,6 +150,21 @@ export class SourceV2PrototypeService {
   private readonly runs = new Map<string, V2RunState>();
 
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly projects: SourceProjectsService, private readonly chat: SourceChatService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly uploads?: UploadsService) {}
+
+  /** The store's catalogue uploads by the 12-character content hash its bundled copies are named after (assets/image-<hash>). */
+  private async catalogUploadsByHash(storeId: string) {
+    const out = new Map<string, string>();
+    if (!this.uploads) return out;
+    const rows = await this.prisma.paymentLink.findMany({ where: { storeId }, select: { imageUrls: true, variants: true } }).catch(() => []);
+    const urls = new Set(rows.flatMap(row => [...(row.imageUrls ?? []), ...((Array.isArray(row.variants) ? row.variants : []) as Array<{ imageUrl?: string | null }>).map(v => v?.imageUrl ?? '')]));
+    for (const url of urls) {
+      const name = /\/v1\/uploads\/([a-f0-9-]+\.(?:png|jpe?g|webp))$/i.exec(url ?? '')?.[1];
+      if (!name) continue;
+      const bytes = await this.uploads.getBuffer(name).catch(() => null);
+      if (bytes) out.set(createHash('sha256').update(bytes).digest('hex').slice(0, 12), `/v1/uploads/${name}`);
+    }
+    return out;
+  }
 
   private enabled() { if (this.config.get<boolean>('app.yapiV2Proto') !== true) throw new NotFoundException(); }
 
@@ -351,6 +368,13 @@ export class SourceV2PrototypeService {
     context.photos.push(...own.photos);
     await this.markProductPhotos(files, context);
     await this.markWordPhotos(storeId, files, context, state);
+    // Live 2026-11-18 (Fishwife copy over 8 MiB): leave ~2 MiB for the pages V2 writes; catalogue-only photos become upload links.
+    const room = makeRoom(files, await this.catalogUploadsByHash(storeId), sourcePublicApiUrl(this.config).origin, 6 * 1024 * 1024);
+    if (room.moved.length) {
+      files.splice(0, files.length, ...(room.files as typeof files));
+      context.photos = context.photos.filter(photo => !room.moved.includes(photo.path));
+      this.log.log(JSON.stringify({ event: 'v2_room_made', storeId, moved: room.moved.length }));
+    }
     // Owner 2026-11-16: the showcases rotate — one the merchant's last three stores placed is not offered (nor its examples).
     context.showcasesUsed = await this.recentShowcases(merchantId, storeId).catch(() => [] as string[]);
     const showcaseFiles = cut.cutouts.length >= 2 ? await readdir(join(referencesDir(), '_showcase')).then(names => Promise.all(names.filter(name => /\.jpe?g$/.test(name)).sort().slice(0, 6)
