@@ -32,4 +32,11 @@ describe('popup design prompt', () => {
     expect(prompt).toMatch(/pantalla completa/i);
     expect(prompt).toMatch(/pregunta/);
   });
+  // Live 2026-11-18 (Fishwife): a fresh design on every retry made new mistakes; the retry now repairs the previous one.
+  it('sends the previous design back to be repaired, and warns against 100vw', () => {
+    const prompt = popupDesignPrompt({ ...input, retryProblems: ['paso o a 390px: el popup se sale a lo ancho.'], previous: { flow: [{ id: 'o', kind: 'offer' }], steps: { o: '<div class="frame-x">hola</div>' }, css: '.frame-x{width:100vw}' } });
+    expect(prompt).toContain('.frame-x{width:100vw}');
+    expect(prompt).toMatch(/corrige solo/i);
+    expect(popupDesignPrompt(input)).toMatch(/100vw/);
+  });
 });

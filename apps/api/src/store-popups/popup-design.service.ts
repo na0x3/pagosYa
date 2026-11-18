@@ -118,10 +118,12 @@ export class PopupDesignService {
     let problems: string[] = [];
     let candidate: Candidate | null = null;
     let measures: FlowStepMeasure[] | null = null;
-    for (let attempt = 0; attempt < 2 && !candidate; attempt++) {
+    let previous: { flow: unknown; steps: Record<string, string>; css: string } | undefined;
+    // Three tries: the second and third repair the previous design with what failed (live 2026-11-18, Fishwife).
+    for (let attempt = 0; attempt < 3 && !candidate; attempt++) {
       options.signal?.throwIfAborted();
       const raw = await this.call(popupDesignPrompt({ storeName: store.name, sector: brief?.research?.niche ?? '', palette: brief?.identity?.palette ?? {}, fonts: [], voice: brief?.identity?.voice ?? '',
-        photos: Object.keys(photos).filter(path => !cutouts.some(cut => cut.url === path)), cutouts, products, capture, percent, taken: taken.map(t => t.composition), request: options.request, retryProblems: problems.length ? problems : undefined }), storeId)
+        photos: Object.keys(photos).filter(path => !cutouts.some(cut => cut.url === path)), cutouts, products, capture, percent, taken: taken.map(t => t.composition), request: options.request, retryProblems: problems.length ? problems : undefined, previous: problems.length ? previous : undefined }), storeId)
         .catch((error: unknown) => ({ failed: String((error as Error)?.message ?? error).slice(0, 300) }));
       // The model's own words reach the chat and the batch log (live 2026-11-18: an exhausted ChatGPT allowance read as «no answer»).
       if (raw && typeof raw === 'object' && 'failed' in raw) {
@@ -130,6 +132,10 @@ export class PopupDesignService {
         continue;
       }
       const built = raw ? this.assemble(raw, id, products.map(p => p.id), taken) : { problems: ['No llegó una respuesta del modelo.'] };
+      if (raw && typeof raw === 'object') {
+        const answer = raw as { flow?: unknown; steps?: Array<{ id?: string; html?: string }>; css?: string };
+        previous = { flow: answer.flow, steps: Object.fromEntries((Array.isArray(answer.steps) ? answer.steps : []).map(step => [String(step?.id), String(step?.html ?? '')])), css: String(answer.css ?? '') };
+      }
       if ('problems' in built) { problems = built.problems; continue; }
       measures = await this.measure({ storeName: store.name, design: { id, flow: built.flow, steps: built.steps, css: built.css, capture, percent }, items: rows.map(r => ({ id: r.id, name: r.name, price: r.amount, imageUrls: r.imageUrls })), photos });
       problems = measures ? checkFlowRender(measures) : ['No se pudo abrir el navegador de prueba.'];

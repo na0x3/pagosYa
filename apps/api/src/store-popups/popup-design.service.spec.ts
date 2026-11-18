@@ -66,9 +66,9 @@ describe('PopupDesignService', () => {
     expect(calls[1]).toMatch(/cerrar/);
   });
 
-  it('saves FAILED and leaves the store\'s popup alone after two failures', async () => {
+  it('saves FAILED and leaves the store\'s popup alone after its three tries fail', async () => {
     const bad = (id: string, w: number) => ({ ...goodMeasure(id, w), contrastFails: ['Hola'] });
-    const { service, retention } = setup([answer(), answer()], { measures: [bad, bad] });
+    const { service, retention } = setup([answer(), answer(), answer()], { measures: [bad, bad, bad] });
     const result = await service.design('m1', 's1', { createdBy: 'batch' });
     expect(result.design.status).toBe('FAILED');
     expect(result.problems.join(' ')).toMatch(/contraste/);
@@ -137,5 +137,13 @@ describe('PopupDesignService', () => {
     const { service, prisma } = setup([answer()]);
     prisma.paymentLink.findMany = jest.fn(async ({ where }: any) => (where.id?.in ?? []).map((id: string) => ({ id })));
     await expect(service.updateSettings('m1', 's1', { products: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] })).rejects.toThrow(/6/);
+  });
+  it('repairs: the retry carries the previous design, and a third attempt is allowed', async () => {
+    const bad = (id: string, w: number) => ({ ...goodMeasure(id, w), contrastFails: ['Hola'] });
+    const { service, calls } = setup([answer({ css: '.card{background:#fff;color:#111}.mark-1{color:red}' }), answer(), answer()], { measures: [bad, bad, goodMeasure] });
+    const result = await service.design('m1', 's1', { createdBy: 'merchant-chat' });
+    expect(calls).toHaveLength(3);
+    expect(calls[1]).toContain('.mark-1{color:red}');
+    expect(result.design.status).toBe('LIVE');
   });
 });

@@ -5,6 +5,8 @@ export type PopupDesignPromptInput = {
   taken: string[]; request?: string; retryProblems?: string[];
   /** Product photos cut out on our server (transparent WebP): the art that can burst in from the edges. */
   cutouts?: Array<{ url: string; product: string }>;
+  /** The attempt that failed: a retry repairs it instead of starting over (live 2026-11-18, Fishwife). */
+  previous?: { flow: unknown; steps: Record<string, string>; css: string };
 };
 
 const LOOKS = [
@@ -31,12 +33,13 @@ export function popupDesignPrompt(input: PopupDesignPromptInput): string {
     '- quiz: [data-question] (la plataforma pone la pregunta) y UNA plantilla [data-choice] (la plataforma la repite por respuesta) con <span data-slot="answer"></span> donde va el texto de la respuesta; cada respuesta ocupa el ancho que necesita (nunca columnas angostas).',
     '- capture: un <input data-field> y un botón [data-submit]; opcional [data-slot="error"]. La plataforma agrega la línea de consentimiento. Cuando nombres el contacto escribe <span data-slot="contact"></span> (la plataforma pone «tu WhatsApp» o «tu correo»).',
     '- reveal: [data-slot="code"] (opcional [data-slot="percent"]) y [data-next] para ir al producto.',
-    'CSS: una sola hoja; la plataforma la limita a tu popup. Diseña cada paso con libertad: composición, formas, decoración en SVG, movimiento con @keyframes (respetando prefers-reduced-motion), en los colores y letras de la marca. El texto se lee siempre (contraste 4.5:1); el texto, los botones y el cierre nunca se salen de la pantalla a 390px, y el botón para cerrar nunca se esconde. La decoración (recortes, dibujos, formas) lleva data-art: puede cruzar los bordes de la tarjeta y de la pantalla y quedar cortada por ellos, nunca tapa el texto ni el cierre.',
+    'CSS: una sola hoja; la plataforma la limita a tu popup y ya centra el popup en la pantalla: nunca uses 100vw ni 100vh (usa 100% y max-width), así nada se sale en un teléfono. Diseña cada paso con libertad: composición, formas, decoración en SVG, movimiento con @keyframes (respetando prefers-reduced-motion), en los colores y letras de la marca. El texto se lee siempre (contraste 4.5:1); el texto, los botones y el cierre nunca se salen de la pantalla a 390px, y el botón para cerrar nunca se esconde. La decoración (recortes, dibujos, formas) lleva data-art: puede cruzar los bordes de la tarjeta y de la pantalla y quedar cortada por ellos, nunca tapa el texto ni el cierre.',
     `INSPIRACIÓN (no son plantillas, inventa la tuya): ${LOOKS.join(' ')}`,
     input.products.length < 2 ? 'Esta tienda tiene menos de 2 productos: No uses pick ni quiz.' : '',
     input.taken.length ? data('Composiciones que ya usan otras tiendas', input.taken.slice(0, 30)) : '',
     input.taken.length ? 'NO repitas esas composiciones: inventa otra disposición.' : '',
-    input.retryProblems?.length ? `TU INTENTO ANTERIOR FALLÓ. Corrige esto:\n${input.retryProblems.map(problem => `- ${problem}`).join('\n')}` : '',
+    input.retryProblems?.length ? `TU INTENTO ANTERIOR FALLÓ. ${input.previous ? 'Corrige solo esto y conserva la idea, la composición, los textos y los ids de los pasos' : 'Corrige esto'}:\n${input.retryProblems.map(problem => `- ${problem}`).join('\n')}` : '',
+    input.retryProblems?.length && input.previous ? data('Tu intento anterior (flow, steps por id, css)', input.previous) : '',
     'composition: una línea en español que nombre tu composición («ticket de cupón inclinado sobre la botella»). launcher: HTML opcional (sin botones ni campos) de una pestaña pequeña que aparece en una esquina si el comprador cierra sin su código («¿15% para ti?»), o ""; dale estilo con su propia clase en la misma hoja.',
   ].filter(Boolean).join('\n');
 }
