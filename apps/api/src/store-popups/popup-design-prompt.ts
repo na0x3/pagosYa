@@ -31,7 +31,7 @@ export function popupDesignPrompt(input: PopupDesignPromptInput): string {
     '',
     'FLUJO: de 2 a 6 pasos, en el orden que quieras, con estos tipos: offer (la oferta), pick (el comprador elige un producto entre fichas), quiz (1 a 3 preguntas; cada respuesta lleva los ids de productos que recomienda), capture (el contacto), reveal (el código), land (último, sin HTML: abre el producto elegido con el descuento en el carrito). capture va antes que reveal. No uses juegos.',
     'GANCHOS que tu HTML debe llevar (la plataforma hace toda la lógica; nunca escribas JavaScript, sin <script>, sin on…, sin enlaces ni imágenes de fuera):',
-    '- todo paso: un botón [data-close] de al menos 44×44, visible; opcional [data-back].',
+    '- todo paso: un botón [data-close] de al menos 44×44, visible; opcional [data-back], en la otra esquina de arriba.',
     '- offer: [data-next]. pick: UNA plantilla [data-tile] con [data-slot="photo"] (<img>), [data-slot="name"] y opcional [data-slot="price"]: la plataforma la repite por producto.',
     '- quiz: [data-question] (la plataforma pone la pregunta) y UNA plantilla [data-choice] (la plataforma la repite por respuesta) con <span data-slot="answer"></span> donde va el texto de la respuesta; cada respuesta ocupa el ancho que necesita (nunca columnas angostas).',
     '- capture: un <input data-field> y un botón [data-submit]; opcional [data-slot="error"]. La plataforma agrega la línea de consentimiento. Cuando nombres el contacto escribe <span data-slot="contact"></span> (la plataforma pone «tu WhatsApp» o «tu correo»).',

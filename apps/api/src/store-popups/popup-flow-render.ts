@@ -11,7 +11,7 @@ export type FlowStepMeasure = { stepId: string; size: { width: number; height: n
   /** The popup's own content edges: a modal sits in the top layer, so an overflowing card never widens the page's scroll. */
   contentLeft: number; contentRight: number;
   contentTop: number; contentBottom: number;
-  contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; /** Words another part of the popup sits on. */ covered: string[]; /** Words drawn over a cut-out or drawing. */ overArt: string[]; /** Cut-outs left mostly off the screen. */ hiddenArt: string[]; /** The close sits in a top corner of the popup. */ closeInCorner: boolean; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
+  contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; /** Words another part of the popup sits on. */ covered: string[]; /** Words drawn over a cut-out or drawing. */ overArt: string[]; /** Cut-outs left mostly off the screen. */ hiddenArt: string[]; /** The close sits in a top corner of the popup. */ closeInCorner: boolean; /** The back button (when there is one) sits in a top corner too. */ backInCorner: boolean; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
 export type FlowRenderInput = { storeName: string; design: { id: string; flow: unknown; steps: Record<string, string>; css: string; capture: string; percent: number };
   items: unknown[]; photos: Record<string, { bytes: Buffer; contentType: string }> };
 
@@ -109,10 +109,12 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
   // The close belongs in a top corner of the popup (live 2026-11-18: Fishwife's floated mid-left over the art).
   const contentTop = edges.length ? Math.min(...edges.map(r => r.top)) : 0, contentBottom = edges.length ? Math.max(...edges.map(r => r.bottom)) : 0;
   const leftEdge = edges.length ? Math.min(...edges.map(r => r.left)) : 0, rightEdge = edges.length ? Math.max(...edges.map(r => r.right)) : 0;
-  const closeInCorner = !closeBox || (closeBox.y + closeBox.height / 2 - contentTop <= Math.max(96, (contentBottom - contentTop) * 0.18)
-    && (closeBox.x + closeBox.width / 2 - leftEdge <= 120 || rightEdge - (closeBox.x + closeBox.width / 2) <= 120));
+  // The back arrow too (live 2026-11-18: Miga's floated mid-popup under an arch).
+  const inCorner = (b: PopupBox | null) => !b || !b.visible || (b.y + b.height / 2 - contentTop <= Math.max(96, (contentBottom - contentTop) * 0.18)
+    && (b.x + b.width / 2 - leftEdge <= 120 || rightEdge - (b.x + b.width / 2) <= 120));
+  const closeInCorner = inCorner(closeBox), backInCorner = inCorner(box(root?.querySelector('[data-back]')));
   return { contentLeft: edges.length ? Math.min(...edges.map(r => r.left)) : 0, contentRight: edges.length ? Math.max(...edges.map(r => r.right)) : 0, contentTop, contentBottom, close: closeBox, closeHit: Boolean(close && hit && (close === hit || close.contains(hit))), scrollWidth: document.documentElement.scrollWidth, dialog: box(dialog),
-    contrastFails, squashed, covered, overArt, hiddenArt, closeInCorner, tiles: tiles && tiles.length ? tiles.length : null,
+    contrastFails, squashed, covered, overArt, hiddenArt, closeInCorner, backInCorner, tiles: tiles && tiles.length ? tiles.length : null,
     tileImages: tiles && tiles.length ? Array.from(tiles).filter(t => ((t.querySelector('img') as HTMLImageElement | null)?.naturalWidth ?? 0) > 0).length : null };
 }
 
@@ -169,6 +171,7 @@ export function checkFlowRender(measures: FlowStepMeasure[]): string[] {
     if (m.scrollWidth > m.size.width + 1 || (m.dialog && m.dialog.width > m.size.width + 1) || m.contentRight > m.size.width + 1 || m.contentLeft < -1) problems.push(`${where}: el popup se sale a lo ancho.`);
     if (m.contrastFails.length) problems.push(`${where}: poco contraste en «${m.contrastFails[0]}».`);
     if (m.closeInCorner === false) problems.push(`${where}: el botón para cerrar va en una esquina de arriba del popup.`);
+    if (m.backInCorner === false) problems.push(`${where}: el botón para volver va en una esquina de arriba del popup.`);
     if (m.overArt?.length) problems.push(`${where}: texto encima de un recorte o dibujo en «${m.overArt[0]}»; mueve el recorte o el texto.`);
     if (m.hiddenArt?.length) problems.push(`${where}: el recorte «${m.hiddenArt[0]}» queda casi todo fuera de la pantalla; muéstralo al menos a medias (puede cruzar el borde).`);
     if (m.covered?.length) problems.push(`${where}: texto tapado por otra parte del popup en «${m.covered[0]}».`);

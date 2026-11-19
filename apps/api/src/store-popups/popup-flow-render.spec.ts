@@ -79,6 +79,14 @@ describe('popup design render check', () => {
     const fine = await measureFlow(base(`${SHEET}.card{position:relative}.tin{position:absolute;left:0;top:40px;width:100%;height:160px;z-index:0}.panel{position:relative;z-index:1;background:#fff}`, { o: card, c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(fine!).join(' ')).not.toMatch(/encima de un recorte/);
   });
+  // Live 2026-11-18 (Miga v4): the back arrow floated mid-popup under an arch instead of a top corner.
+  it('wants the back button in a top corner too', async () => {
+    const back = '<div class="card"><button data-close aria-label="Cerrar">×</button><button data-back aria-label="Volver" class="b">←</button><h2>Hola amigos</h2><button data-next>Ok</button></div>';
+    const lost = await measureFlow(base(`${SHEET}.card{position:relative;min-height:600px}.card [data-close]{position:absolute;top:8px;right:8px}.b{position:absolute;left:calc(50% - 22px);top:100px;width:44px;height:44px}`, { o: back, c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(lost!).join(' ')).toMatch(/botón para volver va en una esquina/);
+    const fine = await measureFlow(base(`${SHEET}.card{position:relative}.card [data-close]{position:absolute;top:8px;right:8px}.b{position:absolute;left:8px;top:8px;width:44px;height:44px}`, { o: back, c: capture }, [flow[0], flow[2]]));
+    expect(checkFlowRender(fine!).join(' ')).not.toMatch(/volver/);
+  });
   // Live 2026-11-18 (NOA v4): on a phone the dress cut-outs sat 148px past the edge, a 30px sliver left — the popup read flat.
   it('finds a cut-out pushed almost all the way off the screen', async () => {
     const art = '<div class="card"><button data-close aria-label="Cerrar">×</button><img data-art class="cala" src="/v1/uploads/a.png" alt=""><h2>Hola</h2><button data-next>Ok</button></div>';
