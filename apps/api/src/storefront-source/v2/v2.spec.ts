@@ -348,6 +348,13 @@ export default function Home() { return <main><ScrollScale className="a" style={
       : file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('</main>', `${closing}</main>`) } : file);
     expect(v2ContractProblems(withFooter('<section className="ob-closing"><h3>Comprar</h3><a>Sodas</a><a>Packs</a><h3>Ayuda</h3></section>'), context).join()).toMatch(/«ob-closing» repite el pie/);
     expect(v2ContractProblems(withFooter('<section className="ob-offer"><h2>10% en tu primera compra</h2><a>Comprar</a></section>'), context).join()).not.toMatch(/repite el pie/);
+    // Live 2026-11-18 (Graza remix): the footer echo named no section, so the round went to the full fix, which broke the build three
+    // times. It names its place in <main>, and only that section is rewritten.
+    const echo = withFooter('<section className="ob-closing"><h3>Comprar</h3><a>Sodas</a><a>Packs</a><h3>Ayuda</h3></section>');
+    const echoLine = v2ContractProblems(echo, context).find(line => /repite el pie/.test(line))!;
+    const echoSections = homeSections(echo.find(file => file.path === 'components/home.tsx')!.content)!;
+    expect(echoLine.startsWith(`[sección ${echoSections.length - 1}] `)).toBe(true);
+    expect(sectionFixPlan(echo, [echoLine])?.sections.map(section => section.index)).toEqual([echoSections.length - 1]);
     // Live 2026-11-16 (rhode failed 4 rounds): a category section names the categories the footer lists too — that is not a second footer.
     const shop = { ...context, categories: ['Labios', 'Rubor', 'Sets'] } as V2Context;
     const footerCats = withFooter('<section className="v2-runway"><a>Todo</a><a>Labios</a><a>Rubor</a><a>Sets</a></section>').map(file => file.path === 'components/Shell.tsx' ? { ...file, content: file.content.replace('</footer>', '<a>Todo</a><a>Labios</a><a>Rubor</a><a>Sets</a></footer>') } : file);

@@ -8,6 +8,7 @@ import type { BrandBrief } from '../brand/brand-brief-types';
 import { fontFamily } from '../brand/brand-identity';
 import { menuStyleBrief, menuStyleProblem, V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
 import { markWordPhotos } from './v2-words';
+import { homeSections } from './v2-section-fix';
 import { heroIdea, heroMarker, MIX_NOTE, STRONG_HERO, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
 import { readV2LibraryFile, V2_HERO_TYPES, V2_KIT_TEXT, V2_LIBRARY_FILE, v2LibraryCatalogText, v2LibrarySchema, type V2LibraryEntry } from './v2-library';
 export { mergeV2LibraryEntries } from './v2-library';
@@ -1027,11 +1028,18 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   // own <footer>, or four of the footer's link and heading words, is a second footer.
   const footerWords = new Set([...(shell.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '').matchAll(/>\s*([^<>{}]{3,24}?)\s*</g)].map(match => match[1].trim().toLowerCase()).filter(word => /[a-záéíóúñ]/i.test(word)));
   const catalogWords = new Set([...context.categories, ...context.products.map(product => product.name)].map(word => word.trim().toLowerCase()));
-  for (const chunk of home.split(/(?=<section\b)/).slice(1)) {
+  // The echo names its place in <main> («[sección N]»), so the fix rewrites that section only (live 2026-11-18, Graza: the full fix
+  // broke the build three rounds running).
+  const mainSections = homeSections(home) ?? [];
+  let chunkAt = 0;
+  for (const chunk of home.split(/(?=<section\b)/)) {
+    const at = chunkAt; chunkAt += chunk.length;
+    if (!at) continue;
+    const place = mainSections.find(section => section.start <= at && at < section.end && !section.library);
     const echoed = new Set([...chunk.matchAll(/>\s*([^<>{}]{3,24}?)\s*</g)].map(match => match[1].trim().toLowerCase()).filter(word => footerWords.has(word)));
     // The store's own category and product names may repeat (a category section names what the footer lists — rhode, live 2026-11-16).
     const ownWords = [...echoed].filter(word => !catalogWords.has(word));
-    if (/<footer\b/.test(chunk) || echoed.size >= 4 && ownWords.length >= 2) { problems.push(`La sección «${chunk.match(/className="([^"]+)"/)?.[1] ?? 'final'}» repite el pie de página (${[...echoed].slice(0, 5).join(', ') || '<footer>'}): el pie ya está en Shell. Termina la portada con una sección propia, sin columnas de enlaces, sin el nombre gigante de la marca y sin el código del pie.`); break; }
+    if (/<footer\b/.test(chunk) || echoed.size >= 4 && ownWords.length >= 2) { problems.push(`${place ? `[sección ${place.index}] ` : ''}La sección «${chunk.match(/className="([^"]+)"/)?.[1] ?? 'final'}» repite el pie de página (${[...echoed].slice(0, 5).join(', ') || '<footer>'}): el pie ya está en Shell. Termina la portada con una sección propia, sin columnas de enlaces, sin el nombre gigante de la marca y sin el código del pie.`); break; }
   }
   // Each photo and cut-out once on the home, outside the stage and the rail (live 2026-11-15, Oh Belly rev 18: the lemons photo three
   // times, a can cut-out in three sections). The browser check compares addresses, so it never saw a cut-out repeated in a hidden slide.
