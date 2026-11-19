@@ -11,7 +11,7 @@ export type FlowStepMeasure = { stepId: string; size: { width: number; height: n
   /** The popup's own content edges: a modal sits in the top layer, so an overflowing card never widens the page's scroll. */
   contentLeft: number; contentRight: number;
   contentTop: number; contentBottom: number;
-  contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; /** Words another part of the popup sits on. */ covered: string[]; /** Words drawn over a cut-out or drawing. */ overArt: string[]; /** The close sits in a top corner of the popup. */ closeInCorner: boolean; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
+  contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; /** Words another part of the popup sits on. */ covered: string[]; /** Words drawn over a cut-out or drawing. */ overArt: string[]; /** Cut-outs left mostly off the screen. */ hiddenArt: string[]; /** The close sits in a top corner of the popup. */ closeInCorner: boolean; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
 export type FlowRenderInput = { storeName: string; design: { id: string; flow: unknown; steps: Record<string, string>; css: string; capture: string; percent: number };
   items: unknown[]; photos: Record<string, { bytes: Buffer; contentType: string }> };
 
@@ -97,6 +97,13 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
     if (bare) overArt.push((el.textContent ?? '').trim().slice(0, 40));
   }
   arts.forEach(art => art.style.removeProperty('pointer-events'));
+  // A cut-out may cross the edge, but at least a third of it shows (live 2026-11-18, NOA v4: a 30px sliver of each dress on a phone).
+  const hiddenArt = arts.filter(art => art.tagName === 'IMG').flatMap(art => {
+    const r = art.getBoundingClientRect();
+    if (r.width < 40 || r.height < 40 || !box(art)?.visible) return [];
+    const shown = Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
+    return shown < r.width * r.height / 3 ? [(art.className || 'recorte').toString().split(/\s+/).pop()!] : [];
+  });
   const tiles = root?.querySelectorAll('[data-tile]') ?? null;
   const edges = Array.from(root?.querySelectorAll('*') ?? []).filter(el => !el.closest('[data-art]')).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
   // The close belongs in a top corner of the popup (live 2026-11-18: Fishwife's floated mid-left over the art).
@@ -105,7 +112,7 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
   const closeInCorner = !closeBox || (closeBox.y + closeBox.height / 2 - contentTop <= Math.max(96, (contentBottom - contentTop) * 0.18)
     && (closeBox.x + closeBox.width / 2 - leftEdge <= 120 || rightEdge - (closeBox.x + closeBox.width / 2) <= 120));
   return { contentLeft: edges.length ? Math.min(...edges.map(r => r.left)) : 0, contentRight: edges.length ? Math.max(...edges.map(r => r.right)) : 0, contentTop, contentBottom, close: closeBox, closeHit: Boolean(close && hit && (close === hit || close.contains(hit))), scrollWidth: document.documentElement.scrollWidth, dialog: box(dialog),
-    contrastFails, squashed, covered, overArt, closeInCorner, tiles: tiles && tiles.length ? tiles.length : null,
+    contrastFails, squashed, covered, overArt, hiddenArt, closeInCorner, tiles: tiles && tiles.length ? tiles.length : null,
     tileImages: tiles && tiles.length ? Array.from(tiles).filter(t => ((t.querySelector('img') as HTMLImageElement | null)?.naturalWidth ?? 0) > 0).length : null };
 }
 
@@ -163,6 +170,7 @@ export function checkFlowRender(measures: FlowStepMeasure[]): string[] {
     if (m.contrastFails.length) problems.push(`${where}: poco contraste en «${m.contrastFails[0]}».`);
     if (m.closeInCorner === false) problems.push(`${where}: el botón para cerrar va en una esquina de arriba del popup.`);
     if (m.overArt?.length) problems.push(`${where}: texto encima de un recorte o dibujo en «${m.overArt[0]}»; mueve el recorte o el texto.`);
+    if (m.hiddenArt?.length) problems.push(`${where}: el recorte «${m.hiddenArt[0]}» queda casi todo fuera de la pantalla; muéstralo al menos a medias (puede cruzar el borde).`);
     if (m.covered?.length) problems.push(`${where}: texto tapado por otra parte del popup en «${m.covered[0]}».`);
     if (m.squashed?.length) problems.push(`${where}: texto aplastado en «${m.squashed[0]}» (una o dos letras por línea).`);
     if (Math.abs((m.contentLeft + m.contentRight) / 2 - m.size.width / 2) > 40 && m.contentRight - m.contentLeft < m.size.width - 40) problems.push(`${where}: el popup no queda centrado.`);
