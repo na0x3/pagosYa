@@ -105,7 +105,19 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
     return shown < r.width * r.height / 3 ? [(art.className || 'recorte').toString().split(/\s+/).pop()!] : [];
   });
   const tiles = root?.querySelectorAll('[data-tile]') ?? null;
-  const edges = Array.from(root?.querySelectorAll('*') ?? []).filter(el => !el.closest('[data-art]')).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+  // What shows of each part: a box that scrolls or clips (a rail of tiles) cuts off what it holds (live 2026-11-19, DooBoo and Antojo:
+  // tiles further along a sideways rail read as the popup leaving the screen).
+  const shown = (el: Element) => {
+    const r = el.getBoundingClientRect();
+    let left = r.left, right = r.right, top = r.top, bottom = r.bottom;
+    for (let node = el.parentElement; node && node !== root && root?.contains(node); node = node.parentElement) {
+      const style = getComputedStyle(node), clip = node.getBoundingClientRect();
+      if (style.overflowX !== 'visible') { left = Math.max(left, clip.left); right = Math.min(right, clip.right); }
+      if (style.overflowY !== 'visible') { top = Math.max(top, clip.top); bottom = Math.min(bottom, clip.bottom); }
+    }
+    return { left, right, top, bottom, width: right - left, height: bottom - top };
+  };
+  const edges = Array.from(root?.querySelectorAll('*') ?? []).filter(el => !el.closest('[data-art]')).map(shown).filter(r => r.width > 0 && r.height > 0);
   // The close belongs in a top corner of the popup (live 2026-11-18: Fishwife's floated mid-left over the art).
   const contentTop = edges.length ? Math.min(...edges.map(r => r.top)) : 0, contentBottom = edges.length ? Math.max(...edges.map(r => r.bottom)) : 0;
   const leftEdge = edges.length ? Math.min(...edges.map(r => r.left)) : 0, rightEdge = edges.length ? Math.max(...edges.map(r => r.right)) : 0;

@@ -87,6 +87,14 @@ describe('popup design render check', () => {
     const fine = await measureFlow(base(`${SHEET}.card{position:relative}.card [data-close]{position:absolute;top:8px;right:8px}.b{position:absolute;left:8px;top:8px;width:44px;height:44px}`, { o: back, c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(fine!).join(' ')).not.toMatch(/volver/);
   });
+  // Live 2026-11-19 (DooBoo, Antojo: three tries each): product tiles in a rail that scrolls sideways were measured past the screen,
+  // so the popup «se sale a lo ancho», its close «not in a corner» and «not centred» — a scroller clips what it holds.
+  it('measures a sideways-scrolling rail of tiles by what shows', async () => {
+    const rail = '<div class="card"><button data-close aria-label="Cerrar">×</button><h2>Elige</h2><ul class="rail"><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b></li></ul></div>';
+    const sheet = `${SHEET}.card{position:relative}.card [data-close]{position:absolute;top:8px;right:8px}.rail{display:flex;gap:12px;overflow-x:auto;padding:0;list-style:none}.rail [data-tile]{flex:0 0 340px}`;
+    const measures = await measureFlow(base(sheet, { p: rail, c: capture }, [flow[1], flow[2]]));
+    expect(checkFlowRender(measures!)).toEqual([]);
+  });
   // Live 2026-11-18 (NOA v4): on a phone the dress cut-outs sat 148px past the edge, a 30px sliver left — the popup read flat.
   it('finds a cut-out pushed almost all the way off the screen', async () => {
     const art = '<div class="card"><button data-close aria-label="Cerrar">×</button><img data-art class="cala" src="/v1/uploads/a.png" alt=""><h2>Hola</h2><button data-next>Ok</button></div>';
