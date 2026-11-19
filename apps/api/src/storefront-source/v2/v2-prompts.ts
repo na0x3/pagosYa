@@ -1001,7 +1001,10 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   }
   // Live 2026-11-14 (BOXY V2: the same four-product rail four times on the home): one row per product set, at most two rows besides
   // the full catalogue (owner 2026-11-11: «one row of the catalogue besides the grid»).
-  const rows = [...home.matchAll(/<[^>]*\bdata-pagosya-catalog\b[^>]*>/g)].map(match => match[0].match(/data-(?:products|category|collection)=(\{[^}]*\}|"[^"]*"|'[^']*')/)?.[1] ?? 'todo');
+  // One product («p1», {OILS.sizzle}, {scene.product}) is a spotlight, not a row (live 2026-11-18: Graza's nine one-product scenes).
+  const spotlight = (tag: string) => /data-products=(?:["'][^,"']+["']|\{\s*[A-Za-z_$][\w$]*(?:\.[\w$]+)+\s*\})/.test(tag);
+  const rows = [...home.matchAll(/<[^>]*\bdata-pagosya-catalog\b[^>]*>/g)].filter(match => !spotlight(match[0]))
+    .map(match => match[0].match(/data-(?:products|category|collection)=(\{[^}]*\}|"[^"]*"|'[^']*')/)?.[1] ?? 'todo');
   const repeated = [...new Set(rows.filter((row, index) => rows.indexOf(row) !== index))];
   if (repeated.length) problems.push(`La portada repite la misma fila de productos (${repeated.join(', ')}): cada grupo de productos va una sola vez.`);
   if (rows.length > 3) problems.push(`La portada tiene ${rows.length} filas de productos: deja como máximo 3 (una con todo o una selección, y hasta dos de categorías o destacados distintos).`);

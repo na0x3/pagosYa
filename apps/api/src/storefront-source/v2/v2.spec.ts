@@ -187,9 +187,17 @@ describe('v2 prototype: the contract', () => {
     const twice = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<div data-pagosya-catalog data-products="p1" />', `${rail}<section>${rail}</section>`) } : file);
     expect(v2ContractProblems(twice, context).join('\n')).toMatch(/repite la misma fila de productos \(\{featured\}\)/);
     const many = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<div data-pagosya-catalog data-products="p1" />',
-      '<div data-pagosya-catalog /><div data-pagosya-catalog data-category="A" /><div data-pagosya-catalog data-category="B" /><div data-pagosya-catalog data-products="p1" />') } : file);
+      '<div data-pagosya-catalog /><div data-pagosya-catalog data-category="A" /><div data-pagosya-catalog data-category="B" /><div data-pagosya-catalog data-products="p1,p1" />') } : file);
     expect(v2ContractProblems(many, context).join('\n')).toMatch(/tiene 4 filas de productos/);
     expect(v2ContractProblems(good, context)).toEqual([]);
+  });
+
+  // Live 2026-11-18 (Graza remix «FUEGO / FINAL»): nine one-product scenes (Sizzle on the fire, Drizzle on the plate) were refused as
+  // «10 filas de productos» after a 10-minute write. One product is a spotlight, not a row.
+  it('counts one-product spotlights apart from product rows', () => {
+    const scenes = '<div data-pagosya-catalog data-products={OILS.sizzle} /><div data-pagosya-catalog data-products={OILS.drizzle} /><div data-pagosya-catalog data-products={OILS.drizzle} /><div key={scene.product} data-pagosya-catalog data-products={scene.product} /><div data-pagosya-catalog data-products="p1" />';
+    const home = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<div data-pagosya-catalog data-products="p1" />', `<div data-pagosya-catalog />${scenes}`) } : file);
+    expect(v2ContractProblems(home, context).join('\n')).not.toMatch(/filas? de productos/);
   });
 
   it('turns the template hint that adds product rows into «a store photo, or remove it» (live 2026-11-14)', () => {
