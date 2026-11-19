@@ -1158,6 +1158,18 @@ describe('V2 on an imported plain-page store (copy a store, 2026-11-17)', () => 
     expect(files.map((file: { path: string }) => file.path)).toEqual(expect.arrayContaining(['lib/ui.tsx', 'lib/creative.tsx']));
     expect(withV2Scaffold(files)).toBe(files);
   });
+
+  // Live 2026-11-18 (Graza remix, three runs): the library's code comes from the template and imports './store-data', which a copied
+  // plain store never had — every build that reached the compiler failed on it. The scaffold brings the four facts the library reads.
+  it('gives a plain store the store-data the library sections read, with its own name', () => {
+    const { withV2Scaffold } = require('./v2-prototype.service');
+    const plain = [{ path: 'index.html', content: '<!doctype html>' }, { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"storeName":"Graza \\"Oil\\""};' }];
+    const data = withV2Scaffold(plain).find((file: { path: string }) => file.path === 'components/store-data.tsx')?.content ?? '';
+    expect(data).toMatch(/export const store\b[^\n]*"Graza \\"Oil\\""/);
+    for (const name of ['layout', 'photos', 'variants']) expect(data).toMatch(new RegExp(`export const ${name}\\b`));
+    const assembled = assembleV2Files(withV2Scaffold(plain), [...good, { path: 'components/v2-library.tsx', content: "import { LibraryBlockView } from './library';\nexport default function L() { return null; }" }] as V2File[]);
+    expect(assembled.map(file => file.path)).toEqual(expect.arrayContaining(['components/library.tsx', 'components/store-data.tsx']));
+  });
 });
 
 describe('V2 with a brand brief (spec 2026-11-18)', () => {

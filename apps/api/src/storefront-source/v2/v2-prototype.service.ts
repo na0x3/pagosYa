@@ -79,7 +79,15 @@ export function withV2Scaffold<T extends { path: string; content: string }>(file
   const runtime = nextProjectScaffold('store', routes).filter(file => ['lib/creative.tsx', 'lib/ui.tsx', 'creative.d.ts', 'storefront-framework.json'].includes(file.path) && !known.has(file.path));
   // A shop build needs a checkout page (live 2026-11-18: «Falta components/checkout.tsx»): the platform's checkout inside V2's Shell.
   const checkout = known.has('components/checkout.tsx') ? [] : [{ path: 'components/checkout.tsx', content: "import Shell from './Shell';\n\nexport default function Checkout() {\n  return <Shell>\n    <main id=\"contenido\" className=\"es-page\" data-pagosya-checkout-page />\n    <p data-pagosya-status role=\"status\" aria-live=\"polite\" />\n  </Shell>;\n}\n" }];
-  return [...files, ...runtime as unknown as T[], ...checkout as unknown as T[]];
+  // The library's code (v2LibrarySources) imports './store-data', which only a template store has (live 2026-11-18: Graza's remix
+  // failed to compile on it three runs running): a plain store gets the four facts the library reads.
+  const data = known.has('components/store-data.tsx') ? [] : [{ path: 'components/store-data.tsx', content: `// Platform: what the section library reads from a store that has no template data.
+export const store: { name: string; phone?: string } = { name: ${JSON.stringify(String(readConfigData(files as never).storeName ?? ''))} };
+export const layout: unknown[] = [];
+export const photos: Record<string, string | undefined> = {};
+export const variants: Record<string, unknown> = {};
+` }];
+  return [...files, ...runtime as unknown as T[], ...checkout as unknown as T[], ...data as unknown as T[]];
 }
 /** The study library on disk: <host>/ pictures + facts.json, index.json, cards/<host>.json (scripts/brand-bench/v2-references.cjs). */
 /** The store photos the written home shows itself (the library's blocks take the others first). */
