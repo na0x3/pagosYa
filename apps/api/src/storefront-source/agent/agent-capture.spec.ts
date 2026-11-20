@@ -112,6 +112,15 @@ describe('agent capture', () => {
     const bar = page('header{position:fixed;top:0;left:0;right:0;height:60px}.stamp{position:absolute;left:100px;top:20px;margin:0}header a{position:absolute;left:96px;top:16px;padding:8px}', '<header><a href="#visita">Visítanos</a><p class="stamp">빵집</p></header>');
     expect((await captureAgentDraft(bar, 1280)).errors).toEqual(expect.arrayContaining([expect.stringContaining('«빵집» sobre «Visítanos»')]));
   });
+  // Graza rev 5 (2026-11-20): an edit squeezed «Shop now» and «Ver carrito» into 53 px pills, one letter a line, and the
+  // verify passed it. A screen-reader-only button (1 px on purpose) and vertical lettering are not squashed.
+  it('names a word squeezed into a sliver, but not a screen-reader-only button or vertical lettering', async () => {
+    const page = (css: string, body: string) => ({ brief: {}, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"><style>${css}</style></head><body><h1>Graza</h1>${body}</body></html>` }] }) as any;
+    const squashed = page('.row{display:flex;width:140px}.cta{display:block;box-sizing:border-box;width:53px;padding:10px 18px;font-size:11px;line-height:1.3;border-radius:99px;word-break:break-all}', '<div class="row"><a class="cta" href="#">Shop now</a><button class="cta" type="button">Ver carrito</button></div>');
+    expect((await captureAgentDraft(squashed, 1280)).errors).toEqual(expect.arrayContaining([expect.stringMatching(/Texto aplastado.*«Shop now».*«Ver carrito»/)]));
+    const fine = page('.sr{position:absolute;width:1px;height:52px;overflow:hidden;clip:rect(0 0 0 0)}.side{writing-mode:vertical-rl;font-size:14px}', '<button class="sr" type="button">Open cart</button><p class="side">Squeeze refill repeat</p><a href="#">Comprar ahora</a>');
+    expect((await captureAgentDraft(fine, 1280)).errors.filter(e => /aplastado/.test(e))).toEqual([]);
+  });
   // PEPPA please 2026-10-20: the older checkout form was pasted over the kit's, so every [data-part] check came back
   // empty and the account theme being edited never showed in the agent's own screenshots.
   it('lets the kit draw the themed account form, so [data-part] checks see it', async () => {

@@ -131,6 +131,15 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
         });
         return hit ? [`«${(el.textContent || '').trim().slice(0, 30)}» sobre «${(hit.textContent || '').trim().slice(0, 30)}»`] : [];
       }).slice(0, 4),
+      // Graza rev 5 (2026-11-20): «Shop now» squeezed into a 53 px pill, one letter a line (the popups' rule). The text's own width,
+      // inside the padding, under two letters; a screen-reader-only box (clipped, or under 4 px) and vertical lettering are meant that way.
+      squashed: Array.from(document.querySelectorAll<HTMLElement>('body *')).filter(el => Array.from(el.childNodes).some(node => node.nodeType === 3 && node.textContent!.trim())).flatMap(el => {
+        const style = getComputedStyle(el), words = Array.from(el.childNodes).filter(node => node.nodeType === 3).map(node => node.textContent).join(' ').trim();
+        if (words.replace(/\s/g, '').length < 4 || style.visibility === 'hidden' || Number(style.opacity) < 0.2 || /^(vertical|sideways)/.test(style.writingMode) || style.clip !== 'auto' || style.clipPath !== 'none' || el.closest('[aria-hidden="true"]')) return [];
+        const box = el.getBoundingClientRect(), size = parseFloat(style.fontSize), line = parseFloat(style.lineHeight) || size * 1.2;
+        const inner = box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
+        return box.width >= 4 && inner < size * 2.2 && box.height > line * 2.5 ? [`«${words.slice(0, 30)}»`] : [];
+      }).slice(0, 4),
       // Text nearly the colour of what is behind it (BOXY 2026-10-25: a white title on a white card over a photo). Only a solid
       // ground counts: text over a photo or a gradient is left to the screenshot.
       lowContrast: (() => {
@@ -274,6 +283,7 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     if (health.overflow) errors.push('La página desborda horizontalmente.');
     errors.push(...health.stickyOver.map(name => `«${name}» es sticky y se desliza sobre las secciones que siguen en su mismo contenedor. Quita el sticky o deja esas secciones fuera de su contenedor.`));
     errors.push(...health.textOverButton.map(pair => `Texto encima de un botón: ${pair}. Muévelo para que no se toquen.`));
+    if (health.squashed.length) errors.push(`Texto aplastado en una columna estrecha, una letra por línea: ${health.squashed.join(', ')}. Dale el ancho de sus palabras (white-space: nowrap o un ancho mínimo) en todas las medidas.`);
     if (health.staleCatalogCopy) errors.push('Texto permanente de catálogo vacío fuera del runtime. Usa texto de marca que siga siendo válido al añadir productos; el catálogo administra su estado vacío.');
     if (health.designProcessCopy) errors.push('Texto del proceso de diseño visible para compradores. Sustituye explicaciones de composición, runtime o catálogo real/vivo por texto breve sobre los productos o la marca, sin inventar datos.');
     if (health.lowContrast.length) errors.push(`Texto casi invisible, del mismo color que el fondo donde está: ${health.lowContrast.join(', ')}. Dale un color que contraste con ese fondo.`);
