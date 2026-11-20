@@ -184,10 +184,18 @@ export function nextPageMarkup(files: SourceProjectFileDto[], name: string): str
       : (requested === 'h3' || requested === 'p' ? requested : 'h2');
     return `<${tag}>${children}</${tag}>`;
   };
+  // Live 2026-11-19 (Fishwife, Graza): NavShell's body (a context provider, the structure chosen at run time) read as empty, so every
+  // header failed «necesita data-cart-open» and the writer added hidden cart buttons. The kit always draws the menu button and the cart
+  // (its fixed structures place NavActions, a free bar gets NavFreeFallback's); a free bar's own markup is the design's children.
+  const uiNavShell = (component: string, children: string, attrs: Array<[string, string]>) => {
+    if (component !== 'NavShell') return null;
+    const free = attrs.some(([attribute, value]) => attribute === 'structure' && value === 'free');
+    return `<header data-nav-shell="">${free ? children : ''}<button data-nav-toggle=""></button><button data-cart-open=""></button></header>`;
+  };
   const renderFile = (path: string, exportName = 'default', children = '', attrs: Array<[string, string]> = []): string => {
     const key = `${path}#${exportName}`;
     if (active.has(key)) return '';
-    const typography = path === UI_LIBRARY_PATH ? uiTypography(exportName, children, attrs) : null;
+    const typography = path === UI_LIBRARY_PATH ? uiTypography(exportName, children, attrs) ?? uiNavShell(exportName, children, attrs) : null;
     if (typography !== null) return typography;
     if (!loaded.has(path)) loaded.set(path, loadFile(path));
     const renderExport = loaded.get(path);

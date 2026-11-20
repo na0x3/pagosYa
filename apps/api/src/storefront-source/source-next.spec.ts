@@ -169,6 +169,18 @@ export default function Header() { return <header><a href="index.html">Home</a><
     expect(() => validateNextSources(files)).not.toThrow();
     expect(nextPageMarkup(files, 'product')).toMatch(/<button[^>]*data-cart-open/);
   });
+  // Live 2026-11-19 (Fishwife, Graza copies): the kit's NavShell read as empty, so a free header holding <NavActions /> failed
+  // «necesita data-cart-open» and the writer added hidden cart buttons to pass it.
+  it('counts the cart a NavShell header always draws, and reads a free bar written inside it', () => {
+    const files = nextStoreFiles();
+    files[0].content = `import { NavShell, NavLogo, NavMenuButton, NavActions } from '@pagosya/ui';
+export default function Header() { return <NavShell structure="free" brand="Mar" links={[]}><div className="bar"><NavMenuButton /><NavLogo /><a className="own-link" href="nosotros.html">Nosotros</a><NavActions /></div></NavShell>; }`;
+    expect(() => validateNextSources(files)).not.toThrow();
+    expect(nextPageMarkup(files, 'home')).toContain('own-link');
+    files[0].content = `import { NavShell } from '@pagosya/ui';
+export default function Header() { return <NavShell structure="split" brand="Mar" links={[]} />; }`;
+    expect(() => validateNextSources(files)).not.toThrow();
+  });
   it('renders reused tab panels each time with their forwarded ids', () => {
     const files = nextStoreFiles();
     files[1].content = `import { useState } from 'react'; import Header from './Header';
