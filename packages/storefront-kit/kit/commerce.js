@@ -2864,6 +2864,8 @@
     track('product_view', undefined, { value: price(p), currency: p.currency });
     analytics('product_view', { productId: p.id }, 'view:' + p.id);
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
+    // Popups 2.0 part 2 (spec 2026-11-21 §7): the popups watch which products a shopper keeps opening.
+    document.dispatchEvent(new CustomEvent("pagosya:product-viewed", { detail: { id: p.id, categoryId: p.categoryId || "" } }));
     activeGallery = null;
     // A card's colour swatch sends the shopper here with ?color=: that colour starts chosen (owner 2026-10-25).
     const linkedColour = fullProductPage ? new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('color') : null;

@@ -650,6 +650,81 @@
     return true;
   }
 
+  // Part 2 (spec 2026-11-21 §3, §7): the moments of a visit — the store's own welcome timing, leave intent (pointer out at the
+  // top; on a phone a fast scroll up after 10 s or coming back to the tab after 20 s), 3 products of one category or 40 s on one,
+  // and a returning contact 6 s in — each asks the rules, which open at most one popup a visit.
+  function watchMoments({ dialog, family, settings, config, api, demo, query, open, waitingForCookies, legacyKey }) {
+    const R = window.PAGOSYA_POPUP_RULES, slug = config.slug, items = (config.data && config.data.items) || [];
+    let legacy = 0; try { legacy = Number(localStorage.getItem(legacyKey)) || 0; } catch {}
+    const memory = R.visitMemory(R.loadMemory(slug), Date.now(), legacy); R.saveMemory(slug, memory);
+    const available = Object.keys(family).filter(moment => family[moment] && family[moment].steps);
+    const consent = () => window.PAGOSYA_PRIVACY?.choice?.(slug) === true;
+    const event = (design, moment, kind, step) => { if (demo || !consent()) return; api('popup-events', { visitor: memory.visitor, designId: design.id, moment, kind, ...(step ? { step } : {}) }).catch(() => undefined); };
+    const cart = () => {
+      const detail = { items: [] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail }));
+      return detail.items.map(line => {
+        const item = items.find(i => i && i.id === (line.paymentLinkId || line.id));
+        return item ? { id: item.id, name: item.name, price: item.price, quantity: line.quantity || 1, photo: (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || '' } : null;
+      }).filter(Boolean);
+    };
+    const favourite = () => { if (memory.favourite) return memory.favourite; try { return localStorage.getItem(`pagosya:fav:${slug}`) || ''; } catch { return ''; } };
+    const blocked = () => ['comeback', 'recover', 'unsubscribe'].some(key => query.has(key)) || document.querySelector('[data-pagosya-checkout-page], .pya-checkout:not([hidden]), dialog[open]');
+    let lastViewed = null, viewTimer = 0, busy = false;
+    async function consider(signals) {
+      if (busy || blocked() || waitingForCookies()) return;
+      const lines = cart();
+      const moment = R.chooseMoment(memory, { available, signals, cartLines: lines.length }, Date.now());
+      if (!moment) return;
+      busy = true;
+      try {
+        // Never remind a code the shopper can no longer use.
+        if (memory.code && moment !== 'welcome') {
+          const status = demo ? { active: true } : await api('code-status', { code: memory.code }).catch(() => ({ active: false }));
+          if (!status.active) { memory.code = ''; R.saveMemory(slug, memory); }
+        }
+        const design = family[moment];
+        const hooks = {
+          closed: step => { R.markClosed(memory, moment, Date.now()); R.saveMemory(slug, memory); event(design, moment, 'closed', step); },
+          done: () => { R.markDone(memory, moment, Date.now()); R.saveMemory(slug, memory); event(design, moment, 'completed'); },
+          contact: code => { memory.contact = true; if (code) memory.code = code; R.markDone(memory, moment, Date.now()); R.saveMemory(slug, memory); },
+        };
+        const context = { moment, contact: memory.contact, code: memory.code, favourite: favourite(), product: lastViewed, cart: lines };
+        if (!mountFlow(dialog, design, { api, demo, remember: () => {}, slug, items, apiBaseUrl: config.apiBaseUrl, context, hooks })) return;
+        R.markShown(memory, moment, Date.now()); R.saveMemory(slug, memory);
+        open();
+        if (dialog.open) event(design, moment, 'shown');
+      } finally { busy = false; }
+    }
+    // Welcome keeps the store's own timing setting.
+    const trigger = ['load', 'delay', 'exit', 'both'].includes(settings.popupTrigger) ? settings.popupTrigger : 'load';
+    const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    const exitWelcome = trigger === 'exit' || trigger === 'both';
+    if (trigger === 'load') void consider(['welcome']);
+    if (trigger === 'delay' || trigger === 'both') setTimeout(() => void consider(['welcome']), Math.min(60, Math.max(0, Number(settings.popupDelaySeconds ?? 8))) * 1000);
+    const leave = () => void consider(exitWelcome ? ['leave', 'welcome'] : ['leave']);
+    if (!touch) document.addEventListener('mouseout', e => { if (!e.relatedTarget && e.clientY <= 0) leave(); });
+    const started = Date.now();
+    let samples = [];
+    window.addEventListener('scroll', () => {
+      const now = Date.now(); samples = [...samples.filter(s => now - s.t <= 400), { t: now, y: scrollY }];
+      if (touch && now - started >= 10_000 && samples[0].y - scrollY >= innerHeight * 0.6) { samples = []; leave(); }
+    }, { passive: true });
+    let hiddenAt = 0;
+    document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (hiddenAt && Date.now() - hiddenAt >= 20_000) { hiddenAt = 0; leave(); } });
+    document.addEventListener('pagosya:product-viewed', e => {
+      const item = items.find(i => i && i.id === e.detail?.id);
+      if (!item) return;
+      lastViewed = { id: item.id, name: item.name, categoryId: item.categoryId || '', categoryName: '' };
+      const third = R.noteView(memory, { id: item.id, categoryId: item.categoryId || '' }); R.saveMemory(slug, memory);
+      clearTimeout(viewTimer);
+      if (third) void consider(['interest']);
+      else viewTimer = setTimeout(() => { if (lastViewed?.id === item.id) void consider(['interest']); }, 40_000);
+    });
+    setTimeout(() => void consider(['return']), 6_000);
+    // The cookie answer clears the way for a welcome that was waiting.
+    window.addEventListener('pagosya:privacy-change', () => setTimeout(() => void consider(['welcome']), 800));
+  }
+
   function mountSignup(host, settings, config, state, api, preview, query, demo = false) {
     host.className = 'pagosya-signup-host';
     if (!document.getElementById('pagosya-signup-style')) {
@@ -788,6 +863,12 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
         }
       } catch (error) { status.textContent = error.message; button.disabled = false; }
     });
+    // Part 2 (spec 2026-11-21 §3, §7): a store with a family of popups — the page's signals pick at most one a visit.
+    const family = settings.popupMoments && typeof settings.popupMoments === 'object' && settings.popupDesign?.steps ? { welcome: settings.popupDesign, ...settings.popupMoments } : null;
+    if (family && !(preview && !demo)) {
+      watchMoments({ dialog, family, settings, config, api, demo, query, open, waitingForCookies, legacyKey: popupKey });
+      return open;
+    }
     let dismissed = state.signupDismissed;
     try { dismissed ||= sessionStorage.getItem(dismissedKey) === '1'; } catch {}
     // Never cover a receipt, private card, recovery link, or merchant preview.
