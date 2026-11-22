@@ -13,7 +13,7 @@ function setup(over: { design?: any } = {}) {
     storeWhatsappSubscriber: { upsert: jest.fn(async ({ create }: any) => ({ id: 'w1', ...create })) },
     storeNewsletterSubscriber: { upsert: jest.fn(async ({ create }: any) => ({ id: 'n1', ...create })) },
     promoCode: {
-      findFirst: jest.fn(async ({ where }: any) => codes.find(c => c.storeId === where.storeId && c.code === where.code) ?? null),
+      findFirst: jest.fn(async ({ where }: any) => codes.find(c => c.storeId === where.storeId && (typeof where.code === 'string' ? c.code === where.code : where.code.in.includes(c.code))) ?? null),
       create: jest.fn(async ({ data }: any) => { codes.push(data); return data; }),
     },
     paymentLink: { findMany: jest.fn(async () => [{ id: 'p1', variants: [] }]) },
@@ -88,5 +88,19 @@ describe('popup moments in retention (spec 2026-11-21 §4, §7)', () => {
   });
   it('keeps the family pointers when the other retention settings are saved', () => {
     expect(KEPT_SETTINGS).toEqual(expect.arrayContaining(['popupMoments']));
+  });
+});
+
+describe('one code per shopper across the family (final review I1)', () => {
+  it('a contact who already got a code from one popup gets the same code from another', async () => {
+    const { service, prisma, codes } = setup();
+    const rescue = { ...design, id: 'crescue00000000000000001', moment: 'rescue' };
+    prisma.storePopupDesign.findFirst = jest.fn(async ({ where }: any) => [design, rescue].find(r => r.id === where.id && r.storeId === where.storeId && (where.status === undefined || r.status === where.status)) ?? null);
+    prisma.storePopupDesign.findMany = jest.fn(async ({ where }: any) => [design, rescue].filter(r => r.storeId === where.storeId).map(r => ({ id: r.id })));
+    prisma.promoCode.findFirst = jest.fn(async ({ where }: any) => codes.find(c => c.storeId === where.storeId && (typeof where.code === 'string' ? c.code === where.code : where.code.in.includes(c.code))) ?? null);
+    const first = await service.subscribe(store, null, { phone: '71234567', source: 'popup', popupDesignId: design.id } as any);
+    const second = await service.subscribe(store, null, { phone: '71234567', source: 'popup', popupDesignId: rescue.id } as any);
+    expect(second.code).toBe(first.code);
+    expect(codes).toHaveLength(1);
   });
 });

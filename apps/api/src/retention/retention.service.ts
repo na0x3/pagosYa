@@ -245,13 +245,17 @@ export class RetentionService {
     return { active: true, percent: row.discountValue };
   }
   /** One personal code per contact and design: the same shopper always gets the same single-use code, and nobody can work out
-   *  another shopper's (keyed with the server secret). Tagged with the design for Part 4's sales count. */
+   *  another shopper's (keyed with the server secret). Tagged with the design for Part 4's sales count.
+   *  Part 2 (spec 2026-11-21 §3): one code per shopper and store — a contact that already got a code from any of the store's
+   *  popups gets that same code back, never a second discount. */
   private async designCode(storeId: string, design: { id: string; percent: number }, contact: string) {
     const secret = this.config.get<string>('app.orderTrackingSecret') || 'development-only';
-    const digest = createHmac('sha256', secret).update(`${design.id}:${contact}`).digest();
-    const code = `POP${Array.from(digest.subarray(0, 6), byte => '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'[byte % 32]).join('')}`;
-    const existing = await this.prisma.promoCode.findFirst({ where: { storeId, code } });
-    if (existing) return code;
+    const codeFor = (designId: string) => `POP${Array.from(createHmac('sha256', secret).update(`${designId}:${contact}`).digest().subarray(0, 6), byte => '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'[byte % 32]).join('')}`;
+    const code = codeFor(design.id);
+    const designs = await this.prisma.storePopupDesign.findMany({ where: { storeId }, select: { id: true } });
+    const candidates = [...new Set([code, ...designs.map(row => codeFor(row.id))])];
+    const existing = await this.prisma.promoCode.findFirst({ where: { storeId, code: { in: candidates } }, orderBy: { createdAt: 'asc' } });
+    if (existing) return existing.code;
     try {
       await this.prisma.promoCode.create({ data: { storeId, code, discountType: 'PERCENT', discountValue: design.percent, maxUses: 1, isActive: true, showInEmails: false, showInAssistant: false, popupDesignId: design.id } });
     } catch (error) { if ((error as { code?: string }).code !== 'P2002') throw error; }
