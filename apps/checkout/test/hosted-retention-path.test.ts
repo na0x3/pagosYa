@@ -29,3 +29,20 @@ it('forwards the popup events and the code check as POSTs, never as reads', () =
   expect(hostedRetentionMethod('code-status', true)).toBe('POST');
   expect(hostedRetentionMethod('popup-events/x', true)).toBeNull();
 });
+
+// Popups part 2 final review (C1): the parent page is the trust boundary — it keeps the popups' memory and only forwards events with consent.
+import { keepPopupMemory, popupMemoryOf, popupEventAllowed } from '../src/source-storefront';
+it('keeps the popups memory per store, only when it is a small JSON object', () => {
+  localStorage.clear();
+  keepPopupMemory('remo', '{"visits":3}');
+  expect(popupMemoryOf('remo')).toBe('{"visits":3}');
+  keepPopupMemory('remo', 'not json'); keepPopupMemory('remo', '[1]'); keepPopupMemory('remo', JSON.stringify({ x: 'y'.repeat(5000) }));
+  expect(popupMemoryOf('remo')).toBe('{"visits":3}');
+  expect(popupMemoryOf('other')).toBe('');
+});
+it('forwards popup events only when the shopper accepted statistics', () => {
+  expect(popupEventAllowed('popup-events', true)).toBe(true);
+  expect(popupEventAllowed('popup-events', false)).toBe(false);
+  expect(popupEventAllowed('popup-events', null)).toBe(false);
+  expect(popupEventAllowed('subscribe', null)).toBe(true);
+});

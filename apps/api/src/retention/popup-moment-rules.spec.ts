@@ -84,3 +84,17 @@ describe('popup moment rules', () => {
     expect(r.loadMemory('calima').code).toBe('POPABC234');
   });
 });
+
+describe('popup memory on a published store (final review C1)', () => {
+  it('reads the memory the parent page handed in and posts every save back to it', () => {
+    const posted: any[] = [];
+    const window: any = { PAGOSYA_HOSTED: true, PAGOSYA_POPUP_MEMORY: JSON.stringify({ visits: 2, contact: true }), parent: { postMessage: (m: any) => posted.push(m) } };
+    const localStorage = { getItem: () => { throw new Error('sandboxed'); }, setItem: () => { throw new Error('sandboxed'); } };
+    new Script(readKitFileSync('retention.js')).runInNewContext({ window, localStorage, document: { addEventListener() {}, querySelector: () => null }, crypto: { getRandomValues: (a: Uint8Array) => a.fill(7) } });
+    const R = window.PAGOSYA_POPUP_RULES;
+    expect(R.loadMemory('calima')).toEqual({ visits: 2, contact: true });
+    R.saveMemory('calima', { visits: 3 });
+    expect(posted).toEqual([{ type: 'pagosya:popup-memory', memory: '{"visits":3}' }]);
+    expect(R.loadMemory('calima')).toEqual({ visits: 3 });
+  });
+});

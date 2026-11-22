@@ -44,6 +44,19 @@ const PROMO = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
 export function keepPromo(slug: string, code: unknown): void {
   if (typeof code === 'string' && PROMO.test(code)) { try { sessionStorage.setItem(`pagosya:promo:${slug}`, code); } catch {} }
 }
+/** Popups part 2 (spec 2026-11-21 §7): the frame cannot keep the popups' visit memory; this page keeps it, a small JSON object. */
+const popupMemoryKey = (slug: string) => `pagosya:popups:${slug}`;
+export function popupMemoryOf(slug: string): string {
+  try { const value = localStorage.getItem(popupMemoryKey(slug)) || ''; return value.length <= 4096 ? value : ''; } catch { return ''; }
+}
+export function keepPopupMemory(slug: string, value: unknown): void {
+  if (typeof value !== 'string' || value.length > 4096) return;
+  try { const parsed = JSON.parse(value); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return; localStorage.setItem(popupMemoryKey(slug), value); } catch {}
+}
+/** What shoppers do with the popups is counted only when they accepted statistics on this page (the trust boundary). */
+export function popupEventAllowed(path: string, analytics: boolean | null): boolean {
+  return path !== 'popup-events' || analytics === true;
+}
 export function promoOf(slug: string): string {
   try { const value = sessionStorage.getItem(`pagosya:promo:${slug}`) || ''; return PROMO.test(value) ? value : ''; } catch { return ''; }
 }
@@ -155,7 +168,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, ...(favouriteOf(slug) ? { favourite: favouriteOf(slug) } : {}), ...(promoOf(slug) ? { promo: promoOf(slug) } : {}), ...(privacy.choice(slug) === null ? { cookiesPending: true } : {}), accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, ...(favouriteOf(slug) ? { favourite: favouriteOf(slug) } : {}), ...(promoOf(slug) ? { promo: promoOf(slug) } : {}), ...(privacy.choice(slug) === null ? { cookiesPending: true } : {}), ...(popupMemoryOf(slug) ? { popupMemory: popupMemoryOf(slug) } : {}), ...(privacy.choice(slug) === true ? { analytics: true } : {}), accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
   // The store draws its account pages; this origin keeps the session, calls the API and guards typed passwords
   // (spec 2026-10-08-store-built-in-account-pages-design). An emailed token is read here and never reaches the store.
   const emailToken = takeAccountEmailToken(location, history);
@@ -222,6 +235,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     }
     // Spec 2026-11-10 rasca y elige: the frame cannot keep the shopper's favourite; this page does, and hands it back on every page.
     if (data?.type === 'pagosya:apply-promo') { keepPromo(slug, data.code); return; }
+    if (data?.type === 'pagosya:popup-memory') { if (!merchantPreview) keepPopupMemory(slug, data.memory); return; }
     if (data?.type === 'pagosya:favourite') { if (typeof data.id === 'string' && data.id.length <= 140) { try { localStorage.setItem(`pagosya:fav:${slug}`, data.id); } catch {} } return; }
     if (data?.type === 'pagosya:funnel') return; // Older kits still post steps; the steps arrive as pagosya:analytics.
     if (data?.type === 'pagosya:analytics') { if (Array.isArray(data.events)) { data.events.slice(0, 40).forEach(analytics.record); if (!merchantPreview) rememberRecent(slug, data.events.slice(0, 40)); } return; }
@@ -290,6 +304,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       const retry = (message: string) => { if (!interactive || attempt >= 4) return false; previous = { error: message, values: Object.fromEntries(Object.entries(personal).filter(([, value]) => value !== undefined && value !== null).map(([key, value]) => [key, typeof value === 'boolean' ? value : String(value)])) }; return true; };
       if (data.action === 'retention') {
         const path = typeof body.path === 'string' ? body.path : '';
+        if (!popupEventAllowed(path, privacy.choice(slug))) { reply(true, { ok: true }); return; }
         const method = hostedRetentionMethod(path, Boolean(body.payload));
         if (!method) throw new Error('Solicitud no válida.');
         const read = method === 'GET';

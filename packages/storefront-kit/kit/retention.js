@@ -54,8 +54,14 @@
       return memory.views[category].length === 3;
     }
     const key = slug => `pagosya:popups:${slug}`;
-    const loadMemory = slug => { try { return JSON.parse(localStorage.getItem(key(slug)) || 'null'); } catch { return null; } };
-    const saveMemory = (slug, memory) => { try { localStorage.setItem(key(slug), JSON.stringify(memory)); } catch {} };
+    // A published store's frame keeps nothing: the parent page hands the memory in (PAGOSYA_POPUP_MEMORY) and keeps every save.
+    const hosted = () => window.PAGOSYA_HOSTED === true;
+    const loadMemory = slug => { try { return JSON.parse((hosted() ? window.PAGOSYA_POPUP_MEMORY : localStorage.getItem(key(slug))) || 'null'); } catch { return null; } };
+    const saveMemory = (slug, memory) => {
+      const text = JSON.stringify(memory);
+      if (hosted()) { window.PAGOSYA_POPUP_MEMORY = text; try { window.parent.postMessage({ type: 'pagosya:popup-memory', memory: text }, '*'); } catch {} return; }
+      try { localStorage.setItem(key(slug), text); } catch {}
+    };
     return { visitMemory, chooseMoment, markShown, markClosed, markDone, noteView, loadMemory, saveMemory };
   })();
   window.PAGOSYA_COMEBACK_RENDER = function renderComeback(el, card, options = {}) {
@@ -658,7 +664,8 @@
     let legacy = 0; try { legacy = Number(localStorage.getItem(legacyKey)) || 0; } catch {}
     const memory = R.visitMemory(R.loadMemory(slug), Date.now(), legacy); R.saveMemory(slug, memory);
     const available = Object.keys(family).filter(moment => family[moment] && family[moment].steps);
-    const consent = () => window.PAGOSYA_PRIVACY?.choice?.(slug) === true;
+    // On a published store the cookie answer lives on the parent page, which also refuses events without it.
+    const consent = () => (window.PAGOSYA_HOSTED === true ? window.PAGOSYA_ANALYTICS === true : window.PAGOSYA_PRIVACY?.choice?.(slug) === true);
     const event = (design, moment, kind, step) => { if (demo || !consent()) return; api('popup-events', { visitor: memory.visitor, designId: design.id, moment, kind, ...(step ? { step } : {}) }).catch(() => undefined); };
     const cart = () => {
       const detail = { items: [] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail }));

@@ -32,3 +32,16 @@ describe('the cookie question handed to the store frame', () => {
   });
 });
 
+
+// Popups part 2 final review (C1): the frame cannot keep the popups' visit memory nor read the cookie answer; the parent hands both in.
+describe('the popups memory and statistics consent handed to the store frame', () => {
+  const snapshot = { files: [{ path: 'index.html', content: '<!doctype html><html><head></head><body><main>Tienda</main></body></html>' }] } as never;
+  it('passes the memory as escaped text and the consent only when given', () => {
+    const html = sourcePreviewDocument(snapshot, 'index.html', { hosted: true, popupMemory: '{"visits":2,"x":"</script>"}', analytics: true });
+    expect(html).toContain('window.PAGOSYA_POPUP_MEMORY="{\\"visits\\":2,\\"x\\":\\"\\u003c/script>\\"}";');
+    expect(html).toContain('window.PAGOSYA_ANALYTICS=true;');
+    const plain = sourcePreviewDocument(snapshot, 'index.html', { hosted: true });
+    expect(plain).not.toContain('PAGOSYA_POPUP_MEMORY'); expect(plain).not.toContain('PAGOSYA_ANALYTICS');
+    expect(sourcePreviewDocument(snapshot, 'index.html', { hosted: true, popupMemory: 'x'.repeat(9000) })).not.toContain('PAGOSYA_POPUP_MEMORY');
+  });
+});
