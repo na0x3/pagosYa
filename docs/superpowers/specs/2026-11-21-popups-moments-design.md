@@ -79,7 +79,7 @@ WhatsApp messages (pagosYa still never sends; the merchant sees the list).
 id, storeId, designId, moment, visitor (random 16-byte id from the browser, never a contact), kind (shown | closed | completed),
 step String? (the step id on closed), createdAt; index [storeId, createdAt], [designId, kind]
 ```
-No IP, no user agent. Rows older than 180 days are deleted by the existing nightly cleanup.
+No IP, no user agent. Rows older than 180 days are deleted by a new nightly job (`popup-events-cleanup`, 03:45 La Paz).
 
 **Code status:** `POST /stores/public/:slug/retention/code-status { code }` → `{ active: boolean, percent }` for the store's own
 popup codes only (unguessable HMAC codes; throttle 20/min). Used by reminders before showing a code.
@@ -93,7 +93,7 @@ Part 1's step kinds stay. Part 2 adds these platform pieces and per-moment shape
 | step `cart` | one `data-tile` with `data-slot="photo\|name\|price\|qty"` inside; optional `data-slot="total"` | clones the tile per cart line (max 4, then «+N más»), live prices, the cart total |
 | step `remind` | `data-slot="code"`, optional `data-slot="percent"`, `data-apply` | shows the shopper's code; `data-apply` sends `pagosya:apply-promo` then goes on |
 | `pick` source `context` / `favourite` / `new` | as Part 1's `pick` | `context`: the viewed product first, then 2–3 of its collection; `favourite`: the saved favourite then newest; `new`: newest active products |
-| `land` target `checkout` | none | opens the cart panel's checkout with the code applied |
+| `land` target `checkout` | none | applies the code and opens the cart panel (`[data-cart-open]`), one tap from «Pagar» |
 | text slots `data-slot="product-name"`, `"collection-name"` | inline in any step | filled from the moment's context; a step with an empty slot is skipped |
 
 **Shapes** (the runtime walks the flow and skips the branch that does not apply to this shopper):
@@ -132,13 +132,13 @@ Part 1's step kinds stay. Part 2 adds these platform pieces and per-moment shape
 Today's 30-day popup key is read once on upgrade: a recent one counts as `lastShownAt` and `done.welcome`.
 
 **Signals:**
-- product views per collection in this visit — commerce.js adds `collectionIds` to `pagosya:current-product`;
+- product views per category in this visit («collection» in this spec = the product's `categoryId`) — commerce.js sends a new `pagosya:product-viewed` `{ id, categoryId }` whenever a product opens (full page or dialog);
 - time on the current product page;
 - cart lines from `pagosya:serialize-cart`, refreshed on `pagosya:cart-updated`;
 - leave intent: desktop `mouseout` to the top (today's rule); phone: scroll up ≥ 60 % of the screen height within 400 ms after
   10 s on the page, or `visibilitychange` back to visible after ≥ 20 s hidden. The back button is never hijacked.
 
-**Events:** `POST /stores/public/:slug/retention/popup-events` (throttle 30/min, `sendBeacon` when leaving) for `shown`, `closed`,
+**Events:** `POST /stores/public/:slug/retention/popup-events` (throttle 30/min, fire-and-forget through the same `api` helper, so published pages use the hosted request) for `shown`, `closed`,
 `completed`, sent only when the shopper allowed analytics (`privacy.js`); without it nothing is sent and only the contact itself
 (already consented) reaches the server. The visitor id is random, kept in the browser memory, and gone when the shopper clears it.
 
