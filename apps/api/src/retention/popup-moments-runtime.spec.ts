@@ -11,9 +11,9 @@ const tile = '<ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name
 const capture = step('<input data-field><button data-submit>Enviar</button>'), reveal = step('<b data-slot="code"></b><button data-next>Ir</button>'), remind = step('<b data-slot="code"></b><button data-apply>Usar</button>');
 const welcome = design('cwelcome00000000000000001', 'welcome', [{ id: 'o', kind: 'offer' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }], { o: step('<h2>Hola</h2><button data-next>Sí</button>'), c: capture, r: reveal });
 const rescue = design('crescue000000000000000001', 'rescue', [{ id: 'k', kind: 'cart' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }, { id: 'm', kind: 'remind' }, { id: 'l', kind: 'land', to: 'checkout' }], { k: step(`<h2>Tu carrito</h2><ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b><i data-slot="price"></i></li></ul><button data-next>Guardar</button>`), c: capture, r: reveal, m: remind });
-const interest = design('cinterest0000000000000001', 'interest', [{ id: 'p', kind: 'pick', source: 'context', products: [] }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }, { id: 'm', kind: 'remind' }], { p: step(`<h2>¿Te gustó <span data-slot="product-name"></span>?</h2>${tile}`), c: capture, r: reveal, m: remind });
+const interest = design('cinterest0000000000000001', 'interest', [{ id: 'p', kind: 'pick', source: 'context', products: [] }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }, { id: 'm', kind: 'remind' }], { p: step(`<h2>¿Te gustó <span data-slot="product-name"></span>?</h2><p>Y otras de <span data-slot="collection-name"></span>.</p>${tile}`), c: capture, r: reveal, m: remind });
 const back = design('creturn000000000000000001', 'return', [{ id: 'p', kind: 'pick', source: 'new', products: [] }, { id: 'm', kind: 'remind' }], { p: step(`<h2>Hola de nuevo</h2>${tile}`), m: remind });
-const items: any[] = ['p1', 'p2', 'p3', 'p4'].map((id, i) => ({ id, name: `Producto ${i + 1}`, price: 3000, categoryId: 'c1', imageUrls: [`/v1/uploads/${id}.png`] }));
+const items: any[] = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'].map((id, i) => ({ id, name: `Producto ${i + 1}`, price: 3000, categoryId: i < 4 ? 'c1' : null, imageUrls: [`/v1/uploads/${id}.png`] }));
 items[3].variants = [{ id: 'v1', name: 'Grande', amount: 5500 }];
 const settings = { signupEnabled: true, popupTrigger: 'delay', popupDelaySeconds: 8, popupDesign: welcome, popupMoments: { rescue, interest, return: back } };
 
@@ -47,7 +47,7 @@ async function open(opts: { storage?: Record<string, string>; analytics?: boolea
     (window as any).__analytics = analytics;
     (window as any).__cart = cart;
     document.addEventListener('pagosya:serialize-cart', (e: any) => { e.detail.items = [...(window as any).__cart]; });
-    (window as any).PAGOSYA_CONFIG = { slug: 'calima', apiBaseUrl: `${location.origin}/v1`, data: { items: list } };
+    (window as any).PAGOSYA_CONFIG = { slug: 'calima', apiBaseUrl: `${location.origin}/v1`, data: { items: list, categories: [{ id: 'c1', name: 'Licuadoras' }], collections: [{ name: 'Verano', slug: 'verano', productIds: ['p5', 'p6', 'p7'] }] } };
     if (notice) { const el = document.createElement('div'); el.setAttribute('data-pagosya-privacy', ''); el.setAttribute('data-notice', ''); document.body.append(el); }
   }, [opts.storage ?? {}, opts.analytics === undefined ? false : opts.analytics, opts.cart ?? [], items, opts.currentProduct ?? '', opts.cookieNotice ?? false] as const);
   await page.addScriptTag({ content: readKitFileSync('retention.js') });
@@ -173,5 +173,18 @@ describe('popup moments on the store page', () => {
     await page.waitForSelector('dialog[open] [data-pya-popup]', { timeout: 3_000 }).catch(() => undefined);
     expect(await openStep(page)).toBe('pick');
     await context.close();
+  });
+  it('the interest popup names the category, and works for products grouped only in a collection (live 2026-11-22: «otras de .»)', async () => {
+    const one = await open();
+    for (const id of ['p1', 'p2', 'p3']) await one.page.evaluate(pid => document.dispatchEvent(new CustomEvent('pagosya:product-viewed', { detail: { id: pid } })), id);
+    await one.page.clock.runFor(100);
+    expect(await one.page.locator('dialog[open] [data-slot=collection-name]').textContent()).toBe('Licuadoras');
+    await one.context.close();
+    const two = await open();
+    for (const id of ['p5', 'p6', 'p7']) await two.page.evaluate(pid => document.dispatchEvent(new CustomEvent('pagosya:product-viewed', { detail: { id: pid } })), id);
+    await two.page.clock.runFor(100);
+    expect(await two.page.locator('dialog[open] [data-slot=collection-name]').textContent()).toBe('Verano');
+    expect(await two.page.locator('dialog[open] [data-slot=name]').allTextContents()).toEqual(['Producto 7', 'Producto 5', 'Producto 6']);
+    await two.context.close();
   });
 });

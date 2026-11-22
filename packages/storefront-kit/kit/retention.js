@@ -153,8 +153,7 @@
       catch { status.textContent = 'No se pudo solicitar el envío. Intenta de nuevo.'; button.disabled = false; }
     });
   };
-  // Spec 2026-11-09 popup looks: six built looks; a store keeps only the id (the API picks one for every store). Colours come from the
-  // signup host (--signup-paper/-ink/-accent, from the store's own tokens); text never sits on the photo and never under 12px.
+  // Spec 2026-11-09 popup looks: six built looks; a store keeps only the id. Colours come from the signup host.
   const K = '[data-popup-kit] ';
   const LOOK_TYPE = `${K}pya-title{font:400 clamp(34px,4vw,46px)/1.05 var(--signup-heading);letter-spacing:-.02em;margin:12px 0 10px}${K}pya-text{font-size:16px;line-height:1.55;margin:0 0 22px}${K}.kick{display:block;font:600 12px/1.4 var(--signup-body);letter-spacing:.18em;text-transform:uppercase;color:var(--signup-ink)}${K}pya-code{font-size:13px;margin-top:12px}`;
   const LOOK_WORDS = '<span class="kick">{name}</span><pya-title></pya-title><pya-text></pya-text><pya-form></pya-form><pya-code></pya-code>';
@@ -172,8 +171,7 @@
     etiqueta: { html: `<div class="lk lk-etiqueta"><pya-photo></pya-photo>${LOOK_WORDS}</div>`,
       css: `${K}.lk-etiqueta{padding:52px 80px 44px;text-align:center;background:var(--signup-paper)}${K}.lk-etiqueta>pya-photo{width:220px;height:220px;min-height:0;border-radius:50%;margin:0 auto 22px;box-shadow:0 0 0 6px var(--signup-paper),0 0 0 8px var(--signup-accent)}${K}.lk-etiqueta pya-text{max-width:520px;margin-left:auto;margin-right:auto}${K}.lk-etiqueta pya-form{max-width:540px;margin:0 auto;text-align:left}@media(max-width:700px){${K}.lk-etiqueta{padding:28px 22px}${K}.lk-etiqueta>pya-photo{width:160px;height:160px}}` },
   };
-  // Spec 2026-11-09 popup games: rasca y gana and ruleta in the popup's form slot. Everyone wins; the server draws and signs the
-  // prize (demo stores and the Studio preview draw locally and never send); the code only comes with the claim.
+  // Spec 2026-11-09 popup games: the server draws and signs the prize; the code only comes with the claim.
   const GAMES = ['scratch', 'wheel'];
   const shortPrize = label => String(label).split(' de ')[0];
   function wheelSvg(slices) {
@@ -185,8 +183,7 @@
         + `<text transform="rotate(${a + step / 2}) translate(0 -60)" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="700" style="fill:${dark ? 'var(--signup-paper)' : 'var(--signup-ink)'}">${escape(shortPrize(label))}</text>`;
     }).join('')}<circle r="14" style="fill:var(--signup-accent);stroke:var(--signup-ink);stroke-width:2"/></svg>`;
   }
-  // Spec 2026-11-10 rasca y elige (owner: the bakeme.pages.dev flow for every store): the card has the business's shape, painted in the
-  // store's colours; scratching strokes from the last point, so a quick swipe clears a whole stripe.
+  // Spec 2026-11-10 rasca y elige: the card has the business's shape, in the store's colours.
   const SHAPES = ['cookie', 'can', 'bottle', 'cup', 'flower', 'garment', 'box', 'bag'];
   const SHAPE_RATIO = { cookie: 1.35, can: 1.05, bottle: 1.05, cup: 1.25, flower: 1.15, garment: 1.1, box: 1.3, bag: 1.15, card: 1.6 };
   const seeded = n => { let state = n; return () => (state = (state * 9301 + 49297) % 233280) / 233280; };
@@ -263,8 +260,7 @@
     const old = settings.popupQuestion;
     return old && Array.isArray(old.answers) && old.answers.length >= 2 ? { text: String(old.text || ''), answers: old.answers.map(label => ({ label: String(label), icon: '' })) } : null;
   }
-  // The favourite tiles: the store's products with a photo (not sold out, never a membership); with fewer than three, the photographed
-  // option values of a product (a one-soda store chooses its flavour); fewer than three in all → no step.
+  // The favourite tiles: products with a photo, else a product's photographed options; fewer than three → no step.
   function favouriteTiles(items, photoUrl, byOption) {
     const list = Array.isArray(items) ? items.filter(p => p && p.id && p.name) : [];
     const firstPhoto = value => photoUrl((Array.isArray(value.imageUrls) && value.imageUrls[0]) || value.imageUrl || '');
@@ -467,7 +463,7 @@
     let cartLines = linesOf(context.cart);
     const viewed = context.product && context.product.id ? context.product : null;
     const pickIds = step => {
-      if (step.source === 'context') { if (!viewed) return []; return [viewed.id, ...(items || []).filter(item => item && item.id !== viewed.id && viewed.categoryId && item.categoryId === viewed.categoryId).map(item => item.id)].filter(product).slice(0, 4); }
+      if (step.source === 'context') { if (!viewed) return []; return [viewed.id, ...(viewed.related || (items || []).filter(item => item && viewed.categoryId && item.categoryId === viewed.categoryId).map(item => item.id))].filter((id, i, l) => product(id) && l.indexOf(id) === i).slice(0, 4); }
       if (step.source === 'favourite') return [context.favourite, ...(items || []).map(item => item && item.id)].filter((id, i, list) => id && product(id) && list.indexOf(id) === i).slice(0, 4);
       if (step.source === 'new') return (items || []).map(item => item && item.id).filter(product).slice(0, 4);
       return (step.products || []).filter(product);
@@ -715,11 +711,19 @@
     }, { passive: true });
     let hiddenAt = 0;
     document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (hiddenAt && Date.now() - hiddenAt >= 20_000) { hiddenAt = 0; leave(); } });
+    // A product's group: its category, or else the collection that holds it.
+    const groupOf = item => {
+      const cat = (config.data?.categories || []).find(c => c && c.id === item.categoryId);
+      if (cat) return { key: `c:${cat.id}`, name: cat.name, ids: items.filter(i => i && i.categoryId === cat.id).map(i => i.id) };
+      const col = (config.data?.collections || []).find(c => (c?.productIds || []).includes(item.id));
+      return col ? { key: `s:${col.slug}`, name: col.name, ids: col.productIds } : null;
+    };
     const viewed = id => {
       const item = items.find(i => i && i.id === id);
       if (!item) return;
-      lastViewed = { id: item.id, name: item.name, categoryId: item.categoryId || '', categoryName: '' };
-      const third = R.noteView(memory, { id: item.id, categoryId: item.categoryId || '' }); R.saveMemory(slug, memory);
+      const g = groupOf(item);
+      lastViewed = { id: item.id, name: item.name, categoryId: g?.key || '', categoryName: g?.name || 'la tienda', related: g?.ids || [] };
+      const third = R.noteView(memory, { id: item.id, categoryId: g?.key || '' }); R.saveMemory(slug, memory);
       clearTimeout(viewTimer);
       if (third) void consider(['interest']);
       else viewTimer = setTimeout(() => { if (lastViewed?.id === item.id) void consider(['interest']); }, 40_000);
@@ -772,8 +776,7 @@
     // A demo's paths sit beside its scripts; the page URL may drop its trailing slash, so it is no base for them.
     const demoBase = document.querySelector('script[src*="commerce.js"],script[src*="retention.js"]')?.src || location.href;
     const image = safeImage(visual.imageUrl) || safeImage(itemImage, demo ? demoBase : undefined);
-    // Spec 2026-11-09 popup looks: the store's look (an id the API sends for every store) drawn around the platform slots; an unknown
-    // id or no photo draws the built-in layout below.
+    // Spec 2026-11-09 popup looks: the store's look around the platform slots; else the built-in layout.
     const lookId = typeof settings.popupLook === 'string' && Object.hasOwn(POPUP_LOOKS, settings.popupLook) ? settings.popupLook : '';
     // The chosen photo is an upload path on the API (the Studio proxies the API under its own base); else the built-in photo.
     const uploadPhoto = value => /^\/v1\/uploads\//.test(String(value || '')) && config.apiBaseUrl ? `${String(config.apiBaseUrl).replace(/\/v1\/?$/, '')}${value}` : value;
@@ -1080,8 +1083,7 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
     window.PAGOSYA_RETENTION_REFRESH = renderRecovery;
     renderRecovery();
   };
-  // «Ver ventana de suscripción» (spec 2026-11-08): the Studio opens the popup at once, drawn as on the store, faked like a demo store
-  // (never sends). It opens over the Studio's own dialogs, so it never waits for the store's timing rules.
+  // «Ver ventana de suscripción» (spec 2026-11-08): the Studio opens the popup at once, faked like a demo store.
   window.PAGOSYA_POPUP_PREVIEW = function previewPopup(settings, config, stepId, context) {
     if (stepId) settings = { ...(settings || {}), popupDesignStartAt: stepId };
     if (context) settings = { ...(settings || {}), popupDesignContext: context };
