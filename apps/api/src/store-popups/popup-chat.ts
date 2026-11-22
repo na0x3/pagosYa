@@ -21,7 +21,8 @@ const MOMENT_WORDS: Array<[PopupMoment | 'all', RegExp]> = [
   ['return', /\bpop-?up\s+(?:de|del)\s+(?:regreso|vuelta|los\s+que\s+vuelven)\b/i],
   ['welcome', /\bpop-?up\s+de\s+bienvenida\b/i],
 ];
-const MOMENT_SWITCH = /\b(apag\w*|desactiv\w*|activ\w*|enciend\w*|prend\w*)\b/i;
+// Orders only: «más activo» describes a design, «activa» switches it on.
+const MOMENT_SWITCH = /\b(apag(?:a|ar|ue|uen)|desactiv(?:a|ar|e|en)|activ(?:a|ar|e|en)|enciend(?:e|an)|encender|prend(?:e|er|an))\b/i;
 
 export function popupChatRequest(text: string): PopupChatRequest | null {
   const moment = MOMENT_WORDS.find(([, words]) => words.test(text))?.[0];

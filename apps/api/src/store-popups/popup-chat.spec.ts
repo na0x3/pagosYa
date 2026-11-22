@@ -34,3 +34,11 @@ describe('moments in chat (spec 2026-11-21 §8)', () => {
     expect(popupChatRequest('apaga el popup')).toBeNull();
   });
 });
+
+describe('switch words are orders, not adjectives (minor 6)', () => {
+  it('«más activo» is a redesign, «activa» a switch', () => {
+    expect(popupChatRequest('haz el popup del carrito más activo')).toMatchObject({ redesign: true, moment: 'rescue' });
+    expect(popupChatRequest('activa el popup del carrito')).toEqual({ redesign: false, moment: 'rescue', on: true });
+    expect(popupChatRequest('desactivar el popup de regreso')).toEqual({ redesign: false, moment: 'return', on: false });
+  });
+});

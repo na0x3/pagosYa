@@ -10,17 +10,18 @@ const design = (id: string, moment: string, flow: unknown[], steps: Record<strin
 const tile = '<ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b></li></ul>';
 const capture = step('<input data-field><button data-submit>Enviar</button>'), reveal = step('<b data-slot="code"></b><button data-next>Ir</button>'), remind = step('<b data-slot="code"></b><button data-apply>Usar</button>');
 const welcome = design('cwelcome00000000000000001', 'welcome', [{ id: 'o', kind: 'offer' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }], { o: step('<h2>Hola</h2><button data-next>Sí</button>'), c: capture, r: reveal });
-const rescue = design('crescue000000000000000001', 'rescue', [{ id: 'k', kind: 'cart' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }, { id: 'm', kind: 'remind' }, { id: 'l', kind: 'land', to: 'checkout' }], { k: step(`<h2>Tu carrito</h2>${tile}<button data-next>Guardar</button>`), c: capture, r: reveal, m: remind });
+const rescue = design('crescue000000000000000001', 'rescue', [{ id: 'k', kind: 'cart' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }, { id: 'm', kind: 'remind' }, { id: 'l', kind: 'land', to: 'checkout' }], { k: step(`<h2>Tu carrito</h2><ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b><i data-slot="price"></i></li></ul><button data-next>Guardar</button>`), c: capture, r: reveal, m: remind });
 const interest = design('cinterest0000000000000001', 'interest', [{ id: 'p', kind: 'pick', source: 'context', products: [] }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }, { id: 'm', kind: 'remind' }], { p: step(`<h2>¿Te gustó <span data-slot="product-name"></span>?</h2>${tile}`), c: capture, r: reveal, m: remind });
 const back = design('creturn000000000000000001', 'return', [{ id: 'p', kind: 'pick', source: 'new', products: [] }, { id: 'm', kind: 'remind' }], { p: step(`<h2>Hola de nuevo</h2>${tile}`), m: remind });
-const items = ['p1', 'p2', 'p3', 'p4'].map((id, i) => ({ id, name: `Producto ${i + 1}`, price: 3000, categoryId: 'c1', imageUrls: [`/v1/uploads/${id}.png`] }));
+const items: any[] = ['p1', 'p2', 'p3', 'p4'].map((id, i) => ({ id, name: `Producto ${i + 1}`, price: 3000, categoryId: 'c1', imageUrls: [`/v1/uploads/${id}.png`] }));
+items[3].variants = [{ id: 'v1', name: 'Grande', amount: 5500 }];
 const settings = { signupEnabled: true, popupTrigger: 'delay', popupDelaySeconds: 8, popupDesign: welcome, popupMoments: { rescue, interest, return: back } };
 
 let browser: Browser;
 beforeAll(async () => { browser = await chromium.launch(); });
 afterAll(async () => { await browser.close(); });
 
-async function open(opts: { storage?: Record<string, string>; analytics?: boolean; cart?: Array<{ id: string; quantity: number }>; settings?: unknown; currentProduct?: string } = {}) {
+async function open(opts: { storage?: Record<string, string>; analytics?: boolean | null; cart?: Array<{ id: string; quantity: number; variantId?: string }>; settings?: unknown; currentProduct?: string; cookieNotice?: boolean } = {}) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const posts: Array<{ path: string; body: any }> = [];
   await context.route('**/*', async route => {
@@ -38,14 +39,17 @@ async function open(opts: { storage?: Record<string, string>; analytics?: boolea
   const page = await context.newPage();
   await page.clock.install({ time: T });
   await page.goto(`${ORIGIN}/`);
-  await page.evaluate(([storage, analytics, cart, list, current]) => {
+  await page.evaluate(([storage, analytics, cart, list, current, notice]) => {
     // A full product page answers «which product is this?» (commerce.js) from the first paint.
     if (current) document.addEventListener('pagosya:current-product', (e: any) => { e.detail.id = current; e.detail.name = 'x'; });
     for (const [k, v] of Object.entries(storage as Record<string, string>)) localStorage.setItem(k, v);
-    (window as any).PAGOSYA_PRIVACY = { choice: () => analytics };
-    document.addEventListener('pagosya:serialize-cart', (e: any) => { e.detail.items.push(...(cart as any[])); });
+    (window as any).PAGOSYA_PRIVACY = { choice: () => (window as any).__analytics };
+    (window as any).__analytics = analytics;
+    (window as any).__cart = cart;
+    document.addEventListener('pagosya:serialize-cart', (e: any) => { e.detail.items = [...(window as any).__cart]; });
     (window as any).PAGOSYA_CONFIG = { slug: 'calima', apiBaseUrl: `${location.origin}/v1`, data: { items: list } };
-  }, [opts.storage ?? {}, opts.analytics ?? false, opts.cart ?? [], items, opts.currentProduct ?? ''] as const);
+    if (notice) { const el = document.createElement('div'); el.setAttribute('data-pagosya-privacy', ''); el.setAttribute('data-notice', ''); document.body.append(el); }
+  }, [opts.storage ?? {}, opts.analytics === undefined ? false : opts.analytics, opts.cart ?? [], items, opts.currentProduct ?? '', opts.cookieNotice ?? false] as const);
   await page.addScriptTag({ content: readKitFileSync('retention.js') });
   await page.clock.runFor(100);
   return { page, posts, context };
@@ -139,6 +143,35 @@ describe('popup moments on the store page', () => {
     expect(await openStep(page)).toBeNull();
     await leaveTop(page);
     expect(await openStep(page)).toBe('cart');
+    await context.close();
+  });
+  it('the cart drawn in the rescue follows the cart, and an emptied cart gives no code (minor 1)', async () => {
+    const { page, context } = await open({ cart: [{ id: 'p1', quantity: 1 }] });
+    await leaveTop(page);
+    expect(await openStep(page)).toBe('cart');
+    await page.evaluate(() => { (window as any).__cart = []; document.dispatchEvent(new CustomEvent('pagosya:cart-updated')); });
+    expect(await page.locator('dialog[open] [data-slot=name]').count()).toBe(0);
+    expect(await page.locator('dialog[open] .pagosya-flow-more').textContent()).toBe('Tu carrito está vacío.');
+    await page.click('dialog[open] [data-next]');
+    expect(await openStep(page)).toBeNull();
+    await context.close();
+  });
+  it('a cart line with a variant shows the variant name and price (minor 2)', async () => {
+    const { page, context } = await open({ cart: [{ id: 'p4', variantId: 'v1', quantity: 1 }] });
+    await leaveTop(page);
+    expect(await page.locator('dialog[open] [data-slot=name]').textContent()).toBe('Producto 4 · Grande');
+    expect(await page.locator('dialog[open] [data-slot=price]').textContent()).toBe('Bs 55');
+    await context.close();
+  });
+  it('a return due while the cookie question was open shows once it is answered (minor 5)', async () => {
+    const saved = { visitor: 'c'.repeat(24), visits: 1, visitStart: T - 3 * 86_400_000, lastSeenAt: T - 3 * 86_400_000, visitShown: true, lastShownAt: T - 3 * 86_400_000, closed: {}, done: { welcome: T - 3 * 86_400_000 }, contact: true, code: '', favourite: '', views: {} };
+    const { page, context } = await open({ analytics: null, cookieNotice: true, storage: { 'pagosya:popups:calima': JSON.stringify(saved) } });
+    await page.clock.runFor(7_000);
+    expect(await openStep(page)).toBeNull();
+    await page.evaluate(() => { (window as any).__analytics = true; window.dispatchEvent(new CustomEvent('pagosya:privacy-change', { detail: { slug: 'calima', analytics: true } })); });
+    await page.clock.runFor(1_000);
+    await page.waitForSelector('dialog[open] [data-pya-popup]', { timeout: 3_000 }).catch(() => undefined);
+    expect(await openStep(page)).toBe('pick');
     await context.close();
   });
 });

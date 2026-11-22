@@ -21,7 +21,7 @@
         visitor: typeof saved?.visitor === 'string' && /^[a-f0-9]{16,32}$/.test(saved.visitor) ? saved.visitor : visitorId(),
         visits: Math.max(0, number(saved?.visits)), visitStart: number(saved?.visitStart), lastSeenAt: number(saved?.lastSeenAt),
         visitShown: saved?.visitShown === true, lastShownAt: number(saved?.lastShownAt), closed: times(saved?.closed), done: times(saved?.done),
-        contact: saved?.contact === true, code: typeof saved?.code === 'string' ? saved.code.slice(0, 40) : '', favourite: typeof saved?.favourite === 'string' ? saved.favourite.slice(0, 40) : '',
+        contact: saved?.contact === true, code: String(saved?.code ?? '').slice(0, 40), favourite: String(saved?.favourite ?? '').slice(0, 40),
         views: saved?.views && typeof saved.views === 'object' ? saved.views : {},
       };
       if (!saved && legacySeen && now - legacySeen < 30 * DAY) { memory.lastShownAt = legacySeen; memory.done.welcome = legacySeen; }
@@ -462,9 +462,9 @@
     const steps = (Array.isArray(design.flow) ? design.flow : []).filter(step => step && step.kind);
     const land = steps.find(step => step.kind === 'land');
     const product = id => (items || []).find(item => item && item.id === id && item.active !== false && item.archived !== true);
-    // Part 2: the moment's data; a known contact skips the contact steps.
     const known = Boolean(context.contact), held = String(context.code || '');
-    const cartLines = (Array.isArray(context.cart) ? context.cart : []).filter(line => line && line.id).slice(0, 12);
+    const linesOf = list => (Array.isArray(list) ? list : []).filter(line => line && line.id).slice(0, 12);
+    let cartLines = linesOf(context.cart);
     const viewed = context.product && context.product.id ? context.product : null;
     const pickIds = step => {
       if (step.source === 'context') { if (!viewed) return []; return [viewed.id, ...(items || []).filter(item => item && item.id !== viewed.id && viewed.categoryId && item.categoryId === viewed.categoryId).map(item => item.id)].filter(product).slice(0, 4); }
@@ -477,7 +477,6 @@
     const live = step => step.kind === 'pick' ? pickIds(step).length >= (step.source ? 1 : 2)
       : step.kind === 'quiz' ? (step.questions || []).some(question => (question.answers || []).some(answer => (answer.products || []).some(product))) : true;
     const shown = steps.filter(step => step.kind !== 'land' && typeof design.steps?.[step.id] === 'string' && live(step) && branch(step) && slotFilled(step));
-    // A welcome that cannot play leaves the classic popup.
     const welcome = !context.moment || context.moment === 'welcome';
     if (!shown.length || (welcome && !shown.some(step => step.kind === 'capture'))) return false;
     dialog.classList.add('pagosya-flow');
@@ -485,6 +484,7 @@
     const memory = { answers: [], favourite: '', code: held, busy: false };
     let at = Math.max(0, shown.findIndex(step => step.id === startAt));
     const money = value => typeof value === 'number' ? `Bs ${(value / 100).toLocaleString('es-BO', { minimumFractionDigits: value % 100 ? 2 : 0 })}` : String(value ?? '');
+    const fill = (copy, v) => { const photo = copy.querySelector('[data-slot=photo]'); if (photo) { photo.setAttribute('src', v.photo); photo.setAttribute('alt', v.name || ''); } for (const k of ['name', 'price', 'qty']) { const el = copy.querySelector(`[data-slot=${k}]`); if (el && v[k] !== undefined) el.textContent = v[k] || ''; } };
     let applied = false;
     const applyCode = () => {
       if (applied || !memory.code) return; applied = true;
@@ -498,11 +498,16 @@
         if (hostedPage) { try { parent.postMessage({ type: 'pagosya:favourite', id: memory.favourite }, '*'); } catch {} }
         document.dispatchEvent(new CustomEvent('pagosya:favourite', { detail: { id: memory.favourite, go: land.to !== 'scroll' } }));
       }
-      if (land && land.to === 'checkout') { if (hostedPage) { try { parent.postMessage({ type: 'pagosya:open-cart' }, '*'); } catch {} } document.querySelector('[data-cart-open]')?.click(); }
+      if (land && land.to === 'checkout') document.querySelector('[data-cart-open]')?.click();
       hooks.done?.();
       dialog.close();
     };
-    const next = () => { if (at + 1 < shown.length) { at += 1; draw(); } else finish(); };
+    const next = () => { if (shown[at]?.kind === 'cart' && !cartLines.length) { hooks.closed?.(shown[at].id); dialog.close(); return; } if (at + 1 < shown.length) { at += 1; draw(); } else finish(); };
+    if (typeof context.cartNow === 'function') {
+      const follow = () => { if (!dialog.open || shown[at]?.kind !== 'cart') return; cartLines = linesOf(context.cartNow()); draw(); };
+      document.addEventListener('pagosya:cart-updated', follow);
+      dialog.addEventListener('close', () => document.removeEventListener('pagosya:cart-updated', follow), { once: true });
+    }
     const back = () => { if (at > 0) { at -= 1; draw(); } };
     function draw() {
       const step = shown[at];
@@ -527,10 +532,7 @@
         if (tile) {
           for (const id of pickIds(step)) {
             const item = product(id), copy = tile.cloneNode(true);
-            const photo = copy.querySelector('[data-slot=photo]');
-            if (photo) { photo.setAttribute('src', (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || ''); photo.setAttribute('alt', item.name || ''); }
-            const nameSlot = copy.querySelector('[data-slot=name]'); if (nameSlot) nameSlot.textContent = item.name || '';
-            const priceSlot = copy.querySelector('[data-slot=price]'); if (priceSlot) priceSlot.textContent = money(item.price);
+            fill(copy, { photo: (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || '', name: item.name, price: money(item.price) });
             copy.setAttribute('tabindex', '0'); copy.setAttribute('role', 'button');
             const choose = () => { memory.favourite = id; next(); };
             copy.addEventListener('click', choose);
@@ -612,10 +614,7 @@
         if (tile) {
           for (const line of cartLines.slice(0, 4)) {
             const copy = tile.cloneNode(true);
-            const photo = copy.querySelector('[data-slot=photo]'); if (photo) { photo.setAttribute('src', upload(line.photo || '')); photo.setAttribute('alt', line.name || ''); }
-            const nameSlot = copy.querySelector('[data-slot=name]'); if (nameSlot) nameSlot.textContent = line.name || '';
-            const priceSlot = copy.querySelector('[data-slot=price]'); if (priceSlot) priceSlot.textContent = money(line.price);
-            const qtySlot = copy.querySelector('[data-slot=qty]'); if (qtySlot) qtySlot.textContent = `× ${Math.max(1, Number(line.quantity) || 1)}`;
+            fill(copy, { photo: upload(line.photo || ''), name: line.name, price: money(line.price), qty: `× ${Math.max(1, Number(line.quantity) || 1)}` });
             tile.before(copy);
           }
           const note = cartLines.length > 4 ? `+${cartLines.length - 4} más` : cartLines.length ? '' : 'Tu carrito está vacío.';
@@ -662,7 +661,8 @@
       const detail = { items: [] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail }));
       return detail.items.map(line => {
         const item = items.find(i => i && i.id === (line.paymentLinkId || line.id));
-        return item ? { id: item.id, name: item.name, price: item.price, quantity: line.quantity || 1, photo: (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || '' } : null;
+        const variant = item && line.variantId ? (item.variants || []).find(v => v && v.id === line.variantId) : null;
+        return item ? { id: item.id, name: variant ? `${item.name} · ${variant.name}` : item.name, price: variant && Number.isFinite(variant.amount) ? variant.amount : item.price, quantity: line.quantity || 1, photo: (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || '' } : null;
       }).filter(Boolean);
     };
     const favourite = () => { if (memory.favourite) return memory.favourite; try { return localStorage.getItem(`pagosya:fav:${slug}`) || ''; } catch { return ''; } };
@@ -687,7 +687,7 @@
           done: () => { keep(R.markDone); event(design, moment, 'completed'); },
           contact: code => { memory.contact = true; if (code) memory.code = code; keep(R.markDone); },
         };
-        const context = { moment, contact: memory.contact, code: memory.code, percent: codePercent, favourite: favourite(), product: lastViewed, cart: lines };
+        const context = { moment, contact: memory.contact, code: memory.code, percent: codePercent, favourite: favourite(), product: lastViewed, cart: lines, cartNow: cart };
         let settled = false;
         const settle = fn => (...args) => { settled = true; fn(...args); };
         const tracked = { closed: settle(hooks.closed), done: settle(hooks.done), contact: hooks.contact };
@@ -696,7 +696,6 @@
         open();
         if (dialog.open) {
           event(design, moment, 'shown');
-          // Any close counts as closed.
           dialog.addEventListener('close', () => { if (!settled) tracked.closed(''); }, { once: true });
         }
       } finally { busy = false; }
@@ -729,8 +728,9 @@
     // A full product page opened before this watcher started.
     const current = {}; document.dispatchEvent(new CustomEvent('pagosya:current-product', { detail: current }));
     if (current.id) viewed(current.id);
-    setTimeout(() => void consider(['return']), 6_000);
-    window.addEventListener('pagosya:privacy-change', () => setTimeout(() => void consider(['welcome']), 800));
+    let returnDue = false;
+    setTimeout(() => { returnDue = true; void consider(['return']); }, 6_000);
+    window.addEventListener('pagosya:privacy-change', () => setTimeout(() => void consider(returnDue ? ['return', 'welcome'] : ['welcome']), 800));
   }
 
   function mountSignup(host, settings, config, state, api, preview, query, demo = false) {
@@ -840,10 +840,9 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
       if (waitingForCookies()) { waiting = true; return; }
       if (!dialog.isConnected || dialog.open || document.querySelector('dialog[open]')) return; dialog.showModal(); (dialog.querySelector('h2') || dialog.querySelector('[data-pya-popup] button, [data-pya-popup] [tabindex]'))?.focus(); };
     dialog.addEventListener('close', remember);
-    // Part 2: a family of popups (works without the welcome too).
     const family = settings.popupMoments && typeof settings.popupMoments === 'object' && Object.keys(settings.popupMoments).length
       ? { ...(settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps ? { welcome: settings.popupDesign } : {}), ...settings.popupMoments } : null;
-    // Popups 2.0: a LIVE YAPI design takes the dialog; a family mounts its popups only when one is chosen.
+    // A family mounts its popups only when one is chosen.
     const flow = family && !(preview && !demo) ? true : settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps
       ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt, apiBaseUrl: config.apiBaseUrl, context: settings.popupDesignContext || {} }) : false;
     dialog.querySelector('.signup-close')?.addEventListener('click', () => dialog.close());
