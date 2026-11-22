@@ -13,7 +13,7 @@ export type FlowStepMeasure = { stepId: string; size: { width: number; height: n
   contentTop: number; contentBottom: number;
   contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; /** Words another part of the popup sits on. */ covered: string[]; /** Words drawn over a cut-out or drawing. */ overArt: string[]; /** Cut-outs left mostly off the screen. */ hiddenArt: string[]; /** The close sits in a top corner of the popup. */ closeInCorner: boolean; /** The back button (when there is one) sits in a top corner too. */ backInCorner: boolean; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
 /** Part 2 (spec 2026-11-21 §6): what a moment's popup plays with — the shopper's cart, the product being viewed, a favourite. */
-export type FlowContext = { moment?: string; contact?: boolean; code?: string; favourite?: string; product?: { id: string; name: string; categoryId?: string; categoryName?: string };
+export type FlowContext = { moment?: string; contact?: boolean; code?: string; percent?: number; favourite?: string; product?: { id: string; name: string; categoryId?: string; categoryName?: string };
   cart?: Array<{ id: string; name: string; price: number; quantity: number; photo: string }> };
 export type FlowRenderInput = { storeName: string; design: { id: string; flow: unknown; steps: Record<string, string>; css: string; capture: string; percent: number };
   items: unknown[]; photos: Record<string, { bytes: Buffer; contentType: string }>; context?: FlowContext };

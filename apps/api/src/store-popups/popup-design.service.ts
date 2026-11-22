@@ -364,6 +364,8 @@ export class PopupDesignService {
       const flow = patch.products ? (row.flow as PopupFlow).map(step => step.kind === 'pick' ? { ...step, products: patch.products! } : step) : undefined;
       await this.prisma.storePopupDesign.update({ where: { id: row.id }, data: { ...(percent !== undefined ? { percent } : {}), ...(patch.capture ? { capture: patch.capture } : {}), ...(flow ? { flow: flow as never } : {}) } });
     }
+    // Part 2 (spec 2026-11-21 §4): one percent and one channel for the whole family of popups.
+    if (percent !== undefined || patch.capture) await this.prisma.storePopupDesign.updateMany({ where: { storeId, status: 'LIVE' }, data: { ...(percent !== undefined ? { percent } : {}), ...(patch.capture ? { capture: patch.capture } : {}) } });
     // On/off only when it changes: off keeps the shown design to come back to; on brings it back only while it is still LIVE.
     const switching = patch.on === false && liveId ? { popupDesignId: null, popupDesignOff: liveId }
       : patch.on === true && !liveId && row && row.status === 'LIVE' ? { popupDesignId: row.id, popupDesignOff: null } : {};

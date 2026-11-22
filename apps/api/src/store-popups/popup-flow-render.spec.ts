@@ -153,3 +153,21 @@ describe('moment steps in the browser check (spec 2026-11-21 §5–6)', () => {
     } finally { await browser.close(); }
   });
 });
+
+describe('the reminder shows the percent of the code the shopper holds (final review I5)', () => {
+  it('uses the context percent over the design percent', async () => {
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage();
+      await page.setContent('<!doctype html><body></body>');
+      await page.addScriptTag({ content: readKitFileSync('retention.js') });
+      const text = await page.evaluate(() => {
+        const flow = [{ id: 'k', kind: 'cart' }, { id: 'm', kind: 'remind' }];
+        const steps = { k: '<div><button data-close>x</button><ul><li data-tile><img data-slot="photo"><b data-slot="name"></b></li></ul></div>', m: '<div><button data-close>x</button><b data-slot="percent"></b><b data-slot="code"></b><button data-apply>Usar</button></div>' };
+        (window as any).PAGOSYA_POPUP_PREVIEW({ signupEnabled: true, popupDesign: { id: 'cx', flow, steps, css: '', capture: 'whatsapp', percent: 15 } }, { slug: 'x', data: { items: [] } }, 'm', { moment: 'rescue', contact: true, code: 'POPAAA234', percent: 10, cart: [{ id: 'p1', name: 'A', price: 100, quantity: 1, photo: '' }] });
+        return document.querySelector('[data-slot=percent]')?.textContent;
+      });
+      expect(text).toBe('10%');
+    } finally { await browser.close(); }
+  });
+});

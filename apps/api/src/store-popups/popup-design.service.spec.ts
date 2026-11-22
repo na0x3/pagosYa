@@ -244,3 +244,13 @@ describe('the Popups page per moment (spec 2026-11-21 §8)', () => {
     expect(retention().settings).toMatchObject({ popupDesignId: 'cw', popupMoments: { rescue: { id: 'cr1' } } });
   });
 });
+
+describe('percent and contact belong to the family (final review I5)', () => {
+  it('a new percent or channel reaches every LIVE popup of the store', async () => {
+    const { service, rows, setRetention } = setup([]);
+    rows.push({ id: 'cw', storeId: 's1', version: 1, status: 'LIVE', moment: 'welcome', percent: 10, capture: 'whatsapp', flow: [] }, { id: 'cr', storeId: 's1', version: 2, status: 'LIVE', moment: 'rescue', percent: 10, capture: 'whatsapp', flow: [] }, { id: 'cold', storeId: 's1', version: 0, status: 'RETIRED', moment: 'rescue', percent: 10, capture: 'whatsapp', flow: [] });
+    setRetention({ settings: { popupDesignId: 'cw', popupMoments: { rescue: { id: 'cr' } } }, updatedAt: new Date(1) });
+    await service.updateSettings('m1', 's1', { percent: 15, capture: 'email' });
+    expect(rows.map(r => [r.id, r.percent, r.capture])).toEqual([['cw', 15, 'email'], ['cr', 15, 'email'], ['cold', 10, 'whatsapp']]);
+  });
+});

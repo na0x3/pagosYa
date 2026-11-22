@@ -633,7 +633,8 @@
       }
       if (step.kind === 'remind') {
         root.querySelectorAll('[data-slot=code]').forEach(el => { el.textContent = memory.code || (demo ? 'POPDEMO10' : ''); });
-        root.querySelectorAll('[data-slot=percent]').forEach(el => { el.textContent = `${design.percent}%`; });
+        // The percent of the code the shopper holds (code-status), which may predate a change of the store's percent.
+        root.querySelectorAll('[data-slot=percent]').forEach(el => { el.textContent = `${Number(context.percent) > 0 ? Number(context.percent) : design.percent}%`; });
         root.querySelectorAll('[data-apply]').forEach(el => el.addEventListener('click', () => { if (!memory.code && demo) memory.code = 'POPDEMO10'; applyCode(); next(); }));
       }
       (root.querySelector('[data-next],[data-field],[data-tile],[data-choice-copy],button') || root).focus?.();
@@ -683,11 +684,12 @@
       const moment = R.chooseMoment(memory, { available, signals, cartLines: lines.length }, Date.now());
       if (!moment) return;
       busy = true;
+      let codePercent = 0;
       try {
         // Never remind a code the shopper can no longer use.
         if (memory.code && moment !== 'welcome') {
           const status = demo ? { active: true } : await api('code-status', { code: memory.code }).catch(() => ({ active: false }));
-          if (!status.active) { memory.code = ''; R.saveMemory(slug, memory); }
+          if (!status.active) { memory.code = ''; R.saveMemory(slug, memory); } else codePercent = Number(status.percent) || 0;
         }
         const design = family[moment];
         const hooks = {
@@ -695,7 +697,7 @@
           done: () => { R.markDone(memory, moment, Date.now()); R.saveMemory(slug, memory); event(design, moment, 'completed'); },
           contact: code => { memory.contact = true; if (code) memory.code = code; R.markDone(memory, moment, Date.now()); R.saveMemory(slug, memory); },
         };
-        const context = { moment, contact: memory.contact, code: memory.code, favourite: favourite(), product: lastViewed, cart: lines };
+        const context = { moment, contact: memory.contact, code: memory.code, percent: codePercent, favourite: favourite(), product: lastViewed, cart: lines };
         let settled = false;
         const settle = fn => (...args) => { settled = true; fn(...args); };
         const tracked = { closed: settle(hooks.closed), done: settle(hooks.done), contact: hooks.contact };
