@@ -1258,6 +1258,7 @@ model Store {
   emailContent                 StoreEmailContent?
 
   popupDesigns                StorePopupDesign[]
+  popupEvents                 StorePopupEvent[]
   @@index([merchantId, createdAt])
 }
 
@@ -3950,9 +3951,31 @@ model StorePopupDesign {
   fingerprint String
   checks      Json?
   previews    Json?
+  /// Popups 2.0 part 2 (spec 2026-11-21): welcome | rescue | interest | return; one LIVE row per store and moment.
+  moment      String            @default("welcome")
+  /// The run that wrote this design; the moments written together share it.
+  family      String?
   createdAt   DateTime          @default(now())
 
   @@unique([storeId, version])
   @@index([storeId, status])
+  @@index([storeId, moment, status])
   @@index([createdAt])
+}
+
+/// Popups 2.0 part 2 (spec 2026-11-21 §4): what shoppers did with each popup — sent only with analytics consent; no IP, no
+/// user agent, never a contact. Deleted after 180 days (popup-events-cleanup).
+model StorePopupEvent {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  designId  String
+  moment    String
+  visitor   String
+  kind      String
+  step      String?
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([designId, kind])
 }
