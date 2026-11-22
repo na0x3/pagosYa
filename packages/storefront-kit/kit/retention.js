@@ -528,7 +528,7 @@
         if (tile) {
           for (const id of pickIds(step)) {
             const item = product(id), copy = tile.cloneNode(true);
-            fill(copy, { photo: (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || '', name: item.name, price: money(item.price) });
+            fill(copy, { photo: (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || '', name: item.name, price: money(item.price ?? item.amount) });
             copy.setAttribute('tabindex', '0'); copy.setAttribute('role', 'button');
             const choose = () => { memory.favourite = id; next(); };
             copy.addEventListener('click', choose);
@@ -658,7 +658,7 @@
       return detail.items.map(line => {
         const item = items.find(i => i && i.id === (line.paymentLinkId || line.id));
         const variant = item && line.variantId ? (item.variants || []).find(v => v && v.id === line.variantId) : null;
-        return item ? { id: item.id, name: variant ? `${item.name} · ${variant.name}` : item.name, price: variant && Number.isFinite(variant.amount) ? variant.amount : item.price, quantity: line.quantity || 1, photo: (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || '' } : null;
+        return item ? { id: item.id, name: variant ? `${item.name} · ${variant.name}` : item.name, price: variant && Number.isFinite(variant.amount) ? variant.amount : item.price ?? item.amount, quantity: line.quantity || 1, photo: (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || '' } : null;
       }).filter(Boolean);
     };
     const favourite = () => { if (memory.favourite) return memory.favourite; try { return localStorage.getItem(`pagosya:fav:${slug}`) || ''; } catch { return ''; } };

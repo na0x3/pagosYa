@@ -21,7 +21,7 @@ let browser: Browser;
 beforeAll(async () => { browser = await chromium.launch(); });
 afterAll(async () => { await browser.close(); });
 
-async function open(opts: { storage?: Record<string, string>; analytics?: boolean | null; cart?: Array<{ id: string; quantity: number; variantId?: string }>; settings?: unknown; currentProduct?: string; cookieNotice?: boolean } = {}) {
+async function open(opts: { storage?: Record<string, string>; analytics?: boolean | null; cart?: Array<{ id: string; quantity: number; variantId?: string }>; settings?: unknown; currentProduct?: string; cookieNotice?: boolean; items?: unknown[] } = {}) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const posts: Array<{ path: string; body: any }> = [];
   await context.route('**/*', async route => {
@@ -49,7 +49,7 @@ async function open(opts: { storage?: Record<string, string>; analytics?: boolea
     document.addEventListener('pagosya:serialize-cart', (e: any) => { e.detail.items = [...(window as any).__cart]; });
     (window as any).PAGOSYA_CONFIG = { slug: 'calima', apiBaseUrl: `${location.origin}/v1`, data: { items: list, categories: [{ id: 'c1', name: 'Licuadoras' }], collections: [{ name: 'Verano', slug: 'verano', productIds: ['p5', 'p6', 'p7'] }] } };
     if (notice) { const el = document.createElement('div'); el.setAttribute('data-pagosya-privacy', ''); el.setAttribute('data-notice', ''); document.body.append(el); }
-  }, [opts.storage ?? {}, opts.analytics === undefined ? false : opts.analytics, opts.cart ?? [], items, opts.currentProduct ?? '', opts.cookieNotice ?? false] as const);
+  }, [opts.storage ?? {}, opts.analytics === undefined ? false : opts.analytics, opts.cart ?? [], opts.items ?? items, opts.currentProduct ?? '', opts.cookieNotice ?? false] as const);
   await page.addScriptTag({ content: readKitFileSync('retention.js') });
   await page.clock.runFor(100);
   return { page, posts, context };
@@ -186,5 +186,12 @@ describe('popup moments on the store page', () => {
     expect(await two.page.locator('dialog[open] [data-slot=collection-name]').textContent()).toBe('Verano');
     expect(await two.page.locator('dialog[open] [data-slot=name]').allTextContents()).toEqual(['Producto 7', 'Producto 5', 'Producto 6']);
     await two.context.close();
+  });
+  it('a live store sends amount, not price: the tiles still show the price (live Remolino 2026-11-22)', async () => {
+    const live = items.map(({ price, ...item }) => ({ ...item, amount: 89000 }));
+    const { page, context } = await open({ items: live, cart: [{ id: 'p1', quantity: 1 }] });
+    await leaveTop(page);
+    expect(await page.locator('dialog[open] [data-slot=price]').first().textContent()).toBe('Bs 890');
+    await context.close();
   });
 });
