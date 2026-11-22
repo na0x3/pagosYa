@@ -156,3 +156,58 @@ describe('PopupDesignService', () => {
     expect(result.design.status).toBe('LIVE');
   });
 });
+
+describe('family of moments (spec 2026-11-21 §6)', () => {
+  const close = '<button data-close aria-label="Cerrar">×</button>';
+  const box = (inner: string) => `<div class="card">${close}${inner}</div>`;
+  const fi = (o: Record<string, unknown>) => ({ products: [], to: 'product', questions: [], source: '', ...o });
+  const cartStep = { id: 'k', html: box('<ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b></li></ul><button data-next>Seguir</button>') };
+  const capture = { id: 'c', html: box('<input data-field><button data-submit>Enviar</button>') };
+  const reveal = { id: 'r', html: box('<b data-slot="code"></b><button data-next>Ir</button>') };
+  const remind = { id: 'm', html: box('<b data-slot="code"></b><button data-apply>Usar</button>') };
+  const pick = { id: 'p', html: box('<h2><span data-slot="product-name"></span></h2><ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b></li></ul>') };
+  const family = {
+    composition: 'mundo de salsas', css: '.card{background:#fff;color:#111;padding:20px}',
+    moments: [
+      { moment: 'rescue', composition: 'carrito propio', css: '', flow: [fi({ id: 'k', kind: 'cart' }), fi({ id: 'c', kind: 'capture' }), fi({ id: 'r', kind: 'reveal' }), fi({ id: 'm', kind: 'remind' }), fi({ id: 'l', kind: 'land', to: 'checkout' })], steps: [cartStep, capture, reveal, remind] },
+      { moment: 'interest', composition: 'interés propio', css: '', flow: [fi({ id: 'p', kind: 'pick', source: 'context' }), fi({ id: 'c', kind: 'capture' }), fi({ id: 'r', kind: 'reveal' }), fi({ id: 'm', kind: 'remind' })], steps: [pick, capture, reveal, remind] },
+      // Broken on purpose: a return popup must not ask for the contact.
+      { moment: 'return', composition: 'regreso propio', css: '', flow: [fi({ id: 'p', kind: 'pick', source: 'new' }), fi({ id: 'x', kind: 'capture' })], steps: [pick, { ...capture, id: 'x' }] },
+    ],
+  };
+  const fixedReturn = { composition: 'regreso arreglado', flow: [fi({ id: 'p', kind: 'pick', source: 'new' }), fi({ id: 'm', kind: 'remind' })], steps: [pick, remind], css: '', launcher: '' };
+  const withWelcome = () => {
+    const made = setup([]);
+    made.rows.push({ id: 'old', storeId: 's1', version: 1, status: 'LIVE', moment: 'welcome', css: '.card{color:#111}', steps: { o: '<div class="card"></div>' } });
+    made.service.measure = jest.fn(async () => []) as any;
+    return made;
+  };
+
+  it('writes the missing moments in one call, repairs the broken one alone, and saves each by moment', async () => {
+    const { service, prisma, retention } = withWelcome();
+    service.call = jest.fn(async (_p: string, _s: string, kind?: string) => (kind === 'family' ? family : fixedReturn)) as any;
+    const result = await service.designFamily('m1', 's1', { createdBy: 'batch' });
+    expect((service.call as jest.Mock).mock.calls.map(c => c[2] ?? 'design')).toEqual(['family', 'design']);
+    expect(result.results.map(r => [r.moment, r.status])).toEqual([['rescue', 'LIVE'], ['interest', 'LIVE'], ['return', 'LIVE']]);
+    const created = prisma.storePopupDesign.create.mock.calls.map((c: any) => c[0].data);
+    expect(created.map((d: any) => d.moment)).toEqual(['rescue', 'interest', 'return']);
+    expect(new Set(created.map((d: any) => d.family)).size).toBe(1);
+    expect(prisma.storePopupDesign.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ moment: 'rescue', status: 'LIVE' }) }));
+    expect(retention().settings.popupDesignId).toBe('old');
+    expect(Object.keys(retention().settings.popupMoments)).toEqual(['rescue', 'interest', 'return']);
+  });
+  it('a moment that still fails after two repairs is FAILED and the others go LIVE', async () => {
+    const { service, retention } = withWelcome();
+    service.call = jest.fn(async (_p: string, _s: string, kind?: string) => (kind === 'family' ? family : { composition: '', flow: [], steps: [], css: '', launcher: '' })) as any;
+    const result = await service.designFamily('m1', 's1', { createdBy: 'batch' });
+    expect(result.results.find(r => r.moment === 'return')).toMatchObject({ status: 'FAILED', problems: expect.arrayContaining([expect.any(String)]) });
+    expect(result.results.filter(r => r.status === 'LIVE').map(r => r.moment)).toEqual(['rescue', 'interest']);
+    expect((service.call as jest.Mock).mock.calls.filter(c => c[2] !== 'family')).toHaveLength(2);
+    expect(retention().settings.popupMoments.return).toBeUndefined();
+  });
+  it('a welcome redesign retires only the welcome', async () => {
+    const { service, prisma } = setup([answer()]);
+    await service.design('m1', 's1', { createdBy: 'merchant-chat' });
+    expect(prisma.storePopupDesign.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ moment: 'welcome', status: 'LIVE' }) }));
+  });
+});

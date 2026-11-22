@@ -47,3 +47,28 @@ describe('popup design prompt', () => {
     expect(popupDesignPrompt(input)).not.toMatch(/FORMATO: PANTALLA COMPLETA/);
   });
 });
+
+import { POPUP_FAMILY_SCHEMA, popupFamilyPrompt } from './popup-design-prompt';
+
+describe('family prompt (spec 2026-11-21 §6)', () => {
+  const base = { storeName: 'Calima', sector: 'salsas', palette: {}, fonts: [], voice: '', photos: [], products: [{ id: 'p1', name: 'Habanero', price: 'Bs 45', photo: '' }, { id: 'p2', name: 'Serrano', price: 'Bs 40', photo: '' }], capture: 'whatsapp' as const, percent: 10, taken: [] };
+  it('asks for each missing moment with its job and shape, and keeps the live welcome as the look', () => {
+    const text = popupFamilyPrompt({ ...base, moments: ['rescue', 'interest', 'return'], anchor: { css: '.card{background:#f3d}', steps: { o: '<div class="card"></div>' } }, takenByMoment: { rescue: ['ticket de carrito'] } });
+    expect(text).toMatch(/rescue \(carrito/); expect(text).toMatch(/interest \(interés/); expect(text).toMatch(/return \(regreso/);
+    expect(text).not.toMatch(/welcome \(bienvenida/);
+    expect(text).toContain('.card{background:#f3d}');
+    expect(text).toContain('ticket de carrito');
+    expect(text).toMatch(/data-apply/);
+  });
+  it('the schema allows the new steps and one entry per moment', () => {
+    const moment = (POPUP_FAMILY_SCHEMA.properties.moments as any).items;
+    expect(moment.properties.moment.enum).toEqual(['welcome', 'rescue', 'interest', 'return']);
+    expect(moment.properties.flow.items.properties.kind.enum).toEqual(expect.arrayContaining(['cart', 'remind']));
+    expect(moment.properties.flow.items.properties.to.enum).toEqual(expect.arrayContaining(['checkout']));
+    expect(moment.properties.flow.items.properties.source.enum).toEqual(['', 'context', 'favourite', 'new']);
+  });
+  it('a repair of one moment says which moment it is', () => {
+    expect(popupDesignPrompt({ ...base, moment: 'rescue' })).toMatch(/ESTE POPUP ES EL MOMENTO rescue \(carrito/);
+    expect(popupDesignPrompt(base)).not.toMatch(/ESTE POPUP ES EL MOMENTO/);
+  });
+});

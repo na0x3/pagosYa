@@ -8,12 +8,12 @@ import { PlansService } from '../plans/plans.service';
 import { AiUsageService } from '../ai-usage/ai-usage.service';
 import { brandCall } from '../storefront-source/brand/brand-model-call';
 import { sourceProvider } from '../storefront-source/source-provider';
-import { renderedSteps, validateFlow, type PopupFlow } from './popup-flow';
+import { POPUP_MOMENTS, isPopupMoment, renderedSteps, validateFlow, type PopupFlow, type PopupMoment } from './popup-flow';
 import { cleanStepHtml } from './popup-html';
 import { scopePopupCss } from './popup-css';
 import { popupFingerprint, varietyProblem } from './popup-fingerprint';
-import { checkFlowRender, measureFlow, type FlowRenderInput, type FlowStepMeasure } from './popup-flow-render';
-import { POPUP_DESIGN_SCHEMA, popupDesignPrompt } from './popup-design-prompt';
+import { checkFlowRender, measureFlow, type FlowContext, type FlowRenderInput, type FlowStepMeasure } from './popup-flow-render';
+import { POPUP_DESIGN_SCHEMA, POPUP_FAMILY_SCHEMA, popupDesignPrompt, popupFamilyPrompt } from './popup-design-prompt';
 import { popupChatRequest } from './popup-chat';
 import { join } from 'node:path';
 import sharp from 'sharp';
@@ -30,7 +30,7 @@ const clamp = (value: number) => Math.max(5, Math.min(30, Math.round(value)));
 @Injectable()
 export class PopupDesignService {
   /** The model call and the browser check, replaceable in tests. */
-  call: (prompt: string, storeId: string) => Promise<unknown> = (prompt, storeId) => this.modelCall(prompt, storeId);
+  call: (prompt: string, storeId: string, kind?: 'design' | 'family') => Promise<unknown> = (prompt, storeId, kind) => this.modelCall(prompt, storeId, kind);
   measure: (input: FlowRenderInput) => Promise<FlowStepMeasure[] | null> = input => measureFlow(input);
   /** The local background removal (downloads its 44 MB model once), replaceable in tests. */
   cut: (bytes: Buffer, model: string) => Promise<{ cut: Buffer | null }> = (bytes, model) => productCutout(bytes, model);
@@ -43,11 +43,11 @@ export class PopupDesignService {
     @Optional() private readonly usage?: AiUsageService,
   ) {}
 
-  private async modelCall(prompt: string, storeId: string) {
+  private async modelCall(prompt: string, storeId: string, kind: 'design' | 'family' = 'design') {
     const model = this.config.get<string>('app.yapiPopupModel') ?? 'gpt-5.6-sol';
     const provider = sourceProvider(this.config, model);
     const { json } = await brandCall({ endpoint: provider.endpoint, apiKey: provider.apiKey, model, record: async (body, ms, ok) => { await this.usage?.record(storeId, 'popup-design', model, body, ms, ok ? 'COMPLETED' : 'FAILED'); } },
-      { text: prompt, schemaName: 'popup_design', schema: POPUP_DESIGN_SCHEMA, maxOutputTokens: 16_000 });
+      { text: prompt, schemaName: kind === 'family' ? 'popup_family' : 'popup_design', schema: kind === 'family' ? POPUP_FAMILY_SCHEMA : POPUP_DESIGN_SCHEMA, maxOutputTokens: kind === 'family' ? 40_000 : 16_000 });
     return json;
   }
 
@@ -75,9 +75,9 @@ export class PopupDesignService {
   }
 
   /** YAPI's answer made safe and complete, or the list of what is wrong (in the words YAPI gets back). */
-  private assemble(raw: any, id: string, products: string[], taken: Array<{ fingerprint: string; composition: string }>, layout?: 'full' | 'card'): Candidate | { problems: string[] } {
+  private assemble(raw: any, id: string, products: string[], taken: Array<{ fingerprint: string; composition: string }>, layout?: 'full' | 'card', moment: PopupMoment = 'welcome'): Candidate | { problems: string[] } {
     const problems: string[] = [];
-    const flowResult = validateFlow(raw?.flow, products);
+    const flowResult = validateFlow(raw?.flow, products, moment);
     if ('problems' in flowResult) return { problems: flowResult.problems };
     const given = new Map<string, string>((Array.isArray(raw?.steps) ? raw.steps : []).map((step: any) => [String(step?.id), String(step?.html ?? '')]));
     const steps: Record<string, string> = {};
@@ -99,22 +99,28 @@ export class PopupDesignService {
     return { flow: flowResult.flow, steps, css: scoped.css, launcher: cleanLauncher && 'html' in cleanLauncher ? cleanLauncher.html : null, composition, fingerprint };
   }
 
-  async design(merchantId: string, storeId: string, options: { createdBy: Created; request?: string; signal?: AbortSignal; layout?: 'full' | 'card' }) {
+  /** What every design run starts from: the store, its settings, up to 12 products with their photos, and the cut-outs. */
+  private async gather(merchantId: string, storeId: string, createdBy: Created) {
     const store = await this.store(merchantId, storeId);
-    if (options.createdBy !== 'batch') await this.plans?.assertCredits(storeId);
+    if (createdBy !== 'batch') await this.plans?.assertCredits(storeId);
     const settings = await this.settings(storeId);
     const capture = settings.popupDesignCapture === 'email' ? 'email' as const : 'whatsapp' as const;
     const percent = clamp(Number(settings.popupDesignPercent) || 10);
-    const rows = await this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, select: { id: true, name: true, amount: true, imageUrls: true }, take: 12 });
+    const rows = await this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, select: { id: true, name: true, amount: true, imageUrls: true, categoryId: true }, take: 12 });
     const products = rows.map(row => ({ id: row.id, name: row.name, price: `Bs ${(row.amount / 100).toLocaleString('es-BO')}`, photo: (row.imageUrls ?? []).find(url => url.startsWith('/v1/uploads/')) ?? '' }));
     const brief = (store.onboarding as { brandBrief?: { identity?: { palette?: Record<string, string>; voice?: string }; research?: { niche?: string } } } | null)?.brandBrief;
-    const taken = await this.prisma.storePopupDesign.findMany({ where: { status: 'LIVE', storeId: { not: storeId } }, orderBy: { createdAt: 'desc' }, take: 30, select: { fingerprint: true, composition: true } });
     const photos: FlowRenderInput['photos'] = {};
     for (const photo of [...new Set(products.map(p => p.photo).filter(Boolean))]) {
       const bytes = await this.uploads.getBuffer(photo.split('/').at(-1)!).catch(() => null);
       if (bytes) photos[photo] = { bytes, contentType: /\.png$/i.test(photo) ? 'image/png' : /\.webp$/i.test(photo) ? 'image/webp' : 'image/jpeg' };
     }
     const cutouts = await this.cutouts(products, photos);
+    return { store, settings, capture, percent, rows, products, brief, photos, cutouts };
+  }
+
+  async design(merchantId: string, storeId: string, options: { createdBy: Created; request?: string; signal?: AbortSignal; layout?: 'full' | 'card' }) {
+    const { store, capture, percent, rows, products, brief, photos, cutouts } = await this.gather(merchantId, storeId, options.createdBy);
+    const taken = await this.prisma.storePopupDesign.findMany({ where: { status: 'LIVE', moment: 'welcome', storeId: { not: storeId } }, orderBy: { createdAt: 'desc' }, take: 30, select: { fingerprint: true, composition: true } });
     const id = designId();
     let problems: string[] = [];
     let candidate: Candidate | null = null;
@@ -138,34 +144,96 @@ export class PopupDesignService {
         previous = { flow: answer.flow, steps: Object.fromEntries((Array.isArray(answer.steps) ? answer.steps : []).map(step => [String(step?.id), String(step?.html ?? '')])), css: String(answer.css ?? '') };
       }
       if ('problems' in built) { problems = built.problems; continue; }
-      measures = await this.measure({ storeName: store.name, design: { id, flow: built.flow, steps: built.steps, css: built.css, capture, percent }, items: rows.map(r => ({ id: r.id, name: r.name, price: r.amount, imageUrls: r.imageUrls })), photos });
+      measures = await this.measure({ storeName: store.name, design: { id, flow: built.flow, steps: built.steps, css: built.css, capture, percent }, items: rows.map(r => ({ id: r.id, name: r.name, price: r.amount, imageUrls: r.imageUrls, categoryId: r.categoryId })), photos });
       problems = measures ? checkFlowRender(measures) : ['No se pudo abrir el navegador de prueba.'];
       if (!problems.length) candidate = built;
     }
+    const saved = await this.saveMoment(storeId, { id, family: null, moment: 'welcome', createdBy: options.createdBy, request: options.request, capture, percent, candidate, problems, measures });
+    if (saved.status !== 'LIVE') return { design: { id, version: saved.version, status: 'FAILED' as const }, problems };
+    await this.point(storeId, { popupDesignId: id, popupDesignOff: null });
+    return { design: { id, version: saved.version, status: 'LIVE' as const, composition: saved.composition }, problems: [] };
+  }
+
+  /** A design version saved under the per-store lock: FAILED kept for diagnosis, or LIVE retiring the moment's previous LIVE one. */
+  private async saveMoment(storeId: string, s: { id: string; family: string | null; moment: PopupMoment; createdBy: Created; request?: string; capture: string; percent: number; candidate: Candidate | null; problems: string[]; measures: FlowStepMeasure[] | null }) {
     const previews = [];
-    for (const m of (measures ?? []).filter(m => m.size.width < 500 && m.screenshot.length)) previews.push({ stepId: m.stepId, url: (await this.uploads.saveBuffer(m.screenshot, 'image/jpeg')).url });
+    for (const m of (s.measures ?? []).filter(m => m.size.width < 500 && m.screenshot.length)) previews.push({ stepId: m.stepId, url: (await this.uploads.saveBuffer(m.screenshot, 'image/jpeg')).url });
     // One store, one writer at a time: the version is numbered and the LIVE one switched under a per-store lock.
     const nextVersion = async (tx: Prisma.TransactionClient) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`popup-design:${storeId}`}::text))`;
       return ((await tx.storePopupDesign.aggregate({ where: { storeId }, _max: { version: true } }))._max.version ?? 0) + 1;
     };
-    const base = { id, storeId, createdBy: options.createdBy, request: options.request ?? null, capture, percent, checks: { problems } as never, previews: (candidate ? previews : null) as never };
-    if (!candidate) {
-      const version = await this.prisma.$transaction(async tx => {
-        const version = await nextVersion(tx);
-        await tx.storePopupDesign.create({ data: { ...base, version, status: 'FAILED', flow: [] as never, steps: {} as never, css: '', composition: '', fingerprint: '' } });
-        return version;
-      });
-      return { design: { id, version, status: 'FAILED' as const }, problems };
-    }
+    const base = { id: s.id, storeId, moment: s.moment, family: s.family, createdBy: s.createdBy, request: s.request ?? null, capture: s.capture, percent: s.percent, checks: { problems: s.problems } as never, previews: (s.candidate ? previews : null) as never };
+    const candidate = s.candidate;
     const version = await this.prisma.$transaction(async tx => {
       const version = await nextVersion(tx);
-      await tx.storePopupDesign.updateMany({ where: { storeId, status: 'LIVE', id: { not: id } }, data: { status: 'RETIRED' } });
-      await tx.storePopupDesign.create({ data: { ...base, version, status: 'LIVE', flow: candidate!.flow as never, steps: candidate!.steps as never, css: candidate!.css, launcher: candidate!.launcher, composition: candidate!.composition, fingerprint: candidate!.fingerprint } });
+      if (!candidate) { await tx.storePopupDesign.create({ data: { ...base, version, status: 'FAILED', flow: [] as never, steps: {} as never, css: '', composition: '', fingerprint: '' } }); return version; }
+      await tx.storePopupDesign.updateMany({ where: { storeId, moment: s.moment, status: 'LIVE', id: { not: s.id } }, data: { status: 'RETIRED' } });
+      await tx.storePopupDesign.create({ data: { ...base, version, status: 'LIVE', flow: candidate.flow as never, steps: candidate.steps as never, css: candidate.css, launcher: candidate.launcher, composition: candidate.composition, fingerprint: candidate.fingerprint } });
       return version;
     });
-    await this.point(storeId, { popupDesignId: id, popupDesignOff: null });
-    return { design: { id, version, status: 'LIVE' as const, composition: candidate.composition }, problems: [] };
+    return candidate
+      ? { moment: s.moment, id: s.id, version, status: 'LIVE' as const, composition: candidate.composition, problems: [] as string[] }
+      : { moment: s.moment, id: s.id, version, status: 'FAILED' as const, problems: s.problems };
+  }
+
+  /** The moment's context for the browser check (spec 2026-11-21 §6): two cart lines, a viewed product, a favourite. */
+  private checkContext(moment: PopupMoment, rows: Array<{ id: string; name: string; amount: number; imageUrls: string[]; categoryId?: string | null }>): FlowContext {
+    const photo = (r: { imageUrls: string[] }) => (r.imageUrls ?? []).find(url => url.startsWith('/v1/uploads/')) ?? '';
+    if (moment === 'rescue') return { moment, cart: rows.slice(0, 2).map(r => ({ id: r.id, name: r.name, price: r.amount, quantity: 1, photo: photo(r) })) };
+    if (moment === 'interest' && rows[0]) return { moment, product: { id: rows[0].id, name: rows[0].name, categoryId: rows[0].categoryId ?? '' } };
+    if (moment === 'return' && rows[0]) return { moment, contact: true, favourite: rows[0].id };
+    return { moment };
+  }
+
+  /** Part 2 (spec 2026-11-21 §6): the store's missing moments written in one call, each checked and repaired alone. */
+  async designFamily(merchantId: string, storeId: string, options: { createdBy: Created; moments?: PopupMoment[]; request?: string; signal?: AbortSignal }) {
+    const g = await this.gather(merchantId, storeId, options.createdBy);
+    const welcomeId = typeof g.settings.popupDesignId === 'string' ? g.settings.popupDesignId : '';
+    const anchorRow = welcomeId ? await this.prisma.storePopupDesign.findFirst({ where: { id: welcomeId, storeId, status: 'LIVE' } }) : null;
+    const moments = (options.moments ?? (anchorRow ? ['rescue', 'interest', 'return'] as PopupMoment[] : [...POPUP_MOMENTS])).filter(isPopupMoment);
+    const taken: Partial<Record<PopupMoment, Array<{ fingerprint: string; composition: string }>>> = {};
+    for (const moment of moments) taken[moment] = await this.prisma.storePopupDesign.findMany({ where: { status: 'LIVE', moment, storeId: { not: storeId } }, orderBy: { createdAt: 'desc' }, take: 30, select: { fingerprint: true, composition: true } });
+    const base = { storeName: g.store.name, sector: g.brief?.research?.niche ?? '', palette: g.brief?.identity?.palette ?? {}, fonts: [] as string[], voice: g.brief?.identity?.voice ?? '',
+      photos: Object.keys(g.photos).filter(path => !g.cutouts.some(cut => cut.url === path)), cutouts: g.cutouts, products: g.products, capture: g.capture, percent: g.percent, taken: [] as string[], request: options.request };
+    const anchor = anchorRow ? { css: anchorRow.css, steps: anchorRow.steps as Record<string, string> } : undefined;
+    options.signal?.throwIfAborted();
+    const raw = await this.call(popupFamilyPrompt({ ...base, moments, anchor, takenByMoment: Object.fromEntries(moments.map(m => [m, (taken[m] ?? []).map(t => t.composition)])) }), storeId, 'family')
+      .catch((error: unknown) => ({ failed: String((error as Error)?.message ?? error).slice(0, 300) })) as { failed?: string; css?: string; moments?: Array<Record<string, unknown>> } | null;
+    const family = designId();
+    const shared = String(raw?.css ?? '').slice(0, 24_000);
+    const results = [];
+    for (const moment of moments) {
+      const id = designId();
+      const given = (Array.isArray(raw?.moments) ? raw!.moments : []).find(m => m?.moment === moment);
+      let answer: any = given ? { composition: given.composition, flow: given.flow, steps: given.steps, css: `${shared}\n${String(given.css ?? '').slice(0, 6_000)}`, launcher: '' } : null;
+      let problems: string[] = raw?.failed ? [`El modelo no respondió: ${raw.failed}`] : given ? [] : [`Falta el momento ${moment} en la respuesta.`];
+      let candidate: Candidate | null = null, measures: FlowStepMeasure[] | null = null;
+      // The family's answer, then up to two repairs of this moment alone.
+      for (let attempt = 0; attempt < 3 && !candidate; attempt++) {
+        options.signal?.throwIfAborted();
+        if (attempt > 0) {
+          if (/usage_limit|quota|rate.?limit|insufficient|ServiceUnavailable|no está configurad/i.test(problems[0] ?? '')) break;
+          const previous = answer ? { flow: answer.flow, steps: Object.fromEntries((Array.isArray(answer.steps) ? answer.steps : []).map((st: any) => [String(st?.id), String(st?.html ?? '')])), css: String(answer.css ?? '') } : undefined;
+          answer = await this.call(popupDesignPrompt({ ...base, moment, taken: (taken[moment] ?? []).map(t => t.composition), retryProblems: problems, previous }), storeId, 'design').catch(() => null);
+          if (answer && shared && !String(answer.css ?? '').startsWith(shared.slice(0, 200))) answer = { ...answer, css: `${shared}\n${String(answer.css ?? '')}` };
+        }
+        if (!answer) { problems = problems.length ? problems : ['No llegó una respuesta del modelo.']; continue; }
+        const built = this.assemble(answer, id, g.products.map(p => p.id), taken[moment] ?? [], undefined, moment);
+        if ('problems' in built) { problems = built.problems; continue; }
+        measures = await this.measure({ storeName: g.store.name, design: { id, flow: built.flow, steps: built.steps, css: built.css, capture: g.capture, percent: g.percent },
+          items: g.rows.map(r => ({ id: r.id, name: r.name, price: r.amount, imageUrls: r.imageUrls, categoryId: r.categoryId })), photos: g.photos, context: this.checkContext(moment, g.rows) });
+        problems = measures ? checkFlowRender(measures) : ['No se pudo abrir el navegador de prueba.'];
+        if (!problems.length) candidate = built;
+      }
+      results.push(await this.saveMoment(storeId, { id, family, moment, createdBy: options.createdBy, request: options.request, capture: g.capture, percent: g.percent, candidate, problems, measures }));
+    }
+    const patch: Record<string, unknown> = {};
+    const pointers = { ...((g.settings.popupMoments ?? {}) as Record<string, unknown>) };
+    for (const r of results.filter(r => r.status === 'LIVE')) { if (r.moment === 'welcome') Object.assign(patch, { popupDesignId: r.id, popupDesignOff: null }); else pointers[r.moment] = { id: r.id }; }
+    if (results.some(r => r.status === 'LIVE' && r.moment !== 'welcome')) patch.popupMoments = pointers;
+    if (Object.keys(patch).length) await this.point(storeId, patch);
+    return { family, results };
   }
 
   private async post(storeId: string, content: string, metadata: Record<string, unknown> = {}) {
