@@ -447,7 +447,7 @@
 
   // Popups 2.0 (spec 2026-11-18 §7): a YAPI-written design — its own markup per step and its own scoped sheet — played here. YAPI
   // never writes script: the steps carry data-* hooks and this runtime does the logic (products, contact, code, cart, landing).
-  function mountFlow(dialog, design, { api, demo, remember, slug, items, startAt, apiBaseUrl }) {
+  function mountFlow(dialog, design, { api, demo, remember, slug, items, startAt, apiBaseUrl, context = {}, hooks = {} }) {
     const hostedPage = Boolean(window.PAGOSYA_HOSTED);
     // Photos YAPI wrote as /v1/uploads/… live on the API (a published store's frame resolves paths against another origin).
     const apiOrigin = String(apiBaseUrl || '').replace(/\/v1\/?$/, '');
@@ -458,14 +458,30 @@
     const steps = (Array.isArray(design.flow) ? design.flow : []).filter(step => step && step.kind);
     const land = steps.find(step => step.kind === 'land');
     const product = id => (items || []).find(item => item && item.id === id && item.active !== false && item.archived !== true);
-    const live = step => step.kind === 'pick' ? (step.products || []).filter(product).length >= 2
+    // Part 2 (spec 2026-11-21 §5): the moment's own data — the shopper's cart, the product they keep looking at, their favourite,
+    // and whether they already left a contact (then the contact steps are skipped and their code is reminded instead).
+    const known = Boolean(context.contact), held = String(context.code || '');
+    const cartLines = (Array.isArray(context.cart) ? context.cart : []).filter(line => line && line.id).slice(0, 12);
+    const viewed = context.product && context.product.id ? context.product : null;
+    const pickIds = step => {
+      if (step.source === 'context') { if (!viewed) return []; return [viewed.id, ...(items || []).filter(item => item && item.id !== viewed.id && viewed.categoryId && item.categoryId === viewed.categoryId).map(item => item.id)].filter(product).slice(0, 4); }
+      if (step.source === 'favourite') return [context.favourite, ...(items || []).map(item => item && item.id)].filter((id, i, list) => id && product(id) && list.indexOf(id) === i).slice(0, 4);
+      if (step.source === 'new') return (items || []).map(item => item && item.id).filter(product).slice(0, 4);
+      return (step.products || []).filter(product);
+    };
+    const slotFilled = step => !/data-slot=["']?product-name/.test(design.steps?.[step.id] || '') || Boolean(viewed && viewed.name);
+    // The check (popup-flow-render) asks for a cart step even with an empty cart, so it can fail it; a store page never does.
+    const branch = step => step.kind === 'capture' || step.kind === 'reveal' ? !known : step.kind === 'remind' ? known && Boolean(held) : step.kind === 'cart' ? cartLines.length > 0 || step.id === startAt : true;
+    const live = step => step.kind === 'pick' ? pickIds(step).length >= (step.source ? 1 : 2)
       : step.kind === 'quiz' ? (step.questions || []).some(question => (question.answers || []).some(answer => (answer.products || []).some(product))) : true;
-    const shown = steps.filter(step => step.kind !== 'land' && typeof design.steps?.[step.id] === 'string' && live(step));
-    // A design with no step this page can play (malformed, or every product gone) leaves the classic popup in place.
-    if (!shown.length || !shown.some(step => step.kind === 'capture')) return false;
+    const shown = steps.filter(step => step.kind !== 'land' && typeof design.steps?.[step.id] === 'string' && live(step) && branch(step) && slotFilled(step));
+    // A welcome design with no step this page can play (malformed, or every product gone) leaves the classic popup in place;
+    // a moment design simply does not open.
+    const welcome = !context.moment || context.moment === 'welcome';
+    if (!shown.length || (welcome && !shown.some(step => step.kind === 'capture'))) return false;
     dialog.classList.add('pagosya-flow');
     dialog.replaceChildren(sheet, root);
-    const memory = { answers: [], favourite: '', code: '', busy: false };
+    const memory = { answers: [], favourite: '', code: held, busy: false };
     let at = Math.max(0, shown.findIndex(step => step.id === startAt));
     const money = value => typeof value === 'number' ? `Bs ${(value / 100).toLocaleString('es-BO', { minimumFractionDigits: value % 100 ? 2 : 0 })}` : String(value ?? '');
     let applied = false;
@@ -476,11 +492,14 @@
     };
     const finish = () => {
       applyCode();
-      if (land && memory.favourite) {
+      if (land && land.to !== 'checkout' && memory.favourite) {
         try { localStorage.setItem(`pagosya:fav:${slug}`, memory.favourite); } catch {}
         if (hostedPage) { try { parent.postMessage({ type: 'pagosya:favourite', id: memory.favourite }, '*'); } catch {} }
         document.dispatchEvent(new CustomEvent('pagosya:favourite', { detail: { id: memory.favourite, go: land.to !== 'scroll' } }));
       }
+      // Cart rescue lands in the cart, the code applied, one tap from «Pagar».
+      if (land && land.to === 'checkout') { if (hostedPage) { try { parent.postMessage({ type: 'pagosya:open-cart' }, '*'); } catch {} } document.querySelector('[data-cart-open]')?.click(); }
+      hooks.done?.();
       dialog.close();
     };
     const next = () => { if (at + 1 < shown.length) { at += 1; draw(); } else finish(); };
@@ -496,15 +515,17 @@
         if (img.hasAttribute('srcset')) img.setAttribute('srcset', img.getAttribute('srcset').split(',').map(part => { const [url, ...rest] = part.trim().split(/\s+/); return [upload(url), ...rest].join(' '); }).join(', '));
       });
       root.setAttribute('data-step', step.kind);
+      root.querySelectorAll('[data-slot=product-name]').forEach(el => { el.textContent = viewed?.name || ''; });
+      root.querySelectorAll('[data-slot=collection-name]').forEach(el => { el.textContent = viewed?.categoryName || ''; });
       // A full-page step (owner 2026-11-18) gets the whole screen, edge to edge.
       dialog.classList.toggle('pagosya-flow-full', Boolean(root.firstElementChild?.hasAttribute('data-full')));
-      root.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => { remember(); if (memory.code) applyCode(); dialog.close(); }));
+      root.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => { hooks.closed?.(step.id); remember(); if (memory.code) applyCode(); dialog.close(); }));
       root.querySelectorAll('[data-back]').forEach(el => el.addEventListener('click', back));
       root.querySelectorAll('[data-next]').forEach(el => el.addEventListener('click', next));
       if (step.kind === 'pick') {
         const tile = root.querySelector('[data-tile]');
         if (tile) {
-          for (const id of (step.products || []).filter(product)) {
+          for (const id of pickIds(step)) {
             const item = product(id), copy = tile.cloneNode(true);
             const photo = copy.querySelector('[data-slot=photo]');
             if (photo) { photo.setAttribute('src', (item.imageUrls || []).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || ''); photo.setAttribute('alt', item.name || ''); }
@@ -568,6 +589,7 @@
             const body = { ...(design.capture === 'email' ? { email: value } : { phone: value }), contact: design.capture === 'email' ? 'email' : 'whatsapp', consent: true, source: 'popup', popupDesignId: design.id, answers: memory.answers, favourite: memory.favourite || undefined };
             const answer = demo ? { code: 'POPDEMO10' } : await api('subscribe', body);
             memory.code = answer?.code || '';
+            hooks.contact?.(memory.code);
             remember();
             next();
           } catch (failure) { say(failure?.message || 'No se pudo completar. Intenta de nuevo.'); }
@@ -584,6 +606,29 @@
         // A preview that opens on this step has no real code yet: it shows a sample so the ticket never looks empty.
         root.querySelectorAll('[data-slot=code]').forEach(el => { el.textContent = memory.code || (demo ? 'POPDEMO10' : ''); });
         root.querySelectorAll('[data-slot=percent]').forEach(el => { el.textContent = `${design.percent}%`; });
+      }
+      if (step.kind === 'cart') {
+        const tile = root.querySelector('[data-tile]');
+        if (tile) {
+          for (const line of cartLines.slice(0, 4)) {
+            const copy = tile.cloneNode(true);
+            const photo = copy.querySelector('[data-slot=photo]'); if (photo) { photo.setAttribute('src', upload(line.photo || '')); photo.setAttribute('alt', line.name || ''); }
+            const nameSlot = copy.querySelector('[data-slot=name]'); if (nameSlot) nameSlot.textContent = line.name || '';
+            const priceSlot = copy.querySelector('[data-slot=price]'); if (priceSlot) priceSlot.textContent = money(line.price);
+            const qtySlot = copy.querySelector('[data-slot=qty]'); if (qtySlot) qtySlot.textContent = `× ${Math.max(1, Number(line.quantity) || 1)}`;
+            tile.before(copy);
+          }
+          const note = cartLines.length > 4 ? `+${cartLines.length - 4} más` : cartLines.length ? '' : 'Tu carrito está vacío.';
+          if (note) { const line = document.createElement('p'); line.className = 'pagosya-flow-more'; line.textContent = note; tile.after(line); }
+          tile.remove();
+        }
+        const total = cartLines.reduce((sum, line) => sum + (Number(line.price) || 0) * Math.max(1, Number(line.quantity) || 1), 0);
+        root.querySelectorAll('[data-slot=total]').forEach(el => { el.textContent = money(total); });
+      }
+      if (step.kind === 'remind') {
+        root.querySelectorAll('[data-slot=code]').forEach(el => { el.textContent = memory.code || (demo ? 'POPDEMO10' : ''); });
+        root.querySelectorAll('[data-slot=percent]').forEach(el => { el.textContent = `${design.percent}%`; });
+        root.querySelectorAll('[data-apply]').forEach(el => el.addEventListener('click', () => { if (!memory.code && demo) memory.code = 'POPDEMO10'; applyCode(); next(); }));
       }
       (root.querySelector('[data-next],[data-field],[data-tile],[data-choice-copy],button') || root).focus?.();
     }
@@ -714,7 +759,7 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
     dialog.addEventListener('close', remember);
     // Popups 2.0: a LIVE YAPI design takes the dialog; timing and the 30-day memory stay the same.
     const flow = settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps
-      ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt, apiBaseUrl: config.apiBaseUrl }) : false;
+      ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt, apiBaseUrl: config.apiBaseUrl, context: settings.popupDesignContext || {} }) : false;
     dialog.querySelector('.signup-close')?.addEventListener('click', () => dialog.close());
     if (flow) dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
     dialog.addEventListener('click', event => { if (event.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); });
@@ -948,8 +993,9 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
   };
   // «Ver ventana de suscripción» (spec 2026-11-08): the Studio opens the popup at once, drawn as on the store, faked like a demo store
   // (never sends). It opens over the Studio's own dialogs, so it never waits for the store's timing rules.
-  window.PAGOSYA_POPUP_PREVIEW = function previewPopup(settings, config, stepId) {
+  window.PAGOSYA_POPUP_PREVIEW = function previewPopup(settings, config, stepId, context) {
     if (stepId) settings = { ...(settings || {}), popupDesignStartAt: stepId };
+    if (context) settings = { ...(settings || {}), popupDesignContext: context };
     document.querySelector('[data-pagosya-popup-preview]')?.remove();
     const host = document.createElement('section'); host.setAttribute('data-pagosya-popup-preview', ''); document.body.append(host);
     const previewConfig = { ...config, slug: `studio-preview-${config?.slug || 'tienda'}` };

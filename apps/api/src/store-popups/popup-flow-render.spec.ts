@@ -113,3 +113,43 @@ describe('popup design render check', () => {
   });
 });
 
+
+import { chromium } from 'playwright';
+import { readKitFileSync } from '@pagosya/storefront-kit';
+
+describe('moment steps in the browser check (spec 2026-11-21 §5–6)', () => {
+  const CARD = '.card{background:#fff;color:#111;padding:24px;width:min(420px,100%)}.card [data-close]{width:44px;height:44px}.card [data-tile] img{width:60px;height:60px}';
+  const cartHtml = '<div class="card"><button data-close aria-label="Cerrar">×</button><h2>Tu carrito</h2><ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b><i data-slot="qty"></i></li></ul><p data-slot="total"></p><button data-next>Seguir</button></div>';
+  const remindHtml = '<div class="card"><button data-close aria-label="Cerrar">×</button><p>Tu <b data-slot="percent"></b> sigue esperando: <b data-slot="code"></b></p><button data-apply>Usar mi código</button></div>';
+  const captureHtml = '<div class="card"><button data-close aria-label="Cerrar">×</button><input data-field><button data-submit>Enviar</button></div>';
+  const revealHtml = '<div class="card"><button data-close aria-label="Cerrar">×</button><b data-slot="code"></b><button data-next>Ir</button></div>';
+  const rescueFlow = [{ id: 'k', kind: 'cart' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }, { id: 'm', kind: 'remind' }, { id: 'l', kind: 'land', to: 'checkout' }];
+  const steps = { k: cartHtml, c: captureHtml, r: revealHtml, m: remindHtml };
+  const cart = [{ id: 'p1', name: 'Habanero', price: 4500, quantity: 2, photo: '/v1/uploads/a.png' }, { id: 'p2', name: 'Serrano', price: 4000, quantity: 1, photo: '/v1/uploads/b.png' }];
+
+  it('fills the cart tiles from the shopper\'s cart and shows a reminder with the code', async () => {
+    const measures = await measureFlow({ ...base(CARD, steps, rescueFlow), context: { moment: 'rescue', cart } }, [{ width: 390, height: 844 }]);
+    expect(measures!.map(m => m.stepId)).toEqual(['k', 'c', 'r', 'm']);
+    expect(measures!.find(m => m.stepId === 'k')!.tiles).toBe(2);
+    expect(checkFlowRender(measures!)).toEqual([]);
+  });
+
+  it('cart step with an empty cart: the check fails it', async () => {
+    const measures = await measureFlow({ ...base(CARD, steps, rescueFlow), context: { moment: 'rescue', cart: [] } }, [{ width: 390, height: 844 }]);
+    expect(checkFlowRender(measures!).join(' ')).toMatch(/paso k.*fichas/);
+  });
+
+  it('contact without a code: rescue skips capture, reveal and remind, and still opens on the cart', async () => {
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage();
+      await page.setContent('<!doctype html><body></body>');
+      await page.addScriptTag({ content: readKitFileSync('retention.js') });
+      const shown = await page.evaluate(([flow, html, lines]) => {
+        (window as any).PAGOSYA_POPUP_PREVIEW({ signupEnabled: true, popupDesign: { id: 'cx', flow, steps: html, css: '', capture: 'whatsapp', percent: 10 } }, { slug: 'x', data: { items: [] } }, '', { moment: 'rescue', contact: true, code: '', cart: lines });
+        return document.querySelector('[data-pya-popup]')?.getAttribute('data-step');
+      }, [rescueFlow, steps, cart] as const);
+      expect(shown).toBe('cart');
+    } finally { await browser.close(); }
+  });
+});

@@ -12,8 +12,11 @@ export type FlowStepMeasure = { stepId: string; size: { width: number; height: n
   contentLeft: number; contentRight: number;
   contentTop: number; contentBottom: number;
   contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; /** Words another part of the popup sits on. */ covered: string[]; /** Words drawn over a cut-out or drawing. */ overArt: string[]; /** Cut-outs left mostly off the screen. */ hiddenArt: string[]; /** The close sits in a top corner of the popup. */ closeInCorner: boolean; /** The back button (when there is one) sits in a top corner too. */ backInCorner: boolean; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
+/** Part 2 (spec 2026-11-21 §6): what a moment's popup plays with — the shopper's cart, the product being viewed, a favourite. */
+export type FlowContext = { moment?: string; contact?: boolean; code?: string; favourite?: string; product?: { id: string; name: string; categoryId?: string; categoryName?: string };
+  cart?: Array<{ id: string; name: string; price: number; quantity: number; photo: string }> };
 export type FlowRenderInput = { storeName: string; design: { id: string; flow: unknown; steps: Record<string, string>; css: string; capture: string; percent: number };
-  items: unknown[]; photos: Record<string, { bytes: Buffer; contentType: string }> };
+  items: unknown[]; photos: Record<string, { bytes: Buffer; contentType: string }>; context?: FlowContext };
 
 const escape = (text: string) => text.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const pageHtml = (storeName: string) => `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#fff"><main><h1>${escape(storeName)}</h1></main></body></html>`;
@@ -150,11 +153,15 @@ export async function measureFlow(input: FlowRenderInput, sizes: ReadonlyArray<{
       await page.goto(`${ORIGIN}/`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
       await page.addScriptTag({ content: script });
       for (const step of steps) {
-        await page.evaluate(([design, items, stepId]) => {
-          (window as unknown as { PAGOSYA_POPUP_PREVIEW: (s: unknown, c: unknown, id: string) => void }).PAGOSYA_POPUP_PREVIEW({ signupEnabled: true, popupDesign: design }, { slug: 'popup-check', apiBaseUrl: `${location.origin}/v1`, data: { items } }, stepId);
-        }, [input.design, input.items, step.id] as const);
+        // Each step opens for a shopper it is meant for: the reminder for a known contact with a code, the rest for a new shopper.
+        const context = step.kind === 'remind' ? { ...(input.context ?? {}), contact: true, code: 'POPDEMO10' } : { ...(input.context ?? {}), contact: false };
+        await page.evaluate(([design, items, stepId, ctx]) => {
+          (window as unknown as { PAGOSYA_POPUP_PREVIEW: (s: unknown, c: unknown, id: string, x: unknown) => void }).PAGOSYA_POPUP_PREVIEW({ signupEnabled: true, popupDesign: design }, { slug: 'popup-check', apiBaseUrl: `${location.origin}/v1`, data: { items } }, stepId, ctx);
+        }, [input.design, input.items, step.id, context] as const);
         await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-pagosya-popup-preview] img')).every(img => (img as HTMLImageElement).complete), null, { timeout: 3_000 }).catch(() => undefined);
         const measured = await page.evaluate(measureInPage);
+        // A cart step that drew no product is reported as empty tiles, never skipped.
+        if (step.kind === 'cart' && measured.tiles === null) { measured.tiles = 0; measured.tileImages = 0; }
         let fieldsTypeable: boolean | null = null;
         if (step.kind === 'capture') {
           const field = page.locator('[data-pagosya-popup-preview] [data-field]').first();
