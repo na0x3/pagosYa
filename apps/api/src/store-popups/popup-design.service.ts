@@ -23,6 +23,7 @@ type Created = 'yapi' | 'merchant-chat' | 'batch';
 type Candidate = { flow: PopupFlow; steps: Record<string, string>; css: string; launcher: string | null; composition: string; fingerprint: string };
 const designId = () => `c${Array.from(randomBytes(24), byte => '0123456789abcdefghijklmnopqrstuvwxyz'[byte % 36]).join('')}`;
 const clamp = (value: number) => Math.max(5, Math.min(30, Math.round(value)));
+const MOMENT_NAMES: Record<PopupMoment, string> = { welcome: 'de bienvenida', rescue: 'del carrito', interest: 'de interés', return: 'de regreso' };
 
 /** Popups 2.0 (spec 2026-11-18 §5–6, §8): YAPI writes a store's popup; it is cleaned, played in a real browser and compared with the
  *  popups other stores already have, retried once with what failed, and saved LIVE (the store points at it) or FAILED (the store
@@ -244,6 +245,21 @@ export class PopupDesignService {
   /** A chat request about the popup (spec 2026-11-18 §8): a discount or contact change at once, anything else a new design. */
   async forChat(job: { merchantId: string; storeId: string; input: { instruction: string }; signal?: AbortSignal }): Promise<{ skipped: true }> {
     const ask = popupChatRequest(job.input.instruction) ?? { redesign: true, request: job.input.instruction };
+    // Part 2 (spec 2026-11-21 §8): one of the other popups switched on/off, or redesigned (alone or all together).
+    if (!ask.redesign && ask.moment && ask.moment !== 'all' && ask.on !== undefined) {
+      await this.updateSettings(job.merchantId, job.storeId, { moment: ask.moment, on: ask.on });
+      await this.post(job.storeId, `Listo: el popup ${MOMENT_NAMES[ask.moment]} quedó ${ask.on ? 'encendido' : 'apagado'}.`, { popupSettings: true });
+      return { skipped: true };
+    }
+    if (ask.redesign && ask.moment && ask.moment !== 'welcome') {
+      await this.post(job.storeId, 'Diseñando tus popups (2–4 minutos)…', { progress: 'popup' });
+      const moments = ask.moment === 'all' ? [...POPUP_MOMENTS] : [ask.moment];
+      const result = await this.designFamily(job.merchantId, job.storeId, { createdBy: 'merchant-chat', moments, request: ask.request, signal: job.signal });
+      const live = result.results.filter(r => r.status === 'LIVE').map(r => MOMENT_NAMES[r.moment]);
+      const failed = result.results.filter(r => r.status === 'FAILED').map(r => MOMENT_NAMES[r.moment]);
+      await this.post(job.storeId, [live.length ? `Listo: el popup ${live.join(', ')}.` : '', failed.length ? `No logré el ${failed.join(', ')}; sigue como estaba.` : '', 'Míralos en Crecimiento › Popups.'].filter(Boolean).join(' '), { popupFamily: result.family });
+      return { skipped: true };
+    }
     if (!ask.redesign) {
       await this.updateSettings(job.merchantId, job.storeId, { ...(ask.percent !== undefined ? { percent: ask.percent } : {}), ...(ask.capture ? { capture: ask.capture } : {}) });
       const said = [ask.percent !== undefined ? `el descuento quedó en ${clamp(ask.percent)}%` : '', ask.capture ? `ahora pide ${ask.capture === 'email' ? 'el correo' : 'el WhatsApp'}` : ''].filter(Boolean).join(' y ');
@@ -281,18 +297,21 @@ export class PopupDesignService {
     await this.store(merchantId, storeId);
     const row = await this.prisma.storePopupDesign.findFirst({ where: { id, storeId } });
     if (!row || row.status === 'FAILED') throw new NotFoundException('Esa versión del popup no existe.');
+    const moment = (row.moment ?? 'welcome') as PopupMoment;
     await this.prisma.$transaction(async tx => {
-      await tx.storePopupDesign.updateMany({ where: { storeId, status: 'LIVE', id: { not: id } }, data: { status: 'RETIRED' } });
+      await tx.storePopupDesign.updateMany({ where: { storeId, moment, status: 'LIVE', id: { not: id } }, data: { status: 'RETIRED' } });
       await tx.storePopupDesign.update({ where: { id }, data: { status: 'LIVE' } });
     });
-    await this.point(storeId, { popupDesignId: id, popupDesignOff: null });
+    if (moment === 'welcome') await this.point(storeId, { popupDesignId: id, popupDesignOff: null });
+    else await this.point(storeId, { popupMoments: { ...(((await this.settings(storeId)).popupMoments ?? {}) as Record<string, unknown>), [moment]: { id } } });
   }
 
   /** The Popups page (spec 2026-11-18 §9): versions newest first, the live one, its settings and the store's products. */
   async overview(merchantId: string, storeId: string) {
     await this.store(merchantId, storeId);
     const settings = await this.settings(storeId);
-    const rows = await this.prisma.storePopupDesign.findMany({ where: { storeId }, orderBy: { version: 'desc' }, take: 20, select: { id: true, version: true, status: true, composition: true, previews: true, percent: true, capture: true, flow: true, createdAt: true } });
+    const all = await this.prisma.storePopupDesign.findMany({ where: { storeId }, orderBy: { version: 'desc' }, take: 60, select: { id: true, version: true, status: true, moment: true, composition: true, previews: true, percent: true, capture: true, flow: true, createdAt: true } });
+    const rows = all.filter(row => (row.moment ?? 'welcome') === 'welcome');
     const products = await this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, select: { id: true, name: true }, orderBy: { createdAt: 'desc' }, take: 40 });
     const liveId = typeof settings.popupDesignId === 'string' ? settings.popupDesignId : null;
     const current = rows.find(row => row.id === (liveId ?? settings.popupDesignOff));
@@ -301,12 +320,35 @@ export class PopupDesignService {
       liveId, on: Boolean(liveId), percent: current?.percent ?? clamp(Number(settings.popupDesignPercent) || 10), capture: current?.capture ?? (settings.popupDesignCapture === 'email' ? 'email' : 'whatsapp'),
       pick: pick?.products ?? [], products,
       designs: rows.map(({ flow: _flow, ...row }) => row),
+      moments: await this.momentsOverview(storeId, settings, all, liveId),
     };
   }
 
+  /** Part 2 (spec 2026-11-21 §8): each moment's versions, whether it shows, and what shoppers did with it in the last 30 days. */
+  private async momentsOverview(storeId: string, settings: Record<string, unknown>, rows: Array<{ moment: string | null; flow: unknown } & Record<string, unknown>>, liveId: string | null) {
+    const since = new Date(Date.now() - 30 * 86_400_000);
+    const tallies = await this.prisma.storePopupEvent.groupBy({ by: ['moment', 'kind'], where: { storeId, createdAt: { gte: since } }, _count: { _all: true } })
+      .catch(() => [] as Array<{ moment: string; kind: string; _count: { _all: number } }>);
+    const pointers = (settings.popupMoments ?? {}) as Record<string, { id?: string; off?: boolean }>;
+    return POPUP_MOMENTS.map(moment => {
+      const live = moment === 'welcome' ? liveId : pointers[moment]?.id && !pointers[moment]?.off ? pointers[moment]!.id! : null;
+      const count = (kind: string) => tallies.filter(t => t.moment === moment && t.kind === kind).reduce((sum, t) => sum + t._count._all, 0);
+      return { moment, liveId: live, on: Boolean(live), designs: rows.filter(r => (r.moment ?? 'welcome') === moment).map(({ flow: _flow, ...row }) => row), counts: { shown: count('shown'), closed: count('closed'), completed: count('completed') } };
+    });
+  }
+
   /** Percent, contact and the products in «¿qué buscas?» change without a model call; on/off turns the YAPI popup off (the old one shows). */
-  async updateSettings(merchantId: string, storeId: string, patch: { percent?: number; capture?: 'whatsapp' | 'email'; products?: string[]; on?: boolean }) {
+  async updateSettings(merchantId: string, storeId: string, patch: { percent?: number; capture?: 'whatsapp' | 'email'; products?: string[]; on?: boolean; moment?: PopupMoment }) {
     await this.store(merchantId, storeId);
+    // Part 2: another moment is only switched on/off; its design stays to switch back to.
+    if (patch.moment && patch.moment !== 'welcome') {
+      const pointers = { ...(((await this.settings(storeId)).popupMoments ?? {}) as Record<string, { id?: string; off?: boolean }>) };
+      const entry = pointers[patch.moment];
+      if (!entry?.id) throw new NotFoundException('Ese popup todavía no existe; pídeselo a YAPI.');
+      if (patch.on !== undefined) pointers[patch.moment] = patch.on ? { id: entry.id } : { id: entry.id, off: true };
+      await this.point(storeId, { popupMoments: pointers });
+      return;
+    }
     const settings = await this.settings(storeId);
     const liveId = typeof settings.popupDesignId === 'string' && settings.popupDesignId ? settings.popupDesignId : '';
     const offId = typeof settings.popupDesignOff === 'string' && settings.popupDesignOff ? settings.popupDesignOff : '';

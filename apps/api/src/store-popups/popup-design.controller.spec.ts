@@ -9,6 +9,7 @@ describe('PopupDesignController', () => {
     storeRetention: { findUnique: jest.fn(async () => ({ settings: { popupDesignId: 'cd1', popupDesignPercent: 15 } })), upsert: jest.fn() },
     storePopupDesign: { findMany: jest.fn(async () => [{ id: 'cd1', version: 2, status: 'LIVE', composition: 'Ticket', previews: [{ stepId: 'o', url: '/v1/uploads/o.jpg' }], percent: 15, capture: 'whatsapp', flow: [{ id: 'o', kind: 'offer' }, { id: 'p', kind: 'pick', products: ['p1', 'p2'] }], createdAt: new Date() }]), findFirst: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
     paymentLink: { findMany: jest.fn(async () => [{ id: 'p1', name: 'Habanero' }, { id: 'p2', name: 'Serrano' }, { id: 'p3', name: 'Jalapeño' }]) },
+    storePopupEvent: { groupBy: jest.fn(async () => []) },
   };
   const controller = new PopupDesignController(new PopupDesignService(prisma, { get: () => undefined } as any, {} as any));
 

@@ -9,6 +9,8 @@ export class PopupDesignSettingsDto {
   @IsOptional() @IsIn(['whatsapp', 'email']) capture?: 'whatsapp' | 'email';
   @IsOptional() @IsArray() @ArrayMaxSize(6) @IsString({ each: true }) products?: string[];
   @IsOptional() @IsBoolean() on?: boolean;
+  /** Part 2 (spec 2026-11-21): which popup the switch is for (welcome when absent). */
+  @IsOptional() @IsIn(['welcome', 'rescue', 'interest', 'return']) moment?: 'welcome' | 'rescue' | 'interest' | 'return';
 }
 
 /** Popups 2.0 (spec 2026-11-18 §9): the merchant's Popups page. A redesign is a chat request («Rediseña mi popup…»), so it

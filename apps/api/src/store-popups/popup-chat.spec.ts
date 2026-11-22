@@ -20,3 +20,17 @@ describe('popup requests in the chat', () => {
     expect(popupChatRequest('quiero un popup full screen')).toMatchObject({ redesign: true, layout: 'full' });
   });
 });
+
+describe('moments in chat (spec 2026-11-21 §8)', () => {
+  it('names the moment a redesign is for', () => {
+    expect(popupChatRequest('haz el popup del carrito más simple')).toMatchObject({ redesign: true, moment: 'rescue' });
+    expect(popupChatRequest('rediseña el popup de regreso')).toMatchObject({ redesign: true, moment: 'return' });
+    expect(popupChatRequest('rediseña todos mis popups')).toMatchObject({ redesign: true, moment: 'all' });
+    expect(popupChatRequest('rediseña mi popup')).toEqual({ redesign: true });
+  });
+  it('switches one moment on or off without a model call', () => {
+    expect(popupChatRequest('apaga el popup de regreso')).toEqual({ redesign: false, moment: 'return', on: false });
+    expect(popupChatRequest('activa el popup del carrito')).toEqual({ redesign: false, moment: 'rescue', on: true });
+    expect(popupChatRequest('apaga el popup')).toBeNull();
+  });
+});

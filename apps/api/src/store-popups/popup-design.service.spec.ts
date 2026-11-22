@@ -23,7 +23,7 @@ function setup(answers: unknown[], over: { measures?: Array<(id: string, w: numb
       findMany: jest.fn(async () => over.taken ?? []),
       aggregate: jest.fn(async () => ({ _max: { version: rows.length ? Math.max(...rows.map(r => r.version)) : null } })),
       create: jest.fn(async ({ data }: any) => { rows.push(data); return data; }),
-      updateMany: jest.fn(async ({ where, data }: any) => { for (const r of rows) if (r.storeId === where.storeId && r.status === where.status && r.id !== where.id?.not) Object.assign(r, data); return { count: 1 }; }),
+      updateMany: jest.fn(async ({ where, data }: any) => { for (const r of rows) if (r.storeId === where.storeId && r.status === where.status && r.id !== where.id?.not && (where.moment === undefined || (r.moment ?? 'welcome') === where.moment)) Object.assign(r, data); return { count: 1 }; }),
       findFirst: jest.fn(async ({ where }: any) => rows.find(r => r.id === where.id && r.storeId === where.storeId) ?? null),
       update: jest.fn(async ({ where, data }: any) => Object.assign(rows.find(r => r.id === where.id), data)),
     },
@@ -209,5 +209,38 @@ describe('family of moments (spec 2026-11-21 §6)', () => {
     const { service, prisma } = setup([answer()]);
     await service.design('m1', 's1', { createdBy: 'merchant-chat' });
     expect(prisma.storePopupDesign.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ moment: 'welcome', status: 'LIVE' }) }));
+  });
+});
+
+describe('the Popups page per moment (spec 2026-11-21 §8)', () => {
+  it('lists the four moments with their designs and last-30-day counts', async () => {
+    const { service, prisma, setRetention } = setup([]);
+    prisma.storePopupDesign.findMany = jest.fn(async () => [
+      { id: 'cw', version: 3, status: 'LIVE', moment: 'welcome', composition: 'w', previews: [], percent: 10, capture: 'whatsapp', flow: [], createdAt: new Date() },
+      { id: 'cr', version: 4, status: 'LIVE', moment: 'rescue', composition: 'r', previews: [], percent: 10, capture: 'whatsapp', flow: [], createdAt: new Date() }]);
+    prisma.paymentLink.findMany = jest.fn(async () => []);
+    prisma.storePopupEvent = { groupBy: jest.fn(async () => [{ moment: 'rescue', kind: 'shown', _count: { _all: 5 } }, { moment: 'rescue', kind: 'completed', _count: { _all: 2 } }]) };
+    setRetention({ settings: { popupDesignId: 'cw', popupMoments: { rescue: { id: 'cr' } } }, updatedAt: new Date(1) });
+    const view: any = await service.overview('m1', 's1');
+    expect(view.moments.map((m: any) => [m.moment, m.liveId, m.on])).toEqual([['welcome', 'cw', true], ['rescue', 'cr', true], ['interest', null, false], ['return', null, false]]);
+    expect(view.moments[1].counts).toEqual({ shown: 5, closed: 0, completed: 2 });
+    expect(view.designs.map((d: any) => d.id)).toEqual(['cw']);
+  });
+  it('switches one moment off, keeping its design to switch back on', async () => {
+    const { service, retention, setRetention } = setup([]);
+    setRetention({ settings: { popupDesignId: 'cw', popupMoments: { rescue: { id: 'cr' } } }, updatedAt: new Date(1) });
+    await service.updateSettings('m1', 's1', { moment: 'rescue', on: false });
+    expect(retention().settings.popupMoments).toEqual({ rescue: { id: 'cr', off: true } });
+    await service.updateSettings('m1', 's1', { moment: 'rescue', on: true });
+    expect(retention().settings.popupMoments).toEqual({ rescue: { id: 'cr' } });
+    expect(retention().settings.popupDesignId).toBe('cw');
+  });
+  it('restores an older version of one moment without touching the others', async () => {
+    const { service, rows, retention, setRetention } = setup([]);
+    rows.push({ id: 'cw', storeId: 's1', version: 1, status: 'LIVE', moment: 'welcome' }, { id: 'cr1', storeId: 's1', version: 2, status: 'RETIRED', moment: 'rescue' }, { id: 'cr2', storeId: 's1', version: 3, status: 'LIVE', moment: 'rescue' });
+    setRetention({ settings: { popupDesignId: 'cw', popupMoments: { rescue: { id: 'cr2' } } }, updatedAt: new Date(1) });
+    await service.restore('m1', 's1', 'cr1');
+    expect(rows.map(r => [r.id, r.status])).toEqual([['cw', 'LIVE'], ['cr1', 'LIVE'], ['cr2', 'RETIRED']]);
+    expect(retention().settings).toMatchObject({ popupDesignId: 'cw', popupMoments: { rescue: { id: 'cr1' } } });
   });
 });
