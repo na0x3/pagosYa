@@ -267,3 +267,23 @@ describe('the family starts from the welcome look (final review I6)', () => {
     expect(prompt).not.toContain('data-pya-popup=\\"old\\"');
   });
 });
+
+describe('a family run points each moment as it lands (minor 4)', () => {
+  it('keeps a toggle the merchant made during the run, and an off moment stays off after a redesign', async () => {
+    const { service, rows, retention, setRetention } = setup([]);
+    rows.push({ id: 'old', storeId: 's1', version: 1, status: 'LIVE', moment: 'welcome', css: '', steps: {} });
+    setRetention({ settings: { popupDesignId: 'old', popupMoments: { interest: { id: 'ci0', off: true }, return: { id: 'ct0' } } }, updatedAt: new Date(1) });
+    const fi = (o: Record<string, unknown>) => ({ products: [], to: 'product', questions: [], source: '', ...o });
+    const box = (inner: string) => `<div class="card"><button data-close aria-label="Cerrar">×</button>${inner}</div>`;
+    const pick = { id: 'p', html: box('<h2><span data-slot="product-name"></span></h2><ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b></li></ul>') };
+    const interest = { moment: 'interest', composition: 'i', css: '', flow: [fi({ id: 'p', kind: 'pick', source: 'context' }), fi({ id: 'c', kind: 'capture' }), fi({ id: 'r', kind: 'reveal' }), fi({ id: 'm', kind: 'remind' })],
+      steps: [pick, { id: 'c', html: box('<input data-field><button data-submit>E</button>') }, { id: 'r', html: box('<b data-slot="code"></b><button data-next>I</button>') }, { id: 'm', html: box('<b data-slot="code"></b><button data-apply>U</button>') }] };
+    service.call = jest.fn(async () => ({ composition: 'x', css: '.card{color:#111}', moments: [interest] })) as any;
+    // While YAPI writes, the merchant switches «Regreso» off on the Popups page.
+    service.measure = jest.fn(async () => { setRetention({ settings: { ...retention().settings, popupMoments: { ...retention().settings.popupMoments, return: { id: 'ct0', off: true } } }, updatedAt: new Date(5) }); return []; }) as any;
+    const result = await service.designFamily('m1', 's1', { createdBy: 'batch', moments: ['interest'] });
+    const pointers = retention().settings.popupMoments;
+    expect(pointers.return).toEqual({ id: 'ct0', off: true });
+    expect(pointers.interest).toEqual({ id: result.results[0].id, off: true });
+  });
+});

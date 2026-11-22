@@ -9,7 +9,7 @@ function setup(over: { design?: any } = {}) {
   const prisma: any = {
     storeRetention: { findUnique: jest.fn(async () => ({ settings: { signupEnabled: true, popupDesignId: design.id } })) },
     storePopupDesign: { findFirst: jest.fn(async ({ where }: any) => { const row = 'design' in over ? over.design : design; return row && row.id === where.id && row.storeId === where.storeId && (where.status === undefined || row.status === where.status) ? row : null; }), findMany: jest.fn(async () => []) },
-    storePopupEvent: { create: jest.fn(async ({ data }: any) => data) },
+    storePopupEvent: { create: jest.fn(async ({ data }: any) => data), findFirst: jest.fn(async () => null) },
     storeWhatsappSubscriber: { upsert: jest.fn(async ({ create }: any) => ({ id: 'w1', ...create })) },
     storeNewsletterSubscriber: { upsert: jest.fn(async ({ create }: any) => ({ id: 'n1', ...create })) },
     promoCode: {
@@ -116,5 +116,22 @@ describe('the popups a store page gets (final review I7)', () => {
     const both = await service.publicPopups('s1', { popupDesignId: design.id, popupMoments: { rescue: { id: rescueRow.id } } } as any);
     expect(both.popupDesign).toMatchObject({ id: design.id });
     expect(await service.publicPopups('s1', {} as any)).toEqual({});
+  });
+});
+
+describe('popup events cannot be inflated (minor 3)', () => {
+  it('records one event per visitor, design and kind in 30 minutes, and only for the design\'s own moment', async () => {
+    const { service, prisma } = setup();
+    let last: any = null;
+    prisma.storePopupEvent.findFirst = jest.fn(async () => last);
+    prisma.storePopupEvent.create = jest.fn(async ({ data }: any) => { last = data; return data; });
+    const event = { visitor: 'a'.repeat(24), designId: design.id, moment: 'welcome', kind: 'shown' } as any;
+    await service.recordPopupEvent('s1', event);
+    await service.recordPopupEvent('s1', event);
+    expect(prisma.storePopupEvent.create).toHaveBeenCalledTimes(1);
+    expect(prisma.storePopupEvent.findFirst).toHaveBeenLastCalledWith({ where: { storeId: 's1', designId: design.id, visitor: event.visitor, kind: 'shown', createdAt: { gte: expect.any(Date) } }, select: { id: true } });
+    last = null;
+    await service.recordPopupEvent('s1', { ...event, moment: 'rescue' });
+    expect(prisma.storePopupEvent.create).toHaveBeenCalledTimes(1);
   });
 });

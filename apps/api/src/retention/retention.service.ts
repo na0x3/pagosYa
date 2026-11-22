@@ -240,7 +240,10 @@ export class RetentionService {
   /** What a shopper did with one of this store's popups (sent only with analytics consent). */
   async recordPopupEvent(storeId: string, dto: PopupEventDto) {
     const owned = await this.prisma.storePopupDesign.findFirst({ where: { id: dto.designId, storeId } });
-    if (owned) await this.prisma.storePopupEvent.create({ data: { storeId, designId: dto.designId, moment: dto.moment, visitor: dto.visitor, kind: dto.kind, step: dto.step ?? null } });
+    if (!owned || (owned.moment ?? 'welcome') !== dto.moment) return { ok: true as const };
+    // One event per visitor, design and kind in 30 minutes: a script repeating it cannot inflate the counts.
+    const seen = await this.prisma.storePopupEvent.findFirst({ where: { storeId, designId: dto.designId, visitor: dto.visitor, kind: dto.kind, createdAt: { gte: new Date(Date.now() - 30 * 60_000) } }, select: { id: true } });
+    if (!seen) await this.prisma.storePopupEvent.create({ data: { storeId, designId: dto.designId, moment: dto.moment, visitor: dto.visitor, kind: dto.kind, step: dto.step ?? null } });
     return { ok: true as const };
   }
   /** A reminder never shows a code the shopper can't use: only this store's own popup codes, still active and unused. */

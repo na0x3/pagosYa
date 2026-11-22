@@ -61,9 +61,10 @@ export class PopupDesignService {
     return ((await this.prisma.storeRetention.findUnique({ where: { storeId } }))?.settings ?? {}) as Record<string, unknown>;
   }
   /** Writes over the settings version it read (another save in between → read again), so no other setting is lost. */
-  private async point(storeId: string, patch: Record<string, unknown>) {
+  private async point(storeId: string, given: Record<string, unknown> | ((settings: Record<string, unknown>) => Record<string, unknown>)) {
     for (let attempt = 0; attempt < 4; attempt++) {
       const row = await this.prisma.storeRetention.findUnique({ where: { storeId } });
+      const patch = typeof given === 'function' ? given((row?.settings ?? {}) as Record<string, unknown>) : given;
       if (!row) {
         const created = await this.prisma.storeRetention.create({ data: { storeId, settings: patch as never } }).then(() => true, () => false);
         if (created) return; continue;
@@ -228,13 +229,17 @@ export class PopupDesignService {
         problems = measures ? checkFlowRender(measures) : ['No se pudo abrir el navegador de prueba.'];
         if (!problems.length) candidate = built;
       }
-      results.push(await this.saveMoment(storeId, { id, family, moment, createdBy: options.createdBy, request: options.request, capture: g.capture, percent: g.percent, candidate, problems, measures }));
+      const saved = await this.saveMoment(storeId, { id, family, moment, createdBy: options.createdBy, request: options.request, capture: g.capture, percent: g.percent, candidate, problems, measures });
+      results.push(saved);
+      // Pointed as soon as it is saved, over the settings as they are now: a switch the merchant made meanwhile, or a moment
+      // they had switched off, stays as they left it.
+      if (saved.status === 'LIVE') await this.point(storeId, now => {
+        if (moment === 'welcome') return typeof now.popupDesignOff === 'string' && now.popupDesignOff && !now.popupDesignId ? { popupDesignOff: id } : { popupDesignId: id, popupDesignOff: null };
+        const pointers = { ...((now.popupMoments ?? {}) as Record<string, { id?: string; off?: boolean }>) };
+        pointers[moment] = pointers[moment]?.off ? { id, off: true } : { id };
+        return { popupMoments: pointers };
+      });
     }
-    const patch: Record<string, unknown> = {};
-    const pointers = { ...((g.settings.popupMoments ?? {}) as Record<string, unknown>) };
-    for (const r of results.filter(r => r.status === 'LIVE')) { if (r.moment === 'welcome') Object.assign(patch, { popupDesignId: r.id, popupDesignOff: null }); else pointers[r.moment] = { id: r.id }; }
-    if (results.some(r => r.status === 'LIVE' && r.moment !== 'welcome')) patch.popupMoments = pointers;
-    if (Object.keys(patch).length) await this.point(storeId, patch);
     return { family, results };
   }
 
