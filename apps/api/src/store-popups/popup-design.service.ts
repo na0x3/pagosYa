@@ -88,7 +88,7 @@ export class PopupDesignService {
       if ('problem' in cleaned) problems.push(`paso ${step.id}: ${cleaned.problem}`); else steps[step.id] = cleaned.html;
       if (layout === 'full' && 'html' in cleaned && !/^<[a-z0-9]+\b[^>]*\sdata-full\b/i.test(cleaned.html.trim())) problems.push(`paso ${step.id}: falta data-full en el elemento exterior (formato pantalla completa).`);
     }
-    const scoped = scopePopupCss(String(raw?.css ?? ''), id, moment === 'welcome' ? undefined : 36_000);
+    const scoped = scopePopupCss(String(raw?.css ?? ''), id, moment === 'welcome' ? undefined : 60_000);
     if ('problem' in scoped) problems.push(scoped.problem);
     const composition = String(raw?.composition ?? '').replace(/\s+/g, ' ').trim().slice(0, 140);
     if (!composition) problems.push('Falta composition (una línea que nombre tu composición).');
@@ -205,7 +205,8 @@ export class PopupDesignService {
     const raw = await this.call(popupFamilyPrompt({ ...base, moments, anchor, takenByMoment: Object.fromEntries(moments.map(m => [m, (taken[m] ?? []).map(t => t.composition)])) }), storeId, 'family')
       .catch((error: unknown) => ({ failed: String((error as Error)?.message ?? error).slice(0, 300) })) as { failed?: string; css?: string; moments?: Array<Record<string, unknown>> } | null;
     const family = designId();
-    const shared = String(raw?.css ?? '').slice(0, 24_000);
+    // The welcome's own rules come first: the new popups reuse its classes (live DooBoo 2026-11-22: kicker and close unstyled).
+    const shared = `${anchor ? `${anchor.css}\n` : ''}${String(raw?.css ?? '').slice(0, 24_000)}`;
     const results = [];
     for (const moment of moments) {
       const id = designId();

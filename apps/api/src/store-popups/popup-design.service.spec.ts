@@ -303,3 +303,18 @@ describe('the interest check plays a product with its neighbours (live Miga 2026
     expect(context.product.related).toEqual(['p1', 'p2']);
   });
 });
+
+describe('the family carries the welcome rules it builds on (live DooBoo 2026-11-22)', () => {
+  it('each new popup includes the welcome sheet, so classes it reuses are styled', async () => {
+    const { service, rows, prisma } = setup([]);
+    rows.push({ id: 'old', storeId: 's1', version: 1, status: 'LIVE', moment: 'welcome', css: '[data-pya-popup="old"] .db-kicker{color:#5a1}', steps: {} });
+    service.measure = jest.fn(async () => []) as any;
+    const fi = (o: Record<string, unknown>) => ({ products: [], to: 'product', questions: [], source: '', ...o });
+    const box = (inner: string) => `<div class="card"><button data-close aria-label="Cerrar">×</button>${inner}</div>`;
+    service.call = jest.fn(async () => ({ composition: 'x', css: '.card{color:#111}', moments: [{ moment: 'return', composition: 'r', css: '', flow: [fi({ id: 'p', kind: 'pick', source: 'new' }), fi({ id: 'm', kind: 'remind' })],
+      steps: [{ id: 'p', html: box('<p class="db-kicker">Hola</p><ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b></li></ul>') }, { id: 'm', html: box('<b data-slot="code"></b><button data-apply>U</button>') }] }] })) as any;
+    const result = await service.designFamily('m1', 's1', { createdBy: 'batch', moments: ['return'] });
+    const saved = prisma.storePopupDesign.create.mock.calls.map((c: any) => c[0].data).find((d: any) => d.id === result.results[0].id);
+    expect(saved.css).toContain(`[data-pya-popup="${saved.id}"] .db-kicker`);
+  });
+});
