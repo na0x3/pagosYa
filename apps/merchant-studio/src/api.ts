@@ -230,12 +230,15 @@ export class MerchantStudioApi {
   abNote(storeId: string): Promise<{ message: unknown }> { return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/ab/note`, { method: 'POST' }); }
   /** Popups 2.0 (spec 2026-11-18 §9): the YAPI popup's versions and settings. A redesign is a chat request, so it shows in the chat. */
   popupDesigns(storeId: string): Promise<PopupDesignsOverview> { return this.request(`/stores/${encodeURIComponent(storeId)}/popup-designs`); }
-  async popupRedesign(storeId: string, request: string): Promise<SourceChatJob> {
+  async popupRedesign(storeId: string, request: string, moment?: PopupMomentName): Promise<SourceChatJob> {
     const source = await this.request<{ revision?: number }>(`/stores/${encodeURIComponent(storeId)}/source-project`).catch(() => ({ revision: 0 }));
-    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: 'POST', body: JSON.stringify({ instruction: request.trim() ? `Rediseña mi popup: ${request.trim()}` : 'Rediseña mi popup', assetUrls: [], revision: source.revision ?? 0, requestId: crypto.randomUUID() }) });
+    // Spec 2026-11-21: a redesign of another moment names it, so the chat routes it to that popup.
+    const name = { welcome: 'de bienvenida', rescue: 'del carrito', interest: 'de interés', return: 'de regreso' }[moment ?? 'welcome'];
+    const instruction = moment && moment !== 'welcome' ? `Rediseña mi popup ${name}${request.trim() ? `: ${request.trim()}` : ''}` : request.trim() ? `Rediseña mi popup: ${request.trim()}` : 'Rediseña mi popup';
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: 'POST', body: JSON.stringify({ instruction, assetUrls: [], revision: source.revision ?? 0, requestId: crypto.randomUUID() }) });
   }
   popupRestore(storeId: string, id: string): Promise<unknown> { return this.request(`/stores/${encodeURIComponent(storeId)}/popup-designs/${encodeURIComponent(id)}/restore`, { method: 'POST' }); }
-  popupSettings(storeId: string, body: { percent?: number; capture?: 'whatsapp' | 'email'; products?: string[]; on?: boolean }): Promise<unknown> { return this.request(`/stores/${encodeURIComponent(storeId)}/popup-designs/settings`, { method: 'PUT', body: JSON.stringify(body) }); }
+  popupSettings(storeId: string, body: { percent?: number; capture?: 'whatsapp' | 'email'; products?: string[]; on?: boolean; moment?: PopupMomentName }): Promise<unknown> { return this.request(`/stores/${encodeURIComponent(storeId)}/popup-designs/settings`, { method: 'PUT', body: JSON.stringify(body) }); }
   popupPreview(storeId: string): Promise<{ slug: string; storeName: string; settings: Record<string, unknown> }> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention/popup-preview`); }
   /** The store's promo codes; «Tu comunidad» offers the active ones as the popup's welcome code. */
   promoCodes(storeId: string): Promise<Array<{ id: string; code: string; isActive: boolean }>> { return this.request(`/stores/${encodeURIComponent(storeId)}/promo-codes`); }
@@ -641,5 +644,9 @@ export type SourceGenerationRun = { id: string; model: string; status: string; c
 /** The request a preserved draft was built from (API: source-draft-retry.ts); resent with resumeDraft to finish and save it. */
 export type SourceDraftRetry = { text: string; assetUrls: string[]; currentPage: string; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; selection?: import('./source-selection').SelectionPayload; viewing?: import('./source-selection').ViewingPayload; templateId?: string; directionId?: string };
 
+export type PopupMomentName = 'welcome' | 'rescue' | 'interest' | 'return';
+type PopupDesignRow = { id: string; version: number; status: 'DRAFT' | 'LIVE' | 'FAILED' | 'RETIRED'; composition: string; previews: Array<{ stepId: string; url: string }> | null; createdAt?: string };
 export type PopupDesignsOverview = { liveId: string | null; on: boolean; percent: number; capture: 'whatsapp' | 'email'; pick: string[]; products: Array<{ id: string; name: string }>;
-  designs: Array<{ id: string; version: number; status: 'DRAFT' | 'LIVE' | 'FAILED' | 'RETIRED'; composition: string; previews: Array<{ stepId: string; url: string }> | null; createdAt?: string }> };
+  designs: PopupDesignRow[];
+  /** Spec 2026-11-21: the store's four popups — welcome, cart, interest, return. */
+  moments?: Array<{ moment: PopupMomentName; liveId: string | null; on: boolean; designs: PopupDesignRow[]; counts: { shown: number; closed: number; completed: number } }> };

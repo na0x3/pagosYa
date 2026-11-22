@@ -1,9 +1,30 @@
-import { API_BASE_URL, type MerchantStudioApi, type PopupDesignsOverview } from './api';
+import { API_BASE_URL, type MerchantStudioApi, type PopupDesignsOverview, type PopupMomentName } from './api';
 import { escapeHtml as esc } from './studio-ui';
 
 type PopupApi = Pick<MerchantStudioApi, 'popupDesigns' | 'popupRedesign' | 'popupRestore' | 'popupSettings'>;
 const clampPercent = (value: number) => Math.max(5, Math.min(30, Math.round(Number.isFinite(value) ? value : 10)));
 const asset = (url: string) => (url.startsWith('/v1/') ? `${API_BASE_URL.replace(/\/v1\/?$/, '')}${url}` : url);
+
+// Spec 2026-11-21: what each of the store's four popups is for, in the merchant's words.
+const MOMENT_LABEL: Record<PopupMomentName, [string, string]> = {
+  welcome: ['Bienvenida', 'Primera visita: oferta y su contacto.'],
+  rescue: ['Carrito', 'Se va con productos en el carrito: le guarda el carrito y le recuerda su código.'],
+  interest: ['Interés', 'Mira varios productos de una categoría: le muestra ese producto con su código.'],
+  return: ['Regreso', 'Vuelve alguien que ya dejó su contacto: sus favoritos y lo nuevo.'],
+};
+function momentCard(m: NonNullable<PopupDesignsOverview['moments']>[number], off: string) {
+  const current = m.designs.find(d => d.id === m.liveId) ?? m.designs.find(d => d.status !== 'FAILED');
+  const [title, what] = MOMENT_LABEL[m.moment];
+  return `<article class="retention-section popup-designs popup-designs__moment" data-popup-moment="${m.moment}">
+    <h3>${title}</h3><p>${esc(what)}</p>
+    ${current ? `<p><strong>${esc(current.composition || `Versión ${current.version}`)}</strong></p>
+      <ol class="popup-designs__steps">${(current.previews ?? []).map((p, i) => `<li><img src="${esc(asset(p.url))}" alt="Paso ${i + 1} del popup ${esc(title)}" loading="lazy" width="195"></li>`).join('')}</ol>
+      <p class="popup-designs__counts">Últimos 30 días: ${m.counts.shown} vieron · ${m.counts.closed} cerraron · ${m.counts.completed} completaron</p>
+      <label class="retention-toggle"><input type="checkbox" name="momentOn"${m.on ? ' checked' : ''}${off}>Mostrar este popup</label>`
+      : '<p>Todavía no tiene diseño.</p>'}
+    <p><button type="button" data-moment-redesign${off}>${current ? 'Rediseñar' : 'Pedírselo a YAPI'}</button></p>
+  </article>`;
+}
 
 /** Popups 2.0 (spec 2026-11-18 §9): the store's YAPI popup — each step as shoppers see it on a phone, «Rediseñar» with an
  *  optional request (a chat request: it shows in the chat and spends a credit), percent, contact, the products in «¿qué buscas?»,
@@ -34,8 +55,8 @@ export async function mountPopupDesigns(host: HTMLElement, api: PopupApi, storeI
     if (!data) { host.innerHTML = `<section class="retention-section popup-designs"><h3>Popup de YAPI</h3><p role="${failed ? 'alert' : 'status'}">${esc(note || 'Cargando…')}</p></section>`; return; }
     const current = data.designs.find(d => d.id === data!.liveId) ?? data.designs.find(d => d.status !== 'FAILED');
     const earlier = data.designs.filter(d => d.status !== 'FAILED' && d.id !== current?.id);
-    host.innerHTML = `<section class="retention-section popup-designs" aria-label="Popup de YAPI">
-      <h3>Popup de YAPI</h3>
+    host.innerHTML = `<article data-popup-moment="welcome"><section class="retention-section popup-designs" aria-label="Popup de YAPI">
+      <h3>${data.moments ? 'Bienvenida' : 'Popup de YAPI'}</h3>
       ${current ? `<p><strong>${esc(current.composition || `Versión ${current.version}`)}</strong> · ${data.on ? 'activo en tu tienda' : 'apagado (se muestra la ventana clásica)'}</p>
         <ol class="popup-designs__steps" data-popup-steps>${(current.previews ?? []).map((preview, i) => `<li><img src="${esc(asset(preview.url))}" alt="Paso ${i + 1} del popup" loading="lazy" width="195"></li>`).join('')}</ol>`
         : '<p>YAPI diseña un popup para tu tienda con tus colores y productos: oferta, «¿qué buscas?», tu contacto y el código que lleva al producto con el descuento.</p>'}
@@ -50,7 +71,7 @@ export async function mountPopupDesigns(host: HTMLElement, api: PopupApi, storeI
       <p><button type="button" data-popup-save${off}>Guardar popup</button></p>` : ''}
       ${earlier.length ? `<details class="popup-designs__versions"><summary>Versiones anteriores (${earlier.length})</summary><ul>${earlier.map(d => `<li data-popup-version="${esc(d.id)}">${d.previews?.[0] ? `<img src="${esc(asset(d.previews[0].url))}" alt="" width="64" loading="lazy">` : ''}<span>v${d.version} · ${esc(d.composition || '')}</span><button type="button"${off}>Volver a esta</button></li>`).join('')}</ul></details>` : ''}
       <p role="${failed ? 'alert' : 'status'}" class="retention-message">${esc(note)}</p>
-    </section>`;
+    </section></article>${(data.moments ?? []).filter(m => m.moment !== 'welcome').map(m => momentCard(m, off)).join('')}`;
     host.querySelector('[data-popup-redesign]')?.addEventListener('click', () => {
       const request = host.querySelector<HTMLTextAreaElement>('[name=popupRequest]')?.value ?? '';
       const before = data?.designs[0]?.id ?? null;
@@ -68,6 +89,12 @@ export async function mountPopupDesigns(host: HTMLElement, api: PopupApi, storeI
       void run(() => api.popupSettings(storeId, { percent, capture, on, ...(products ? { products } : {}) }), 'Popup guardado.');
     });
     host.querySelectorAll<HTMLElement>('[data-popup-version]').forEach(row => row.querySelector('button')?.addEventListener('click', () => void run(() => api.popupRestore(storeId, row.dataset.popupVersion!), 'Volviste a esa versión.')));
+    host.querySelectorAll<HTMLElement>('[data-popup-moment]').forEach(card => {
+      const moment = card.dataset.popupMoment as PopupMomentName;
+      if (moment === 'welcome') return;
+      card.querySelector<HTMLInputElement>('[name=momentOn]')?.addEventListener('change', event => void run(() => api.popupSettings(storeId, { moment, on: (event.target as HTMLInputElement).checked }), 'Guardado.'));
+      card.querySelector('[data-moment-redesign]')?.addEventListener('click', () => void run(() => api.popupRedesign(storeId, '', moment), 'YAPI está diseñando este popup (2–4 minutos). También lo ves en el chat.'));
+    });
   }
   draw();
   await load();

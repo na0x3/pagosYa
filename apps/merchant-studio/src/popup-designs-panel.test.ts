@@ -51,3 +51,32 @@ describe('Popups page', () => {
   });
 });
 
+
+describe('four moments (spec 2026-11-21 §8)', () => {
+  const withMoments = () => ({ ...overview(), moments: [
+    { moment: 'welcome', liveId: 'cd2', on: true, designs: overview().designs, counts: { shown: 40, closed: 30, completed: 6 } },
+    { moment: 'rescue', liveId: 'cr1', on: true, designs: [{ id: 'cr1', version: 5, status: 'LIVE', composition: 'Ticket de carrito', previews: [{ stepId: 'k', url: '/v1/uploads/k.jpg' }] }], counts: { shown: 9, closed: 4, completed: 3 } },
+    { moment: 'interest', liveId: null, on: false, designs: [], counts: { shown: 0, closed: 0, completed: 0 } },
+    { moment: 'return', liveId: null, on: false, designs: [{ id: 'ct1', version: 6, status: 'FAILED', composition: '', previews: null }], counts: { shown: 0, closed: 0, completed: 0 } },
+  ] });
+  it('shows a card per moment with its previews and counts', async () => {
+    api.popupDesigns.mockResolvedValue(withMoments());
+    await mountPopupDesigns(host, api, 's1');
+    expect(Array.from(host.querySelectorAll('[data-popup-moment]')).map(card => card.getAttribute('data-popup-moment'))).toEqual(['welcome', 'rescue', 'interest', 'return']);
+    const rescue = host.querySelector('[data-popup-moment="rescue"]')!;
+    expect(rescue.textContent).toContain('Carrito');
+    expect(rescue.textContent).toContain('Ticket de carrito');
+    expect(rescue.textContent).toMatch(/9 vieron.*3 completaron/);
+    expect(host.querySelector('[data-popup-moment="return"]')!.textContent).toContain('Todavía no tiene diseño');
+  });
+  it('switches one moment and asks YAPI for one moment', async () => {
+    api.popupDesigns.mockResolvedValue(withMoments());
+    await mountPopupDesigns(host, api, 's1');
+    const toggle = host.querySelector<HTMLInputElement>('[data-popup-moment="rescue"] [name=momentOn]')!;
+    toggle.checked = false; toggle.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(api.popupSettings).toHaveBeenCalledWith('s1', { moment: 'rescue', on: false }));
+    await vi.waitFor(() => expect(host.querySelector('[data-popup-moment="interest"] [data-moment-redesign]:not([disabled])')).not.toBeNull());
+    host.querySelector<HTMLButtonElement>('[data-popup-moment="interest"] [data-moment-redesign]')!.click();
+    await vi.waitFor(() => expect(api.popupRedesign).toHaveBeenCalledWith('s1', '', 'interest'));
+  });
+});
