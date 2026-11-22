@@ -254,3 +254,16 @@ describe('percent and contact belong to the family (final review I5)', () => {
     expect(rows.map(r => [r.id, r.percent, r.capture])).toEqual([['cw', 15, 'email'], ['cr', 15, 'email'], ['cold', 10, 'whatsapp']]);
   });
 });
+
+describe('the family starts from the welcome look (final review I6)', () => {
+  it('hands YAPI the welcome sheet without its own scope', async () => {
+    const { service, rows } = setup([]);
+    rows.push({ id: 'old', storeId: 's1', version: 1, status: 'LIVE', moment: 'welcome', css: '[data-pya-popup="old"] .card{color:#111}', steps: { o: '<div class="card"></div>' } });
+    service.measure = jest.fn(async () => []) as any;
+    service.call = jest.fn(async () => ({ composition: 'x', css: '', moments: [] })) as any;
+    await service.designFamily('m1', 's1', { createdBy: 'batch', moments: ['rescue'] });
+    const prompt = (service.call as jest.Mock).mock.calls[0][0] as string;
+    expect(prompt).toContain('.card{color:#111}');
+    expect(prompt).not.toContain('data-pya-popup=\\"old\\"');
+  });
+});

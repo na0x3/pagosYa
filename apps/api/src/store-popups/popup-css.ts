@@ -62,3 +62,10 @@ export function scopePopupCss(css: string, designId: string): { css: string; dro
   if (out.length > MAX_POPUP_CSS) return { problem: 'El CSS supera los 24 KB.' };
   return { css: out, dropped };
 }
+
+/** Part 2 (final review I6): a stored, scoped sheet given back as plain CSS — the welcome's look handed to YAPI for the other
+ *  moments, which scopePopupCss then scopes to each new design. */
+export function unscopePopupCss(css: string, designId: string): string {
+  const scope = `[data-pya-popup="${designId}"]`;
+  return css.split(`${scope} `).join('').split(scope).join(':root').split(`pp-${designId.slice(0, 8)}-`).join('');
+}

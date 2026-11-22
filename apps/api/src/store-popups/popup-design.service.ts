@@ -10,7 +10,7 @@ import { brandCall } from '../storefront-source/brand/brand-model-call';
 import { sourceProvider } from '../storefront-source/source-provider';
 import { POPUP_MOMENTS, isPopupMoment, renderedSteps, validateFlow, type PopupFlow, type PopupMoment } from './popup-flow';
 import { cleanStepHtml } from './popup-html';
-import { scopePopupCss } from './popup-css';
+import { scopePopupCss, unscopePopupCss } from './popup-css';
 import { popupFingerprint, varietyProblem } from './popup-fingerprint';
 import { checkFlowRender, measureFlow, type FlowContext, type FlowRenderInput, type FlowStepMeasure } from './popup-flow-render';
 import { POPUP_DESIGN_SCHEMA, POPUP_FAMILY_SCHEMA, popupDesignPrompt, popupFamilyPrompt } from './popup-design-prompt';
@@ -197,7 +197,8 @@ export class PopupDesignService {
     for (const moment of moments) taken[moment] = await this.prisma.storePopupDesign.findMany({ where: { status: 'LIVE', moment, storeId: { not: storeId } }, orderBy: { createdAt: 'desc' }, take: 30, select: { fingerprint: true, composition: true } });
     const base = { storeName: g.store.name, sector: g.brief?.research?.niche ?? '', palette: g.brief?.identity?.palette ?? {}, fonts: [] as string[], voice: g.brief?.identity?.voice ?? '',
       photos: Object.keys(g.photos).filter(path => !g.cutouts.some(cut => cut.url === path)), cutouts: g.cutouts, products: g.products, capture: g.capture, percent: g.percent, taken: [] as string[], request: options.request };
-    const anchor = anchorRow ? { css: anchorRow.css, steps: anchorRow.steps as Record<string, string> } : undefined;
+    // The welcome's stored sheet is scoped to the welcome: given back plain, so each new popup scopes it as its own.
+    const anchor = anchorRow ? { css: unscopePopupCss(anchorRow.css, anchorRow.id), steps: anchorRow.steps as Record<string, string> } : undefined;
     options.signal?.throwIfAborted();
     const raw = await this.call(popupFamilyPrompt({ ...base, moments, anchor, takenByMoment: Object.fromEntries(moments.map(m => [m, (taken[m] ?? []).map(t => t.composition)])) }), storeId, 'family')
       .catch((error: unknown) => ({ failed: String((error as Error)?.message ?? error).slice(0, 300) })) as { failed?: string; css?: string; moments?: Array<Record<string, unknown>> } | null;

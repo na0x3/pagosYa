@@ -30,3 +30,15 @@ describe('popup css', () => {
     expect(out.css.match(/data-pya-popup/g)).toHaveLength(1);
   });
 });
+
+import { unscopePopupCss } from './popup-css';
+describe('a stored sheet given back as the family look (final review I6)', () => {
+  it('drops the welcome scope and keyframe prefix, so the new popup scopes it as its own', () => {
+    const original = ':root{--ink:#111}.card{color:var(--ink);animation:pop .3s}@keyframes pop{from{opacity:0}to{opacity:1}}';
+    const welcome = scopePopupCss(original, 'cwelcome0000000000000001') as { css: string };
+    const back = unscopePopupCss(welcome.css, 'cwelcome0000000000000001');
+    expect(back).not.toContain('cwelcome');
+    const rescue = scopePopupCss(back, 'crescue00000000000000001') as { css: string };
+    expect(rescue.css).toBe((scopePopupCss(original, 'crescue00000000000000001') as { css: string }).css);
+  });
+});
