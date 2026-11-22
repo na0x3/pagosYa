@@ -6,7 +6,7 @@ import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { RetentionService, publicRetentionSettings } from './retention.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { findActiveStoreBySlug } from '../stores/active-store';
-import { PopupGameDto, RedeemComebackDto, RetentionCampaignDto, RetentionCartDto, RetentionEmailDto, RetentionPaymentCardDto, RetentionSettingsDto, RetentionSubscribeDto } from './retention.dto';
+import { PopupGameDto, RedeemComebackDto, RetentionCampaignDto, RetentionCartDto, RetentionEmailDto, RetentionPaymentCardDto, RetentionSettingsDto, RetentionSubscribeDto, PopupEventDto, PopupCodeStatusDto } from './retention.dto';
 @Controller('v1/retention/payment-card')
 export class RetentionPaymentController {
   constructor(private readonly retention: RetentionService) {}
@@ -56,12 +56,19 @@ export class RetentionPublicController {
     // Popups 2.0 (spec 2026-11-18): the store's LIVE YAPI design, when it has one; the runtime plays it instead of the look.
     const popupDesign = s.signupEnabled ? await this.retention.liveDesign(store.id, s as { popupDesignId?: unknown }) : null;
     if (popupDesign) shown.popupDesign = popupDesign;
+    // Part 2 (spec 2026-11-21): the other moments ride along only with a welcome design (the family starts from it).
+    if (popupDesign) { const moments = await this.retention.liveMoments(store.id, s as { popupMoments?: unknown }); if (Object.keys(moments).length) shown.popupMoments = moments; }
     if (shown.popupGame) {
       const slices = await this.games.activeSlices(store.id);
       if (slices.length >= 2) shown.popupGameSlices = slices; else { delete shown.popupGame; delete shown.popupGameSlices; delete shown.popupQuestion; }
     }
     return shown;
   }
+  /** Part 2 (spec 2026-11-21 §7): what a shopper did with a popup, and whether a code can still be reminded. */
+  @Post('popup-events') @Header('Cache-Control', 'no-store') @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async popupEvent(@Param('slug') slug: string, @Body() dto: PopupEventDto) { return this.retention.recordPopupEvent((await findActiveStoreBySlug(this.prisma, slug)).id, dto); }
+  @Post('code-status') @Header('Cache-Control', 'no-store') @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async codeStatus(@Param('slug') slug: string, @Body() dto: PopupCodeStatusDto) { return this.retention.popupCodeStatus((await findActiveStoreBySlug(this.prisma, slug)).id, dto.code); }
   @Post('subscribe') @Throttle({ default: { limit: 5, ttl: 60000 } })
   async subscribe(@Param('slug') slug: string, @Body() dto: RetentionSubscribeDto) { return this.retention.subscribe(await findActiveStoreBySlug(this.prisma, slug), dto.email || null, dto); }
   @Post('unsubscribe/:token') @Throttle({ default: { limit: 10, ttl: 60000 } })

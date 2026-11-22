@@ -80,3 +80,14 @@ export const DEFAULT_RETENTION = {
   recoveryEnabled: false, recoveryHours: 24, reviewRequestsEnabled: false, welcomeEnabled: false, welcomeSubject: '¡Bienvenido a {{store}}!', welcomeBody: 'Gracias por unirte a nuestra comunidad. Pronto tendrás noticias de {{store}}.',
 };
 export type RetentionSettings = typeof DEFAULT_RETENTION;
+
+/** Popups 2.0 part 2 (spec 2026-11-21 §7): what a shopper did with a popup — a random browser id, never a contact. */
+export class PopupEventDto {
+  @Matches(/^[a-f0-9]{16,32}$/) visitor!: string;
+  @Matches(/^c[a-z0-9]{20,30}$/) designId!: string;
+  @IsIn(['welcome', 'rescue', 'interest', 'return']) moment!: string;
+  @IsIn(['shown', 'closed', 'completed']) kind!: string;
+  @IsOptional() @Matches(/^[a-z][a-z0-9-]{0,23}$/) step?: string;
+}
+/** A reminder asks whether the shopper's code can still be used before showing it. */
+export class PopupCodeStatusDto { @IsString() @MaxLength(40) code!: string; }

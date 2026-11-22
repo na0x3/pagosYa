@@ -2,13 +2,14 @@ import { BadRequestException } from '@nestjs/common';
 import { KEPT_SETTINGS, RetentionService } from './retention.service';
 
 /** Popups 2.0 part 1 (spec 2026-11-18 §7): the LIVE design served, signups tagged with it, one personal code per contact. */
-const design = { id: 'cdesign0000000000000000001', storeId: 's1', status: 'LIVE', flow: [{ id: 'o', kind: 'offer' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }], steps: { o: '<div></div>' }, css: '', launcher: null, capture: 'whatsapp', percent: 15, composition: 'x', fingerprint: 'y' };
+const design = { id: 'cdesign0000000000000000001', storeId: 's1', status: 'LIVE', flow: [{ id: 'o', kind: 'offer' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }], steps: { o: '<div></div>' }, css: '', launcher: null, capture: 'whatsapp', percent: 15, composition: 'x', fingerprint: 'y', moment: 'welcome' };
 
 function setup(over: { design?: any } = {}) {
   const codes: any[] = [];
   const prisma: any = {
     storeRetention: { findUnique: jest.fn(async () => ({ settings: { signupEnabled: true, popupDesignId: design.id } })) },
-    storePopupDesign: { findFirst: jest.fn(async ({ where }: any) => { const row = 'design' in over ? over.design : design; return row && row.id === where.id && row.storeId === where.storeId && row.status === where.status ? row : null; }) },
+    storePopupDesign: { findFirst: jest.fn(async ({ where }: any) => { const row = 'design' in over ? over.design : design; return row && row.id === where.id && row.storeId === where.storeId && (where.status === undefined || row.status === where.status) ? row : null; }), findMany: jest.fn(async () => []) },
+    storePopupEvent: { create: jest.fn(async ({ data }: any) => data) },
     storeWhatsappSubscriber: { upsert: jest.fn(async ({ create }: any) => ({ id: 'w1', ...create })) },
     storeNewsletterSubscriber: { upsert: jest.fn(async ({ create }: any) => ({ id: 'n1', ...create })) },
     promoCode: {
@@ -58,5 +59,34 @@ describe('popup designs in retention', () => {
     const { service, prisma } = setup({ design: quizDesign });
     await service.subscribe(store, null, { phone: '71234567', source: 'popup', popupDesignId: design.id, answers: ['Muy picante', 'compra en http://x.test'] } as any);
     expect(prisma.storeWhatsappSubscriber.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ interests: ['Muy picante'] }) }));
+  });
+});
+
+describe('popup moments in retention (spec 2026-11-21 §4, §7)', () => {
+  const rescueRow = { ...design, id: 'crescue00000000000000001', moment: 'rescue' };
+  it('serves the LIVE moments the store has switched on, never an off one or another store\'s', async () => {
+    const { service, prisma } = setup();
+    prisma.storePopupDesign.findMany = jest.fn(async ({ where }: any) => [rescueRow].filter(r => where.id.in.includes(r.id) && r.storeId === where.storeId && r.status === where.status));
+    await expect(service.liveMoments('s1', { popupMoments: { rescue: { id: rescueRow.id }, interest: { id: 'cgone', off: true } } } as any)).resolves.toEqual({ rescue: expect.objectContaining({ id: rescueRow.id, moment: 'rescue' }) });
+    await expect(service.liveMoments('s2', { popupMoments: { rescue: { id: rescueRow.id } } } as any)).resolves.toEqual({});
+  });
+  it('records an event only for this store\'s own design', async () => {
+    const { service, prisma } = setup();
+    await service.recordPopupEvent('s1', { visitor: 'a'.repeat(24), designId: design.id, moment: 'welcome', kind: 'shown' } as any);
+    expect(prisma.storePopupEvent.create).toHaveBeenCalledWith({ data: { storeId: 's1', designId: design.id, moment: 'welcome', visitor: 'a'.repeat(24), kind: 'shown', step: null } });
+    await expect(service.recordPopupEvent('s2', { visitor: 'a'.repeat(24), designId: design.id, moment: 'welcome', kind: 'shown' } as any)).resolves.toEqual({ ok: true });
+    expect(prisma.storePopupEvent.create).toHaveBeenCalledTimes(1);
+  });
+  it('code-status refuses foreign and plain codes, and says a used code is not active', async () => {
+    const { service, codes } = setup();
+    codes.push({ storeId: 's1', code: 'POPAAA234', isActive: true, popupDesignId: design.id, discountValue: 15, maxUses: 1 }, { storeId: 's1', code: 'PEPPA10', isActive: true, popupDesignId: null, discountValue: 10 }, { storeId: 's1', code: 'POPUSED22', isActive: true, popupDesignId: design.id, discountValue: 15, maxUses: 1 });
+    (service as any).promoCodes = { resolveActiveForStore: jest.fn(async (_s: string, code: string) => { if (code === 'POPUSED22') throw new Error('Este código ya se usó'); return codes.find(c => c.code === code); }) };
+    await expect(service.popupCodeStatus('s1', 'popaaa234')).resolves.toEqual({ active: true, percent: 15 });
+    await expect(service.popupCodeStatus('s1', 'PEPPA10')).resolves.toEqual({ active: false });
+    await expect(service.popupCodeStatus('s2', 'POPAAA234')).resolves.toEqual({ active: false });
+    await expect(service.popupCodeStatus('s1', 'POPUSED22')).resolves.toEqual({ active: false });
+  });
+  it('keeps the family pointers when the other retention settings are saved', () => {
+    expect(KEPT_SETTINGS).toEqual(expect.arrayContaining(['popupMoments']));
   });
 });

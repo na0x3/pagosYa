@@ -22,3 +22,10 @@ it('carries the test visit on the popup read and the signup, and nowhere else', 
   expect(hostedRetentionRequest('https://api.test/v1', 'remo', '', undefined, undefined).url).toBe('https://api.test/v1/stores/public/remo/retention');
   expect(hostedRetentionRequest('https://api.test/v1', 'remo', 'subscribe', { email: 'a@b.co' }, undefined).body).toEqual({ email: 'a@b.co' });
 });
+
+// Spec 2026-11-21 popups part 2: a published store's popups report what shoppers did and check a code before reminding it.
+it('forwards the popup events and the code check as POSTs, never as reads', () => {
+  expect(hostedRetentionMethod('popup-events', true)).toBe('POST');
+  expect(hostedRetentionMethod('code-status', true)).toBe('POST');
+  expect(hostedRetentionMethod('popup-events/x', true)).toBeNull();
+});

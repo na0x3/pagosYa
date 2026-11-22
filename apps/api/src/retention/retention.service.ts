@@ -13,7 +13,8 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EMAIL_PROVIDER } from '../dashboard/tokens';
 import { EmailProvider } from '../dashboard/interfaces/email-provider.interface';
-import { DEFAULT_RETENTION, RetentionSettings, RetentionSettingsDto, RetentionCartDto, RetentionCampaignDto, RetentionSubscribeDto } from './retention.dto';
+import { DEFAULT_RETENTION, RetentionSettings, RetentionSettingsDto, RetentionCartDto, RetentionCampaignDto, RetentionSubscribeDto, type PopupEventDto } from './retention.dto';
+import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { comebackCode, qualifyingDays, unusedDays } from './retention-policy';
 import { reminderCart } from './reminder-cart';
 import { pickPopupLook, readPopupLook, type PopupLookSettings } from '../store-popups/popup-looks';
@@ -59,11 +60,11 @@ export function favouriteTally(favourites: ReadonlyArray<string | null | undefin
 export const whatsappShown = (digits: string) => /^591\d{8}$/.test(digits) ? `+591 ${digits.slice(3, 7)} ${digits.slice(7)}` : /^591\d{7}$/.test(digits) ? `+591 ${digits.slice(3, 6)} ${digits.slice(6)}` : digits;
 /** Settings Ajustes may not send but must keep: the email workspace, dismissed suggestions and the popup look. */
 // Popups 2.0 (final review I2): the YAPI popup's pointer and settings are the Popups page's, never the settings form's.
-export const KEPT_SETTINGS = ['popupDesignId', 'popupDesignOff', 'popupDesignPercent', 'popupDesignCapture', 'emailWorkspace', 'suggestionsDismissedAt', 'popupLook', 'popupLookPrevious', 'popupPhoto', 'popupGame', 'popupGamePrizes', 'popupQuestion', 'popupShape', 'popupInterests', 'popupFavourite', 'popupContact'] as const;
+export const KEPT_SETTINGS = ['popupDesignId', 'popupDesignOff', 'popupDesignPercent', 'popupDesignCapture', 'popupMoments', 'emailWorkspace', 'suggestionsDismissedAt', 'popupLook', 'popupLookPrevious', 'popupPhoto', 'popupGame', 'popupGamePrizes', 'popupQuestion', 'popupShape', 'popupInterests', 'popupFavourite', 'popupContact'] as const;
 @Injectable()
 export class RetentionService {
   private working = false;
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider, @Optional() private readonly plans?: PlansService, @Optional() private readonly games?: PopupGameService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider, @Optional() private readonly plans?: PlansService, @Optional() private readonly games?: PopupGameService, @Optional() private readonly promoCodes?: PromoCodesService) {}
   async owner(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId } });
     if (!store) throw new NotFoundException('Tienda no encontrada.'); return store;
@@ -214,6 +215,34 @@ export class RetentionService {
     if (!id) return null;
     const row = await this.prisma.storePopupDesign.findFirst({ where: { id, storeId, status: 'LIVE' } });
     return row ? { id: row.id, flow: row.flow, steps: row.steps, css: row.css, launcher: row.launcher, capture: row.capture, percent: row.percent } : null;
+  }
+  /** Part 2 (spec 2026-11-21 §4): the store's LIVE rescue / interest / return designs that are switched on. */
+  async liveMoments(storeId: string, settings: { popupMoments?: unknown }) {
+    const wanted = Object.entries((settings.popupMoments ?? {}) as Record<string, { id?: unknown; off?: unknown }>)
+      .filter(([moment, entry]) => ['rescue', 'interest', 'return'].includes(moment) && typeof entry?.id === 'string' && entry.off !== true)
+      .map(([moment, entry]) => ({ moment, id: entry.id as string }));
+    if (!wanted.length) return {};
+    const rows = await this.prisma.storePopupDesign.findMany({ where: { id: { in: wanted.map(w => w.id) }, storeId, status: 'LIVE' } });
+    const out: Record<string, unknown> = {};
+    for (const { moment, id } of wanted) {
+      const row = rows.find(r => r.id === id && r.moment === moment);
+      if (row) out[moment] = { id: row.id, moment, flow: row.flow, steps: row.steps, css: row.css, launcher: row.launcher, capture: row.capture, percent: row.percent };
+    }
+    return out;
+  }
+  /** What a shopper did with one of this store's popups (sent only with analytics consent). */
+  async recordPopupEvent(storeId: string, dto: PopupEventDto) {
+    const owned = await this.prisma.storePopupDesign.findFirst({ where: { id: dto.designId, storeId } });
+    if (owned) await this.prisma.storePopupEvent.create({ data: { storeId, designId: dto.designId, moment: dto.moment, visitor: dto.visitor, kind: dto.kind, step: dto.step ?? null } });
+    return { ok: true as const };
+  }
+  /** A reminder never shows a code the shopper can't use: only this store's own popup codes, still active and unused. */
+  async popupCodeStatus(storeId: string, raw: string) {
+    const code = String(raw ?? '').trim().toUpperCase();
+    const row = await this.prisma.promoCode.findFirst({ where: { storeId, code } });
+    if (!row || !row.popupDesignId) return { active: false };
+    try { await this.promoCodes!.resolveActiveForStore(storeId, code); } catch { return { active: false }; }
+    return { active: true, percent: row.discountValue };
   }
   /** One personal code per contact and design: the same shopper always gets the same single-use code, and nobody can work out
    *  another shopper's (keyed with the server secret). Tagged with the design for Part 4's sales count. */

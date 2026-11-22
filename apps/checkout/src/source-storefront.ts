@@ -28,7 +28,7 @@ const cartId = (value: unknown): value is string => typeof value === 'string' &&
  *  games) the prize draw `play`; null for anything else or a read with a body. */
 export function hostedRetentionMethod(path: string, hasPayload: boolean): 'GET' | 'POST' | null {
   const read = path === '' || /^(cards|carts)\/[a-f0-9]{64}$/.test(path);
-  const write = ['subscribe', 'cards', 'carts', 'play'].includes(path) || /^unsubscribe\/[a-f0-9-]{36}$/.test(path);
+  const write = ['subscribe', 'cards', 'carts', 'play', 'popup-events', 'code-status'].includes(path) || /^unsubscribe\/[a-f0-9-]{36}$/.test(path);
   if (read) return hasPayload ? null : 'GET';
   return write ? 'POST' : null;
 }
