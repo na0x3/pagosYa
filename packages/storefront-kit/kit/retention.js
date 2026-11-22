@@ -8,6 +8,56 @@
     if (!form.querySelector('.pagosya-secure-note')) form.querySelector('[type=submit]')?.insertAdjacentHTML('beforebegin', '<p class="pagosya-secure-note">Tus datos se piden en un formulario seguro de pagosYa.</p>');
   }
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  // Popups 2.0 part 2 (spec 2026-11-21 §3, §7): which of the store's popups (welcome, rescue, interest, return) this shopper may
+  // see now — at most one a visit, 24 h apart (rescue may skip the gap), a closed one away 7 days, a finished welcome never again.
+  window.PAGOSYA_POPUP_RULES = (() => {
+    const HOUR = 3_600_000, DAY = 24 * HOUR, VISIT_GAP = 30 * 60_000, CLOSED_FOR = 7 * DAY;
+    const RANK = ['rescue', 'interest', 'return', 'welcome'];
+    const visitorId = () => { const bytes = new Uint8Array(12); try { crypto.getRandomValues(bytes); } catch { for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256); } return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(''); };
+    const number = value => (Number.isFinite(Number(value)) ? Number(value) : 0);
+    const times = value => Object.fromEntries(Object.entries(value && typeof value === 'object' ? value : {}).filter(([key]) => RANK.includes(key)).map(([key, at]) => [key, number(at)]));
+    function visitMemory(raw, now, legacySeen) {
+      const saved = raw && typeof raw === 'object' ? raw : null;
+      const memory = {
+        visitor: typeof saved?.visitor === 'string' && /^[a-f0-9]{16,32}$/.test(saved.visitor) ? saved.visitor : visitorId(),
+        visits: Math.max(0, number(saved?.visits)), visitStart: number(saved?.visitStart), lastSeenAt: number(saved?.lastSeenAt),
+        visitShown: saved?.visitShown === true, lastShownAt: number(saved?.lastShownAt), closed: times(saved?.closed), done: times(saved?.done),
+        contact: saved?.contact === true, code: typeof saved?.code === 'string' ? saved.code.slice(0, 40) : '', favourite: typeof saved?.favourite === 'string' ? saved.favourite.slice(0, 40) : '',
+        views: saved?.views && typeof saved.views === 'object' ? saved.views : {},
+      };
+      // Today's single popup remembered its last showing for 30 days: that counts as the welcome shown and done.
+      if (!saved && legacySeen && now - legacySeen < 30 * DAY) { memory.lastShownAt = legacySeen; memory.done.welcome = legacySeen; }
+      if (!memory.visits || now - memory.lastSeenAt > VISIT_GAP) { memory.visits += 1; memory.visitStart = now; memory.visitShown = false; memory.views = {}; }
+      memory.lastSeenAt = now;
+      return memory;
+    }
+    function allowed(memory, moment, context, now) {
+      if (!context.available.includes(moment) || memory.visitShown) return false;
+      if (memory.closed[moment] && now - memory.closed[moment] < CLOSED_FOR) return false;
+      if (moment !== 'rescue' && memory.lastShownAt && now - memory.lastShownAt < DAY) return false;
+      const signals = context.signals;
+      if (moment === 'welcome') return signals.includes('welcome') && !memory.contact && !memory.done.welcome;
+      if (moment === 'rescue') return signals.includes('leave') && context.cartLines > 0;
+      if (moment === 'interest') return signals.includes('interest');
+      return signals.includes('return') && memory.contact && memory.visits >= 2;
+    }
+    const chooseMoment = (memory, context, now) => RANK.find(moment => allowed(memory, moment, context, now)) || null;
+    const markShown = (memory, moment, now) => { memory.visitShown = true; memory.lastShownAt = now; return memory; };
+    const markClosed = (memory, moment, now) => { memory.closed[moment] = now; return memory; };
+    const markDone = (memory, moment, now) => { memory.done[moment] = now; return memory; };
+    function noteView(memory, product) {
+      const category = String(product?.categoryId || ''), id = String(product?.id || '');
+      if (!category || !id) return false;
+      const seen = Array.isArray(memory.views[category]) ? memory.views[category] : [];
+      if (seen.includes(id)) return false;
+      memory.views[category] = [...seen, id].slice(-12);
+      return memory.views[category].length === 3;
+    }
+    const key = slug => `pagosya:popups:${slug}`;
+    const loadMemory = slug => { try { return JSON.parse(localStorage.getItem(key(slug)) || 'null'); } catch { return null; } };
+    const saveMemory = (slug, memory) => { try { localStorage.setItem(key(slug), JSON.stringify(memory)); } catch {} };
+    return { visitMemory, chooseMoment, markShown, markClosed, markDone, noteView, loadMemory, saveMemory };
+  })();
   window.PAGOSYA_COMEBACK_RENDER = function renderComeback(el, card, options = {}) {
     if (!document.getElementById('pagosya-comeback-style')) {
       const style = document.createElement('style'); style.id = 'pagosya-comeback-style';
