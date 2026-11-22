@@ -407,3 +407,13 @@ it('spec 2026-11-18 popups: a message about the popup runs the popup designer, n
   await service.create('m', 's', { instruction: 'pon 15% en el popup', revision: 2, requestId: '6f1d2c0e-1111-4c4c-9999-000000000003' } as any);
   expect(prisma.storeSourceChatJob.create).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ input: expect.objectContaining({ popupDesign: true }) }) }));
 });
+
+it('spec 2026-11-21 popups part 2: a new store\'s first build gets the whole family of popups in one run', async () => {
+  const { prisma, chat } = setup();
+  const popups: any = { forChat: jest.fn(), design: jest.fn().mockResolvedValue({}), designFamily: jest.fn().mockResolvedValue({ family: 'f', results: [] }) };
+  const service = new SourceChatJobsService(prisma, chat, undefined, undefined, undefined, undefined, undefined, undefined, popups);
+  await service.run({ ...job, input: { ...input, firstDesign: true } });
+  await new Promise(resolve => setImmediate(resolve));
+  expect(popups.designFamily).toHaveBeenCalledWith('m', 's', { createdBy: 'yapi' });
+  expect(popups.design).not.toHaveBeenCalled();
+});

@@ -250,8 +250,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
       if (followUp) await this.create(job.merchantId, job.storeId, followUp).catch(error => this.logger.warn(`follow-up not queued for ${job.storeId}: ${String(error).slice(0, 200)}`));
       // Spec 2026-11-09: the last step of a new store's first build gives its popup a look (instant; never delays the chat).
       // Spec 2026-11-09 tour: then YAPI offers to walk the new store (after the popup line, so the offer is the last message).
-      // Popups 2.0 (spec 2026-11-18 §8): a new store gets its YAPI popup in the background (it keeps the look until one passes).
-      if (!failed && !followUp && isFirstBuildStep(job.input) && process.env.YAPI_POPUP_DESIGNS !== '0') void this.popupDesigns?.design(job.merchantId, job.storeId, { createdBy: 'yapi' }).catch(error => this.logger.warn(`popup design failed for ${job.storeId}: ${String(error).slice(0, 200)}`));
+      // Popups 2.0 (spec 2026-11-18 §8, part 2 2026-11-21 §6): a new store gets its family of YAPI popups — welcome, cart, interest,
+      // return — in one background run (it keeps the look until the welcome passes).
+      if (!failed && !followUp && isFirstBuildStep(job.input) && process.env.YAPI_POPUP_DESIGNS !== '0') void this.popupDesigns?.designFamily(job.merchantId, job.storeId, { createdBy: 'yapi' }).catch(error => this.logger.warn(`popup design failed for ${job.storeId}: ${String(error).slice(0, 200)}`));
       if (!failed && !followUp && isFirstBuildStep(job.input)) void Promise.resolve(this.popupLooks?.designAfterBuild(job.storeId)).catch(() => undefined)
         .then(() => this.tour?.offer(job.storeId)).catch(error => this.logger.warn(`tour offer failed for ${job.storeId}: ${String(error).slice(0, 200)}`));
       if (restOf?.tourStepId) void this.tour?.afterEdit(job.storeId, Boolean(failed)).catch(() => undefined);
