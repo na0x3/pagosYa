@@ -20,7 +20,7 @@ let browser: Browser;
 beforeAll(async () => { browser = await chromium.launch(); });
 afterAll(async () => { await browser.close(); });
 
-async function open(opts: { storage?: Record<string, string>; analytics?: boolean; cart?: Array<{ id: string; quantity: number }> } = {}) {
+async function open(opts: { storage?: Record<string, string>; analytics?: boolean; cart?: Array<{ id: string; quantity: number }>; settings?: unknown; currentProduct?: string } = {}) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const posts: Array<{ path: string; body: any }> = [];
   await context.route('**/*', async route => {
@@ -32,18 +32,20 @@ async function open(opts: { storage?: Record<string, string>; analytics?: boolea
       posts.push({ path, body: route.request().postDataJSON() });
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify(path === 'code-status' ? { active: true, percent: 10 } : path === 'subscribe' ? { subscribed: true, code: 'POPABC234' } : { ok: true }) });
     }
-    if (path === '') return route.fulfill({ contentType: 'application/json', body: JSON.stringify(settings) });
+    if (path === '') return route.fulfill({ contentType: 'application/json', body: JSON.stringify(opts.settings ?? settings) });
     return route.fulfill({ contentType: 'application/json', body: '{}' });
   });
   const page = await context.newPage();
   await page.clock.install({ time: T });
   await page.goto(`${ORIGIN}/`);
-  await page.evaluate(([storage, analytics, cart, list]) => {
+  await page.evaluate(([storage, analytics, cart, list, current]) => {
+    // A full product page answers «which product is this?» (commerce.js) from the first paint.
+    if (current) document.addEventListener('pagosya:current-product', (e: any) => { e.detail.id = current; e.detail.name = 'x'; });
     for (const [k, v] of Object.entries(storage as Record<string, string>)) localStorage.setItem(k, v);
     (window as any).PAGOSYA_PRIVACY = { choice: () => analytics };
     document.addEventListener('pagosya:serialize-cart', (e: any) => { e.detail.items.push(...(cart as any[])); });
     (window as any).PAGOSYA_CONFIG = { slug: 'calima', apiBaseUrl: `${location.origin}/v1`, data: { items: list } };
-  }, [opts.storage ?? {}, opts.analytics ?? false, opts.cart ?? [], items] as const);
+  }, [opts.storage ?? {}, opts.analytics ?? false, opts.cart ?? [], items, opts.currentProduct ?? ''] as const);
   await page.addScriptTag({ content: readKitFileSync('retention.js') });
   await page.clock.runFor(100);
   return { page, posts, context };
@@ -98,5 +100,45 @@ describe('popup moments on the store page', () => {
     await withConsent.page.clock.runFor(9_000);
     expect(withConsent.posts.filter(p => p.path === 'popup-events').map(p => [p.body.moment, p.body.kind])).toEqual([['welcome', 'shown']]);
     await withConsent.context.close();
+  });
+  it('closing with Escape counts as closed (final review I2)', async () => {
+    const { page, context } = await open();
+    await page.clock.runFor(9_000);
+    expect(await openStep(page)).toBe('offer');
+    await page.keyboard.press('Escape');
+    // The dialog's close event is its own task: wait for it before reading the memory.
+    await page.waitForFunction(() => Boolean(JSON.parse(localStorage.getItem('pagosya:popups:calima') || '{}').closed?.welcome), null, { timeout: 3_000 }).catch(() => undefined);
+    expect(await openStep(page)).toBeNull();
+    expect((await memory(page)).closed.welcome).toBeGreaterThan(0);
+    await context.close();
+  });
+  it('a family store never shows the welcome launcher tab (final review I3)', async () => {
+    const withLauncher = { ...settings, popupTrigger: 'load', popupDesign: { ...welcome, launcher: '<span class="tab">¿10% para ti?</span>' } };
+    const { page, context } = await open({ settings: withLauncher });
+    await page.waitForSelector('dialog[open] [data-pya-popup]', { timeout: 5_000 });
+    await page.click('dialog[open] [data-close]');
+    await page.clock.runFor(1_000);
+    expect(await page.locator('[data-pya-launcher]').count()).toBe(0);
+    await context.close();
+  });
+  it('a full product page counts as viewed from the first paint: 40 s on it opens the interest (final review I4)', async () => {
+    const T2 = T + 2 * 86_400_000;
+    const saved = { visitor: 'b'.repeat(24), visits: 1, visitStart: T - 86_400_000 * 3, lastSeenAt: T - 86_400_000 * 3, visitShown: false, lastShownAt: T - 86_400_000 * 3, closed: {}, done: { welcome: T - 86_400_000 * 3 }, contact: false, code: '', favourite: '', views: {} };
+    const { page, context } = await open({ currentProduct: 'p2', storage: { 'pagosya:popups:calima': JSON.stringify(saved) } });
+    void T2;
+    await page.clock.runFor(41_000);
+    await page.waitForSelector('dialog[open] [data-pya-popup]', { timeout: 5_000 }).catch(() => undefined);
+    expect(await openStep(page)).toBe('pick');
+    expect(await page.locator('dialog[open] [data-slot=product-name]').textContent()).toBe('Producto 2');
+    await context.close();
+  });
+  it('with the welcome switched off, the other popups still work (final review I7)', async () => {
+    const { popupDesign: _w, ...noWelcome } = settings as any;
+    const { page, context } = await open({ settings: noWelcome, cart: [{ id: 'p1', quantity: 1 }] });
+    await page.clock.runFor(9_000);
+    expect(await openStep(page)).toBeNull();
+    await leaveTop(page);
+    expect(await openStep(page)).toBe('cart');
+    await context.close();
   });
 });

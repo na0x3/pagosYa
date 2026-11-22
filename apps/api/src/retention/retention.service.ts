@@ -216,6 +216,13 @@ export class RetentionService {
     const row = await this.prisma.storePopupDesign.findFirst({ where: { id, storeId, status: 'LIVE' } });
     return row ? { id: row.id, flow: row.flow, steps: row.steps, css: row.css, launcher: row.launcher, capture: row.capture, percent: row.percent } : null;
   }
+  /** What a store page gets of its YAPI popups: the LIVE welcome, and the other LIVE moments that are on — those keep working
+   *  when the welcome is switched off (final review I7). */
+  async publicPopups(storeId: string, settings: { popupDesignId?: unknown; popupMoments?: unknown }) {
+    const popupDesign = await this.liveDesign(storeId, settings);
+    const popupMoments = await this.liveMoments(storeId, settings);
+    return { ...(popupDesign ? { popupDesign } : {}), ...(Object.keys(popupMoments).length ? { popupMoments } : {}) };
+  }
   /** Part 2 (spec 2026-11-21 §4): the store's LIVE rescue / interest / return designs that are switched on. */
   async liveMoments(storeId: string, settings: { popupMoments?: unknown }) {
     const wanted = Object.entries((settings.popupMoments ?? {}) as Record<string, { id?: unknown; off?: unknown }>)

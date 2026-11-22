@@ -104,3 +104,17 @@ describe('one code per shopper across the family (final review I1)', () => {
     expect(codes).toHaveLength(1);
   });
 });
+
+describe('the popups a store page gets (final review I7)', () => {
+  it('sends the other moments even when the welcome is switched off', async () => {
+    const { service, prisma } = setup();
+    const rescueRow = { ...design, id: 'crescue00000000000000001', moment: 'rescue' };
+    prisma.storePopupDesign.findMany = jest.fn(async () => [rescueRow]);
+    const off = await service.publicPopups('s1', { popupDesignId: null, popupDesignOff: design.id, popupMoments: { rescue: { id: rescueRow.id } } } as any);
+    expect(off.popupDesign).toBeUndefined();
+    expect(Object.keys(off.popupMoments ?? {})).toEqual(['rescue']);
+    const both = await service.publicPopups('s1', { popupDesignId: design.id, popupMoments: { rescue: { id: rescueRow.id } } } as any);
+    expect(both.popupDesign).toMatchObject({ id: design.id });
+    expect(await service.publicPopups('s1', {} as any)).toEqual({});
+  });
+});

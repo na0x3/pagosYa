@@ -54,10 +54,8 @@ export class RetentionPublicController {
     const shown: Record<string, unknown> = { ...publicRetentionSettings(s, store.slug), ...(s.signupEnabled ? { signupVisual: await this.retention.signupVisual(store.id) } : {}) };
     // Review 2026-11-09: only prizes that can still be won; fewer than two → the plain popup (never a game that cannot be played).
     // Popups 2.0 (spec 2026-11-18): the store's LIVE YAPI design, when it has one; the runtime plays it instead of the look.
-    const popupDesign = s.signupEnabled ? await this.retention.liveDesign(store.id, s as { popupDesignId?: unknown }) : null;
-    if (popupDesign) shown.popupDesign = popupDesign;
-    // Part 2 (spec 2026-11-21): the other moments ride along only with a welcome design (the family starts from it).
-    if (popupDesign) { const moments = await this.retention.liveMoments(store.id, s as { popupMoments?: unknown }); if (Object.keys(moments).length) shown.popupMoments = moments; }
+    // Part 2 (spec 2026-11-21): the other moments too, which keep working when the welcome is switched off.
+    if (s.signupEnabled) Object.assign(shown, await this.retention.publicPopups(store.id, s as { popupDesignId?: unknown; popupMoments?: unknown }));
     if (shown.popupGame) {
       const slices = await this.games.activeSlices(store.id);
       if (slices.length >= 2) shown.popupGameSlices = slices; else { delete shown.popupGame; delete shown.popupGameSlices; delete shown.popupQuestion; }

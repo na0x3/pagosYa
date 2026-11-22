@@ -453,7 +453,7 @@
 
   // Popups 2.0 (spec 2026-11-18 §7): a YAPI-written design — its own markup per step and its own scoped sheet — played here. YAPI
   // never writes script: the steps carry data-* hooks and this runtime does the logic (products, contact, code, cart, landing).
-  function mountFlow(dialog, design, { api, demo, remember, slug, items, startAt, apiBaseUrl, context = {}, hooks = {} }) {
+  function mountFlow(dialog, design, { api, demo, remember, slug, items, startAt, apiBaseUrl, context = {}, hooks = {}, launcher = true }) {
     const hostedPage = Boolean(window.PAGOSYA_HOSTED);
     // Photos YAPI wrote as /v1/uploads/… live on the API (a published store's frame resolves paths against another origin).
     const apiOrigin = String(apiBaseUrl || '').replace(/\/v1\/?$/, '');
@@ -641,7 +641,7 @@
     // YAPI's launcher: a small tab in a corner after the shopper closes without the code; it opens the popup again from the start.
     const preview = Boolean(dialog.closest('[data-pagosya-popup-preview]'));
     dialog.addEventListener('close', () => {
-      if (preview || memory.code || typeof design.launcher !== 'string' || !design.launcher.trim() || document.querySelector('[data-pya-launcher]')) return;
+      if (!launcher || preview || memory.code || typeof design.launcher !== 'string' || !design.launcher.trim() || document.querySelector('[data-pya-launcher]')) return;
       const holder = document.createElement('div'); holder.setAttribute('data-pya-launcher', '');
       holder.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483000';
       const button = document.createElement('button'); button.type = 'button'; button.setAttribute('aria-label', 'Abrir la oferta');
@@ -696,10 +696,17 @@
           contact: code => { memory.contact = true; if (code) memory.code = code; R.markDone(memory, moment, Date.now()); R.saveMemory(slug, memory); },
         };
         const context = { moment, contact: memory.contact, code: memory.code, favourite: favourite(), product: lastViewed, cart: lines };
-        if (!mountFlow(dialog, design, { api, demo, remember: () => {}, slug, items, apiBaseUrl: config.apiBaseUrl, context, hooks })) return;
+        let settled = false;
+        const settle = fn => (...args) => { settled = true; fn(...args); };
+        const tracked = { closed: settle(hooks.closed), done: settle(hooks.done), contact: hooks.contact };
+        if (!mountFlow(dialog, design, { api, demo, remember: () => {}, slug, items, apiBaseUrl: config.apiBaseUrl, context, hooks: tracked, launcher: false })) return;
         R.markShown(memory, moment, Date.now()); R.saveMemory(slug, memory);
         open();
-        if (dialog.open) event(design, moment, 'shown');
+        if (dialog.open) {
+          event(design, moment, 'shown');
+          // Escape or a click outside closes too: that counts as closed, like the design's own close button.
+          dialog.addEventListener('close', () => { if (!settled) tracked.closed(''); }, { once: true });
+        }
       } finally { busy = false; }
     }
     // Welcome keeps the store's own timing setting.
@@ -718,15 +725,19 @@
     }, { passive: true });
     let hiddenAt = 0;
     document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (hiddenAt && Date.now() - hiddenAt >= 20_000) { hiddenAt = 0; leave(); } });
-    document.addEventListener('pagosya:product-viewed', e => {
-      const item = items.find(i => i && i.id === e.detail?.id);
+    const viewed = id => {
+      const item = items.find(i => i && i.id === id);
       if (!item) return;
       lastViewed = { id: item.id, name: item.name, categoryId: item.categoryId || '', categoryName: '' };
       const third = R.noteView(memory, { id: item.id, categoryId: item.categoryId || '' }); R.saveMemory(slug, memory);
       clearTimeout(viewTimer);
       if (third) void consider(['interest']);
       else viewTimer = setTimeout(() => { if (lastViewed?.id === item.id) void consider(['interest']); }, 40_000);
-    });
+    };
+    document.addEventListener('pagosya:product-viewed', e => viewed(e.detail?.id));
+    // A full product page announced itself before this watcher started (it waits for the store's popups): ask which one it is.
+    const current = {}; document.dispatchEvent(new CustomEvent('pagosya:current-product', { detail: current }));
+    if (current.id) viewed(current.id);
     setTimeout(() => void consider(['return']), 6_000);
     // The cookie answer clears the way for a welcome that was waiting.
     window.addEventListener('pagosya:privacy-change', () => setTimeout(() => void consider(['welcome']), 800));
@@ -839,8 +850,13 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
       if (waitingForCookies()) { waiting = true; return; }
       if (!dialog.isConnected || dialog.open || document.querySelector('dialog[open]')) return; dialog.showModal(); (dialog.querySelector('h2') || dialog.querySelector('[data-pya-popup] button, [data-pya-popup] [tabindex]'))?.focus(); };
     dialog.addEventListener('close', remember);
-    // Popups 2.0: a LIVE YAPI design takes the dialog; timing and the 30-day memory stay the same.
-    const flow = settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps
+    // Part 2 (spec 2026-11-21 §3, §7): a store with a family of popups — the page's signals pick at most one a visit; the moments
+    // keep working when the welcome is switched off.
+    const family = settings.popupMoments && typeof settings.popupMoments === 'object' && Object.keys(settings.popupMoments).length
+      ? { ...(settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps ? { welcome: settings.popupDesign } : {}), ...settings.popupMoments } : null;
+    // Popups 2.0: a LIVE YAPI design takes the dialog; timing and the 30-day memory stay the same. A family mounts its popups
+    // only when one is chosen (watchMoments), never this early welcome copy.
+    const flow = family && !(preview && !demo) ? true : settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps
       ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt, apiBaseUrl: config.apiBaseUrl, context: settings.popupDesignContext || {} }) : false;
     dialog.querySelector('.signup-close')?.addEventListener('click', () => dialog.close());
     if (flow) dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
@@ -870,8 +886,6 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
         }
       } catch (error) { status.textContent = error.message; button.disabled = false; }
     });
-    // Part 2 (spec 2026-11-21 §3, §7): a store with a family of popups — the page's signals pick at most one a visit.
-    const family = settings.popupMoments && typeof settings.popupMoments === 'object' && settings.popupDesign?.steps ? { welcome: settings.popupDesign, ...settings.popupMoments } : null;
     if (family && !(preview && !demo)) {
       watchMoments({ dialog, family, settings, config, api, demo, query, open, waitingForCookies, legacyKey: popupKey });
       return open;
