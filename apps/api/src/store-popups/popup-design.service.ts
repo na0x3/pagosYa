@@ -183,7 +183,8 @@ export class PopupDesignService {
   private checkContext(moment: PopupMoment, rows: Array<{ id: string; name: string; amount: number; imageUrls: string[]; categoryId?: string | null }>): FlowContext {
     const photo = (r: { imageUrls: string[] }) => (r.imageUrls ?? []).find(url => url.startsWith('/v1/uploads/')) ?? '';
     if (moment === 'rescue') return { moment, cart: rows.slice(0, 2).map(r => ({ id: r.id, name: r.name, price: r.amount, quantity: 1, photo: photo(r) })) };
-    if (moment === 'interest' && rows[0]) return { moment, product: { id: rows[0].id, name: rows[0].name, categoryId: rows[0].categoryId ?? '' } };
+    // Its neighbours too: a store without categories groups products by collection on the page (live Miga 2026-11-22).
+    if (moment === 'interest' && rows[0]) return { moment, product: { id: rows[0].id, name: rows[0].name, categoryId: rows[0].categoryId ?? '', categoryName: 'la tienda', related: rows.slice(0, 4).map(r => r.id) } };
     if (moment === 'return' && rows[0]) return { moment, contact: true, favourite: rows[0].id };
     return { moment };
   }

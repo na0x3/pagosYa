@@ -8,12 +8,15 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { PopupDesignService } from '../src/store-popups/popup-design.service';
+import { isPopupMoment } from '../src/store-popups/popup-flow';
 
 async function main() {
   const ids = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
   // --full: full-page popups (owner 2026-11-18 «some full pages ones»).
   const layout = process.argv.includes('--full') ? 'full' as const : undefined;
-  const moments = process.argv.includes('--moments');
+  // --moments=interest,return: only those popups (a redo of the ones that failed).
+  const only = process.argv.find(arg => arg.startsWith('--moments='))?.slice('--moments='.length).split(',').filter(isPopupMoment);
+  const moments = process.argv.includes('--moments') || Boolean(only?.length);
   if (!ids.length) throw new Error('usage: design-popups.ts <storeId|slug> [more…] [--full] [--moments]');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
   const timers = app.get(SchedulerRegistry);
@@ -28,7 +31,7 @@ async function main() {
       if (!store) { console.log(`${id}: no existe`); continue; }
       const started = Date.now();
       const result = await (moments
-        ? popups.designFamily(store.merchantId, store.id, { createdBy: 'batch' }).then(r => ({
+        ? popups.designFamily(store.merchantId, store.id, { createdBy: 'batch', ...(only?.length ? { moments: only } : {}) }).then(r => ({
             design: { status: r.results.every(x => x.status === 'LIVE') ? 'LIVE' : r.results.some(x => x.status === 'LIVE') ? 'PARTIAL' : 'FAILED', composition: r.results.map(x => `${x.moment}:${x.status}`).join(' ') },
             problems: r.results.flatMap(x => x.problems.slice(0, 1).map(p => `${x.moment}: ${p}`)) }))
         : popups.design(store.merchantId, store.id, { createdBy: 'batch', layout }))

@@ -287,3 +287,19 @@ describe('a family run points each moment as it lands (minor 4)', () => {
     expect(pointers.interest).toEqual({ id: result.results[0].id, off: true });
   });
 });
+
+describe('the interest check plays a product with its neighbours (live Miga 2026-11-22)', () => {
+  it('hands the browser check related products, so a store without categories still shows several tiles', async () => {
+    const { service, rows } = setup([]);
+    rows.push({ id: 'old', storeId: 's1', version: 1, status: 'LIVE', moment: 'welcome', css: '', steps: {} });
+    let context: any = null;
+    service.measure = jest.fn(async (input: any) => { context = input.context; return []; }) as any;
+    const fi = (o: Record<string, unknown>) => ({ products: [], to: 'product', questions: [], source: '', ...o });
+    const box = (inner: string) => `<div class="card"><button data-close aria-label="Cerrar">×</button>${inner}</div>`;
+    service.call = jest.fn(async () => ({ composition: 'x', css: '', moments: [{ moment: 'interest', composition: 'i', css: '', flow: [fi({ id: 'p', kind: 'pick', source: 'context' }), fi({ id: 'c', kind: 'capture' }), fi({ id: 'r', kind: 'reveal' }), fi({ id: 'm', kind: 'remind' })],
+      steps: [{ id: 'p', html: box('<ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b></li></ul>') }, { id: 'c', html: box('<input data-field><button data-submit>E</button>') }, { id: 'r', html: box('<b data-slot="code"></b><button data-next>I</button>') }, { id: 'm', html: box('<b data-slot="code"></b><button data-apply>U</button>') }] }] })) as any;
+    await service.designFamily('m1', 's1', { createdBy: 'batch', moments: ['interest'] });
+    expect(context.product).toMatchObject({ id: 'p1' });
+    expect(context.product.related).toEqual(['p1', 'p2']);
+  });
+});
