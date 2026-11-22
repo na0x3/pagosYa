@@ -42,3 +42,11 @@ describe('a stored sheet given back as the family look (final review I6)', () =>
     expect(rescue.css).toBe((scopePopupCss(original, 'crescue00000000000000001') as { css: string }).css);
   });
 });
+
+describe('room for the family sheet (live DooBoo 2026-11-22)', () => {
+  it('a family popup may carry the shared sheet plus its own, a lone welcome keeps 24 KB', () => {
+    const sheet = Array.from({ length: 420 }, (_, i) => `.c${i}{color:#111;margin:${i}px}`).join('');
+    expect(scopePopupCss(sheet, 'cdesign0000000000000000001')).toEqual({ problem: expect.stringMatching(/24 KB/) });
+    expect(scopePopupCss(sheet, 'cdesign0000000000000000001', 36_000)).toHaveProperty('css');
+  });
+});

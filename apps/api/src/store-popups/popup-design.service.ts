@@ -88,7 +88,7 @@ export class PopupDesignService {
       if ('problem' in cleaned) problems.push(`paso ${step.id}: ${cleaned.problem}`); else steps[step.id] = cleaned.html;
       if (layout === 'full' && 'html' in cleaned && !/^<[a-z0-9]+\b[^>]*\sdata-full\b/i.test(cleaned.html.trim())) problems.push(`paso ${step.id}: falta data-full en el elemento exterior (formato pantalla completa).`);
     }
-    const scoped = scopePopupCss(String(raw?.css ?? ''), id);
+    const scoped = scopePopupCss(String(raw?.css ?? ''), id, moment === 'welcome' ? undefined : 36_000);
     if ('problem' in scoped) problems.push(scoped.problem);
     const composition = String(raw?.composition ?? '').replace(/\s+/g, ' ').trim().slice(0, 140);
     if (!composition) problems.push('Falta composition (una línea que nombre tu composición).');

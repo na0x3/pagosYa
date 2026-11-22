@@ -17,9 +17,11 @@ const inKeyframes = (node: { parent?: unknown }) => {
   return parent?.type === 'atrule' && /keyframes$/i.test(parent.name);
 };
 
-export function scopePopupCss(css: string, designId: string): { css: string; dropped: string[] } | { problem: string } {
+/** `max`: a family popup carries the shared sheet plus its own (spec 2026-11-21 §6: 24 + 6 KB, plus the scope on every selector). */
+export function scopePopupCss(css: string, designId: string, max = MAX_POPUP_CSS): { css: string; dropped: string[] } | { problem: string } {
   if (typeof css !== 'string') return { problem: 'Falta el CSS del popup.' };
-  if (css.length > MAX_POPUP_CSS * 2) return { problem: 'El CSS supera los 24 KB.' };
+  const tooBig = { problem: `El CSS supera los ${Math.round(max / 1000)} KB.` };
+  if (css.length > max * 2) return tooBig;
   const scope = `[data-pya-popup="${designId}"]`;
   const prefix = `pp-${designId.slice(0, 8)}-`;
   let root: postcss.Root;
@@ -59,7 +61,7 @@ export function scopePopupCss(css: string, designId: string): { css: string; dro
   });
   root.walkRules(rule => { if (!rule.nodes?.length) rule.remove(); });
   const out = root.toString().trim();
-  if (out.length > MAX_POPUP_CSS) return { problem: 'El CSS supera los 24 KB.' };
+  if (out.length > max) return tooBig;
   return { css: out, dropped };
 }
 
