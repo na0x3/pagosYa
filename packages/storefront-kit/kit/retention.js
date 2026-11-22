@@ -8,12 +8,11 @@
     if (!form.querySelector('.pagosya-secure-note')) form.querySelector('[type=submit]')?.insertAdjacentHTML('beforebegin', '<p class="pagosya-secure-note">Tus datos se piden en un formulario seguro de pagosYa.</p>');
   }
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  // Popups 2.0 part 2 (spec 2026-11-21 §3, §7): which of the store's popups (welcome, rescue, interest, return) this shopper may
-  // see now — at most one a visit, 24 h apart (rescue may skip the gap), a closed one away 7 days, a finished welcome never again.
+  // Popups part 2 (spec 2026-11-21): which popup a shopper may see now.
   window.PAGOSYA_POPUP_RULES = (() => {
     const HOUR = 3_600_000, DAY = 24 * HOUR, VISIT_GAP = 30 * 60_000, CLOSED_FOR = 7 * DAY;
     const RANK = ['rescue', 'interest', 'return', 'welcome'];
-    const visitorId = () => { const bytes = new Uint8Array(12); try { crypto.getRandomValues(bytes); } catch { for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256); } return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(''); };
+    const visitorId = () => { const b = new Uint8Array(12); try { crypto.getRandomValues(b); } catch { b.forEach((_, i) => { b[i] = Math.random() * 256; }); } return Array.from(b, x => x.toString(16).padStart(2, '0')).join(''); };
     const number = value => (Number.isFinite(Number(value)) ? Number(value) : 0);
     const times = value => Object.fromEntries(Object.entries(value && typeof value === 'object' ? value : {}).filter(([key]) => RANK.includes(key)).map(([key, at]) => [key, number(at)]));
     function visitMemory(raw, now, legacySeen) {
@@ -25,7 +24,6 @@
         contact: saved?.contact === true, code: typeof saved?.code === 'string' ? saved.code.slice(0, 40) : '', favourite: typeof saved?.favourite === 'string' ? saved.favourite.slice(0, 40) : '',
         views: saved?.views && typeof saved.views === 'object' ? saved.views : {},
       };
-      // Today's single popup remembered its last showing for 30 days: that counts as the welcome shown and done.
       if (!saved && legacySeen && now - legacySeen < 30 * DAY) { memory.lastShownAt = legacySeen; memory.done.welcome = legacySeen; }
       if (!memory.visits || now - memory.lastSeenAt > VISIT_GAP) { memory.visits += 1; memory.visitStart = now; memory.visitShown = false; memory.views = {}; }
       memory.lastSeenAt = now;
@@ -54,7 +52,7 @@
       return memory.views[category].length === 3;
     }
     const key = slug => `pagosya:popups:${slug}`;
-    // A published store's frame keeps nothing: the parent page hands the memory in (PAGOSYA_POPUP_MEMORY) and keeps every save.
+    // Published stores: the parent page keeps the memory.
     const hosted = () => window.PAGOSYA_HOSTED === true;
     const loadMemory = slug => { try { return JSON.parse((hosted() ? window.PAGOSYA_POPUP_MEMORY : localStorage.getItem(key(slug))) || 'null'); } catch { return null; } };
     const saveMemory = (slug, memory) => {
@@ -464,8 +462,7 @@
     const steps = (Array.isArray(design.flow) ? design.flow : []).filter(step => step && step.kind);
     const land = steps.find(step => step.kind === 'land');
     const product = id => (items || []).find(item => item && item.id === id && item.active !== false && item.archived !== true);
-    // Part 2 (spec 2026-11-21 §5): the moment's own data — the shopper's cart, the product they keep looking at, their favourite,
-    // and whether they already left a contact (then the contact steps are skipped and their code is reminded instead).
+    // Part 2: the moment's data; a known contact skips the contact steps.
     const known = Boolean(context.contact), held = String(context.code || '');
     const cartLines = (Array.isArray(context.cart) ? context.cart : []).filter(line => line && line.id).slice(0, 12);
     const viewed = context.product && context.product.id ? context.product : null;
@@ -476,13 +473,11 @@
       return (step.products || []).filter(product);
     };
     const slotFilled = step => !/data-slot=["']?product-name/.test(design.steps?.[step.id] || '') || Boolean(viewed && viewed.name);
-    // The check (popup-flow-render) asks for a cart step even with an empty cart, so it can fail it; a store page never does.
     const branch = step => step.kind === 'capture' || step.kind === 'reveal' ? !known : step.kind === 'remind' ? known && Boolean(held) : step.kind === 'cart' ? cartLines.length > 0 || step.id === startAt : true;
     const live = step => step.kind === 'pick' ? pickIds(step).length >= (step.source ? 1 : 2)
       : step.kind === 'quiz' ? (step.questions || []).some(question => (question.answers || []).some(answer => (answer.products || []).some(product))) : true;
     const shown = steps.filter(step => step.kind !== 'land' && typeof design.steps?.[step.id] === 'string' && live(step) && branch(step) && slotFilled(step));
-    // A welcome design with no step this page can play (malformed, or every product gone) leaves the classic popup in place;
-    // a moment design simply does not open.
+    // A welcome that cannot play leaves the classic popup.
     const welcome = !context.moment || context.moment === 'welcome';
     if (!shown.length || (welcome && !shown.some(step => step.kind === 'capture'))) return false;
     dialog.classList.add('pagosya-flow');
@@ -503,7 +498,6 @@
         if (hostedPage) { try { parent.postMessage({ type: 'pagosya:favourite', id: memory.favourite }, '*'); } catch {} }
         document.dispatchEvent(new CustomEvent('pagosya:favourite', { detail: { id: memory.favourite, go: land.to !== 'scroll' } }));
       }
-      // Cart rescue lands in the cart, the code applied, one tap from «Pagar».
       if (land && land.to === 'checkout') { if (hostedPage) { try { parent.postMessage({ type: 'pagosya:open-cart' }, '*'); } catch {} } document.querySelector('[data-cart-open]')?.click(); }
       hooks.done?.();
       dialog.close();
@@ -625,7 +619,7 @@
             tile.before(copy);
           }
           const note = cartLines.length > 4 ? `+${cartLines.length - 4} más` : cartLines.length ? '' : 'Tu carrito está vacío.';
-          if (note) { const line = document.createElement('p'); line.className = 'pagosya-flow-more'; line.textContent = note; tile.after(line); }
+          if (note) tile.insertAdjacentHTML('afterend', `<p class="pagosya-flow-more">${escape(note)}</p>`);
           tile.remove();
         }
         const total = cartLines.reduce((sum, line) => sum + (Number(line.price) || 0) * Math.max(1, Number(line.quantity) || 1), 0);
@@ -633,7 +627,6 @@
       }
       if (step.kind === 'remind') {
         root.querySelectorAll('[data-slot=code]').forEach(el => { el.textContent = memory.code || (demo ? 'POPDEMO10' : ''); });
-        // The percent of the code the shopper holds (code-status), which may predate a change of the store's percent.
         root.querySelectorAll('[data-slot=percent]').forEach(el => { el.textContent = `${Number(context.percent) > 0 ? Number(context.percent) : design.percent}%`; });
         root.querySelectorAll('[data-apply]').forEach(el => el.addEventListener('click', () => { if (!memory.code && demo) memory.code = 'POPDEMO10'; applyCode(); next(); }));
       }
@@ -657,15 +650,12 @@
     return true;
   }
 
-  // Part 2 (spec 2026-11-21 §3, §7): the moments of a visit — the store's own welcome timing, leave intent (pointer out at the
-  // top; on a phone a fast scroll up after 10 s or coming back to the tab after 20 s), 3 products of one category or 40 s on one,
-  // and a returning contact 6 s in — each asks the rules, which open at most one popup a visit.
+  // Part 2 (spec 2026-11-21 §3, §7): page signals ask the rules for at most one popup a visit.
   function watchMoments({ dialog, family, settings, config, api, demo, query, open, waitingForCookies, legacyKey }) {
     const R = window.PAGOSYA_POPUP_RULES, slug = config.slug, items = (config.data && config.data.items) || [];
     let legacy = 0; try { legacy = Number(localStorage.getItem(legacyKey)) || 0; } catch {}
     const memory = R.visitMemory(R.loadMemory(slug), Date.now(), legacy); R.saveMemory(slug, memory);
     const available = Object.keys(family).filter(moment => family[moment] && family[moment].steps);
-    // On a published store the cookie answer lives on the parent page, which also refuses events without it.
     const consent = () => (window.PAGOSYA_HOSTED === true ? window.PAGOSYA_ANALYTICS === true : window.PAGOSYA_PRIVACY?.choice?.(slug) === true);
     const event = (design, moment, kind, step) => { if (demo || !consent()) return; api('popup-events', { visitor: memory.visitor, designId: design.id, moment, kind, ...(step ? { step } : {}) }).catch(() => undefined); };
     const cart = () => {
@@ -686,16 +676,16 @@
       busy = true;
       let codePercent = 0;
       try {
-        // Never remind a code the shopper can no longer use.
         if (memory.code && moment !== 'welcome') {
           const status = demo ? { active: true } : await api('code-status', { code: memory.code }).catch(() => ({ active: false }));
           if (!status.active) { memory.code = ''; R.saveMemory(slug, memory); } else codePercent = Number(status.percent) || 0;
         }
         const design = family[moment];
+        const keep = mark => { mark(memory, moment, Date.now()); R.saveMemory(slug, memory); };
         const hooks = {
-          closed: step => { R.markClosed(memory, moment, Date.now()); R.saveMemory(slug, memory); event(design, moment, 'closed', step); },
-          done: () => { R.markDone(memory, moment, Date.now()); R.saveMemory(slug, memory); event(design, moment, 'completed'); },
-          contact: code => { memory.contact = true; if (code) memory.code = code; R.markDone(memory, moment, Date.now()); R.saveMemory(slug, memory); },
+          closed: step => { keep(R.markClosed); event(design, moment, 'closed', step); },
+          done: () => { keep(R.markDone); event(design, moment, 'completed'); },
+          contact: code => { memory.contact = true; if (code) memory.code = code; keep(R.markDone); },
         };
         const context = { moment, contact: memory.contact, code: memory.code, percent: codePercent, favourite: favourite(), product: lastViewed, cart: lines };
         let settled = false;
@@ -706,12 +696,11 @@
         open();
         if (dialog.open) {
           event(design, moment, 'shown');
-          // Escape or a click outside closes too: that counts as closed, like the design's own close button.
+          // Any close counts as closed.
           dialog.addEventListener('close', () => { if (!settled) tracked.closed(''); }, { once: true });
         }
       } finally { busy = false; }
     }
-    // Welcome keeps the store's own timing setting.
     const trigger = ['load', 'delay', 'exit', 'both'].includes(settings.popupTrigger) ? settings.popupTrigger : 'load';
     const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
     const exitWelcome = trigger === 'exit' || trigger === 'both';
@@ -737,11 +726,10 @@
       else viewTimer = setTimeout(() => { if (lastViewed?.id === item.id) void consider(['interest']); }, 40_000);
     };
     document.addEventListener('pagosya:product-viewed', e => viewed(e.detail?.id));
-    // A full product page announced itself before this watcher started (it waits for the store's popups): ask which one it is.
+    // A full product page opened before this watcher started.
     const current = {}; document.dispatchEvent(new CustomEvent('pagosya:current-product', { detail: current }));
     if (current.id) viewed(current.id);
     setTimeout(() => void consider(['return']), 6_000);
-    // The cookie answer clears the way for a welcome that was waiting.
     window.addEventListener('pagosya:privacy-change', () => setTimeout(() => void consider(['welcome']), 800));
   }
 
@@ -852,12 +840,10 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
       if (waitingForCookies()) { waiting = true; return; }
       if (!dialog.isConnected || dialog.open || document.querySelector('dialog[open]')) return; dialog.showModal(); (dialog.querySelector('h2') || dialog.querySelector('[data-pya-popup] button, [data-pya-popup] [tabindex]'))?.focus(); };
     dialog.addEventListener('close', remember);
-    // Part 2 (spec 2026-11-21 §3, §7): a store with a family of popups — the page's signals pick at most one a visit; the moments
-    // keep working when the welcome is switched off.
+    // Part 2: a family of popups (works without the welcome too).
     const family = settings.popupMoments && typeof settings.popupMoments === 'object' && Object.keys(settings.popupMoments).length
       ? { ...(settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps ? { welcome: settings.popupDesign } : {}), ...settings.popupMoments } : null;
-    // Popups 2.0: a LIVE YAPI design takes the dialog; timing and the 30-day memory stay the same. A family mounts its popups
-    // only when one is chosen (watchMoments), never this early welcome copy.
+    // Popups 2.0: a LIVE YAPI design takes the dialog; a family mounts its popups only when one is chosen.
     const flow = family && !(preview && !demo) ? true : settings.popupDesign && typeof settings.popupDesign === 'object' && settings.popupDesign.steps
       ? mountFlow(dialog, settings.popupDesign, { api, demo, remember, slug: config.slug, items: config.data && config.data.items, startAt: settings.popupDesignStartAt, apiBaseUrl: config.apiBaseUrl, context: settings.popupDesignContext || {} }) : false;
     dialog.querySelector('.signup-close')?.addEventListener('click', () => dialog.close());
