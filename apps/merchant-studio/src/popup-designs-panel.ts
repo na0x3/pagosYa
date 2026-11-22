@@ -12,6 +12,8 @@ const MOMENT_LABEL: Record<PopupMomentName, [string, string]> = {
   interest: ['Interés', 'Mira varios productos de una categoría: le muestra ese producto con su código.'],
   return: ['Regreso', 'Vuelve alguien que ya dejó su contacto: sus favoritos y lo nuevo.'],
 };
+const countsLine = (c: { shown: number; closed: number; completed: number }) => `<p class="popup-designs__counts">Últimos 30 días: ${c.shown} vieron · ${c.closed} cerraron · ${c.completed} completaron</p>`;
+const versions = (earlier: PopupDesignsOverview['designs'], off: string) => earlier.length ? `<details class="popup-designs__versions"><summary>Versiones anteriores (${earlier.length})</summary><ul>${earlier.map(d => `<li data-popup-version="${esc(d.id)}">${d.previews?.[0] ? `<img src="${esc(asset(d.previews[0].url))}" alt="" width="64" loading="lazy">` : ''}<span>v${d.version} · ${esc(d.composition || '')}</span><button type="button"${off}>Volver a esta</button></li>`).join('')}</ul></details>` : '';
 function momentCard(m: NonNullable<PopupDesignsOverview['moments']>[number], off: string) {
   const current = m.designs.find(d => d.id === m.liveId) ?? m.designs.find(d => d.status !== 'FAILED');
   const [title, what] = MOMENT_LABEL[m.moment];
@@ -19,10 +21,11 @@ function momentCard(m: NonNullable<PopupDesignsOverview['moments']>[number], off
     <h3>${title}</h3><p>${esc(what)}</p>
     ${current ? `<p><strong>${esc(current.composition || `Versión ${current.version}`)}</strong></p>
       <ol class="popup-designs__steps">${(current.previews ?? []).map((p, i) => `<li><img src="${esc(asset(p.url))}" alt="Paso ${i + 1} del popup ${esc(title)}" loading="lazy" width="195"></li>`).join('')}</ol>
-      <p class="popup-designs__counts">Últimos 30 días: ${m.counts.shown} vieron · ${m.counts.closed} cerraron · ${m.counts.completed} completaron</p>
+      ${countsLine(m.counts)}
       <label class="retention-toggle"><input type="checkbox" name="momentOn"${m.on ? ' checked' : ''}${off}>Mostrar este popup</label>`
       : '<p>Todavía no tiene diseño.</p>'}
     <p><button type="button" data-moment-redesign${off}>${current ? 'Rediseñar' : 'Pedírselo a YAPI'}</button></p>
+    ${versions(m.designs.filter(d => d.status !== 'FAILED' && d.id !== current?.id), off)}
   </article>`;
 }
 
@@ -69,7 +72,8 @@ export async function mountPopupDesigns(host: HTMLElement, api: PopupApi, storeI
       </div>
       ${data.pick.length ? `<fieldset class="popup-designs__products"><legend>Productos en «¿qué buscas?» (de 2 a 6)</legend>${data.products.map(p => `<label><input type="checkbox" name="popupProduct" value="${esc(p.id)}"${data!.pick.includes(p.id) ? ' checked' : ''}${off}>${esc(p.name)}</label>`).join('')}</fieldset>` : ''}
       <p><button type="button" data-popup-save${off}>Guardar popup</button></p>` : ''}
-      ${earlier.length ? `<details class="popup-designs__versions"><summary>Versiones anteriores (${earlier.length})</summary><ul>${earlier.map(d => `<li data-popup-version="${esc(d.id)}">${d.previews?.[0] ? `<img src="${esc(asset(d.previews[0].url))}" alt="" width="64" loading="lazy">` : ''}<span>v${d.version} · ${esc(d.composition || '')}</span><button type="button"${off}>Volver a esta</button></li>`).join('')}</ul></details>` : ''}
+      ${(() => { const welcome = data!.moments?.find(m => m.moment === 'welcome'); return current && welcome ? countsLine(welcome.counts) : ''; })()}
+      ${versions(earlier, off)}
       <p role="${failed ? 'alert' : 'status'}" class="retention-message">${esc(note)}</p>
     </section></article>${(data.moments ?? []).filter(m => m.moment !== 'welcome').map(m => momentCard(m, off)).join('')}`;
     host.querySelector('[data-popup-redesign]')?.addEventListener('click', () => {

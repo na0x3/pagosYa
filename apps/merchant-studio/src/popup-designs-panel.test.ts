@@ -80,3 +80,19 @@ describe('four moments (spec 2026-11-21 §8)', () => {
     await vi.waitFor(() => expect(api.popupRedesign).toHaveBeenCalledWith('s1', '', 'interest'));
   });
 });
+
+describe('versions and counts on every card (final review I8)', () => {
+  const data = () => ({ ...overview(), moments: [
+    { moment: 'welcome', liveId: 'cd2', on: true, designs: overview().designs, counts: { shown: 40, closed: 30, completed: 6 } },
+    { moment: 'rescue', liveId: 'cr2', on: true, designs: [{ id: 'cr2', version: 7, status: 'LIVE', composition: 'Nuevo', previews: [] }, { id: 'cr1', version: 5, status: 'RETIRED', composition: 'Ticket de carrito', previews: [] }, { id: 'cr0', version: 4, status: 'FAILED', composition: '', previews: null }], counts: { shown: 1, closed: 0, completed: 0 } },
+  ] });
+  it('the welcome card shows its counts, and another moment can go back to an earlier version', async () => {
+    api.popupDesigns.mockResolvedValue(data());
+    await mountPopupDesigns(host, api, 's1');
+    expect(host.querySelector('[data-popup-moment="welcome"]')!.textContent).toMatch(/40 vieron.*6 completaron/);
+    const rescue = host.querySelector('[data-popup-moment="rescue"]')!;
+    expect(rescue.querySelectorAll('[data-popup-version]')).toHaveLength(1);
+    rescue.querySelector<HTMLButtonElement>('[data-popup-version="cr1"] button')!.click();
+    await vi.waitFor(() => expect(api.popupRestore).toHaveBeenCalledWith('s1', 'cr1'));
+  });
+});
