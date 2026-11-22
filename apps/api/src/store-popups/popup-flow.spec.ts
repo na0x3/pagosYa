@@ -26,3 +26,31 @@ describe('popup flow rules', () => {
     expect((validateFlow([{ id: 'g', kind: 'game', game: 'scratch' }, ...ok.slice(2)], products) as any).problems.join()).toMatch(/juegos todavía no/);
   });
 });
+
+describe('flow shape per moment (spec 2026-11-21 §5)', () => {
+  const rescue = [{ id: 'k', kind: 'cart' }, { id: 'c', kind: 'capture' }, { id: 'r', kind: 'reveal' }, { id: 'm', kind: 'remind' }, { id: 'l', kind: 'land', to: 'checkout' }];
+  it('accepts a rescue flow: the cart first, both branches, checkout last', () => {
+    const result = validateFlow(rescue, products, 'rescue');
+    expect('flow' in result && result.flow.map(s => s.kind)).toEqual(['cart', 'capture', 'reveal', 'remind', 'land']);
+    expect('flow' in result && result.flow[4]).toEqual({ id: 'l', kind: 'land', to: 'checkout' });
+  });
+  it('names what a rescue flow misses', () => {
+    const problems = (validateFlow([rescue[1], rescue[2], rescue[4]], products, 'rescue') as { problems: string[] }).problems.join(' ');
+    expect(problems).toMatch(/cart va primero/);
+    expect(problems).toMatch(/remind/);
+  });
+  it('accepts an interest flow that starts with the viewed product, with no fixed products', () => {
+    const flow = [{ id: 'p', kind: 'pick', source: 'context', products: [] }, rescue[1], rescue[2], rescue[3], { id: 'l', kind: 'land', to: 'product' }];
+    const result = validateFlow(flow, products, 'interest');
+    expect('flow' in result && result.flow[0]).toEqual({ id: 'p', kind: 'pick', products: [], source: 'context' });
+  });
+  it('a return flow has no contact step and picks the favourite or the newest', () => {
+    expect('flow' in validateFlow([{ id: 'p', kind: 'pick', source: 'favourite', products: [] }, { id: 'm', kind: 'remind' }, { id: 'l', kind: 'land', to: 'product' }], products, 'return')).toBe(true);
+    const problems = (validateFlow([{ id: 'p', kind: 'pick', source: 'new', products: [] }, { id: 'c', kind: 'capture' }], products, 'return') as { problems: string[] }).problems.join(' ');
+    expect(problems).toMatch(/regreso va sin capture/);
+  });
+  it('keeps the welcome rules unchanged when no moment is given', () => {
+    expect('flow' in validateFlow(ok, products)).toBe(true);
+    expect((validateFlow([{ id: 'a', kind: 'cart' }, { id: 'c', kind: 'capture' }], products) as { problems: string[] }).problems.join(' ')).toMatch(/cart y remind son de los popups de carrito/);
+  });
+});

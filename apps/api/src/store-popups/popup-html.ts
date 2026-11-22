@@ -75,12 +75,18 @@ function hookProblem(root: { childNodes: Node[] }, kind: PopupStepKind | 'launch
   if (!some('data-close')) return 'Falta [data-close] (el botón para cerrar).';
   if (kind === 'offer' && !some('data-next')) return 'Falta [data-next] (el botón para seguir).';
   if (kind === 'game' && !some('data-game-surface')) return 'Falta [data-game-surface] (dónde va el juego).';
-  if (kind === 'pick') {
+  // One tile template the platform repeats per product (pick) or per cart line (cart, spec 2026-11-21).
+  const tileProblem = (what: string) => {
     const tiles = all.filter(el => hasAttr(el, 'data-tile'));
-    if (tiles.length !== 1) return 'Hace falta exactamente un [data-tile] (la plantilla de cada producto).';
+    if (tiles.length !== 1) return `Hace falta exactamente un [data-tile] (la plantilla de cada ${what}).`;
     const inside = elements(tiles[0]);
     for (const slot of ['photo', 'name']) if (!inside.some(el => attr(el, 'data-slot') === slot)) return `Falta data-slot="${slot}" dentro de [data-tile].`;
-  }
+    return null;
+  };
+  if (kind === 'pick') { const problem = tileProblem('producto'); if (problem) return problem; }
+  if (kind === 'cart') { const problem = tileProblem('producto del carrito'); if (problem) return problem; }
+  if (kind === 'remind' && !some('data-slot', 'code')) return 'Falta data-slot="code" (dónde va su código).';
+  if (kind === 'remind' && !some('data-apply')) return 'Falta un botón data-apply en remind (usa el código).';
   if (kind === 'quiz') {
     if (!some('data-question')) return 'Falta [data-question] (dónde va la pregunta).';
     if (all.filter(el => hasAttr(el, 'data-choice')).length !== 1) return 'Hace falta exactamente un [data-choice] (la plantilla de cada respuesta).';

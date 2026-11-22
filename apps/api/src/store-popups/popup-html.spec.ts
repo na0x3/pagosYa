@@ -48,3 +48,15 @@ describe('popup step html', () => {
   });
 });
 
+
+describe('hooks for the moment steps (spec 2026-11-21 §5)', () => {
+  const close = '<button data-close aria-label="Cerrar">×</button>';
+  it('a cart step needs one tile with photo and name', () => {
+    expect(cleanStepHtml(`<div>${close}<ul><li data-tile><img data-slot="photo" alt=""><b data-slot="name"></b><i data-slot="qty"></i></li></ul><button data-next>Seguir</button></div>`, 'cart')).toHaveProperty('html');
+    expect(cleanStepHtml(`<div>${close}<p>Tu carrito</p></div>`, 'cart')).toEqual({ problem: expect.stringMatching(/data-tile/) });
+  });
+  it('a remind step needs the code slot and an apply button', () => {
+    expect(cleanStepHtml(`<div>${close}<b data-slot="code"></b><button data-apply>Usar</button></div>`, 'remind')).toHaveProperty('html');
+    expect(cleanStepHtml(`<div>${close}<b data-slot="code"></b></div>`, 'remind')).toEqual({ problem: expect.stringMatching(/data-apply/) });
+  });
+});
